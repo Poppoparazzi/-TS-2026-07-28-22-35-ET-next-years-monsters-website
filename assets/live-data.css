@@ -1,0 +1,127 @@
+/* TS: 2026-07-29 12:45 ET */
+
+.monster-live-strip {
+  display: grid;
+  grid-template-columns: minmax(180px, .8fr) repeat(3, minmax(180px, 1fr));
+  border-right: 1px solid #080c0b;
+  border-bottom: 1px solid #080c0b;
+  border-left: 1px solid #080c0b;
+  background: #f8f3e7;
+  color: #080c0b;
+}
+
+.monster-live-label,
+.monster-live-metric {
+  min-width: 0;
+  padding: 24px;
+  border-right: 1px solid #9da09a;
+}
+
+.monster-live-metric:last-of-type {
+  border-right: 0;
+}
+
+.monster-live-label {
+  background: var(--editorial-lime, #b8f34a);
+}
+
+.monster-live-label span,
+.monster-live-metric > span {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.monster-live-label strong,
+.monster-live-metric strong {
+  display: block;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: clamp(24px, 2.2vw, 38px);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.02;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.monster-live-label strong {
+  font-size: clamp(34px, 3vw, 52px);
+}
+
+.monster-live-metric em,
+.monster-live-filing a {
+  display: block;
+  margin-top: 10px;
+  color: #4c524d;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.monster-live-filing a {
+  color: #b72d27;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.monster-live-disclosure {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 14px 24px;
+  border-top: 1px solid #9da09a;
+  background: #101514;
+  color: #d7ddd7;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.monster-live-strip[data-live-status="loading"] {
+  opacity: .78;
+}
+
+.monster-live-strip[data-live-status="unavailable"] .monster-live-label {
+  background: var(--editorial-gold, #d9aa31);
+}
+
+.monster-live-strip[data-live-status="partial"] .monster-live-filing {
+  background: #eee5d1;
+}
+
+@media (max-width: 980px) {
+  .monster-live-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .monster-live-label,
+  .monster-live-metric {
+    border-bottom: 1px solid #9da09a;
+  }
+
+  .monster-live-metric:nth-of-type(2n) {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .monster-live-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .monster-live-label,
+  .monster-live-metric {
+    border-right: 0;
+  }
+
+  .monster-live-label strong,
+  .monster-live-metric strong {
+    font-size: clamp(25px, 8vw, 36px);
+  }
+}
