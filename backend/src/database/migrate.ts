@@ -1,10 +1,13 @@
-// TS: 2026-07-29 16:17 ET
+// TS: 2026-07-29 16:19 ET
 
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Client } from "pg";
+import pg from "pg";
+
+const { Client } = pg;
+type DatabaseClient = InstanceType<typeof Client>;
 
 interface AppliedMigration {
   readonly filename: string;
@@ -34,7 +37,14 @@ function checksum(content: string): string {
 function removeMigrationTransactionWrapper(content: string): string {
   const lines = content.split(/\r?\n/);
   const beginIndex = lines.findIndex((line) => line.trim().toUpperCase() === "BEGIN;");
-  const commitIndex = lines.findLastIndex((line) => line.trim().toUpperCase() === "COMMIT;");
+  let commitIndex = -1;
+
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (lines[index]?.trim().toUpperCase() === "COMMIT;") {
+      commitIndex = index;
+      break;
+    }
+  }
 
   if (beginIndex < 0 || commitIndex < 0 || commitIndex <= beginIndex) {
     throw new Error("Migration must contain a top-level BEGIN; and COMMIT; wrapper.");
@@ -54,7 +64,7 @@ async function loadMigrationFiles(): Promise<readonly string[]> {
     .sort((left, right) => left.localeCompare(right));
 }
 
-async function ensureMigrationTable(client: Client): Promise<void> {
+async function ensureMigrationTable(client: DatabaseClient): Promise<void> {
   await client.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       filename text PRIMARY KEY,
@@ -64,7 +74,7 @@ async function ensureMigrationTable(client: Client): Promise<void> {
   `);
 }
 
-async function appliedMigrations(client: Client): Promise<Map<string, string>> {
+async function appliedMigrations(client: DatabaseClient): Promise<Map<string, string>> {
   const result = await client.query<AppliedMigration>(
     "SELECT filename, checksum FROM schema_migrations ORDER BY filename",
   );
@@ -73,7 +83,7 @@ async function appliedMigrations(client: Client): Promise<Map<string, string>> {
 }
 
 async function applyMigration(
-  client: Client,
+  client: DatabaseClient,
   filename: string,
   content: string,
   migrationChecksum: string,
