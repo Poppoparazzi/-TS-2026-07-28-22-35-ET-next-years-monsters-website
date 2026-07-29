@@ -1,0 +1,123 @@
+<!-- TS: 2026-07-29 16:42 ET -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Live Data Status | Next Year’s Monsters™</title>
+  <meta name="description" content="See exactly what is complete, what is pending, and how the Next Year’s Monsters™ stock data rollout moves from one verified ticker to the live Top 25.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/editorial-type.css">
+  <link rel="stylesheet" href="assets/live-status.css">
+</head>
+<body class="live-status-page">
+
+<header class="site-header home-header">
+  <div class="home-nav-shell">
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
+      <span class="home-brand-arrow">↗</span>
+      <span>NEXT YEAR’S MONSTERS™</span>
+    </a>
+    <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a href="monster-check.html">MONSTER CHECK</a>
+      <a href="top-monsters.html">TOP MONSTERS</a>
+      <a href="how-it-works.html">THE SYSTEM</a>
+      <a href="vcl-library.html">VCL™ LIBRARY</a>
+      <a href="about.html">ABOUT</a>
+    </nav>
+    <a class="home-nav-cta" href="top-monsters.html">BACK TO LEADERBOARD</a>
+  </div>
+</header>
+
+<main>
+  <section class="status-hero">
+    <div class="status-shell">
+      <p class="status-kicker">PUBLIC BUILD STATUS · NO HIDDEN COMPLETION CLAIMS</p>
+      <h1>LIVE DATA<br><strong>ROLLOUT BOARD</strong></h1>
+      <p class="status-intro">This page shows what is genuinely working, what still needs to be connected, and the precise path from today’s 15-stock demonstration to a verified live Top 25.</p>
+    </div>
+  </section>
+
+  <div class="status-main">
+    <section class="status-summary" aria-label="Current rollout totals">
+      <article><strong>15/15</strong><span>DEMO PROFILES PUBLISHED</span></article>
+      <article><strong>0/15</strong><span>LIVE QUOTES SAVED</span></article>
+      <article><strong>0/15</strong><span>SEC CHECKS SAVED</span></article>
+      <article><strong>0/15</strong><span>LIVE RATINGS SAVED</span></article>
+      <article><strong>10</strong><span>TOP 25 SLOTS OPEN</span></article>
+    </section>
+
+    <div class="status-next">
+      <strong>NEXT VISIBLE RESULT: AAPL LIVE TEST</strong>
+      <span>AAPL is the first technical test, not a recommendation. It must show a genuine quote, official SEC status, source disclosure, and real Last Updated time. Two successful refreshes are required before the rollout expands.</span>
+    </div>
+
+    <section class="status-section" aria-labelledby="rollout-stages-title">
+      <div class="status-section-head">
+        <h2 id="rollout-stages-title">ONE STANDARD.<br>FOUR CHECKPOINTS.</h2>
+        <p>Every stock follows the same live-readiness rules. The checkpoints exist to prove the system remains reliable as the number of stocks grows. Nobody gets promoted merely because the spreadsheet looks lonely.</p>
+      </div>
+      <div class="stage-grid">
+        <article><span>CHECKPOINT 01</span><strong>1 LIVE TICKER</strong><p>Proves provider → backend → database → website works from end to end.</p></article>
+        <article><span>CHECKPOINT 02</span><strong>5 LIVE TICKERS</strong><p>Proves different companies and sectors refresh without malformed or duplicate data.</p></article>
+        <article><span>CHECKPOINT 03</span><strong>15 LIVE TICKERS</strong><p>Completes the original book-based pilot with two successful refresh cycles.</p></article>
+        <article><span>CHECKPOINT 04</span><strong>25 LIVE TICKERS</strong><p>Allows the public leaderboard to change from PENDING to LIVE.</p></article>
+      </div>
+    </section>
+
+    <section class="status-section" aria-labelledby="pilot-status-title">
+      <div class="status-section-head">
+        <h2 id="pilot-status-title">THE ORIGINAL 15.<br>STOCK BY STOCK.</h2>
+        <p>Each row identifies what already exists and what remains missing. The status is deliberately blunt because decorative optimism does not count as market data.</p>
+      </div>
+      <div class="status-list" data-status-list>
+        <p class="leaderboard-empty">Loading the 15-stock rollout checklist…</p>
+      </div>
+    </section>
+
+    <section class="status-section" aria-labelledby="open-slots-title">
+      <div class="status-section-head">
+        <h2 id="open-slots-title">TEN OPEN SLOTS.<br>NOT RANDOM FILLER.</h2>
+        <p>The additional ten will be selected only after the original 15 work reliably. The group will broaden sector, market-cap, profitability, and chart-condition coverage rather than simply cloning the most famous technology names.</p>
+      </div>
+      <div class="open-slots" aria-label="Open Top 25 positions">
+        <article><strong>16</strong><span>Selection pending</span></article>
+        <article><strong>17</strong><span>Selection pending</span></article>
+        <article><strong>18</strong><span>Selection pending</span></article>
+        <article><strong>19</strong><span>Selection pending</span></article>
+        <article><strong>20</strong><span>Selection pending</span></article>
+        <article><strong>21</strong><span>Selection pending</span></article>
+        <article><strong>22</strong><span>Selection pending</span></article>
+        <article><strong>23</strong><span>Selection pending</span></article>
+        <article><strong>24</strong><span>Selection pending</span></article>
+        <article><strong>25</strong><span>Selection pending</span></article>
+      </div>
+    </section>
+
+    <section class="status-section" aria-labelledby="pipeline-title">
+      <div class="status-section-head">
+        <h2 id="pipeline-title">THE DATA PIPELINE.<br>WHAT EXISTS TODAY.</h2>
+        <p>The public website remains a demonstration until the secure services below are deployed and saving verified records. Missing information stays missing instead of dressing up as certainty.</p>
+      </div>
+      <div class="pipeline-grid">
+        <article><strong>MARKET QUOTES</strong><span>Twelve Data adapter built. Private provider key and deployed backend still required.</span></article>
+        <article><strong>SEC FILINGS & FACTS</strong><span>Official EDGAR adapter built. Deployed service and saved database records still required.</span></article>
+        <article><strong>DATABASE HISTORY</strong><span>PostgreSQL schema and migration runner built. A private hosted database still needs to be provisioned.</span></article>
+        <article><strong>STOCK NEWS</strong><span>Ticker news and press-release feed not connected yet. News will require sources, timestamps, and explicit rating impact.</span></article>
+      </div>
+    </section>
+
+    <div class="status-note">
+      <strong>Educational notice:</strong> Demonstration ratings are not current recommendations. A live quote alone does not make a stock rating live. The rating must also have a saved version, evidence, risks, sources, and a genuine data timestamp.
+    </div>
+  </div>
+</main>
+
+<footer class="home-footer">
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>THE SCREEN DOES NOT FIND GUARANTEED WINNERS. IT FINDS EVIDENCE.</span></div>
+  <p><strong>Educational Use Only:</strong> Nothing on this status page is a recommendation to buy, sell, or hold a security.</p>
+</footer>
+
+<script src="assets/live-status.js"></script>
+</body>
+</html>
