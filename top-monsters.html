@@ -1,15 +1,16 @@
-<!-- TS: 2026-07-29 10:52 ET -->
+<!-- TS: 2026-07-29 15:23 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Monster Leaderboard™ | Next Year’s Monsters™</title>
-  <meta name="description" content="Explore the highest current demonstration Monster Ratings™, then open each company’s Monster Check™ to study the evidence and risks.">
+  <meta name="description" content="Explore the highest demonstration Monster Ratings™, see when the list was reviewed, and open each company’s Monster Check™ to study the evidence and risks.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/monster-check.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/top-monsters.css">
+  <link rel="stylesheet" href="assets/data-status.css">
 </head>
 <body class="leaderboard-page">
 
@@ -37,13 +38,30 @@
       <h1>MONSTER<br><strong>LEADERBOARD™</strong></h1>
       <p class="leaderboard-intro">The leaderboard is a doorway, not the destination. Rankings create curiosity. The individual Monster Check™ provides the evidence, risks, catalysts, and questions that matter.</p>
       <span class="leaderboard-pilot"><span data-leaderboard-count>15-STOCK PILOT</span> · DEMONSTRATION RATINGS · NOT LIVE DATA</span>
+
+      <div class="leaderboard-status-board" aria-label="Leaderboard data status">
+        <div class="leaderboard-status-item">
+          <span class="leaderboard-status-check" aria-hidden="true">✓</span>
+          <div>
+            <strong>DEMONSTRATION CONTENT REVIEWED</strong>
+            <time datetime="2026-07-29T15:23:00-04:00">Last reviewed July 29, 2026 at 3:23 PM ET</time>
+          </div>
+        </div>
+        <div class="leaderboard-status-item leaderboard-status-pending">
+          <span class="leaderboard-status-check" aria-hidden="true">○</span>
+          <div>
+            <strong>TOP 25 LIVE STATUS: PENDING</strong>
+            <span>Goes live after all 25 have verified quotes, SEC checks, saved versioned ratings, and freshness timestamps.</span>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <section class="leaderboard-main">
     <div class="leaderboard-section-head">
-      <h2>HIGHEST CURRENT<br>DEMO RATINGS™</h2>
-      <p>The current pilot ranks the 15 book-based demonstration companies. The production page will show the Top 25, with ranks 26–50 available as a lighter click-through list.</p>
+      <h2>HIGHEST DEMO<br>RATINGS™</h2>
+      <p>The current pilot ranks the 15 book-based demonstration companies. After the original 15 pass live verification, 10 additional stocks will be added and tested before the public Top 25 switches to live status.</p>
     </div>
 
     <div class="leaderboard-list" data-leaderboard-list>
