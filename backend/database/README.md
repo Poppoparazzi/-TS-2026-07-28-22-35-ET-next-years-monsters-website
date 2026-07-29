@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-29 16:14 ET -->
+<!-- TS: 2026-07-29 16:21 ET -->
 
 # Next Year’s Monsters™ Database
 
@@ -18,13 +18,27 @@ This directory contains the permanent PostgreSQL history layer for Phase 3.
 
 ## Migration order
 
-Apply these files in filename order:
+The migration runner applies these files in filename order:
 
 1. `migrations/001_initial_schema.sql`
 2. `migrations/002_seed_pilot_companies.sql`
 3. `migrations/003_live_readiness_views.sql`
 
-Production deployment will run migrations against a private PostgreSQL database through `DATABASE_URL`. The public GitHub Pages site must never receive that connection string.
+Set a private PostgreSQL connection string in `DATABASE_URL`, then run:
+
+```bash
+npm run db:migrate
+```
+
+The runner:
+
+- Locks migrations so two deployments cannot modify the schema simultaneously.
+- Applies each new migration in a transaction.
+- Saves each filename and SHA-256 checksum.
+- Refuses to run if an already-applied migration was edited.
+- Never prints the database connection string.
+
+The public GitHub Pages site must never receive `DATABASE_URL`.
 
 ## Original 15 live gate
 
