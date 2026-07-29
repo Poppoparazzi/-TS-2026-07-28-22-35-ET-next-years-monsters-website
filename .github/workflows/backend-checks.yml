@@ -1,0 +1,43 @@
+# TS: 2026-07-29 11:55 ET
+
+name: Phase 3 Backend Checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-3-backend-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-backend:
+    name: Typecheck and test backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install backend dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run typechecks and tests
+        run: npm run check
