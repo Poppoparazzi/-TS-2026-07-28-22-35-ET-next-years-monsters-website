@@ -1,4 +1,4 @@
-// TS: 2026-07-29 10:50 ET
+// TS: 2026-07-29 16:33 ET
 
 function leaderboardEscape(value) {
   return String(value ?? "")
@@ -34,8 +34,34 @@ function leaderboardRow(stock, index) {
     </article>`;
 }
 
+function rolloutStage(label, status, detail) {
+  const ready = status === "ready";
+  return `
+    <div class="rollout-stage rollout-stage-${ready ? "ready" : "pending"}">
+      <span aria-hidden="true">${ready ? "✓" : "○"}</span>
+      <div><strong>${leaderboardEscape(label)}</strong><small>${leaderboardEscape(detail)}</small></div>
+    </div>`;
+}
+
+function rolloutRow(stock, index) {
+  const order = String(index + 1).padStart(2, "0");
+  return `
+    <article class="rollout-row">
+      <div class="rollout-company">
+        <span>${order}</span>
+        <div><strong>$${leaderboardEscape(stock.ticker)}</strong><small>${leaderboardEscape(stock.name)}</small></div>
+      </div>
+      ${rolloutStage("DEMO PROFILE", "ready", "Published")}
+      ${rolloutStage("LIVE QUOTE", "pending", "Backend not deployed")}
+      ${rolloutStage("SEC CHECK", "pending", "Not saved yet")}
+      ${rolloutStage("LIVE RATING", "pending", "Version 1 not calculated")}
+      <div class="rollout-row-status"><strong>NOT LIVE YET</strong><span>Waiting for the first secure data run.</span></div>
+    </article>`;
+}
+
 async function setupLeaderboard() {
   const list = document.querySelector("[data-leaderboard-list]");
+  const rolloutList = document.querySelector("[data-rollout-list]");
   const count = document.querySelector("[data-leaderboard-count]");
   const input = document.querySelector("[data-leaderboard-input]");
   const button = document.querySelector("[data-leaderboard-button]");
@@ -47,9 +73,13 @@ async function setupLeaderboard() {
     const stocks = await response.json();
     const ranked = [...stocks].sort((a, b) => b.score - a.score || a.ticker.localeCompare(b.ticker));
     list.innerHTML = ranked.map(leaderboardRow).join("");
+    if (rolloutList) rolloutList.innerHTML = ranked.map(rolloutRow).join("");
     if (count) count.textContent = `${ranked.length}-STOCK PILOT`;
   } catch (error) {
     list.innerHTML = `<p class="leaderboard-empty">The demonstration ranking file did not load. The page is refusing to fabricate a leaderboard, which is inconvenient but civilized.</p>`;
+    if (rolloutList) {
+      rolloutList.innerHTML = `<p class="leaderboard-empty">The rollout checklist could not load because its stock list is unavailable. No completion status was invented.</p>`;
+    }
   }
 
   const runSearch = () => openMonsterCheck(input?.value);
