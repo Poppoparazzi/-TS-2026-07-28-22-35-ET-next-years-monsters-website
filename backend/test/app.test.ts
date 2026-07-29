@@ -1,0 +1,134 @@
+// TS: 2026-07-29 11:49 ET
+
+import assert from "node:assert/strict";
+import test from "node:test";
+import { buildApp } from "../src/app.js";
+import type { AppConfig } from "../src/config.js";
+import { UnconfiguredMarketDataProvider } from "../src/providers/unconfigured.js";
+import type {
+  MarketDataProvider,
+  QuoteSnapshot,
+  TickerSearchResult,
+} from "../src/providers/types.js";
+
+const TEST_SECRET = "test-secret-that-must-never-appear";
+
+function testConfig(): AppConfig {
+  return Object.freeze({
+    nodeEnv: "test",
+    host: "127.0.0.1",
+    port: 8787,
+    corsOrigins: Object.freeze(["https://example.test"]),
+    marketDataProvider: "twelve-data",
+    twelveDataApiKey: TEST_SECRET,
+    secUserAgent: "NextYearsMonsters test@example.test",
+  });
+}
+
+class StaticMarketDataProvider implements MarketDataProvider {
+  public readonly name = "static-test-provider";
+  public readonly configured = true;
+  public quoteCalls = 0;
+
+  public async searchTickers(
+    query: string,
+    limit = 10,
+  ): Promise<readonly TickerSearchResult[]> {
+    return [
+      {
+        symbol: query.trim().toUpperCase(),
+        companyName: "Test Company",
+        exchange: "NASDAQ",
+        securityType: "Common Stock",
+        active: true,
+      },
+    ].slice(0, limit);
+  }
+
+  public async getQuote(symbol: string): Promise<QuoteSnapshot> {
+    this.quoteCalls += 1;
+    return {
+      symbol,
+      companyName: "Test Company",
+      exchange: "NASDAQ",
+      currency: "USD",
+      price: 123.45,
+      change: 1.25,
+      percentChange: 1.02,
+      volume: 1_000_000,
+      marketSession: "regular",
+      freshness: "near-live",
+      provider: this.name,
+      providerTimestamp: "2026-07-29T15:45:00.000Z",
+      retrievedAt: "2026-07-29T15:45:01.000Z",
+      feedDisclosure: "Test feed disclosure.",
+    };
+  }
+}
+
+test("health and provider status never expose configured secrets", async (t) => {
+  const provider = new StaticMarketDataProvider();
+  const app = await buildApp({ config: testConfig(), provider, logger: false });
+  t.after(async () => app.close());
+
+  const health = await app.inject({ method: "GET", url: "/api/health" });
+  const status = await app.inject({ method: "GET", url: "/api/provider-status" });
+  const combined = `${health.body}\n${status.body}`;
+
+  assert.equal(health.statusCode, 200);
+  assert.equal(status.statusCode, 200);
+  assert.equal(combined.includes(TEST_SECRET), false);
+  assert.equal(status.json().marketData.secretExposed, false);
+  assert.equal(status.json().sec.userAgentExposed, false);
+});
+
+test("ticker search requires a query and caps the requested limit", async (t) => {
+  const provider = new StaticMarketDataProvider();
+  const app = await buildApp({ config: testConfig(), provider, logger: false });
+  t.after(async () => app.close());
+
+  const missing = await app.inject({ method: "GET", url: "/api/tickers" });
+  const found = await app.inject({ method: "GET", url: "/api/tickers?q=aapl&limit=999" });
+
+  assert.equal(missing.statusCode, 400);
+  assert.equal(missing.json().error, "missing_query");
+  assert.equal(found.statusCode, 200);
+  assert.equal(found.json().query, "aapl");
+  assert.equal(found.json().count, 1);
+});
+
+test("quote route normalizes valid symbols and rejects unsupported characters", async (t) => {
+  const provider = new StaticMarketDataProvider();
+  const app = await buildApp({ config: testConfig(), provider, logger: false });
+  t.after(async () => app.close());
+
+  const valid = await app.inject({ method: "GET", url: "/api/quotes/aapl" });
+  const invalid = await app.inject({ method: "GET", url: "/api/quotes/AAPL%2F..%2Fsecret" });
+
+  assert.equal(valid.statusCode, 200);
+  assert.equal(valid.json().symbol, "AAPL");
+  assert.equal(valid.json().price, 123.45);
+  assert.equal(invalid.statusCode, 400);
+  assert.equal(invalid.json().error, "invalid_symbol");
+  assert.equal(provider.quoteCalls, 1);
+});
+
+test("unconfigured provider returns a clear 503 instead of invented data", async (t) => {
+  const app = await buildApp({
+    config: {
+      ...testConfig(),
+      marketDataProvider: "unconfigured",
+      twelveDataApiKey: null,
+    },
+    provider: new UnconfiguredMarketDataProvider(),
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({ method: "GET", url: "/api/quotes/AAPL" });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "provider_not_configured");
+  assert.match(response.json().message, /not configured/i);
+  assert.equal(response.body.includes("123.45"), false);
+});
