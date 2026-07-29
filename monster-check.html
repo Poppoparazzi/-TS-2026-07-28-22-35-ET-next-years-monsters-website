@@ -1,63 +1,98 @@
-<!-- TS: 2026-07-28 19:20 ET -->
+<!-- TS: 2026-07-29 08:58 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Monster Check™ | Next Year’s Monsters</title>
-  <meta name="description" content="Next Year’s Monsters™ educational stock evidence website prototype.">
+  <title>Monster Check™ | Next Year’s Monsters™</title>
+  <meta name="description" content="Enter a stock ticker to see its illustrative Monster Rating™, evidence, risks, future watch points, and the structure planned for live news impact.">
   <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/monster-check.css">
 </head>
-<body>
+<body class="monster-page">
 
-<header class="site-header">
-  <div class="wrap nav">
-    <a class="brand" href="index.html">
-      <span class="brand-mark">M</span>
-      <span>Next Year’s Monsters™</span>
+<header class="site-header home-header">
+  <div class="home-nav-shell">
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
+      <span class="home-brand-arrow">↗</span>
+      <span>NEXT YEAR’S MONSTERS™</span>
     </a>
-    <nav class="nav-links" aria-label="Main navigation">
-      <a href="index.html">Home</a>
-      <a href="monster-check.html" class="active">Monster Check™</a>
-      <a href="how-it-works.html">How It Works</a>
-      <a href="vcl-library.html">VCL™ Library</a>
-      <a href="about.html">About</a>
+    <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a class="active" href="monster-check.html">MONSTER CHECK</a>
+      <a href="how-it-works.html">THE SYSTEM</a>
+      <a href="vcl-library.html">VCL™ LIBRARY</a>
+      <a href="about.html">ABOUT</a>
     </nav>
+    <a class="home-nav-cta" href="#ticker-search">CHECK A TICKER</a>
   </div>
 </header>
 
 <main>
-
-<section class="page-hero">
-  <div class="wrap">
-    <span class="eyebrow">Interactive prototype</span>
-    <h1>Monster Check™</h1>
-    <p class="lead">Search the 15 companies in the approved VCL book set by ticker or company name.</p>
-    <div class="notice">These are clearly labeled illustrative demo scores. Live ratings require a licensed market-data source and a real scoring engine.</div>
-  </div>
-</section>
-<section class="section">
-  <div class="wrap">
-    <div class="panel search-panel">
-      <h2>Enter a ticker</h2>
-      <p class="copy">Examples: NVDA, Apple, VRT, Microsoft, MNST.</p>
-      <div class="search-row">
-        <input data-ticker-input aria-label="Ticker or company name" placeholder="Enter ticker or company">
-        <button data-rate-button type="button">Rate</button>
+  <section class="monster-hero">
+    <div class="monster-hero-copy">
+      <p class="home-kicker"><span></span> ENTER THE SYMBOL. READ THE EVIDENCE.</p>
+      <h1>MONSTER<br><strong>CHECK™</strong></h1>
+      <p class="monster-hero-line">ONE SCORE GETS YOUR ATTENTION. THE EVIDENCE EARNS YOUR TRUST.</p>
+      <p class="monster-hero-text">Search the current 15-stock Visual Case Library demonstration. The finished system is designed to cover more than 2,000 U.S. stocks with live market data, verified news, and explainable rating changes.</p>
+    </div>
+    <div class="monster-hero-art">
+      <div class="monster-meter" aria-label="Monster Rating scale from 0 to 100">
+        <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
       </div>
-      <div class="suggestions" data-suggestions></div>
-      <div class="result-card" data-result></div>
+      <img src="captain_breakout.png" alt="Approved full-color Captain Breakout">
+      <p>CAPTAIN BREAKOUT / EVIDENCE BEFORE EXCITEMENT</p>
+    </div>
+  </section>
+
+  <section class="monster-search" id="ticker-search">
+    <div class="monster-search-intro">
+      <span class="home-section-number">00 / SEARCH</span>
+      <h2>WHAT DOES THIS STOCK HAVE?</h2>
+      <p>Enter a ticker or company name. The current demonstration contains the 15 companies from the book’s Visual Case Library.</p>
+    </div>
+
+    <div class="monster-search-panel">
+      <label for="monster-ticker">MONSTER CHECK™</label>
+      <div class="monster-search-row">
+        <span>$</span>
+        <input id="monster-ticker" data-ticker-input aria-label="Ticker or company name" placeholder="ENTER STOCK SYMBOL" autocomplete="off">
+        <button data-rate-button type="button">RUN THE CHECK</button>
+      </div>
+      <div class="suggestions monster-suggestions" data-suggestions></div>
+      <p class="monster-demo-note">CURRENTLY A 15-STOCK EDUCATIONAL DEMONSTRATION. LIVE DATA CONNECTION COMES NEXT.</p>
+    </div>
+  </section>
+
+  <section class="monster-result-shell" aria-live="polite">
+    <div class="result-card monster-result" data-result></div>
+  </section>
+
+  <div class="concept-tape" aria-label="Next Year's Monsters evidence concepts">
+    <div class="concept-tape-track">
+      <span>RECENT NEWS</span><b>◆</b><span>RATING IMPACT</span><b>◆</b><span>WHAT TO WATCH</span><b>◆</b><span>MONSTER DNA™</span><b>◆</b><span>MARKET WEATHER™</span><b>◆</b><span>RISK SIGNALS</span><b>◆</b>
+      <span>RECENT NEWS</span><b>◆</b><span>RATING IMPACT</span><b>◆</b><span>WHAT TO WATCH</span><b>◆</b><span>MONSTER DNA™</span><b>◆</b><span>MARKET WEATHER™</span><b>◆</b><span>RISK SIGNALS</span><b>◆</b>
     </div>
   </div>
-</section>
 
+  <section class="monster-roadmap">
+    <div class="home-section-rule">
+      <span>THE LIVE VERSION</span>
+      <span>01 / WHAT COMES NEXT</span>
+    </div>
+    <div class="monster-roadmap-grid">
+      <h2>FROM DEMO<br>TO 2,000+<br>TICKERS.</h2>
+      <div>
+        <article><strong>LIVE MARKET DATA</strong><p>Price, volume, trend, relative strength, and market context refreshed during market hours.</p></article>
+        <article><strong>VERIFIED NEWS IMPACT</strong><p>Recent developments linked to the rating components they strengthen, weaken, or leave unchanged.</p></article>
+        <article><strong>RATING HISTORY</strong><p>A dated record showing why a score rose, fell, or stayed put.</p></article>
+      </div>
+    </div>
+  </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <strong>Educational disclaimer:</strong> Monster Rating™ measures evidence strength. It is not a buy, sell, or hold recommendation and is not financial advice. Investing involves risk, including loss of principal. The screen does not find guaranteed winners. It finds evidence.
-    <br><br>© 2026 Next Year’s Monsters™. Captain Breakout™, Monster Check™, Monster Rating™, Monster DNA™, Monster Climb™, Market Weather™, Tipping Point™, Move Driver™, and VCL™ are project brands.
-  </div>
+<footer class="home-footer">
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>THE SCREEN DOES NOT FIND GUARANTEED WINNERS. IT FINDS EVIDENCE.</span></div>
+  <p><strong>Educational Use Only:</strong> Monster Rating™ is not a recommendation to buy, sell, or hold any security and does not guarantee future performance. Market conditions and company fundamentals can change rapidly. Investing involves risk, including possible loss of principal.</p>
 </footer>
 
 <script src="assets/app.js"></script>
