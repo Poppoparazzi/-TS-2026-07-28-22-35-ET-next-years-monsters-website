@@ -1,4 +1,4 @@
-// TS: 2026-07-28 19:20 ET
+// TS: 2026-07-29 07:24 ET
 const DEMO_NOTICE = "Illustrative demo score, not live market data or a recommendation.";
 
 async function loadStocks() {
@@ -18,11 +18,21 @@ function setupMascotFallback() {
   const image = document.querySelector("[data-captain-image]");
   const placeholder = document.querySelector("[data-captain-placeholder]");
   if (!image || !placeholder) return;
-  image.addEventListener("load", () => { placeholder.style.display = "none"; });
-  image.addEventListener("error", () => {
+
+  const showImage = () => {
+    image.style.display = "block";
+    placeholder.style.display = "none";
+  };
+  const showPlaceholder = () => {
     image.style.display = "none";
     placeholder.style.display = "grid";
-  });
+  };
+
+  if (image.complete) {
+    image.naturalWidth > 0 ? showImage() : showPlaceholder();
+  }
+  image.addEventListener("load", showImage);
+  image.addEventListener("error", showPlaceholder);
 }
 
 function setupBullSound() {
