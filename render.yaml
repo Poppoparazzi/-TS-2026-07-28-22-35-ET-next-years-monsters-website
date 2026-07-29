@@ -1,0 +1,27 @@
+# TS: 2026-07-29 12:30 ET
+
+services:
+  - type: web
+    name: next-years-monsters-api
+    runtime: node
+    plan: free
+    region: virginia
+    rootDir: backend
+    buildCommand: npm install --no-audit --no-fund && npm run check && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: CORS_ORIGIN
+        value: https://poppoparazzi.github.io
+      - key: MARKET_DATA_PROVIDER
+        value: twelve-data
+      - key: TWELVE_DATA_API_KEY
+        sync: false
+      - key: SEC_USER_AGENT
+        sync: false
