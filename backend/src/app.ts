@@ -1,26 +1,33 @@
-// TS: 2026-07-29 11:45 ET
+// TS: 2026-07-29 12:13 ET
 
 import cors from "@fastify/cors";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { loadConfig, type AppConfig } from "./config.js";
 import { createMarketDataProvider } from "./providers/index.js";
 import {
   type MarketDataProvider,
   ProviderNotConfiguredError,
 } from "./providers/types.js";
+import { createSecDataProvider } from "./sec/index.js";
+import type { SecDataProvider } from "./sec/types.js";
 
 interface TickerQuery {
   readonly q?: string;
   readonly limit?: string;
 }
 
-interface QuoteParams {
+interface LimitQuery {
+  readonly limit?: string;
+}
+
+interface SymbolParams {
   readonly symbol: string;
 }
 
 export interface BuildAppOptions {
   readonly config?: AppConfig;
   readonly provider?: MarketDataProvider;
+  readonly secProvider?: SecDataProvider;
   readonly logger?: boolean;
 }
 
@@ -29,9 +36,24 @@ function normalizeTickerSymbol(value: string): string | null {
   return /^[A-Z0-9.-]{1,15}$/.test(normalized) ? normalized : null;
 }
 
+function parseLimit(value: string | undefined, defaultValue: number, maximum: number): number {
+  const requested = Number(value ?? String(defaultValue));
+  return Number.isFinite(requested)
+    ? Math.min(Math.max(Math.trunc(requested), 1), maximum)
+    : defaultValue;
+}
+
+function sendInvalidSymbol(reply: FastifyReply) {
+  return reply.code(400).send({
+    error: "invalid_symbol",
+    message: "Ticker symbols may contain only letters, numbers, periods, and hyphens.",
+  });
+}
+
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const config = options.config ?? loadConfig();
   const provider = options.provider ?? createMarketDataProvider(config);
+  const secProvider = options.secProvider ?? createSecDataProvider(config);
   const app = Fastify({
     logger:
       options.logger === false
@@ -51,11 +73,15 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get("/api/health", async () => ({
     status: "ok",
     service: "next-years-monsters-api",
-    version: "0.1.0",
+    version: "0.2.0",
     timestamp: new Date().toISOString(),
     marketData: {
       provider: provider.name,
       configured: provider.configured,
+    },
+    sec: {
+      provider: secProvider.name,
+      configured: secProvider.configured,
     },
   }));
 
@@ -66,7 +92,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       secretExposed: false,
     },
     sec: {
-      configured: Boolean(config.secUserAgent),
+      provider: secProvider.name,
+      configured: secProvider.configured,
       userAgentExposed: false,
     },
     timestamp: new Date().toISOString(),
@@ -82,10 +109,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       });
     }
 
-    const requestedLimit = Number(request.query.limit ?? "10");
-    const limit = Number.isFinite(requestedLimit)
-      ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 25)
-      : 10;
+    const limit = parseLimit(request.query.limit, 10, 25);
     const results = await provider.searchTickers(query, limit);
 
     return {
@@ -97,17 +121,41 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     };
   });
 
-  app.get<{ Params: QuoteParams }>("/api/quotes/:symbol", async (request, reply) => {
+  app.get<{ Params: SymbolParams }>("/api/quotes/:symbol", async (request, reply) => {
     const symbol = normalizeTickerSymbol(request.params.symbol);
-
-    if (!symbol) {
-      return reply.code(400).send({
-        error: "invalid_symbol",
-        message: "Ticker symbols may contain only letters, numbers, periods, and hyphens.",
-      });
-    }
-
+    if (!symbol) return sendInvalidSymbol(reply);
     return provider.getQuote(symbol);
+  });
+
+  app.get<{ Params: SymbolParams }>("/api/sec/company/:symbol", async (request, reply) => {
+    const symbol = normalizeTickerSymbol(request.params.symbol);
+    if (!symbol) return sendInvalidSymbol(reply);
+    return secProvider.getCompany(symbol);
+  });
+
+  app.get<{ Params: SymbolParams; Querystring: LimitQuery }>(
+    "/api/sec/filings/:symbol",
+    async (request, reply) => {
+      const symbol = normalizeTickerSymbol(request.params.symbol);
+      if (!symbol) return sendInvalidSymbol(reply);
+
+      const limit = parseLimit(request.query.limit, 10, 50);
+      const filings = await secProvider.getRecentFilings(symbol, limit);
+
+      return {
+        ticker: symbol,
+        count: filings.length,
+        filings,
+        provider: secProvider.name,
+        retrievedAt: new Date().toISOString(),
+      };
+    },
+  );
+
+  app.get<{ Params: SymbolParams }>("/api/sec/facts/:symbol", async (request, reply) => {
+    const symbol = normalizeTickerSymbol(request.params.symbol);
+    if (!symbol) return sendInvalidSymbol(reply);
+    return secProvider.getCompanyFacts(symbol);
   });
 
   app.setErrorHandler((error, request, reply) => {
@@ -124,7 +172,9 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       error:
         error instanceof ProviderNotConfiguredError
           ? "provider_not_configured"
-          : "request_failed",
+          : statusCode === 404
+            ? "not_found"
+            : "request_failed",
       message:
         statusCode >= 500 && !(error instanceof ProviderNotConfiguredError)
           ? "The data service could not complete the request."
