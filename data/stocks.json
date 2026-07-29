@@ -1,0 +1,152 @@
+[
+  {
+    "ticker": "AAPL",
+    "name": "Apple",
+    "score": 88,
+    "tier": "Gold Monster",
+    "sector": "Technology",
+    "why": "Powerful ecosystem, services growth, cash generation, and institutional support.",
+    "warning": "Its enormous size and premium expectations can limit surprise upside.",
+    "dna": ["Brand moat", "Cash flow", "Services", "Institutional strength"]
+  },
+  {
+    "ticker": "NVDA",
+    "name": "NVIDIA",
+    "score": 96,
+    "tier": "Platinum Monster",
+    "sector": "Semiconductors",
+    "why": "AI and data-center leadership, revenue acceleration, margins, and sector dominance.",
+    "warning": "Expectations are extremely high, so pullbacks can be violent.",
+    "dna": ["AI leadership", "Revenue growth", "Margins", "Relative strength"]
+  },
+  {
+    "ticker": "MNST",
+    "name": "Monster Beverage",
+    "score": 86,
+    "tier": "Gold Monster",
+    "sector": "Consumer Staples",
+    "why": "A durable brand, distribution strength, category expansion, and long-term compounding DNA.",
+    "warning": "Mature-category growth and valuation can slow the climb.",
+    "dna": ["Brand power", "Distribution", "Margins", "Compounding"]
+  },
+  {
+    "ticker": "AMZN",
+    "name": "Amazon",
+    "score": 90,
+    "tier": "Platinum Monster",
+    "sector": "Consumer / Cloud",
+    "why": "AWS, advertising, logistics scale, and improving operating leverage.",
+    "warning": "Capital intensity, regulation, and consumer sensitivity remain meaningful.",
+    "dna": ["Cloud", "Advertising", "Scale", "Operating leverage"]
+  },
+  {
+    "ticker": "TSLA",
+    "name": "Tesla",
+    "score": 72,
+    "tier": "Silver Watchlist",
+    "sector": "Automotive / Technology",
+    "why": "Innovation history, brand strength, software ambition, and volatility-driven opportunity.",
+    "warning": "Margins, competition, execution risk, and sentiment swings remain substantial.",
+    "dna": ["Innovation", "Brand", "Software option", "Volatility"]
+  },
+  {
+    "ticker": "NFLX",
+    "name": "Netflix",
+    "score": 84,
+    "tier": "Gold Monster",
+    "sector": "Media",
+    "why": "Global scale, pricing power, advertising optionality, and improving cash generation.",
+    "warning": "Content costs and subscriber expectations can punish weak quarters.",
+    "dna": ["Scale", "Pricing power", "Advertising", "Cash flow"]
+  },
+  {
+    "ticker": "AMD",
+    "name": "Advanced Micro Devices",
+    "score": 79,
+    "tier": "Gold Monster",
+    "sector": "Semiconductors",
+    "why": "Product execution, CPU and GPU exposure, data-center opportunity, and turnaround DNA.",
+    "warning": "Competition and semiconductor cyclicality remain real.",
+    "dna": ["Execution", "Data center", "Turnaround", "AI exposure"]
+  },
+  {
+    "ticker": "COST",
+    "name": "Costco",
+    "score": 84,
+    "tier": "Gold Monster",
+    "sector": "Retail",
+    "why": "Membership economics, customer loyalty, steady comps, and durable operating discipline.",
+    "warning": "Premium valuation can reduce future returns even when the business performs well.",
+    "dna": ["Membership moat", "Loyalty", "Recurring revenue", "Execution"]
+  },
+  {
+    "ticker": "VRT",
+    "name": "Vertiv",
+    "score": 91,
+    "tier": "Platinum Monster",
+    "sector": "Industrial Technology",
+    "why": "Data-center infrastructure demand, power and cooling exposure, and strong thematic tailwinds.",
+    "warning": "A crowded AI-infrastructure trade can create sharp resets.",
+    "dna": ["Data centers", "Power", "Cooling", "Theme leadership"]
+  },
+  {
+    "ticker": "AXON",
+    "name": "Axon Enterprise",
+    "score": 90,
+    "tier": "Platinum Monster",
+    "sector": "Public Safety Technology",
+    "why": "Recurring software, connected devices, public-safety adoption, and ecosystem expansion.",
+    "warning": "Valuation and government procurement cycles can create volatility.",
+    "dna": ["Recurring software", "Ecosystem", "Mission critical", "Expansion"]
+  },
+  {
+    "ticker": "DECK",
+    "name": "Deckers Outdoor",
+    "score": 82,
+    "tier": "Gold Monster",
+    "sector": "Consumer Discretionary",
+    "why": "Brand momentum, strong margins, disciplined distribution, and category expansion.",
+    "warning": "Fashion cycles and high expectations can change quickly.",
+    "dna": ["Brand momentum", "Margins", "Distribution", "Category growth"]
+  },
+  {
+    "ticker": "WING",
+    "name": "Wingstop",
+    "score": 78,
+    "tier": "Gold Monster",
+    "sector": "Restaurants",
+    "why": "Asset-light expansion, unit growth, strong brand awareness, and franchise economics.",
+    "warning": "Valuation, food costs, and consumer traffic remain risks.",
+    "dna": ["Unit growth", "Franchise model", "Brand", "Asset light"]
+  },
+  {
+    "ticker": "META",
+    "name": "Meta Platforms",
+    "score": 89,
+    "tier": "Gold Monster",
+    "sector": "Technology / Advertising",
+    "why": "Advertising scale, engagement, AI-driven efficiency, and powerful cash generation.",
+    "warning": "Regulation, capital spending, and platform shifts remain important.",
+    "dna": ["Advertising moat", "Engagement", "AI efficiency", "Cash flow"]
+  },
+  {
+    "ticker": "APP",
+    "name": "AppLovin",
+    "score": 92,
+    "tier": "Platinum Monster",
+    "sector": "Advertising Technology",
+    "why": "Software growth, advertising optimization, strong market momentum, and margin expansion.",
+    "warning": "Expectations, concentration, and rapid sentiment changes can amplify downside.",
+    "dna": ["Ad technology", "Margins", "Momentum", "Software"]
+  },
+  {
+    "ticker": "MSFT",
+    "name": "Microsoft",
+    "score": 93,
+    "tier": "Platinum Monster",
+    "sector": "Technology",
+    "why": "Cloud scale, enterprise distribution, recurring revenue, AI integration, and cash flow.",
+    "warning": "Its size, valuation, and heavy capital spending raise the performance bar.",
+    "dna": ["Cloud", "Enterprise moat", "Recurring revenue", "AI integration"]
+  }
+]
