@@ -1,6 +1,6 @@
 # Next Year’s Monsters™ API
 
-<!-- TS: 2026-07-29 12:23 ET -->
+<!-- TS: 2026-07-29 12:09 ET -->
 
 This folder contains the provider-neutral TypeScript backend for the live-data phase of Monster Check™.
 
@@ -24,15 +24,18 @@ Implemented:
 - Safe unconfigured-provider behavior when credentials or the required SEC user agent are absent.
 - Automated route, secret-exposure, malformed-symbol, quote-normalization, missing-price, SEC-filing, and SEC-fact tests.
 - GitHub Actions workflow for typechecking and tests on backend changes.
+- Public runtime configuration file with no credentials.
+- Landing-page and dedicated Monster Check™ live quote and latest-filing client.
+- Automatic retention of the clearly labeled demonstration when the live API is absent or unavailable.
 
 Not implemented yet:
 
 - Deployed public API URL.
+- Active public API address in `assets/runtime-config.js`.
 - PostgreSQL database.
 - News provider.
 - Monster Rating™ Version 1 engine.
 - Rating history.
-- Front-end connection to the backend.
 
 ## Local setup
 
@@ -79,6 +82,7 @@ The GitHub Actions workflow `.github/workflows/backend-checks.yml` runs the same
 - `/api/provider-status` confirms that secrets and the SEC user agent are not exposed.
 - `/api/tickers` and `/api/quotes/:symbol` return HTTP 503 rather than fabricated market data.
 - `/api/sec/company/:symbol`, `/api/sec/filings/:symbol`, and `/api/sec/facts/:symbol` return HTTP 503 until `SEC_USER_AGENT` is configured.
+- The website continues showing the labeled 15-stock demonstration because the public runtime API address remains blank.
 
 ## Expected behavior with providers configured
 
@@ -93,11 +97,17 @@ With a valid SEC user agent configured:
 - `/api/sec/filings/AAPL` returns recent filing metadata and official document links.
 - `/api/sec/facts/AAPL` returns selected latest periodic XBRL facts with their complete reporting context and official source links.
 
+With a verified public API address configured:
+
+- Monster Check™ displays the current price, change, freshness, provider timestamp, feed disclosure, and latest official SEC filing above the demonstration analysis.
+- If the quote request fails, the page explicitly activates the demonstration fallback instead of substituting a false value.
+
 ## Next implementation
 
 1. Confirm the GitHub Actions verification run is green and fix any reported issue.
-2. Add a PostgreSQL schema for tickers, quotes, filings, facts, ratings, and rating history.
-3. Deploy the backend to a secure host.
-4. Configure the market-data key and SEC user agent only on that host.
-5. Connect the public website with the existing demonstration data retained as a visible fallback.
-6. Begin Monster Rating™ Version 1 only after live quote and SEC data pass deployment checks.
+2. Deploy the backend using `render.yaml`.
+3. Configure the market-data key and SEC user agent only on that host.
+4. Add the verified API address to `assets/runtime-config.js`.
+5. Confirm the live quote and SEC filing panel on both Monster Check™ surfaces.
+6. Add a PostgreSQL schema for tickers, quotes, filings, facts, ratings, and rating history.
+7. Begin Monster Rating™ Version 1 only after live quote and SEC data pass deployment checks.
