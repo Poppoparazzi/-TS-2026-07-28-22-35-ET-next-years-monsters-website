@@ -1,83 +1,134 @@
-<!-- TS: 2026-07-28 19:20 ET -->
+<!-- TS: 2026-07-29 07:20 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Next Year’s Monsters™</title>
-  <meta name="description" content="Next Year’s Monsters™ educational stock evidence website prototype.">
+  <title>Next Year’s Monsters™ | Find Tomorrow’s Market Leaders Today</title>
+  <meta name="description" content="Next Year’s Monsters™ turns the book into a living market field guide built around sourced evidence, Monster Rating™, Monster DNA™, Market Weather™, Tipping Point™, Move Driver™, and VCL™.">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body>
+<body class="home-page">
 
-<header class="site-header">
-  <div class="wrap nav">
-    <a class="brand" href="index.html" class="active">
-      <span class="brand-mark">M</span>
-      <span>Next Year’s Monsters™</span>
+<header class="site-header home-header">
+  <div class="home-nav-shell">
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
+      <span class="home-brand-arrow">↗</span>
+      <span>NEXT YEAR’S MONSTERS™</span>
     </a>
-    <nav class="nav-links" aria-label="Main navigation">
-      <a href="index.html">Home</a>
-      <a href="monster-check.html">Monster Check™</a>
-      <a href="how-it-works.html">How It Works</a>
-      <a href="vcl-library.html">VCL™ Library</a>
-      <a href="about.html">About</a>
+    <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a href="#monster-check">MONSTER CHECK</a>
+      <a href="#system">THE SYSTEM</a>
+      <a href="#captain">CAPTAIN BREAKOUT</a>
     </nav>
+    <a class="home-nav-cta" href="#monster-check">CHECK A TICKER</a>
   </div>
 </header>
 
 <main>
-
-<section class="hero">
-  <div class="wrap hero-grid">
-    <div>
-      <span class="eyebrow">Captain Breakout presents Monster Check™</span>
-      <h1>One ticker.<br>One score.<br>Then the evidence.</h1>
-      <p class="lead">What tomorrow’s greatest stocks look like today.</p>
-      <p class="copy">Next Year’s Monsters™ turns stock evidence into a memorable rating, then opens the deeper case through Monster DNA™, Market Weather™, Tipping Point™, Move Driver™, and VCL™.</p>
-      <div class="actions">
-        <a class="btn btn-primary" href="monster-check.html">Search the 15-stock demo</a>
-        <a class="btn btn-secondary" href="how-it-works.html">See the framework</a>
+  <section class="home-hero" aria-labelledby="hero-title">
+    <div class="home-hero-copy">
+      <p class="home-kicker"><span></span> THE BOOK BECOMES A LIVE MARKET FIELD GUIDE</p>
+      <h1 id="hero-title">NEXT<br>YEAR’S<br><strong>MONSTERS™</strong></h1>
+      <p class="home-hero-line">NO BULL. NO NOISE. FIND WHAT COULD MOVE NEXT.</p>
+      <p class="home-hero-text">The book taught the hunt. The site tracks it with sourced evidence, explainable scores, and the setups behind tomorrow’s potential market leaders.</p>
+      <div class="home-hero-actions">
+        <a class="home-btn home-btn-green" href="#monster-check">RUN A MONSTER CHECK</a>
+        <a class="home-btn home-btn-outline" href="#mission">SEE THE MISSION</a>
       </div>
-      <div class="notice"><strong>The screen does not find guaranteed winners.</strong> It finds evidence.</div>
     </div>
-    <aside class="hero-card">
-      <div class="mascot-frame">
-        <img data-captain-image src="assets/captain_breakout.png" alt="Approved Captain Breakout full-body artwork">
-        <div class="asset-placeholder" data-captain-placeholder>
-          <div><strong>Approved Captain Breakout™</strong>Place the locked full-body PNG here. The frame is fixed so his head will not be cropped.</div>
-        </div>
-      </div>
-      <button class="bull-button" data-bull-button type="button">Play Approved Bull Sound</button>
-      <audio data-bull-audio preload="auto">
-        <source src="assets/tunetank-bull-mad-mooing.wav" type="audio/wav">
-      </audio>
-      <div class="bull-status" data-bull-status></div>
-    </aside>
-  </div>
-</section>
-<section class="section">
-  <div class="wrap">
-    <h2>The evidence framework</h2>
-    <p class="copy">Fast enough for a first look, deep enough for serious study. A rare compromise where nobody had to sacrifice the useful part.</p>
-    <div class="cards">
-      <article class="card"><h3>Monster Rating™</h3><p>A 0–100 educational evidence score that summarizes setup quality, fundamentals, trend, catalysts, and risk.</p></article>
-      <article class="card"><h3>Monster DNA™</h3><p>The durable traits behind the rating, including growth, margins, cash flow, leadership, and execution.</p></article>
-      <article class="card"><h3>Market Weather™</h3><p>The surrounding sector and macro conditions that can strengthen or weaken the setup.</p></article>
-      <article class="card"><h3>Tipping Point™</h3><p>The period when the evidence changed and the stock began behaving differently.</p></article>
-      <article class="card"><h3>VCL™</h3><p>Visual Case Library pages showing dates, prices, pullbacks, breakouts, and what happened next.</p></article>
-      <article class="card"><h3>Move Driver™</h3><p>Separates company-specific strength from sector, macro, and sympathy-driven movement.</p></article>
-    </div>
-  </div>
-</section>
 
+    <div class="home-hero-art" aria-label="Captain Breakout full-color artwork">
+      <div class="hero-chart-lines" aria-hidden="true"></div>
+      <img data-captain-image src="captain_breakout.png" alt="Captain Breakout in full color, wearing the approved navy and gold suit with CB cuffs and dollar-sign belt buckle">
+      <div class="asset-placeholder" data-captain-placeholder>
+        <div><strong>Captain Breakout™</strong>The approved full-color image belongs here.</div>
+      </div>
+      <div class="hero-art-caption">CAPTAIN BREAKOUT / SPOT THE SETUP BEFORE THE CROWD</div>
+    </div>
+  </section>
+
+  <section class="home-check" id="monster-check" aria-labelledby="check-title">
+    <div class="home-check-heading">
+      <span class="home-section-number">00 / MONSTER CHECK</span>
+      <h2 id="check-title">CHECK ANY STOCK.<br>READ THE EVIDENCE.</h2>
+      <p>Enter one of the 15 Visual Case Library tickers. Ratings shown here are clearly labeled educational demonstrations, not live recommendations.</p>
+    </div>
+    <div class="home-check-panel">
+      <div class="home-search-label">MONSTER CHECK™</div>
+      <div class="home-search-row">
+        <span class="home-dollar">$</span>
+        <input data-ticker-input aria-label="Enter stock ticker" placeholder="ENTER STOCK SYMBOL" autocomplete="off">
+        <button data-rate-button type="button">RUN THE CHECK</button>
+      </div>
+      <div class="suggestions home-suggestions" data-suggestions></div>
+      <div class="result-card home-result-card" data-result></div>
+      <p class="home-data-note">THE SCREEN DOES NOT FIND GUARANTEED WINNERS. IT FINDS EVIDENCE.</p>
+    </div>
+  </section>
+
+  <div class="concept-tape" aria-label="Next Year's Monsters evidence concepts">
+    <div class="concept-tape-track">
+      <span>VCL™</span><b>◆</b><span>TIPPING POINT™</span><b>◆</b><span>MARKET WEATHER™</span><b>◆</b><span>MOVE DRIVER™</span><b>◆</b><span>MONSTER DNA™</span><b>◆</b><span>MONSTER RATING™</span><b>◆</b>
+      <span>VCL™</span><b>◆</b><span>TIPPING POINT™</span><b>◆</b><span>MARKET WEATHER™</span><b>◆</b><span>MOVE DRIVER™</span><b>◆</b><span>MONSTER DNA™</span><b>◆</b><span>MONSTER RATING™</span><b>◆</b>
+    </div>
+  </div>
+
+  <section class="home-mission" id="mission" aria-labelledby="mission-title">
+    <div class="home-section-rule">
+      <span>FROM PAGE TO MARKET</span>
+      <span>01 / THE MISSION</span>
+    </div>
+    <div class="home-mission-grid">
+      <h2 id="mission-title">YOU READ THE BOOK.<br>NOW HUNT THE MARKET.</h2>
+      <div class="home-mission-copy">
+        <p>Next Year’s Monsters™ is not another stock list. It is a disciplined way to recognize the businesses, catalysts, and market structures that can produce tomorrow’s leaders.</p>
+        <p>This site turns that field guide into a living system: searchable, updated, historically accountable, and clear about the evidence behind every rating.</p>
+        <a class="text-arrow-link" href="how-it-works.html">EXPLORE THE SYSTEM →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-system" id="system" aria-labelledby="system-title">
+    <div class="home-section-rule home-section-rule-dark">
+      <span>THE EVIDENCE ENGINE</span>
+      <span>02 / THE SYSTEM</span>
+    </div>
+    <div class="home-system-header">
+      <h2 id="system-title">ONE SCORE.<br>SIX WAYS TO<br>QUESTION IT.</h2>
+      <p>Monster Rating™ is the front door, not the final answer. Every score opens into the evidence that created it.</p>
+    </div>
+    <div class="home-system-grid">
+      <article><span>01</span><h3>MONSTER RATING™</h3><p>A readable 0–100 summary of evidence strength, with no claim of certainty.</p></article>
+      <article><span>02</span><h3>MONSTER DNA™</h3><p>Growth, margins, cash flow, leadership, execution, catalysts, and risk.</p></article>
+      <article><span>03</span><h3>MARKET WEATHER™</h3><p>The sector, macro, rates, and leadership conditions surrounding the stock.</p></article>
+      <article><span>04</span><h3>TIPPING POINT™</h3><p>The moment the business evidence or price behavior materially changed.</p></article>
+      <article><span>05</span><h3>MOVE DRIVER™</h3><p>What is actually moving the stock: company, sector, macro, or sympathy.</p></article>
+      <article><span>06</span><h3>VCL™</h3><p>Visual cases showing dates, prices, pullbacks, breakouts, and what happened next.</p></article>
+    </div>
+  </section>
+
+  <section class="home-captain" id="captain" aria-labelledby="captain-title">
+    <div class="home-captain-art">
+      <span class="captain-wordmark">CAPTAIN<br><strong>BREAKOUT</strong></span>
+      <img src="captain_breakout.png" alt="Approved full-color Captain Breakout">
+      <p>SPOT THE SETUP BEFORE THE CROWD.</p>
+    </div>
+    <div class="home-captain-copy">
+      <p class="home-kicker home-kicker-dark"><span></span> YOUR GUIDE TO THE HUNT</p>
+      <h2 id="captain-title">CAPTAIN<br>BREAKOUT<br>KNOWS A<br>SETUP WHEN<br>HE SEES ONE.</h2>
+      <p>He represents disciplined preparation, visual evidence, and the courage to ask what the chart and the business are really saying.</p>
+      <a class="home-btn home-btn-black" href="about.html">MEET CAPTAIN BREAKOUT</a>
+    </div>
+  </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <strong>Educational disclaimer:</strong> Monster Rating™ measures evidence strength. It is not a buy, sell, or hold recommendation and is not financial advice. Investing involves risk, including loss of principal. The screen does not find guaranteed winners. It finds evidence.
-    <br><br>© 2026 Next Year’s Monsters™. Captain Breakout™, Monster Check™, Monster Rating™, Monster DNA™, Monster Climb™, Market Weather™, Tipping Point™, Move Driver™, and VCL™ are project brands.
+<footer class="home-footer">
+  <div>
+    <strong>NEXT YEAR’S MONSTERS™</strong>
+    <span>WHAT TOMORROW’S GREATEST STOCKS LOOK LIKE TODAY.</span>
   </div>
+  <p><strong>Educational disclaimer:</strong> Monster Rating™ measures evidence strength. It is not a buy, sell, or hold recommendation and is not financial advice. Investing involves risk, including loss of principal.</p>
 </footer>
 
 <script src="assets/app.js"></script>
