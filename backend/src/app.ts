@@ -1,10 +1,13 @@
-// TS: 2026-07-29 10:47 ET
+// TS: 2026-07-29 11:45 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
-import { loadConfig } from "./config.js";
+import { loadConfig, type AppConfig } from "./config.js";
 import { createMarketDataProvider } from "./providers/index.js";
-import { ProviderNotConfiguredError } from "./providers/types.js";
+import {
+  type MarketDataProvider,
+  ProviderNotConfiguredError,
+} from "./providers/types.js";
 
 interface TickerQuery {
   readonly q?: string;
@@ -15,13 +18,27 @@ interface QuoteParams {
   readonly symbol: string;
 }
 
-export async function buildApp(): Promise<FastifyInstance> {
-  const config = loadConfig();
-  const provider = createMarketDataProvider(config);
+export interface BuildAppOptions {
+  readonly config?: AppConfig;
+  readonly provider?: MarketDataProvider;
+  readonly logger?: boolean;
+}
+
+function normalizeTickerSymbol(value: string): string | null {
+  const normalized = value.trim().toUpperCase();
+  return /^[A-Z0-9.-]{1,15}$/.test(normalized) ? normalized : null;
+}
+
+export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
+  const config = options.config ?? loadConfig();
+  const provider = options.provider ?? createMarketDataProvider(config);
   const app = Fastify({
-    logger: {
-      level: config.nodeEnv === "production" ? "info" : "debug",
-    },
+    logger:
+      options.logger === false
+        ? false
+        : {
+            level: config.nodeEnv === "production" ? "info" : "debug",
+          },
   });
 
   const allowedOrigins = [...config.corsOrigins];
@@ -66,7 +83,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
 
     const requestedLimit = Number(request.query.limit ?? "10");
-    const limit = Number.isFinite(requestedLimit) ? requestedLimit : 10;
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 25)
+      : 10;
     const results = await provider.searchTickers(query, limit);
 
     return {
@@ -78,8 +97,17 @@ export async function buildApp(): Promise<FastifyInstance> {
     };
   });
 
-  app.get<{ Params: QuoteParams }>("/api/quotes/:symbol", async (request) => {
-    return provider.getQuote(request.params.symbol);
+  app.get<{ Params: QuoteParams }>("/api/quotes/:symbol", async (request, reply) => {
+    const symbol = normalizeTickerSymbol(request.params.symbol);
+
+    if (!symbol) {
+      return reply.code(400).send({
+        error: "invalid_symbol",
+        message: "Ticker symbols may contain only letters, numbers, periods, and hyphens.",
+      });
+    }
+
+    return provider.getQuote(symbol);
   });
 
   app.setErrorHandler((error, request, reply) => {
