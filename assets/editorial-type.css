@@ -1,0 +1,234 @@
+/* TS: 2026-07-29 10:14 ET */
+
+:root {
+  --editorial-display-font: "Segoe UI", Arial, Helvetica, sans-serif;
+  --editorial-display-weight: 800;
+}
+
+/* Keep the editorial strength while removing the crushed Impact-style letterforms. */
+.home-page h1,
+.home-page h2,
+.home-page h3,
+.monster-page h1,
+.monster-page h2,
+.monster-page h3,
+.monster-result h2,
+.monster-result h3,
+.home-brand,
+.home-hero-line,
+.monster-hero-line,
+.concept-tape-track,
+.home-system-grid h3,
+.captain-wordmark,
+.home-footer div strong,
+.monster-score-card strong,
+.monster-news-status strong,
+.monster-roadmap-grid article strong {
+  font-family: var(--editorial-display-font);
+  font-weight: var(--editorial-display-weight);
+  letter-spacing: -.022em;
+}
+
+.home-brand,
+.home-nav-links a,
+.home-nav-cta,
+.home-kicker,
+.home-btn,
+.home-section-number,
+.home-search-label,
+.monster-search-panel > label,
+.monster-search-row button,
+.monster-demo-flag,
+.monster-result-sector,
+.monster-score-card > span,
+.monster-score-card em,
+.monster-result-panel > span,
+.monster-section-label,
+.monster-dna-list .dna,
+.home-section-rule {
+  font-weight: 800;
+}
+
+.home-hero h1 {
+  font-size: clamp(72px, 8vw, 136px);
+  line-height: .9;
+  letter-spacing: -.03em;
+}
+
+.home-hero-line {
+  font-size: clamp(22px, 2vw, 34px);
+  line-height: 1.12;
+  letter-spacing: -.01em;
+}
+
+.home-check-heading h2 {
+  font-size: clamp(46px, 4.8vw, 78px);
+  line-height: .96;
+  letter-spacing: -.025em;
+}
+
+.concept-tape-track {
+  font-size: 20px;
+  letter-spacing: -.01em;
+}
+
+.home-mission h2 {
+  font-size: clamp(62px, 7vw, 118px);
+  line-height: .9;
+  letter-spacing: -.03em;
+}
+
+.home-system-header h2 {
+  font-size: clamp(60px, 6.8vw, 112px);
+  line-height: .91;
+  letter-spacing: -.03em;
+}
+
+.home-system-grid h3 {
+  font-size: 28px;
+  line-height: 1.12;
+  letter-spacing: -.015em;
+}
+
+.captain-wordmark {
+  font-size: clamp(48px, 5vw, 90px);
+  line-height: .92;
+  letter-spacing: -.025em;
+}
+
+.home-captain-copy h2 {
+  font-size: clamp(56px, 5.5vw, 94px);
+  line-height: .91;
+  letter-spacing: -.03em;
+}
+
+.monster-hero h1 {
+  font-size: clamp(78px, 8.4vw, 142px);
+  line-height: .9;
+  letter-spacing: -.03em;
+}
+
+.monster-hero-line {
+  font-size: clamp(22px, 2.1vw, 35px);
+  line-height: 1.12;
+  letter-spacing: -.01em;
+}
+
+.monster-search-intro h2 {
+  font-size: clamp(46px, 4.8vw, 78px);
+  line-height: .96;
+  letter-spacing: -.025em;
+}
+
+.monster-result-identity h2 {
+  font-size: clamp(44px, 5vw, 82px);
+  line-height: .96;
+  letter-spacing: -.025em;
+}
+
+.monster-result-identity h2 span {
+  display: inline-block;
+  margin-right: .12em;
+  color: #df473a;
+  font-size: .78em;
+  font-weight: 750;
+  letter-spacing: -.012em;
+  vertical-align: .06em;
+}
+
+.monster-score-card strong {
+  font-size: clamp(70px, 7vw, 112px);
+  line-height: .95;
+  letter-spacing: -.025em;
+}
+
+.monster-result-panel h3,
+.monster-dna-section h3,
+.monster-trigger h3 {
+  font-size: clamp(28px, 2.7vw, 42px);
+  line-height: 1.05;
+  letter-spacing: -.018em;
+}
+
+.monster-news-copy h3 {
+  font-size: clamp(36px, 4.5vw, 68px);
+  line-height: 1;
+  letter-spacing: -.022em;
+}
+
+.monster-news-status strong {
+  font-size: clamp(30px, 3vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -.018em;
+  overflow-wrap: anywhere;
+}
+
+.monster-roadmap-grid > h2 {
+  font-size: clamp(58px, 6.5vw, 110px);
+  line-height: .93;
+  letter-spacing: -.03em;
+}
+
+.monster-roadmap-grid article strong {
+  font-size: 24px;
+  line-height: 1.12;
+  letter-spacing: -.012em;
+}
+
+/* Bring the remaining prototype pages into the same calmer typographic family. */
+body:not(.home-page):not(.monster-page) .page-hero h1 {
+  font-family: var(--editorial-display-font);
+  font-size: clamp(42px, 5.5vw, 74px);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -.025em;
+}
+
+body:not(.home-page):not(.monster-page) .step h3,
+body:not(.home-page):not(.monster-page) .card h3 {
+  font-family: var(--editorial-display-font);
+  font-weight: 750;
+  letter-spacing: -.015em;
+}
+
+@media (max-width: 650px) {
+  .home-hero h1 {
+    font-size: clamp(62px, 20vw, 92px);
+    line-height: .92;
+  }
+
+  .home-mission h2,
+  .home-system-header h2 {
+    font-size: clamp(52px, 16vw, 72px);
+    line-height: .94;
+  }
+
+  .home-captain-copy h2 {
+    font-size: clamp(48px, 14vw, 66px);
+    line-height: .94;
+  }
+
+  .captain-wordmark {
+    font-size: clamp(44px, 13vw, 58px);
+    line-height: .95;
+  }
+
+  .monster-hero h1 {
+    font-size: clamp(58px, 17vw, 76px);
+    line-height: .93;
+  }
+
+  .monster-result-identity h2 {
+    font-size: clamp(38px, 12.5vw, 58px);
+    line-height: .98;
+  }
+
+  .monster-result-identity h2 span {
+    font-size: .76em;
+  }
+
+  .monster-roadmap-grid > h2 {
+    font-size: clamp(52px, 15vw, 76px);
+    line-height: .96;
+  }
+}
