@@ -1,0 +1,35 @@
+/* TS: 2026-07-29 11:12 ET */
+
+/* Keep important status words intact. Browsers may wrap at spaces, never inside a word. */
+.monster-news-status strong,
+.home-result-card .monster-news-status strong {
+  max-width: 100%;
+  font-size: clamp(27px, 2.15vw, 38px);
+  line-height: 1.08;
+  letter-spacing: -.012em;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+  text-wrap: balance;
+}
+
+.monster-news-status {
+  min-width: 0;
+}
+
+@media (min-width: 801px) {
+  .monster-news-section {
+    grid-template-columns: minmax(0, 1.18fr) minmax(340px, .82fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .monster-news-section {
+    grid-template-columns: 1fr;
+  }
+
+  .monster-news-status strong,
+  .home-result-card .monster-news-status strong {
+    font-size: clamp(28px, 8vw, 38px);
+  }
+}
