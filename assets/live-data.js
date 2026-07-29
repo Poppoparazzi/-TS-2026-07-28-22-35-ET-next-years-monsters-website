@@ -1,4 +1,4 @@
-// TS: 2026-07-29 12:42 ET
+// TS: 2026-07-29 12:53 ET
 
 (() => {
   const CONFIG = window.NYM_CONFIG ?? {};
@@ -41,28 +41,42 @@
     return response.json();
   }
 
+  function finiteNumber(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
   function formatMoney(value, currency = "USD") {
-    if (!Number.isFinite(value)) return "Unavailable";
+    const number = finiteNumber(value);
+    if (number === null) return "Unavailable";
+
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(value);
+    }).format(number);
   }
 
   function formatSigned(value, suffix = "") {
-    if (!Number.isFinite(value)) return "Unavailable";
-    const sign = value > 0 ? "+" : "";
-    return `${sign}${value.toFixed(2)}${suffix}`;
+    const number = finiteNumber(value);
+    if (number === null) return "Unavailable";
+
+    const sign = number > 0 ? "+" : "";
+    return `${sign}${number.toFixed(2)}${suffix}`;
   }
 
   function formatTimestamp(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "Timestamp unavailable";
+
     return new Intl.DateTimeFormat("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
       timeZoneName: "short",
     }).format(date);
   }
@@ -105,12 +119,12 @@
 
   function renderQuote(section, quote) {
     section.querySelector("[data-live-price]").textContent = formatMoney(
-      Number(quote.price),
+      quote.price,
       quote.currency || "USD",
     );
     section.querySelector("[data-live-change]").textContent = `${formatSigned(
-      Number(quote.change),
-    )} · ${formatSigned(Number(quote.percentChange), "%")}`;
+      quote.change,
+    )} · ${formatSigned(quote.percentChange, "%")}`;
     section.querySelector("[data-live-freshness]").textContent = String(
       quote.freshness || "Unknown freshness",
     ).toUpperCase();
