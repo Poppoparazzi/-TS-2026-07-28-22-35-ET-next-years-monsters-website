@@ -1,4 +1,4 @@
-/* TS: 2026-07-29 10:14 ET */
+/* TS: 2026-07-29 11:22 ET */
 
 :root {
   --editorial-display-font: "Segoe UI", Arial, Helvetica, sans-serif;
@@ -157,10 +157,12 @@
 }
 
 .monster-news-status strong {
-  font-size: clamp(30px, 3vw, 48px);
-  line-height: 1.05;
-  letter-spacing: -.018em;
-  overflow-wrap: anywhere;
+  font-size: clamp(27px, 2.45vw, 40px);
+  line-height: 1.06;
+  letter-spacing: -.014em;
+  overflow-wrap: normal !important;
+  word-break: normal;
+  hyphens: none;
 }
 
 .monster-roadmap-grid > h2 {
@@ -173,6 +175,26 @@
   font-size: 24px;
   line-height: 1.12;
   letter-spacing: -.012em;
+}
+
+/* Display text may wrap between words, never through the middle of a word. */
+.home-page h1,
+.home-page h2,
+.home-page h3,
+.monster-page h1,
+.monster-page h2,
+.monster-page h3,
+.monster-result h2,
+.monster-result h3,
+.monster-news-status strong,
+.monster-roadmap-grid article strong,
+.leaderboard-page h1,
+.leaderboard-page h2,
+.leaderboard-page h3,
+.leaderboard-page strong {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 /* Bring the remaining prototype pages into the same calmer typographic family. */
@@ -225,6 +247,10 @@ body:not(.home-page):not(.monster-page) .card h3 {
 
   .monster-result-identity h2 span {
     font-size: .76em;
+  }
+
+  .monster-news-status strong {
+    font-size: clamp(27px, 9vw, 36px);
   }
 
   .monster-roadmap-grid > h2 {
