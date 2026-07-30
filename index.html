@@ -1,11 +1,11 @@
-<!-- TS: 2026-07-30 06:58 ET -->
+<!-- TS: 2026-07-30 11:43 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Next Year’s Monsters™ | Find Tomorrow’s Market Leaders Today</title>
-  <meta name="description" content="Next Year’s Monsters™ turns the book into a living market field guide built around sourced evidence, Monster Rating™, Monster DNA™, Market Weather™, Tipping Point™, Move Driver™, and VCL™.">
+  <meta name="description" content="Search the Next Year’s Monsters™ stock directory, open Monster Checks, charts, current stories, and the evidence framework built to identify tomorrow’s potential market leaders.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/monster-check.css">
   <style>
@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="assets/text-fit.css">
   <link rel="stylesheet" href="assets/live-data.css">
   <link rel="stylesheet" href="assets/home-market-tools.css">
+  <link rel="stylesheet" href="assets/home-stock-finder.css">
 </head>
 <body class="home-page">
 
@@ -32,25 +33,35 @@
       <span>NEXT YEAR’S MONSTERS™</span>
     </a>
     <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a href="coverage-universe.html">FIND STOCKS</a>
       <a href="#monster-check">MONSTER CHECK</a>
       <a href="top-monsters.html">TOP MONSTERS</a>
-      <a href="#system">THE SYSTEM</a>
-      <a href="#captain">CAPTAIN BREAKOUT</a>
+      <a href="market-explorer.html">FULL CHARTS</a>
     </nav>
-    <a class="home-nav-cta" href="#monster-check">CHECK A TICKER</a>
+    <a class="home-nav-cta" href="#home-stock-finder">SEARCH A STOCK</a>
   </div>
 </header>
 
 <main>
   <section class="home-hero" aria-labelledby="hero-title">
     <div class="home-hero-copy">
-      <p class="home-kicker"><span></span> THE BOOK BECOMES A LIVE MARKET FIELD GUIDE</p>
+      <p class="home-kicker"><span></span> SEARCH THE MARKET. FOLLOW THE EVIDENCE.</p>
       <h1 id="hero-title">NEXT<br>YEAR’S<br><strong>MONSTERS™</strong></h1>
-      <p class="home-hero-line">NO BULL. NO NOISE. FIND WHAT COULD MOVE NEXT.</p>
-      <p class="home-hero-text">The book taught the hunt. The site tracks it with sourced evidence, explainable scores, and the setups behind tomorrow’s potential market leaders.</p>
+      <p class="home-hero-line">FIND THE STOCK. SEE WHAT EXISTS. THEN READ THE EVIDENCE.</p>
+      <p class="home-hero-text">Search the current 25-stock directory by ticker, company, or industry. Fifteen companies have educational Monster Check demonstrations; all 25 have external charts and latest available stories.</p>
+
+      <form class="home-stock-finder" id="home-stock-finder" data-home-stock-finder>
+        <label for="home-stock-search">FIND A STOCK, COMPANY, OR INDUSTRY</label>
+        <div class="home-stock-finder-row">
+          <input id="home-stock-search" data-home-stock-finder-input aria-label="Find a ticker, company, or industry" placeholder="TRY AAPL, PALANTIR, OR SEMICONDUCTORS" autocomplete="off">
+          <button type="submit">SEARCH STOCKS</button>
+        </div>
+        <small>The directory will tell you whether a Monster Check exists and open the correct Check, Chart, or Current Stories page.</small>
+      </form>
+
       <div class="home-hero-actions">
         <a class="home-btn home-btn-green" href="#monster-check">RUN A MONSTER CHECK</a>
-        <a class="home-btn home-btn-outline" href="top-monsters.html">SEE TOP MONSTERS</a>
+        <a class="home-btn home-btn-outline" href="coverage-universe.html">OPEN STOCK DIRECTORY</a>
       </div>
     </div>
 
@@ -67,8 +78,8 @@
   <section class="home-check" id="monster-check" aria-labelledby="check-title">
     <div class="home-check-heading">
       <span class="home-section-number">00 / MONSTER CHECK</span>
-      <h2 id="check-title">CHECK ANY STOCK.<br>READ THE EVIDENCE.</h2>
-      <p>Enter one of the 15 Visual Case Library tickers. Ratings shown here are clearly labeled educational demonstrations, not live recommendations.</p>
+      <h2 id="check-title">RUN A CHECK.<br>READ THE EVIDENCE.</h2>
+      <p>Enter one of the 15 Visual Case Library tickers. Ratings shown here are clearly labeled educational demonstrations, not internally verified live recommendations.</p>
     </div>
     <div class="home-check-panel">
       <div class="home-search-label">MONSTER CHECK™</div>
@@ -94,28 +105,28 @@
     <div class="home-market-tools-inner">
       <div class="home-market-tools-head">
         <h2 id="market-tools-title">THE MARKET<br>TOOLKIT.</h2>
-        <p>Five direct doors into the working website. External market widgets may be delayed. Internal verified-live ratings remain a separate production milestone.</p>
+        <p>Five direct doors into the working website. External market information may be delayed. Internally verified live ratings remain a separate production milestone.</p>
       </div>
       <div class="home-market-tools-grid">
         <a class="home-market-tool-card home-market-tool-card-featured" href="market-explorer.html">
-          <div><span>01 / COMPARE</span><strong>MARKET EXPLORER</strong><small>Put any two of the 15 pilot stocks side by side with interactive charts and time ranges.</small></div>
-          <em>COMPARE TWO STOCKS →</em>
+          <div><span>01 / CHARTS</span><strong>FULL CHARTS</strong><small>Study one or compare two companies from the current 25-stock external market universe.</small></div>
+          <em>OPEN THE CHARTS →</em>
         </a>
         <a class="home-market-tool-card" href="market-pulse.html">
-          <div><span>02 / CONTEXT</span><strong>MARKET PULSE</strong><small>See the Monster 15, indexes, sectors, macro markets, and the S&amp;P 500 heatmap.</small></div>
+          <div><span>02 / CONTEXT</span><strong>MARKET PULSE</strong><small>See the Market 25, indexes, sectors, macro markets, and the S&amp;P 500 heatmap.</small></div>
           <em>READ THE MARKET →</em>
         </a>
         <a class="home-market-tool-card" href="news-radar.html">
-          <div><span>03 / CATALYSTS</span><strong>NEWS RADAR</strong><small>Place current external company stories beside the stock’s actual price reaction.</small></div>
-          <em>SCAN THE NEWS →</em>
+          <div><span>03 / STORIES</span><strong>NEWS RADAR</strong><small>Place the latest available external company stories beside the stock’s price reaction.</small></div>
+          <em>SCAN THE STORIES →</em>
         </a>
         <a class="home-market-tool-card" href="live-status.html">
-          <div><span>04 / ACCOUNTABILITY</span><strong>LIVE STATUS</strong><small>See what is truly connected, what remains demonstration-only, and what the production pipeline still needs.</small></div>
-          <em>CHECK THE ROLLOUT →</em>
+          <div><span>04 / ACCOUNTABILITY</span><strong>DATA STATUS</strong><small>See what is truly connected, what remains demonstration-only, and what the production pipeline still needs.</small></div>
+          <em>CHECK DATA STATUS →</em>
         </a>
         <a class="home-market-tool-card" href="coverage-universe.html">
-          <div><span>05 / SCALE</span><strong>COVERAGE UNIVERSE</strong><small>Count the current 15 profiles, the 10 empty Top-25 slots, and the honest path toward 2,000 stocks.</small></div>
-          <em>SEE WHAT EXISTS →</em>
+          <div><span>05 / DIRECTORY</span><strong>FIND STOCKS</strong><small>Search 25 companies by ticker, name, or industry and open the available Check, Chart, or Current Stories.</small></div>
+          <em>OPEN STOCK DIRECTORY →</em>
         </a>
       </div>
     </div>
@@ -182,6 +193,7 @@
 <script src="assets/app.js"></script>
 <script src="assets/live-data.js"></script>
 <script src="assets/landing-scroll.js"></script>
+<script src="assets/home-stock-finder.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>
 </html>
