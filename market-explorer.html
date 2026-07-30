@@ -1,0 +1,123 @@
+<!-- TS: 2026-07-30 01:37 ET -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Market Explorer | Next Year’s Monsters™</title>
+  <meta name="description" content="Compare any two stocks from the Next Year’s Monsters™ 15-stock pilot using interactive external market charts and direct Monster Check™ links.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/editorial-type.css">
+  <link rel="stylesheet" href="assets/market-explorer.css">
+</head>
+<body class="market-explorer-page">
+
+<header class="site-header home-header">
+  <div class="home-nav-shell">
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
+      <span class="home-brand-arrow">↗</span>
+      <span>NEXT YEAR’S MONSTERS™</span>
+    </a>
+    <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a href="monster-check.html">MONSTER CHECK</a>
+      <a href="top-monsters.html">TOP MONSTERS</a>
+      <a class="active" href="market-explorer.html">MARKET EXPLORER</a>
+      <a href="how-it-works.html">THE SYSTEM</a>
+      <a href="vcl-library.html">VCL™ LIBRARY</a>
+      <a href="about.html">ABOUT</a>
+    </nav>
+    <a class="home-nav-cta" href="live-status.html">LIVE STATUS</a>
+  </div>
+</header>
+
+<main>
+  <section class="explorer-hero">
+    <div class="explorer-shell">
+      <p class="explorer-kicker">COMPARE THE MARKET. THEN READ THE EVIDENCE.</p>
+      <h1>TWO-STOCK<br><strong>MARKET EXPLORER</strong></h1>
+      <p class="explorer-intro">Choose any two companies from the 15-stock pilot and inspect their price movement, volume, and multiple chart ranges side by side. The charts provide external market context. The Monster Check™ pages explain the demonstration evidence framework.</p>
+    </div>
+  </section>
+
+  <div class="explorer-main">
+    <section class="explorer-trust-strip" aria-label="Market Explorer features">
+      <article><strong>15</strong><span>PILOT STOCKS</span></article>
+      <article><strong>2</strong><span>SIDE-BY-SIDE CHARTS</span></article>
+      <article><strong>6</strong><span>BUILT-IN TIME RANGES</span></article>
+      <article><strong data-explorer-status>LOADING</strong><span>EXPLORER STATUS</span></article>
+    </section>
+
+    <div class="explorer-notice">
+      <strong>EXTERNAL MARKET DATA · MAY BE DELAYED</strong>
+      <span>TradingView supplies the chart snapshots. These charts do not make the demonstration Monster Ratings™ live and do not replace the planned secure quote, SEC, database, news, or rating pipeline.</span>
+    </div>
+
+    <section class="explorer-controls" aria-label="Choose stocks to compare">
+      <div class="explorer-select-group">
+        <label for="explorer-left-select">LEFT CHART</label>
+        <select id="explorer-left-select" data-explorer-left-select></select>
+      </div>
+      <button class="explorer-swap" data-explorer-swap type="button">SWAP CHARTS ⇄</button>
+      <div class="explorer-select-group">
+        <label for="explorer-right-select">RIGHT CHART</label>
+        <select id="explorer-right-select" data-explorer-right-select></select>
+      </div>
+    </section>
+
+    <section class="explorer-compare-grid" aria-label="Two-stock market comparison">
+      <article class="explorer-chart-card">
+        <div class="explorer-chart-head">
+          <div class="explorer-chart-title">
+            <strong>$<span data-explorer-left-ticker>AAPL</span></strong>
+            <span data-explorer-left-company>Apple · Technology</span>
+          </div>
+          <div class="explorer-chart-actions">
+            <a data-explorer-left-monster-link href="monster-check.html?ticker=AAPL">OPEN AAPL MONSTER CHECK™</a>
+            <a data-explorer-left-chart-link href="https://www.tradingview.com/symbols/NASDAQ-AAPL/" rel="noopener nofollow" target="_blank">FULL CHART ↗</a>
+          </div>
+        </div>
+        <div class="explorer-chart-frame" data-explorer-left-frame aria-live="polite">
+          <p class="explorer-loading">Loading left market chart…</p>
+        </div>
+      </article>
+
+      <article class="explorer-chart-card">
+        <div class="explorer-chart-head">
+          <div class="explorer-chart-title">
+            <strong>$<span data-explorer-right-ticker>NVDA</span></strong>
+            <span data-explorer-right-company>NVIDIA · Semiconductors</span>
+          </div>
+          <div class="explorer-chart-actions">
+            <a data-explorer-right-monster-link href="monster-check.html?ticker=NVDA">OPEN NVDA MONSTER CHECK™</a>
+            <a data-explorer-right-chart-link href="https://www.tradingview.com/symbols/NASDAQ-NVDA/" rel="noopener nofollow" target="_blank">FULL CHART ↗</a>
+          </div>
+        </div>
+        <div class="explorer-chart-frame" data-explorer-right-frame aria-live="polite">
+          <p class="explorer-loading">Loading right market chart…</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="explorer-quick-section explorer-section" aria-labelledby="quick-load-title">
+      <div class="explorer-quick-head">
+        <h2 id="quick-load-title">LOAD ANY<br>PILOT STOCK.</h2>
+        <p>Use a ticker button to place that company into the left chart while keeping the right chart in place for comparison. The dropdowns remain available for any combination.</p>
+      </div>
+      <div class="explorer-buttons" data-explorer-buttons aria-label="Load a pilot stock into the left chart"></div>
+    </section>
+
+    <div class="explorer-footer-note">
+      <strong>Educational notice:</strong> Price charts provide market context, not a recommendation. Demonstration Monster Ratings™ remain educational examples until the secure production pipeline stores verified quotes, filings, evidence, sources, rating versions, and genuine update timestamps.
+    </div>
+  </div>
+</main>
+
+<footer class="home-footer">
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>COMPARE THE CHART. THEN QUESTION THE EVIDENCE.</span></div>
+  <p><strong>Educational Use Only:</strong> Nothing in the Market Explorer is a recommendation to buy, sell, or hold a security. Investing involves risk, including possible loss of principal.</p>
+</footer>
+
+<script src="assets/market-explorer.js"></script>
+<script src="assets/market-ticker-strip.js"></script>
+</body>
+</html>
