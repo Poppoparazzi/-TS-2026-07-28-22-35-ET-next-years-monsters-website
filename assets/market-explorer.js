@@ -1,4 +1,4 @@
-// TS: 2026-07-30 07:17 ET
+// TS: 2026-07-30 07:21 ET
 
 const EXPLORER_EXCHANGE_OVERRIDES = Object.freeze({
   DECK: "NYSE",
@@ -101,6 +101,9 @@ function setupExplorer(stocks) {
   const quickButtons = document.querySelector("[data-explorer-buttons]");
   const leftFrame = document.querySelector("[data-explorer-left-frame]");
   const rightFrame = document.querySelector("[data-explorer-right-frame]");
+  const modeButtons = [...document.querySelectorAll("[data-explorer-mode]")];
+  const chartCount = document.querySelector("[data-explorer-chart-count]");
+  const status = document.querySelector("[data-explorer-status]");
 
   if (!leftSelect || !rightSelect || !swapButton || !quickButtons || !leftFrame || !rightFrame) {
     return;
@@ -117,6 +120,7 @@ function setupExplorer(stocks) {
   const widgetTicker = tickerFromWidgetSymbol(params.get("tvwidgetsymbol"));
   const requestedLeft = String(params.get("left") || widgetTicker || "AAPL").toUpperCase();
   const requestedRight = String(params.get("right") || "NVDA").toUpperCase();
+  let currentMode = params.get("mode") === "compare" ? "compare" : "single";
 
   leftSelect.value = byTicker.has(requestedLeft) ? requestedLeft : "AAPL";
   rightSelect.value = byTicker.has(requestedRight) ? requestedRight : "NVDA";
@@ -125,6 +129,7 @@ function setupExplorer(stocks) {
     const url = new URL(window.location.href);
     url.searchParams.set("left", leftSelect.value);
     url.searchParams.set("right", rightSelect.value);
+    url.searchParams.set("mode", currentMode);
     url.searchParams.delete("tvwidgetsymbol");
     window.history.replaceState({}, "", url);
   }
@@ -156,8 +161,34 @@ function setupExplorer(stocks) {
     updateUrl();
   }
 
+  function setMode(mode, renderComparison = true) {
+    currentMode = mode === "compare" ? "compare" : "single";
+    const singleMode = currentMode === "single";
+
+    document.body.classList.toggle("is-single-mode", singleMode);
+    modeButtons.forEach((button) => {
+      const active = button.dataset.explorerMode === currentMode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+
+    if (chartCount) chartCount.textContent = singleMode ? "1" : "2";
+    if (status) {
+      status.textContent = singleMode
+        ? "15 STOCKS READY · SINGLE CHART"
+        : "15 STOCKS READY · COMPARE TWO";
+    }
+
+    if (!singleMode && renderComparison) renderSide("right");
+    updateUrl();
+  }
+
   leftSelect.addEventListener("change", () => renderSide("left"));
   rightSelect.addEventListener("change", () => renderSide("right"));
+
+  modeButtons.forEach((button) => {
+    button.addEventListener("click", () => setMode(button.dataset.explorerMode));
+  });
 
   swapButton.addEventListener("click", () => {
     const leftValue = leftSelect.value;
@@ -172,7 +203,7 @@ function setupExplorer(stocks) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = stock.ticker;
-    button.title = `Load ${stock.name} into the left comparison chart`;
+    button.title = `Load ${stock.name} into the primary chart`;
     button.addEventListener("click", () => {
       leftSelect.value = String(stock.ticker).toUpperCase();
       renderSide("left");
@@ -181,8 +212,9 @@ function setupExplorer(stocks) {
     quickButtons.append(button);
   });
 
+  setMode(currentMode, false);
   renderSide("left");
-  renderSide("right");
+  if (currentMode === "compare") renderSide("right");
 }
 
 async function startMarketExplorer() {
@@ -198,7 +230,6 @@ async function startMarketExplorer() {
     );
 
     setupExplorer(ordered);
-    if (status) status.textContent = "15 PILOT STOCKS READY TO COMPARE";
   } catch (_error) {
     if (status) status.textContent = "MARKET EXPLORER COULD NOT LOAD THE STOCK LIST";
 
