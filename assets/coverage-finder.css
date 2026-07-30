@@ -1,0 +1,253 @@
+/* TS: 2026-07-30 09:17 ET */
+
+.coverage-finder {
+  margin-top: 34px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid #b7b09f;
+  background: #101512;
+  color: #f7f1e5;
+}
+
+.coverage-finder-head {
+  display: grid;
+  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+  gap: 30px;
+  align-items: end;
+}
+
+.coverage-finder-head h2 {
+  margin: 0;
+  color: #f7f1e5;
+  font-family: var(--editorial-display-font, "Segoe UI", Arial, sans-serif);
+  font-size: clamp(40px, 6vw, 72px);
+  letter-spacing: -.045em;
+  line-height: .93;
+}
+
+.coverage-finder-head h2 strong {
+  color: #b8f34a;
+}
+
+.coverage-finder-head p {
+  margin: 0;
+  color: #c9ceca;
+  line-height: 1.65;
+}
+
+.coverage-finder-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.coverage-finder-input {
+  width: 100%;
+  min-height: 58px;
+  border: 2px solid #d9aa31;
+  border-radius: 0;
+  outline: 0;
+  background: #fffaf0;
+  color: #101311;
+  padding: 0 18px;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.coverage-finder-input:focus {
+  border-color: #b8f34a;
+  box-shadow: 0 0 0 4px rgba(184, 243, 74, .2);
+}
+
+.coverage-finder-clear {
+  min-width: 104px;
+  border: 0;
+  background: #d9aa31;
+  color: #101311;
+  padding: 0 20px;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+
+.coverage-finder-clear:hover,
+.coverage-finder-clear:focus-visible {
+  background: #f0c95a;
+}
+
+.coverage-finder-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.coverage-finder-filter {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, .34);
+  border-radius: 999px;
+  background: transparent;
+  color: #f7f1e5;
+  padding: 0 16px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .035em;
+  cursor: pointer;
+}
+
+.coverage-finder-filter.is-active,
+.coverage-finder-filter:hover,
+.coverage-finder-filter:focus-visible {
+  border-color: #b8f34a;
+  background: #b8f34a;
+  color: #101311;
+}
+
+.coverage-finder-summary {
+  min-height: 20px;
+  margin: 18px 0 0;
+  color: #d9aa31;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
+.coverage-finder-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.coverage-finder-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 22px;
+  border: 1px dashed rgba(255, 255, 255, .28);
+  color: #c9ceca;
+  line-height: 1.55;
+}
+
+.coverage-finder-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  background: #19201d;
+}
+
+.coverage-finder-identity {
+  min-width: 0;
+}
+
+.coverage-finder-identity strong,
+.coverage-finder-identity span,
+.coverage-finder-identity small {
+  display: block;
+}
+
+.coverage-finder-identity strong {
+  color: #b8f34a;
+  font-size: 23px;
+}
+
+.coverage-finder-identity span {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #fffaf0;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coverage-finder-identity small {
+  margin-top: 8px;
+  color: #aeb5af;
+  line-height: 1.4;
+}
+
+.coverage-finder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.coverage-finder-actions a,
+.coverage-finder-status {
+  display: inline-grid;
+  min-height: 40px;
+  place-items: center;
+  border-radius: 999px;
+  padding: 0 14px;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .035em;
+  text-decoration: none;
+}
+
+.coverage-finder-check {
+  background: #d9aa31;
+  color: #101311;
+}
+
+.coverage-finder-chart {
+  background: #b8f34a;
+  color: #101311;
+}
+
+.coverage-finder-news {
+  border: 1px solid rgba(255, 255, 255, .4);
+  color: #fffaf0;
+}
+
+.coverage-finder-status {
+  border: 1px dashed rgba(255, 255, 255, .35);
+  color: #aeb5af;
+}
+
+.coverage-finder-actions a:hover,
+.coverage-finder-actions a:focus-visible {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+@media (max-width: 820px) {
+  .coverage-finder-head,
+  .coverage-finder-card {
+    grid-template-columns: 1fr;
+  }
+
+  .coverage-finder-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  .coverage-finder {
+    padding: 22px 16px;
+  }
+
+  .coverage-finder-controls,
+  .coverage-finder-results {
+    grid-template-columns: 1fr;
+  }
+
+  .coverage-finder-clear {
+    min-height: 52px;
+  }
+
+  .coverage-finder-filter {
+    flex: 1 1 calc(50% - 10px);
+  }
+
+  .coverage-finder-actions a,
+  .coverage-finder-status {
+    min-height: 44px;
+    padding: 0 16px;
+  }
+}
