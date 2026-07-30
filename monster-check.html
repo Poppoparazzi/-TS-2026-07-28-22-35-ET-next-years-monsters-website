@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-30 08:48 ET -->
+<!-- TS: 2026-07-30 08:56 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -112,6 +112,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="assets/monster-autocomplete.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/text-fit.css">
   <link rel="stylesheet" href="assets/live-data.css">
@@ -163,10 +164,13 @@
 
     <div class="monster-search-panel">
       <label for="monster-ticker">MONSTER CHECK™</label>
-      <div class="monster-search-row">
-        <span>$</span>
-        <input id="monster-ticker" data-ticker-input aria-label="Ticker or company name" placeholder="ENTER STOCK SYMBOL" autocomplete="off">
-        <button data-rate-button type="button">RUN THE CHECK</button>
+      <div class="monster-search-input-shell">
+        <div class="monster-search-row">
+          <span>$</span>
+          <input id="monster-ticker" data-ticker-input aria-label="Ticker or company name" placeholder="ENTER STOCK SYMBOL" autocomplete="off">
+          <button data-rate-button type="button">RUN THE CHECK</button>
+        </div>
+        <div id="monster-autocomplete-list" class="monster-autocomplete" data-monster-autocomplete role="listbox" aria-label="Matching stocks" hidden></div>
       </div>
       <p class="monster-shortcut-guide">QUICK PICKS · TICKER OPENS THE CHECK · GOLD CIRCLE OPENS THE CHART</p>
       <div class="suggestions monster-suggestions" data-suggestions></div>
@@ -214,6 +218,7 @@
 <script src="assets/app.js"></script>
 <script src="assets/live-data.js"></script>
 <script src="assets/monster-query.js"></script>
+<script src="assets/monster-autocomplete.js"></script>
 <script src="assets/monster-chart-link.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>
