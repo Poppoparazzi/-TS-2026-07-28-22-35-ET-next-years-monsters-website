@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-30 09:05 ET -->
+<!-- TS: 2026-07-30 09:43 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/market-explorer.css">
   <link rel="stylesheet" href="assets/market-explorer-mode.css">
+  <link rel="stylesheet" href="assets/market-explorer-coverage.css">
 </head>
 <body class="market-explorer-page is-single-mode">
 
@@ -22,7 +23,7 @@
     <nav class="nav-links home-nav-links" aria-label="Main navigation">
       <a href="monster-check.html">MONSTER CHECK</a>
       <a href="top-monsters.html">TOP MONSTERS</a>
-      <a class="active" href="market-explorer.html">MARKET EXPLORER</a>
+      <a class="active" href="market-explorer.html">FULL CHARTS</a>
       <a href="how-it-works.html">THE SYSTEM</a>
       <a href="vcl-library.html">VCL™ LIBRARY</a>
       <a href="about.html">ABOUT</a>
@@ -50,7 +51,7 @@
 
     <div class="explorer-notice">
       <strong>EXTERNAL MARKET DATA · MAY BE DELAYED</strong>
-      <span>TradingView supplies the chart snapshots. The 25-stock chart universe does not mean all 25 companies have Monster Ratings™. Fifteen currently have demonstration profiles; ten are chart-and-news coverage only.</span>
+      <span>TradingView supplies the chart snapshots. The 25-stock chart universe does not mean all 25 companies have Monster Ratings™. Fifteen currently have demonstration profiles; ten are chart-and-news coverage only. Each selected stock is now labeled clearly above its chart.</span>
     </div>
 
     <section class="explorer-mode-panel" aria-label="Choose chart viewing mode">
@@ -113,7 +114,7 @@
     <section class="explorer-quick-section explorer-section" aria-labelledby="quick-load-title">
       <div class="explorer-quick-head">
         <h2 id="quick-load-title">LOAD ANY<br>MARKET STOCK.</h2>
-        <p>Use a ticker button to place any of the 25 external market-coverage companies into the primary chart. Single Chart gives it the full width; Compare Two leaves the second company in place.</p>
+        <p>Use a ticker button to place any of the 25 external market-coverage companies into the primary chart. The label above the chart tells you whether a Monster Check demonstration exists or whether the company currently has charts and news only.</p>
       </div>
       <div class="explorer-buttons" data-explorer-buttons aria-label="Load an external market stock into the primary chart"></div>
     </section>
@@ -130,6 +131,7 @@
 </footer>
 
 <script src="assets/market-explorer.js"></script>
+<script src="assets/market-explorer-coverage.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>
 </html>
