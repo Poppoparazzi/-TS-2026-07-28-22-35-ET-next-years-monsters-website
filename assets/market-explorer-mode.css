@@ -1,0 +1,82 @@
+/* TS: 2026-07-30 07:21 ET */
+
+.explorer-mode-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 28px;
+  align-items: center;
+  margin: 34px 0 18px;
+  padding: 22px 24px;
+  border: 2px solid #111;
+  background: #fffaf0;
+}
+
+.explorer-mode-panel strong,
+.explorer-mode-panel span {
+  display: block;
+}
+
+.explorer-mode-panel strong {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .055em;
+}
+
+.explorer-mode-panel span {
+  margin-top: 7px;
+  color: #4d534e;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.explorer-mode-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.explorer-mode-buttons button {
+  min-height: 50px;
+  padding: 0 18px;
+  border: 2px solid #111;
+  background: #fff;
+  color: #0b100f;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .045em;
+  cursor: pointer;
+}
+
+.explorer-mode-buttons button.is-active,
+.explorer-mode-buttons button[aria-pressed="true"] {
+  background: var(--editorial-lime, #b8f34a);
+}
+
+.market-explorer-page.is-single-mode [data-comparison-only] {
+  display: none !important;
+}
+
+.market-explorer-page.is-single-mode .explorer-controls,
+.market-explorer-page.is-single-mode .explorer-compare-grid {
+  grid-template-columns: 1fr;
+}
+
+.market-explorer-page.is-single-mode .explorer-chart-frame {
+  height: 680px;
+}
+
+.market-explorer-page.is-single-mode .explorer-chart-card {
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .explorer-mode-panel,
+  .explorer-mode-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .market-explorer-page.is-single-mode .explorer-chart-frame {
+    height: 520px;
+  }
+}
