@@ -1,4 +1,6 @@
-// TS: 2026-07-29 16:41 ET
+// TS: 2026-07-29 21:53 ET
+
+const STATUS_CONFIG = window.NYM_CONFIG ?? {};
 
 function statusEscape(value) {
   return String(value ?? "")
@@ -9,6 +11,35 @@ function statusEscape(value) {
     .replaceAll("'", "&#039;");
 }
 
+function getStatusApiBaseUrl() {
+  const raw = typeof STATUS_CONFIG.apiBaseUrl === "string" ? STATUS_CONFIG.apiBaseUrl.trim() : "";
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    const localDevelopment = ["localhost", "127.0.0.1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localDevelopment) return null;
+    return url.href.replace(/\/$/, "");
+  } catch (_error) {
+    return null;
+  }
+}
+
+function formatStatusTimestamp(value) {
+  if (!value) return "No successful live update yet";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Live timestamp unavailable";
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
 function statusCheck(label, ready, detail) {
   return `
     <div class="status-check ${ready ? "status-check-ready" : "status-check-pending"}">
@@ -17,8 +48,47 @@ function statusCheck(label, ready, detail) {
     </div>`;
 }
 
-function statusRow(stock, index) {
+function staticCompanyReadiness() {
+  return {
+    hasVerifiedQuote: false,
+    quoteIsUsable: false,
+    hasSecStatus: false,
+    hasSavedVersionedRating: false,
+    hasRatingEvidence: false,
+    isLiveReady: false,
+    lastSuccessfulUpdate: null,
+  };
+}
+
+function statusRow(stock, index, readiness) {
   const firstTarget = stock.ticker === "AAPL";
+  const company = readiness ?? staticCompanyReadiness();
+  const quoteReady = Boolean(company.hasVerifiedQuote && company.quoteIsUsable);
+  const ratingReady = Boolean(company.hasSavedVersionedRating && company.hasRatingEvidence);
+
+  const quoteDetail = quoteReady
+    ? `Saved · ${formatStatusTimestamp(company.lastSuccessfulUpdate)}`
+    : company.hasVerifiedQuote
+      ? "Saved quote is stale or unusable"
+      : "Not saved yet";
+  const secDetail = company.hasSecStatus ? "Official filing status saved" : "Not saved yet";
+  const ratingDetail = ratingReady
+    ? "Versioned rating and evidence saved"
+    : company.hasSavedVersionedRating
+      ? "Rating saved; evidence incomplete"
+      : "Version 1 not calculated";
+
+  let resultTitle = "PENDING";
+  let resultDetail = "Follows after the first ticker passes twice.";
+
+  if (company.isLiveReady) {
+    resultTitle = "LIVE READY";
+    resultDetail = formatStatusTimestamp(company.lastSuccessfulUpdate);
+  } else if (firstTarget) {
+    resultTitle = "FIRST TECHNICAL TARGET";
+    resultDetail = "AAPL tests the complete live path first. This is not a recommendation.";
+  }
+
   return `
     <article class="status-row">
       <div class="status-company">
@@ -26,14 +96,76 @@ function statusRow(stock, index) {
         <span>${statusEscape(stock.name)} · ${statusEscape(stock.sector)}</span>
       </div>
       ${statusCheck("DEMO PROFILE", true, "Published")}
-      ${statusCheck("LIVE QUOTE", false, "Secure backend not deployed")}
-      ${statusCheck("SEC CHECK", false, "Not saved to database")}
-      ${statusCheck("LIVE RATING", false, "Version 1 not calculated")}
+      ${statusCheck("USABLE QUOTE", quoteReady, quoteDetail)}
+      ${statusCheck("SEC CHECK", Boolean(company.hasSecStatus), secDetail)}
+      ${statusCheck("LIVE RATING", ratingReady, ratingDetail)}
       <div class="status-result">
-        <strong>${firstTarget ? "FIRST TECHNICAL TARGET" : "PENDING"}</strong>
-        <span>${firstTarget ? "AAPL will test the complete live path first. This is not a recommendation." : "Follows after the first ticker passes twice."}</span>
+        <strong>${statusEscape(resultTitle)}</strong>
+        <span>${statusEscape(resultDetail)}</span>
       </div>
     </article>`;
+}
+
+function setText(selector, value) {
+  const node = document.querySelector(selector);
+  if (node) node.textContent = value;
+}
+
+function renderSummary(stocks, snapshot) {
+  const total = stocks.length;
+  const companies = Array.isArray(snapshot?.companies) ? snapshot.companies : [];
+  const usableQuotes = companies.filter((company) => company.hasVerifiedQuote && company.quoteIsUsable).length;
+  const secChecks = companies.filter((company) => company.hasSecStatus).length;
+  const liveRatings = companies.filter(
+    (company) => company.hasSavedVersionedRating && company.hasRatingEvidence,
+  ).length;
+  const openSlots = Number.isFinite(Number(snapshot?.top25?.companiesStillToAdd))
+    ? Number(snapshot.top25.companiesStillToAdd)
+    : 10;
+
+  setText("[data-demo-count]", `${total}/${total}`);
+  setText("[data-quote-count]", `${usableQuotes}/${total}`);
+  setText("[data-sec-count]", `${secChecks}/${total}`);
+  setText("[data-rating-count]", `${liveRatings}/${total}`);
+  setText("[data-open-slot-count]", String(openSlots));
+
+  if (!snapshot) return;
+
+  const ready = Number(snapshot.pilot?.readyCompanyCount ?? 0);
+  const lastUpdated = formatStatusTimestamp(snapshot.pilot?.lastSuccessfulUpdate);
+
+  if (snapshot.pilot?.isLiveReady) {
+    setText("[data-readiness-headline]", "ORIGINAL 15: LIVE VERIFIED");
+    setText(
+      "[data-readiness-message]",
+      `All 15 pilot stocks passed the saved quote, SEC, rating, evidence, and timestamp checks. Last successful update: ${lastUpdated}.`,
+    );
+  } else if (ready > 0) {
+    setText("[data-readiness-headline]", `${ready}/${total} PILOT STOCKS LIVE READY`);
+    setText(
+      "[data-readiness-message]",
+      `${snapshot.pilot.pendingCompanyCount} pilot stocks remain pending. Last successful saved update: ${lastUpdated}.`,
+    );
+  } else {
+    setText("[data-readiness-headline]", "NEXT VISIBLE RESULT: AAPL LIVE TEST");
+    setText(
+      "[data-readiness-message]",
+      "The readiness API is connected, but no pilot ticker has passed every saved-data check yet. AAPL remains the first technical target.",
+    );
+  }
+}
+
+async function fetchReadinessSnapshot(apiBaseUrl) {
+  const response = await fetch(`${apiBaseUrl}/api/readiness`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(7_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Readiness API returned HTTP ${response.status}.`);
+  }
+
+  return response.json();
 }
 
 async function setupLiveStatus() {
@@ -46,7 +178,29 @@ async function setupLiveStatus() {
 
     const stocks = await response.json();
     const ordered = [...stocks].sort((left, right) => left.ticker.localeCompare(right.ticker));
-    list.innerHTML = ordered.map(statusRow).join("");
+    const apiBaseUrl = getStatusApiBaseUrl();
+    let snapshot = null;
+
+    if (apiBaseUrl) {
+      try {
+        snapshot = await fetchReadinessSnapshot(apiBaseUrl);
+      } catch (_error) {
+        setText("[data-readiness-headline]", "LIVE READINESS API UNAVAILABLE");
+        setText(
+          "[data-readiness-message]",
+          "The public page could not read saved rollout progress. It is showing the repository checklist and is not substituting invented completion values.",
+        );
+      }
+    }
+
+    const readinessByTicker = new Map(
+      (snapshot?.companies ?? []).map((company) => [String(company.ticker).toUpperCase(), company]),
+    );
+
+    list.innerHTML = ordered
+      .map((stock, index) => statusRow(stock, index, readinessByTicker.get(stock.ticker)))
+      .join("");
+    renderSummary(ordered, snapshot);
   } catch (_error) {
     list.innerHTML = "<p class=\"leaderboard-empty\">The live rollout checklist could not load its stock list. No completion status was invented.</p>";
   }
