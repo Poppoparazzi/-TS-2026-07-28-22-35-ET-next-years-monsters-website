@@ -1,4 +1,4 @@
-// TS: 2026-07-30 07:36 ET
+// TS: 2026-07-30 07:49 ET
 
 const NYM_PILOT_MARKET_SYMBOLS = Object.freeze([
   Object.freeze({ ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" }),
@@ -112,7 +112,7 @@ function createMarketTickerStrip() {
   const section = document.createElement("section");
   section.className = "nym-market-tape";
   section.dataset.nymMarketTape = "";
-  section.setAttribute("aria-label", "15-stock external market ticker tape and full chart shortcut");
+  section.setAttribute("aria-label", "15-stock external market ticker tape and full chart shortcuts");
 
   const head = document.createElement("div");
   head.className = "nym-market-tape-head";
@@ -161,19 +161,21 @@ function createMarketTickerStrip() {
 
   const quickLinks = document.createElement("nav");
   quickLinks.className = "nym-market-tape-links";
-  quickLinks.setAttribute("aria-label", "Open pilot stocks in Monster Check");
+  quickLinks.setAttribute("aria-label", "Open a pilot stock in its full single chart");
 
-  NYM_PILOT_MARKET_SYMBOLS.forEach(({ ticker }) => {
+  NYM_PILOT_MARKET_SYMBOLS.forEach(({ ticker, name }) => {
     const link = document.createElement("a");
-    link.href = `monster-check.html?ticker=${encodeURIComponent(ticker)}`;
+    link.href = `market-explorer.html?left=${encodeURIComponent(ticker)}&mode=single`;
     link.textContent = ticker;
+    link.title = `Open ${name} in the full single-chart view`;
+    link.setAttribute("aria-label", `Open ${name} full chart`);
     quickLinks.append(link);
   });
 
   const note = document.createElement("p");
   note.className = "nym-market-tape-note";
   note.textContent =
-    "FULL CHARTS are always available from the navigation and the OPEN FULL CHARTS link above. Prices and percentage moves are supplied by TradingView and may be delayed. These market snapshots do not make the demonstration Monster Ratings live.";
+    "CLICK ANY TICKER BUTTON ABOVE to open that company in the full single-chart view. FULL CHARTS are also always available from the navigation and the OPEN FULL CHARTS link. Prices and percentage moves are supplied by TradingView and may be delayed. These market snapshots do not make the demonstration Monster Ratings live.";
 
   section.append(head, widgetShell, quickLinks, note);
   header.insertAdjacentElement("afterend", section);
