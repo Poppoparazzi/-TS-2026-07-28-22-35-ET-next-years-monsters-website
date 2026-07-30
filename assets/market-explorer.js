@@ -1,4 +1,4 @@
-// TS: 2026-07-30 01:36 ET
+// TS: 2026-07-30 07:17 ET
 
 const EXPLORER_EXCHANGE_OVERRIDES = Object.freeze({
   DECK: "NYSE",
@@ -9,6 +9,13 @@ function explorerSymbol(stock) {
   const ticker = String(stock.ticker).toUpperCase();
   const exchange = EXPLORER_EXCHANGE_OVERRIDES[ticker] ?? "NASDAQ";
   return `${exchange}:${ticker}`;
+}
+
+function tickerFromWidgetSymbol(value) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (!normalized) return "";
+  const parts = normalized.split(":");
+  return parts[parts.length - 1].replace(/[^A-Z0-9.-]/g, "");
 }
 
 function explorerText(selector, value) {
@@ -107,8 +114,9 @@ function setupExplorer(stocks) {
   populateSelect(rightSelect, stocks);
 
   const params = new URLSearchParams(window.location.search);
-  const requestedLeft = String(params.get("left") ?? "AAPL").toUpperCase();
-  const requestedRight = String(params.get("right") ?? "NVDA").toUpperCase();
+  const widgetTicker = tickerFromWidgetSymbol(params.get("tvwidgetsymbol"));
+  const requestedLeft = String(params.get("left") || widgetTicker || "AAPL").toUpperCase();
+  const requestedRight = String(params.get("right") || "NVDA").toUpperCase();
 
   leftSelect.value = byTicker.has(requestedLeft) ? requestedLeft : "AAPL";
   rightSelect.value = byTicker.has(requestedRight) ? requestedRight : "NVDA";
@@ -117,6 +125,7 @@ function setupExplorer(stocks) {
     const url = new URL(window.location.href);
     url.searchParams.set("left", leftSelect.value);
     url.searchParams.set("right", rightSelect.value);
+    url.searchParams.delete("tvwidgetsymbol");
     window.history.replaceState({}, "", url);
   }
 
