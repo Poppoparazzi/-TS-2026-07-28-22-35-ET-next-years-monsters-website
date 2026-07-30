@@ -1,4 +1,4 @@
-// TS: 2026-07-29 10:40 ET
+// TS: 2026-07-29 21:46 ET
 
 export type MarketDataProviderName = "unconfigured" | "twelve-data";
 
@@ -10,6 +10,7 @@ export interface AppConfig {
   readonly marketDataProvider: MarketDataProviderName;
   readonly twelveDataApiKey: string | null;
   readonly secUserAgent: string | null;
+  readonly databaseUrl: string | null;
 }
 
 function parsePort(value: string | undefined): number {
@@ -51,5 +52,6 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     marketDataProvider: parseProvider(environment.MARKET_DATA_PROVIDER),
     twelveDataApiKey: optionalSecret(environment.TWELVE_DATA_API_KEY),
     secUserAgent: optionalSecret(environment.SEC_USER_AGENT),
+    databaseUrl: optionalSecret(environment.DATABASE_URL),
   });
 }
