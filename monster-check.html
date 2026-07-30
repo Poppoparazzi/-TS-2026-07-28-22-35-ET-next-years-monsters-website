@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-30 08:29 ET -->
+<!-- TS: 2026-07-30 08:34 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -29,8 +29,56 @@
       margin-top: 18px;
       text-decoration: none;
     }
+    .monster-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: stretch;
+      margin-top: 14px;
+    }
+    .monster-stock-shortcut {
+      display: inline-flex;
+      align-items: stretch;
+      min-height: 38px;
+      border: 1px solid rgba(255,255,255,.28);
+      background: #151a18;
+    }
+    .monster-stock-shortcut .chip {
+      margin: 0;
+      border: 0;
+      border-right: 1px solid rgba(255,255,255,.28);
+      border-radius: 0;
+      background: #1b211f;
+      color: #fff;
+    }
+    .monster-stock-shortcut .chip:hover,
+    .monster-stock-shortcut .chip:focus-visible {
+      background: #2a312e;
+      color: var(--editorial-lime);
+    }
+    .monster-shortcut-chart {
+      display: grid;
+      place-items: center;
+      padding: 0 12px;
+      background: var(--editorial-lime);
+      color: #080c0b;
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: .035em;
+      text-decoration: none;
+    }
+    .monster-shortcut-chart:hover,
+    .monster-shortcut-chart:focus-visible {
+      background: #d7ff83;
+    }
     @media (max-width:650px) {
       .monster-hero h1 { font-size: clamp(62px, 18.5vw, 82px); }
+      .monster-stock-shortcut {
+        flex: 1 1 calc(50% - 10px);
+      }
+      .monster-stock-shortcut .chip {
+        flex: 1;
+      }
     }
   </style>
   <link rel="stylesheet" href="assets/editorial-type.css">
@@ -92,7 +140,7 @@
       <div class="suggestions monster-suggestions" data-suggestions></div>
       <div class="monster-chart-door">
         <a class="home-btn home-btn-green" href="market-explorer.html?mode=single">OPEN FULL CHARTS →</a>
-        <span>Open one large white-background chart, or switch to Compare Two inside Market Explorer.</span>
+        <span>Every visible stock shortcut also has its own CHART button. Use the larger button here to open the full chart library.</span>
       </div>
       <p class="monster-demo-note">CURRENTLY A 15-STOCK EDUCATIONAL DEMONSTRATION. LIVE DATA CONNECTION COMES NEXT.</p>
     </div>
