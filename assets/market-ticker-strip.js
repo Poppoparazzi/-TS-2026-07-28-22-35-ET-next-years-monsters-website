@@ -1,4 +1,4 @@
-// TS: 2026-07-30 01:38 ET
+// TS: 2026-07-30 ET
 
 const NYM_PILOT_MARKET_SYMBOLS = Object.freeze([
   Object.freeze({ ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" }),
@@ -46,6 +46,22 @@ function ensureMarketExplorerNavLink() {
   if (window.location.pathname.endsWith("market-explorer.html")) {
     link.classList.add("active");
     link.setAttribute("aria-current", "page");
+  }
+
+  let pulseLink = [...navigation.querySelectorAll("a")].find((item) =>
+    item.getAttribute("href")?.includes("market-pulse.html"),
+  );
+
+  if (!pulseLink) {
+    pulseLink = document.createElement("a");
+    pulseLink.href = "market-pulse.html";
+    pulseLink.textContent = "MARKET PULSE";
+    navigation.append(pulseLink);
+  }
+
+  if (window.location.pathname.endsWith("market-pulse.html")) {
+    pulseLink.classList.add("active");
+    pulseLink.setAttribute("aria-current", "page");
   }
 }
 
