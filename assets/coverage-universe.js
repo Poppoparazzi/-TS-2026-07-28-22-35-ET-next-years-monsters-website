@@ -1,81 +1,76 @@
-// TS: 2026-07-30 06:58 ET
+// TS: 2026-07-30 09:05 ET
 
 function coverageText(selector, value) {
   const node = document.querySelector(selector);
   if (node) node.textContent = value;
 }
 
-function renderCurrentStocks(stocks) {
-  const grid = document.querySelector("[data-coverage-stock-grid]");
-  if (!grid) return;
+function createCoverageCard(stock, mode) {
+  const card = document.createElement("article");
+  card.className = "coverage-stock-card";
 
-  grid.replaceChildren();
-  stocks.forEach((stock) => {
-    const card = document.createElement("article");
-    card.className = "coverage-stock-card";
+  const ticker = document.createElement("strong");
+  ticker.textContent = `$${String(stock.ticker).toUpperCase()}`;
 
-    const ticker = document.createElement("strong");
-    ticker.textContent = `$${String(stock.ticker).toUpperCase()}`;
+  const company = document.createElement("span");
+  company.textContent = stock.name;
 
-    const company = document.createElement("span");
-    company.textContent = stock.name;
+  const sector = document.createElement("small");
+  sector.textContent = mode === "demo"
+    ? `${stock.sector} · Demonstration Monster Check · Not internally live`
+    : `${stock.sector} · External chart and news coverage · No Monster Rating yet`;
 
-    const sector = document.createElement("small");
-    sector.textContent = `${stock.sector} · Demonstration profile · Not internally live`;
+  const primaryLink = document.createElement("a");
+  if (mode === "demo") {
+    primaryLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
+    primaryLink.textContent = "OPEN DEMONSTRATION MONSTER CHECK™ →";
+  } else {
+    primaryLink.href = `market-explorer.html?left=${encodeURIComponent(stock.ticker)}&mode=single`;
+    primaryLink.textContent = "OPEN FULL CHART →";
+  }
 
-    const link = document.createElement("a");
-    link.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
-    link.textContent = "OPEN DEMONSTRATION MONSTER CHECK™ →";
+  const newsLink = document.createElement("a");
+  newsLink.href = `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}`;
+  newsLink.textContent = "OPEN NEWS RADAR →";
 
-    card.append(ticker, company, sector, link);
-    grid.append(card);
-  });
+  card.append(ticker, company, sector, primaryLink, newsLink);
+  return card;
 }
 
-function renderOpenSlots(count) {
-  const grid = document.querySelector("[data-coverage-slot-grid]");
+function renderCoverageGrid(selector, stocks, mode) {
+  const grid = document.querySelector(selector);
   if (!grid) return;
-
   grid.replaceChildren();
-  for (let index = 1; index <= count; index += 1) {
-    const card = document.createElement("article");
-    card.className = "coverage-slot-card";
-
-    const slot = document.createElement("strong");
-    slot.textContent = `SLOT ${String(index).padStart(2, "0")}`;
-
-    const status = document.createElement("span");
-    status.textContent = "COMPANY NOT SELECTED";
-
-    card.append(slot, status);
-    grid.append(card);
-  }
+  stocks.forEach((stock) => grid.append(createCoverageCard(stock, mode)));
 }
 
 async function startCoverageUniverse() {
-  renderOpenSlots(10);
-
   try {
-    const response = await fetch("data/stocks.json");
-    if (!response.ok) throw new Error("Unable to load the current stock universe.");
+    const response = await fetch("data/market-universe.json");
+    if (!response.ok) throw new Error("Unable to load the market universe.");
 
     const stocks = await response.json();
     const ordered = [...stocks].sort((left, right) =>
       String(left.ticker).localeCompare(String(right.ticker)),
     );
+    const demonstrations = ordered.filter((stock) => stock.monsterCheck);
+    const externalOnly = ordered.filter((stock) => !stock.monsterCheck);
 
-    renderCurrentStocks(ordered);
-    coverageText("[data-coverage-current-count]", String(ordered.length));
-    coverageText("[data-coverage-status]", "15 DEMONSTRATION PROFILES LOADED");
+    renderCoverageGrid("[data-coverage-stock-grid]", demonstrations, "demo");
+    renderCoverageGrid("[data-coverage-expansion-grid]", externalOnly, "external");
+
+    coverageText("[data-coverage-demo-count]", String(demonstrations.length));
+    coverageText("[data-coverage-market-count]", String(ordered.length));
+    coverageText("[data-coverage-external-count]", String(externalOnly.length));
+    coverageText("[data-coverage-status]", `${ordered.length} EXTERNAL MARKET STOCKS LOADED`);
   } catch (_error) {
-    coverageText("[data-coverage-status]", "CURRENT UNIVERSE COULD NOT LOAD");
-    const grid = document.querySelector("[data-coverage-stock-grid]");
-    if (grid) {
+    coverageText("[data-coverage-status]", "COVERAGE UNIVERSE COULD NOT LOAD");
+    document.querySelectorAll("[data-coverage-stock-grid], [data-coverage-expansion-grid]").forEach((grid) => {
       grid.replaceChildren();
       const message = document.createElement("p");
-      message.textContent = "The current pilot list could not be loaded. No stock was invented.";
+      message.textContent = "The coverage list could not be loaded. No stock was invented.";
       grid.append(message);
-    }
+    });
   }
 }
 
