@@ -1,15 +1,16 @@
-<!-- TS: 2026-07-30 09:17 ET -->
+<!-- TS: 2026-07-30 11:15 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Coverage Universe | Next Year’s Monsters™</title>
-  <meta name="description" content="Search the 25-stock external market universe, see which 15 companies have demonstration Monster Checks, and track the roadmap toward larger verified coverage.">
+  <title>Stock Directory | Next Year’s Monsters™</title>
+  <meta name="description" content="Search the current 25-stock market directory by ticker, company, or industry, then open the available Monster Check, chart, or current stories.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/coverage-universe.css">
   <link rel="stylesheet" href="assets/coverage-finder.css">
+  <link rel="stylesheet" href="assets/coverage-finder-guide.css">
 </head>
 <body class="coverage-page">
 
@@ -25,7 +26,7 @@
       <a href="market-explorer.html">FULL CHARTS</a>
       <a href="market-pulse.html">MARKET PULSE</a>
       <a href="news-radar.html">NEWS RADAR</a>
-      <a class="active" aria-current="page" href="coverage-universe.html">COVERAGE</a>
+      <a class="active" aria-current="page" href="coverage-universe.html">FIND STOCKS</a>
     </nav>
     <a class="home-nav-cta" href="live-status.html">DATA STATUS</a>
   </div>
@@ -34,51 +35,65 @@
 <main>
   <section class="coverage-hero">
     <div class="coverage-shell">
-      <p class="coverage-kicker">WHAT EXISTS. WHAT IS EXTERNAL. WHAT IS STILL MISSING.</p>
-      <h1>COVERAGE<br><strong>UNIVERSE</strong></h1>
-      <p class="coverage-intro">The market tools now cover 25 companies. Fifteen have demonstration Monster Checks. Ten additional companies have external charts and news only. None is internally verified live yet.</p>
+      <p class="coverage-kicker">SEARCH THE MARKET UNIVERSE</p>
+      <h1>STOCK<br><strong>DIRECTORY</strong></h1>
+      <p class="coverage-intro">Find a company by ticker, name, or industry. The directory tells you exactly what is available, then opens its Monster Check, full chart, or latest available stories without making you tour the entire website first.</p>
     </div>
   </section>
 
   <div class="coverage-main">
-    <section class="coverage-trust-strip" aria-label="Coverage universe status">
-      <article><strong data-coverage-market-count>25</strong><span>EXTERNAL MARKET STOCKS</span></article>
+    <section class="coverage-trust-strip" aria-label="Stock directory status">
+      <article><strong data-coverage-market-count>25</strong><span>SEARCHABLE MARKET STOCKS</span></article>
       <article><strong data-coverage-demo-count>15</strong><span>DEMONSTRATION PROFILES</span></article>
-      <article><strong data-coverage-external-count>10</strong><span>CHART-AND-NEWS ONLY</span></article>
+      <article><strong data-coverage-external-count>10</strong><span>CHARTS &amp; STORIES ONLY</span></article>
       <article><strong>0</strong><span>INTERNALLY VERIFIED LIVE</span></article>
-      <article><strong data-coverage-status>LOADING</strong><span>CURRENT LIST STATUS</span></article>
+      <article><strong data-coverage-status>LOADING</strong><span>DIRECTORY STATUS</span></article>
     </section>
 
     <div class="coverage-notice">
-      <strong>25 EXTERNAL STOCKS DOES NOT MEAN 25 MONSTER RATINGS.</strong>
-      TradingView supplies the visible prices, charts, and stories, which may be delayed. Internal live coverage still requires saved quotes, SEC evidence, sources, versioned ratings, and genuine update timestamps in the production database.
+      <strong>SEARCHABLE DOES NOT AUTOMATICALLY MEAN RATED.</strong>
+      TradingView supplies the visible external prices, charts, and stories, which may be delayed. A Monster Rating™ requires saved evidence, sources, rating versions, and genuine update timestamps inside the production system.
     </div>
 
     <section class="coverage-finder" aria-labelledby="coverage-finder-title">
       <div class="coverage-finder-head">
-        <h2 id="coverage-finder-title">FIND A<br><strong>STOCK.</strong></h2>
-        <p>Type a ticker, company name, or sector. Every match tells you whether a demonstration Monster Check exists and gives direct access to its chart and News Radar. This search pattern can grow toward 2,000 companies without creating 2,000 buttons.</p>
+        <h2 id="coverage-finder-title">SEARCH BY<br><strong>STOCK OR INDUSTRY.</strong></h2>
+        <p>Enter a ticker such as RKLB, a company such as Apple, or an industry such as semiconductors. Every result identifies what exists and provides the correct next action.</p>
+      </div>
+
+      <div class="coverage-finder-how" aria-label="How to use the Stock Directory">
+        <article><strong>1 · TYPE</strong><span>Use a ticker, company name, sector, or industry.</span></article>
+        <article><strong>2 · SEE THE STATUS</strong><span>Learn whether a Monster Check exists or only charts and stories are available.</span></article>
+        <article><strong>3 · OPEN THE TOOL</strong><span>Go directly to the Check, Chart, or Current Stories.</span></article>
+      </div>
+
+      <p class="coverage-finder-example-label">TRY AN EXAMPLE</p>
+      <div class="coverage-finder-examples" aria-label="Example stock directory searches">
+        <button class="coverage-finder-example" data-coverage-example="Apple" type="button">APPLE</button>
+        <button class="coverage-finder-example" data-coverage-example="semiconductors" type="button">SEMICONDUCTORS</button>
+        <button class="coverage-finder-example" data-coverage-example="financial technology" type="button">FINANCIAL TECHNOLOGY</button>
+        <button class="coverage-finder-example" data-coverage-example="RKLB" type="button">RKLB</button>
       </div>
 
       <div class="coverage-finder-controls">
-        <input class="coverage-finder-input" data-coverage-finder-input aria-label="Search the coverage universe" placeholder="TYPE A TICKER, COMPANY, OR SECTOR" autocomplete="off">
+        <input class="coverage-finder-input" data-coverage-finder-input aria-label="Search the stock directory" placeholder="TYPE A TICKER, COMPANY, OR INDUSTRY" autocomplete="off">
         <button class="coverage-finder-clear" data-coverage-finder-clear type="button">CLEAR</button>
       </div>
 
-      <div class="coverage-finder-filters" role="group" aria-label="Filter stock coverage">
+      <div class="coverage-finder-filters" role="group" aria-label="Filter stock availability">
         <button class="coverage-finder-filter is-active" data-coverage-finder-filter="all" type="button" aria-pressed="true">ALL 25</button>
         <button class="coverage-finder-filter" data-coverage-finder-filter="monster" type="button" aria-pressed="false">MONSTER CHECK AVAILABLE</button>
-        <button class="coverage-finder-filter" data-coverage-finder-filter="market" type="button" aria-pressed="false">CHARTS &amp; NEWS ONLY</button>
+        <button class="coverage-finder-filter" data-coverage-finder-filter="market" type="button" aria-pressed="false">CHARTS &amp; STORIES ONLY</button>
       </div>
 
-      <p class="coverage-finder-summary" data-coverage-finder-summary aria-live="polite">LOADING STOCK FINDER</p>
+      <p class="coverage-finder-summary" data-coverage-finder-summary aria-live="polite">LOADING STOCK DIRECTORY</p>
       <div class="coverage-finder-results" data-coverage-finder-results aria-live="polite"></div>
     </section>
 
     <section class="coverage-section" aria-labelledby="current-universe-title">
       <div class="coverage-section-head">
         <h2 id="current-universe-title">THE CURRENT<br>MONSTER 15.</h2>
-        <p>These companies have demonstration Monster Check profiles plus external charts and News Radar. None has passed the internal verified-live gate yet.</p>
+        <p>These companies have educational demonstration Monster Check profiles plus external charts and News Radar. None has passed the internally verified-live gate yet.</p>
       </div>
       <div class="coverage-stock-grid" data-coverage-stock-grid>
         <p>Loading the 15 demonstration stocks…</p>
@@ -88,36 +103,37 @@
     <section class="coverage-section" id="external-market-coverage" aria-labelledby="external-coverage-title">
       <div class="coverage-section-head">
         <h2 id="external-coverage-title">TEN MORE.<br>MARKET TOOLS FIRST.</h2>
-        <p>These additional companies now appear in Full Charts, Market Pulse, News Radar, and the sitewide ticker tape. They do not yet have Monster Ratings™ or demonstration evidence profiles.</p>
+        <p>These additional companies appear in Full Charts, Market Pulse, News Radar, and the ticker tape. They do not yet have Monster Ratings™ or demonstration evidence profiles.</p>
       </div>
       <div class="coverage-stock-grid" data-coverage-expansion-grid>
-        <p>Loading the ten external-only stocks…</p>
+        <p>Loading the ten chart-and-stories stocks…</p>
       </div>
     </section>
 
     <section class="coverage-section" aria-labelledby="scale-roadmap-title">
       <div class="coverage-section-head">
         <h2 id="scale-roadmap-title">THE SCALE<br>ROADMAP.</h2>
-        <p>The interface can grow, but each larger verified stage depends on the backend, database, reliable refresh jobs, source tracking, and failure handling. Human beings love large round numbers. Databases demand evidence.</p>
+        <p>The searchable directory can grow much faster than verified Monster Ratings. Each larger verified stage still depends on the backend, database, reliable refresh jobs, source tracking, and failure handling.</p>
       </div>
       <div class="coverage-stage-grid">
-        <article><strong>25</strong><span>EXTERNAL MARKET TOOLS</span><small>Completed for charts, ticker tape, Market Pulse, and News Radar. Monster Ratings remain limited to the 15 demonstrations.</small></article>
-        <article><strong>50</strong><span>SECTOR BREADTH</span><small>Next external expansion after the 25-stock tools are tested and cleaned up.</small></article>
-        <article><strong>100</strong><span>LEADERBOARD DEPTH</span><small>Requires dependable refreshes, filtering, sorting, and history.</small></article>
-        <article><strong>200</strong><span>OPERATING SCALE</span><small>Requires stronger provider limits, monitoring, retries, and database performance.</small></article>
-        <article><strong>2,000</strong><span>FULL TARGET UNIVERSE</span><small>Planned coverage of active U.S.-listed common stocks. Not currently built or internally live.</small></article>
+        <article><strong>25</strong><span>MARKET TOOLS</span><small>Completed for charts, ticker tape, Market Pulse, and News Radar. Ratings remain limited to demonstrations.</small></article>
+        <article><strong>50</strong><span>SECTOR BREADTH</span><small>Next external expansion after the current 25-stock tools are tested and cleaned up.</small></article>
+        <article><strong>100</strong><span>DIRECTORY DEPTH</span><small>Requires stronger filtering, sorting, and search behavior.</small></article>
+        <article><strong>200</strong><span>ACTIVE MONITORING</span><small>Requires provider capacity, monitoring, retries, evidence rules, and database performance.</small></article>
+        <article><strong>2,000</strong><span>SEARCHABLE UNIVERSE</span><small>Planned coverage of active U.S.-listed common stocks. Not currently built or internally live.</small></article>
       </div>
     </section>
   </div>
 </main>
 
 <footer class="home-footer">
-  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>COUNT WHAT EXISTS. LABEL WHAT DOES NOT.</span></div>
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>FIND THE STOCK. SEE WHAT EXISTS. OPEN THE EVIDENCE.</span></div>
   <p><strong>Educational Use Only:</strong> Demonstration profiles and external market widgets are not recommendations. Investing involves risk, including possible loss of principal.</p>
 </footer>
 
 <script src="assets/coverage-universe.js"></script>
 <script src="assets/coverage-finder.js"></script>
+<script src="assets/coverage-finder-guide.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>
 </html>
