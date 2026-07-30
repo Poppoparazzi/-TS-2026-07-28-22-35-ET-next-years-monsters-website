@@ -1,4 +1,4 @@
-// TS: 2026-07-30 09:43 ET
+// TS: 2026-07-30 11:43 ET
 
 function coverageFinderNormalize(value) {
   return String(value ?? "").trim().toUpperCase();
@@ -37,7 +37,7 @@ function createCoverageFinderCard(stock) {
   const detail = document.createElement("small");
   detail.textContent = stock.monsterCheck
     ? `${stock.sector} · Monster Check demonstration available · Not internally live`
-    : `${stock.sector} · Charts and News available · No Monster Rating yet`;
+    : `${stock.sector} · Charts and stories available · No Monster Rating yet`;
 
   identity.append(ticker, company, detail);
 
@@ -83,6 +83,9 @@ async function startCoverageFinder() {
 
   if (!input || !clearButton || !summary || !results) return;
 
+  const initialParams = new URLSearchParams(window.location.search);
+  input.value = initialParams.get("q") || "";
+
   let stocks = [];
   let activeFilter = "all";
 
@@ -91,10 +94,18 @@ async function startCoverageFinder() {
     if (!response.ok) throw new Error("Unable to load market universe");
     stocks = await response.json();
   } catch (_error) {
-    summary.textContent = "STOCK FINDER COULD NOT LOAD";
+    summary.textContent = "STOCK DIRECTORY COULD NOT LOAD";
     results.innerHTML = '<p class="coverage-finder-empty">The market list could not be loaded. No company was invented.</p>';
     return;
   }
+
+  const syncQueryToUrl = () => {
+    const url = new URL(window.location.href);
+    const query = input.value.trim();
+    if (query) url.searchParams.set("q", query);
+    else url.searchParams.delete("q");
+    window.history.replaceState({}, "", url);
+  };
 
   const render = () => {
     const query = input.value.trim();
@@ -118,7 +129,7 @@ async function startCoverageFinder() {
     results.replaceChildren();
 
     if (!query) {
-      summary.textContent = "TYPE A TICKER, COMPANY, OR SECTOR";
+      summary.textContent = "TYPE A TICKER, COMPANY, OR INDUSTRY";
       const message = document.createElement("p");
       message.className = "coverage-finder-empty";
       message.textContent = "Try AAPL, Apple, RKLB, software, semiconductors, or financial technology. The finder is designed to scale without placing thousands of ticker buttons on the page.";
@@ -131,7 +142,7 @@ async function startCoverageFinder() {
     if (!filtered.length) {
       const message = document.createElement("p");
       message.className = "coverage-finder-empty";
-      message.textContent = `No current Market 25 company matches “${query}.” The finder will expand as the coverage universe grows.`;
+      message.textContent = `No current Market 25 company matches “${query}.” The directory will expand as the searchable universe grows.`;
       results.append(message);
       return;
     }
@@ -139,11 +150,15 @@ async function startCoverageFinder() {
     filtered.forEach((stock) => results.append(createCoverageFinderCard(stock)));
   };
 
-  input.addEventListener("input", render);
+  input.addEventListener("input", () => {
+    syncQueryToUrl();
+    render();
+  });
 
   clearButton.addEventListener("click", () => {
     input.value = "";
     input.focus();
+    syncQueryToUrl();
     render();
   });
 
@@ -160,6 +175,9 @@ async function startCoverageFinder() {
   });
 
   render();
+  if (input.value) {
+    window.setTimeout(() => input.scrollIntoView({ block: "center" }), 100);
+  }
 }
 
 if (document.readyState === "loading") {
