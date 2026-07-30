@@ -1,4 +1,4 @@
-// TS: 2026-07-29 22:41 ET
+// TS: 2026-07-30 01:38 ET
 
 const NYM_PILOT_MARKET_SYMBOLS = Object.freeze([
   Object.freeze({ ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" }),
@@ -28,7 +28,29 @@ function ensureMarketTickerStyles() {
   document.head.append(link);
 }
 
+function ensureMarketExplorerNavLink() {
+  const navigation = document.querySelector("nav.nav-links");
+  if (!navigation) return;
+
+  let link = [...navigation.querySelectorAll("a")].find((item) =>
+    item.getAttribute("href")?.includes("market-explorer.html"),
+  );
+
+  if (!link) {
+    link = document.createElement("a");
+    link.href = "market-explorer.html";
+    link.textContent = "MARKET EXPLORER";
+    navigation.append(link);
+  }
+
+  if (window.location.pathname.endsWith("market-explorer.html")) {
+    link.classList.add("active");
+    link.setAttribute("aria-current", "page");
+  }
+}
+
 function createMarketTickerStrip() {
+  ensureMarketExplorerNavLink();
   if (document.querySelector("[data-nym-market-tape]")) return;
 
   const header = document.querySelector("header.site-header");
@@ -49,8 +71,8 @@ function createMarketTickerStrip() {
   label.textContent = "15-STOCK MARKET TAPE · EXTERNAL MARKET DATA";
 
   const explorerLink = document.createElement("a");
-  explorerLink.href = "live-status.html#market-snapshot-title";
-  explorerLink.textContent = "OPEN THE FULL MARKET EXPLORER →";
+  explorerLink.href = "market-explorer.html";
+  explorerLink.textContent = "OPEN THE TWO-STOCK MARKET EXPLORER →";
 
   head.append(label, explorerLink);
 
