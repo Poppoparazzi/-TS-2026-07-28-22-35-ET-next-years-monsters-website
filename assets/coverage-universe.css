@@ -1,0 +1,250 @@
+/* TS: 2026-07-30 06:58 ET */
+
+.coverage-page {
+  background: #f7f1e5;
+  color: #101311;
+}
+
+.coverage-hero {
+  padding: clamp(56px, 8vw, 108px) 24px;
+  background: #0d120f;
+  color: #f7f1e5;
+}
+
+.coverage-shell,
+.coverage-main {
+  width: min(1240px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.coverage-kicker {
+  margin: 0 0 18px;
+  color: #b8f34a;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.coverage-hero h1 {
+  margin: 0;
+  font-family: var(--editorial-display-font, "Segoe UI", Arial, sans-serif);
+  font-size: clamp(56px, 9vw, 120px);
+  font-weight: 850;
+  letter-spacing: -.055em;
+  line-height: .86;
+}
+
+.coverage-hero h1 strong {
+  color: #d9aa31;
+}
+
+.coverage-intro {
+  max-width: 760px;
+  margin: 24px 0 0;
+  color: #d8ddd9;
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.coverage-main {
+  padding: 42px 0 80px;
+}
+
+.coverage-trust-strip,
+.coverage-stage-grid,
+.coverage-stock-grid,
+.coverage-slot-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.coverage-trust-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 24px;
+}
+
+.coverage-trust-strip article,
+.coverage-stage-grid article,
+.coverage-stock-card,
+.coverage-slot-card {
+  border: 1px solid #b7b09f;
+  background: #fffaf0;
+}
+
+.coverage-trust-strip article {
+  padding: 18px;
+}
+
+.coverage-trust-strip strong,
+.coverage-trust-strip span {
+  display: block;
+}
+
+.coverage-trust-strip strong {
+  color: #b72d27;
+  font-size: clamp(28px, 4vw, 46px);
+}
+
+.coverage-trust-strip span {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
+.coverage-notice {
+  padding: 18px 20px;
+  border-left: 7px solid #b72d27;
+  background: #ece5d5;
+  line-height: 1.55;
+}
+
+.coverage-section {
+  margin-top: 44px;
+}
+
+.coverage-section-head {
+  display: grid;
+  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+  gap: 30px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.coverage-section-head h2 {
+  margin: 0;
+  font-family: var(--editorial-display-font, "Segoe UI", Arial, sans-serif);
+  font-size: clamp(40px, 6vw, 72px);
+  letter-spacing: -.045em;
+  line-height: .93;
+}
+
+.coverage-section-head p {
+  margin: 0;
+  color: #4d534e;
+  line-height: 1.65;
+}
+
+.coverage-stock-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.coverage-stock-card,
+.coverage-slot-card {
+  padding: 18px;
+}
+
+.coverage-stock-card strong,
+.coverage-stock-card span,
+.coverage-stock-card small,
+.coverage-slot-card strong,
+.coverage-slot-card span {
+  display: block;
+}
+
+.coverage-stock-card strong,
+.coverage-slot-card strong {
+  font-size: 22px;
+}
+
+.coverage-stock-card span {
+  margin-top: 4px;
+  font-weight: 800;
+}
+
+.coverage-stock-card small {
+  margin-top: 8px;
+  color: #656a65;
+  line-height: 1.4;
+}
+
+.coverage-stock-card a {
+  display: inline-block;
+  margin-top: 14px;
+  color: #b72d27;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.coverage-slot-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.coverage-slot-card {
+  border-style: dashed;
+  background: #f2ecdf;
+}
+
+.coverage-slot-card strong {
+  color: #8e918c;
+}
+
+.coverage-slot-card span {
+  margin-top: 8px;
+  color: #6c716c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.coverage-stage-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.coverage-stage-grid article {
+  padding: 20px;
+}
+
+.coverage-stage-grid strong,
+.coverage-stage-grid span,
+.coverage-stage-grid small {
+  display: block;
+}
+
+.coverage-stage-grid strong {
+  color: #d9aa31;
+  font-size: 40px;
+}
+
+.coverage-stage-grid span {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.coverage-stage-grid small {
+  margin-top: 8px;
+  color: #646964;
+  line-height: 1.4;
+}
+
+.coverage-stage-grid article:last-child {
+  background: #101512;
+  color: #f7f1e5;
+}
+
+.coverage-stage-grid article:last-child small {
+  color: #c9ceca;
+}
+
+@media (max-width: 980px) {
+  .coverage-trust-strip,
+  .coverage-stock-grid,
+  .coverage-stage-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .coverage-slot-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .coverage-section-head,
+  .coverage-trust-strip,
+  .coverage-stock-grid,
+  .coverage-slot-grid,
+  .coverage-stage-grid {
+    grid-template-columns: 1fr;
+  }
+}
