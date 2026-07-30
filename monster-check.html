@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-29 22:41 ET -->
+<!-- TS: 2026-07-30 08:29 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -9,6 +9,26 @@
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/monster-check.css">
   <style>
+    .monster-chart-door {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,.18);
+    }
+    .monster-chart-door span {
+      color: #c4c8c2;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+    .monster-result-chart-link {
+      display: inline-flex;
+      margin-top: 18px;
+      text-decoration: none;
+    }
     @media (max-width:650px) {
       .monster-hero h1 { font-size: clamp(62px, 18.5vw, 82px); }
     }
@@ -70,6 +90,10 @@
         <button data-rate-button type="button">RUN THE CHECK</button>
       </div>
       <div class="suggestions monster-suggestions" data-suggestions></div>
+      <div class="monster-chart-door">
+        <a class="home-btn home-btn-green" href="market-explorer.html?mode=single">OPEN FULL CHARTS →</a>
+        <span>Open one large white-background chart, or switch to Compare Two inside Market Explorer.</span>
+      </div>
       <p class="monster-demo-note">CURRENTLY A 15-STOCK EDUCATIONAL DEMONSTRATION. LIVE DATA CONNECTION COMES NEXT.</p>
     </div>
   </section>
@@ -110,6 +134,7 @@
 <script src="assets/app.js"></script>
 <script src="assets/live-data.js"></script>
 <script src="assets/monster-query.js"></script>
+<script src="assets/monster-chart-link.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>
 </html>
