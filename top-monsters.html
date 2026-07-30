@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-29 22:41 ET -->
+<!-- TS: 2026-07-30 06:58 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -50,8 +50,8 @@
         <div class="leaderboard-status-item leaderboard-status-pending">
           <span class="leaderboard-status-check" aria-hidden="true">○</span>
           <div>
-            <strong>TOP 25 LIVE STATUS: PENDING</strong>
-            <span>The first public milestone is one verified live ticker. The original 15 follow, then 10 additional stocks complete the Top 25.</span>
+            <strong>25-STOCK EXPANSION TARGET: NOT STARTED</strong>
+            <span>Current universe: 15 demonstration profiles. Internal verified live count: 0. The 10 additional companies needed to reach 25 have not been selected or added.</span>
             <a class="leaderboard-link" href="live-status.html">VIEW THE COMPLETE LIVE ROLLOUT BOARD →</a>
           </div>
         </div>
@@ -64,21 +64,35 @@
       <div class="live-rollout-head">
         <div>
           <p class="leaderboard-kicker">LIVE DATA ROLLOUT</p>
-          <h2 id="live-rollout-title">FROM 0 TO 25.<br>ONE VERIFIED STEP AT A TIME.</h2>
+          <h2 id="live-rollout-title">15 DEMOS.<br>0 VERIFIED LIVE.</h2>
         </div>
-        <p>This board shows what is genuinely complete and what is still missing. A stock does not become live until its quote, SEC status, versioned rating, evidence, sources, and update time are saved successfully.</p>
+        <p>This board separates what exists from what is planned. Fifteen demonstration profiles are available now. No stock is internally live until its quote, SEC status, versioned rating, evidence, sources, and update time are saved successfully.</p>
       </div>
 
-      <div class="rollout-summary" aria-label="Live rollout totals">
+      <div class="rollout-summary" aria-label="Current live rollout totals">
         <article><strong>15/15</strong><span>DEMO PROFILES READY</span></article>
         <article><strong>0/15</strong><span>LIVE QUOTES CONNECTED</span></article>
         <article><strong>0/15</strong><span>SEC CHECKS SAVED</span></article>
         <article><strong>0/15</strong><span>LIVE RATINGS SAVED</span></article>
-        <article><strong>10</strong><span>TOP 25 SLOTS OPEN</span></article>
+        <article><strong>0/10</strong><span>ADDITIONAL TOP-25 STOCKS ADDED</span></article>
       </div>
 
+      <section class="rollout-milestones" aria-labelledby="rollout-milestones-title">
+        <div class="rollout-milestones-head">
+          <strong id="rollout-milestones-title">VERIFIED LIVE CHECKPOINTS</strong>
+          <span>Every checkpoint uses the same evidence standard. Larger numbers only prove that the process can repeat reliably.</span>
+        </div>
+        <div class="rollout-milestone-grid">
+          <article><strong>1</strong><span>FIRST VERIFIED STOCK</span><small>Current: 0</small></article>
+          <article><strong>5</strong><span>SMALL PILOT</span><small>Current: 0</small></article>
+          <article><strong>10</strong><span>REPEATABILITY TEST</span><small>Current: 0</small></article>
+          <article><strong>15</strong><span>ORIGINAL PILOT LIVE</span><small>Current: 0</small></article>
+          <article class="rollout-milestone-target"><strong>25</strong><span>FIRST EXPANSION TARGET</span><small>15 demos exist; 10 more not added</small></article>
+        </div>
+      </section>
+
       <div class="rollout-next-step">
-        <strong>NEXT VISIBLE MILESTONE: 1/15 LIVE</strong>
+        <strong>NEXT VISIBLE MILESTONE: 1/15 VERIFIED LIVE</strong>
         <span>Deploy the secure backend, save one genuine quote and SEC check, then display its real source and Last Updated time.</span>
       </div>
 
