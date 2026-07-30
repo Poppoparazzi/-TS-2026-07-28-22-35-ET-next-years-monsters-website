@@ -1,25 +1,7 @@
-// TS: 2026-07-30 07:17 ET
+// TS: 2026-07-30 09:05 ET
 
 const MARKET_EXPLORER_URL =
   "https://poppoparazzi.github.io/-TS-2026-07-28-22-35-ET-next-years-monsters-website/market-explorer.html";
-
-const PULSE_MONSTER_SYMBOLS = Object.freeze([
-  { s: "NASDAQ:AAPL", d: "Apple" },
-  { s: "NASDAQ:AMD", d: "AMD" },
-  { s: "NASDAQ:AMZN", d: "Amazon" },
-  { s: "NASDAQ:APP", d: "AppLovin" },
-  { s: "NASDAQ:AXON", d: "Axon" },
-  { s: "NASDAQ:COST", d: "Costco" },
-  { s: "NYSE:DECK", d: "Deckers" },
-  { s: "NASDAQ:META", d: "Meta" },
-  { s: "NASDAQ:MNST", d: "Monster Beverage" },
-  { s: "NASDAQ:MSFT", d: "Microsoft" },
-  { s: "NASDAQ:NFLX", d: "Netflix" },
-  { s: "NASDAQ:NVDA", d: "NVIDIA" },
-  { s: "NASDAQ:TSLA", d: "Tesla" },
-  { s: "NYSE:VRT", d: "Vertiv" },
-  { s: "NASDAQ:WING", d: "Wingstop" },
-]);
 
 function pulseText(selector, value) {
   const node = document.querySelector(selector);
@@ -28,7 +10,6 @@ function pulseText(selector, value) {
 
 function mountTradingViewWidget(frame, source, configuration) {
   if (!frame) return;
-
   frame.replaceChildren();
 
   const container = document.createElement("div");
@@ -51,7 +32,12 @@ function mountTradingViewWidget(frame, source, configuration) {
   frame.append(container);
 }
 
-function mountMarketOverview() {
+function mountMarketOverview(stocks) {
+  const marketSymbols = stocks.map((stock) => ({
+    s: stock.proName || `${stock.exchange || "NASDAQ"}:${stock.ticker}`,
+    d: stock.name,
+  }));
+
   mountTradingViewWidget(
     document.querySelector("[data-pulse-overview]"),
     "https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js",
@@ -77,9 +63,9 @@ function mountMarketOverview() {
       symbolActiveColor: "rgba(217, 170, 49, 0.18)",
       tabs: [
         {
-          title: "Monster 15",
-          symbols: PULSE_MONSTER_SYMBOLS,
-          originalTitle: "Monster 15",
+          title: "Market 25",
+          symbols: marketSymbols,
+          originalTitle: "Market 25",
         },
         {
           title: "Major Indexes",
@@ -148,11 +134,14 @@ function mountMarketHeatmap() {
   );
 }
 
-function startMarketPulse() {
+async function startMarketPulse() {
   try {
-    mountMarketOverview();
+    const response = await fetch("data/market-universe.json");
+    if (!response.ok) throw new Error("Unable to load the external market universe.");
+    const stocks = await response.json();
+    mountMarketOverview(stocks);
     mountMarketHeatmap();
-    pulseText("[data-pulse-status]", "DASHBOARD REQUESTED");
+    pulseText("[data-pulse-status]", "25-STOCK DASHBOARD REQUESTED");
   } catch (_error) {
     pulseText("[data-pulse-status]", "WIDGET LOAD FAILED");
     document.querySelectorAll("[data-pulse-overview], [data-pulse-heatmap]").forEach((frame) => {
