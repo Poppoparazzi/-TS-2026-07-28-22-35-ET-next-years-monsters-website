@@ -1,4 +1,4 @@
-// TS: 2026-07-30 09:17 ET
+// TS: 2026-07-30 09:43 ET
 
 function coverageFinderNormalize(value) {
   return String(value ?? "").trim().toUpperCase();
@@ -65,8 +65,8 @@ function createCoverageFinderCard(stock) {
     ),
     createCoverageFinderAction(
       "coverage-finder-news",
-      `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}`,
-      "NEWS",
+      `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}#current-stories`,
+      "CURRENT STORIES",
     ),
   );
 
