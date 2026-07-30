@@ -1,0 +1,105 @@
+/* TS: 2026-07-30 11:43 ET */
+
+.home-stock-finder {
+  max-width: 760px;
+  margin-top: 26px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .34);
+  background: rgba(8, 13, 11, .72);
+}
+
+.home-stock-finder label,
+.home-stock-finder small {
+  display: block;
+}
+
+.home-stock-finder label {
+  margin-bottom: 10px;
+  color: var(--editorial-lime, #b8f34a);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .065em;
+}
+
+.home-stock-finder-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.home-stock-finder input {
+  width: 100%;
+  min-height: 54px;
+  border: 2px solid #d9aa31;
+  border-radius: 0;
+  background: #fffaf0;
+  color: #101311;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.home-stock-finder input:focus {
+  border-color: var(--editorial-lime, #b8f34a);
+  outline: 3px solid rgba(184, 243, 74, .2);
+  outline-offset: 1px;
+}
+
+.home-stock-finder button {
+  min-width: 132px;
+  min-height: 54px;
+  border: 0;
+  background: var(--editorial-lime, #b8f34a);
+  color: #101311;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .045em;
+  cursor: pointer;
+}
+
+.home-stock-finder button:hover,
+.home-stock-finder button:focus-visible {
+  filter: brightness(1.08);
+}
+
+.home-stock-finder small {
+  margin-top: 10px;
+  color: #cbd1cd;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 680px) {
+  .home-stock-finder {
+    width: 100%;
+    margin-top: 20px;
+    padding: 15px;
+  }
+
+  .home-stock-finder-row {
+    grid-template-columns: 1fr;
+  }
+
+  .home-stock-finder input,
+  .home-stock-finder button {
+    min-height: 56px;
+  }
+
+  .home-stock-finder button {
+    width: 100%;
+  }
+
+  .home-hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .home-hero-actions .home-btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
