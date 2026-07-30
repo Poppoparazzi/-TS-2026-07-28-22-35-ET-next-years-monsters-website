@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-30 08:34 ET -->
+<!-- TS: 2026-07-30 08:48 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,8 +14,8 @@
       flex-wrap: wrap;
       gap: 14px;
       align-items: center;
-      margin-top: 18px;
-      padding-top: 18px;
+      margin-top: 20px;
+      padding-top: 20px;
       border-top: 1px solid rgba(255,255,255,.18);
     }
     .monster-chart-door span {
@@ -29,55 +29,86 @@
       margin-top: 18px;
       text-decoration: none;
     }
+    .monster-shortcut-guide {
+      margin: 14px 0 0;
+      color: #9ea59f;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .045em;
+    }
     .monster-suggestions {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      align-items: stretch;
-      margin-top: 14px;
+      gap: 14px 18px;
+      align-items: center;
+      margin-top: 12px;
     }
     .monster-stock-shortcut {
       display: inline-flex;
-      align-items: stretch;
-      min-height: 38px;
-      border: 1px solid rgba(255,255,255,.28);
-      background: #151a18;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      border: 0;
+      background: transparent;
     }
     .monster-stock-shortcut .chip {
+      min-width: 86px;
+      height: 44px;
       margin: 0;
-      border: 0;
-      border-right: 1px solid rgba(255,255,255,.28);
-      border-radius: 0;
+      padding: 0 18px;
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 999px;
       background: #1b211f;
       color: #fff;
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: .04em;
     }
     .monster-stock-shortcut .chip:hover,
     .monster-stock-shortcut .chip:focus-visible {
+      border-color: var(--editorial-lime);
       background: #2a312e;
       color: var(--editorial-lime);
     }
     .monster-shortcut-chart {
       display: grid;
+      width: 48px;
+      height: 48px;
       place-items: center;
-      padding: 0 12px;
-      background: var(--editorial-lime);
+      flex: 0 0 48px;
+      border: 2px solid #f5d36a;
+      border-radius: 50%;
+      background: var(--editorial-gold);
       color: #080c0b;
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 950;
-      letter-spacing: .035em;
+      letter-spacing: .025em;
+      line-height: 1;
       text-decoration: none;
+      box-shadow: 0 5px 14px rgba(0,0,0,.28);
+      transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
     }
     .monster-shortcut-chart:hover,
     .monster-shortcut-chart:focus-visible {
-      background: #d7ff83;
+      background: #f1c94a;
+      box-shadow: 0 7px 18px rgba(0,0,0,.36);
+      transform: translateY(-1px) scale(1.04);
+    }
+    .monster-shortcut-chart:focus-visible {
+      outline: 3px solid var(--editorial-lime);
+      outline-offset: 3px;
     }
     @media (max-width:650px) {
       .monster-hero h1 { font-size: clamp(62px, 18.5vw, 82px); }
-      .monster-stock-shortcut {
-        flex: 1 1 calc(50% - 10px);
-      }
+      .monster-suggestions { gap: 12px 14px; }
       .monster-stock-shortcut .chip {
-        flex: 1;
+        min-width: 78px;
+        padding: 0 14px;
+      }
+      .monster-shortcut-chart {
+        width: 44px;
+        height: 44px;
+        flex-basis: 44px;
       }
     }
   </style>
@@ -137,10 +168,11 @@
         <input id="monster-ticker" data-ticker-input aria-label="Ticker or company name" placeholder="ENTER STOCK SYMBOL" autocomplete="off">
         <button data-rate-button type="button">RUN THE CHECK</button>
       </div>
+      <p class="monster-shortcut-guide">QUICK PICKS · TICKER OPENS THE CHECK · GOLD CIRCLE OPENS THE CHART</p>
       <div class="suggestions monster-suggestions" data-suggestions></div>
       <div class="monster-chart-door">
         <a class="home-btn home-btn-green" href="market-explorer.html?mode=single">OPEN FULL CHARTS →</a>
-        <span>Every visible stock shortcut also has its own CHART button. Use the larger button here to open the full chart library.</span>
+        <span>Every selected stock result also includes its own larger full-chart button below.</span>
       </div>
       <p class="monster-demo-note">CURRENTLY A 15-STOCK EDUCATIONAL DEMONSTRATION. LIVE DATA CONNECTION COMES NEXT.</p>
     </div>
