@@ -1,0 +1,157 @@
+/* TS: 2026-07-30 08:56 ET */
+
+.monster-search-input-shell {
+  position: relative;
+  z-index: 30;
+}
+
+.monster-autocomplete {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  max-height: min(430px, 58vh);
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, .28);
+  background: #f7f2e7;
+  color: #080c0b;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, .48);
+}
+
+.monster-autocomplete[hidden] {
+  display: none;
+}
+
+.monster-autocomplete-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 86px;
+  min-height: 72px;
+  border-bottom: 1px solid #c7c2b7;
+}
+
+.monster-autocomplete-row:last-child {
+  border-bottom: 0;
+}
+
+.monster-autocomplete-row.is-active,
+.monster-autocomplete-row:focus-within {
+  box-shadow: inset 5px 0 0 var(--editorial-lime);
+}
+
+.monster-autocomplete-check {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "ticker company action"
+    "ticker sector action";
+  align-items: center;
+  gap: 2px 16px;
+  min-width: 0;
+  border: 0;
+  background: #f7f2e7;
+  color: #080c0b;
+  padding: 13px 18px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.monster-autocomplete-check:hover,
+.monster-autocomplete-check:focus-visible {
+  outline: 0;
+  background: #fffdf7;
+}
+
+.monster-autocomplete-ticker {
+  grid-area: ticker;
+  color: var(--editorial-red);
+  font-size: 20px;
+  font-weight: 950;
+  letter-spacing: .025em;
+}
+
+.monster-autocomplete-company {
+  grid-area: company;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monster-autocomplete-sector {
+  grid-area: sector;
+  min-width: 0;
+  overflow: hidden;
+  color: #646861;
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.monster-autocomplete-check strong {
+  grid-area: action;
+  color: #080c0b;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .055em;
+}
+
+.monster-autocomplete-chart {
+  display: grid;
+  place-items: center;
+  border-left: 1px solid #c7c2b7;
+  background: var(--editorial-lime);
+  color: #080c0b;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+.monster-autocomplete-chart:hover,
+.monster-autocomplete-chart:focus-visible {
+  outline: 0;
+  background: #c8f95e;
+  box-shadow: inset 0 0 0 4px #080c0b;
+}
+
+@media (max-width: 650px) {
+  .monster-autocomplete {
+    max-height: min(390px, 52vh);
+  }
+
+  .monster-autocomplete-row {
+    grid-template-columns: minmax(0, 1fr) 72px;
+    min-height: 78px;
+  }
+
+  .monster-autocomplete-check {
+    grid-template-columns: 58px minmax(0, 1fr);
+    grid-template-areas:
+      "ticker company"
+      "ticker sector";
+    gap: 3px 12px;
+    min-height: 78px;
+    padding: 13px 14px;
+  }
+
+  .monster-autocomplete-ticker {
+    font-size: 17px;
+  }
+
+  .monster-autocomplete-company {
+    font-size: 14px;
+  }
+
+  .monster-autocomplete-check strong {
+    display: none;
+  }
+
+  .monster-autocomplete-chart {
+    font-size: 10px;
+  }
+}
