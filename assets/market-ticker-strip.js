@@ -18,11 +18,23 @@ const NYM_PILOT_MARKET_SYMBOLS = Object.freeze([
   Object.freeze({ ticker: "WING", name: "Wingstop", proName: "NASDAQ:WING" }),
 ]);
 
+function ensureMarketTickerStyles() {
+  if (document.querySelector('link[data-nym-market-tape-style]')) return;
+
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "assets/market-ticker-strip.css";
+  link.dataset.nymMarketTapeStyle = "";
+  document.head.append(link);
+}
+
 function createMarketTickerStrip() {
   if (document.querySelector("[data-nym-market-tape]")) return;
 
   const header = document.querySelector("header.site-header");
   if (!header) return;
+
+  ensureMarketTickerStyles();
 
   const section = document.createElement("section");
   section.className = "nym-market-tape";
@@ -92,4 +104,8 @@ function createMarketTickerStrip() {
   header.insertAdjacentElement("afterend", section);
 }
 
-document.addEventListener("DOMContentLoaded", createMarketTickerStrip);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", createMarketTickerStrip);
+} else {
+  createMarketTickerStrip();
+}
