@@ -1,13 +1,9 @@
-// TS: 2026-07-30 06:32 ET
-
-const NEWS_RADAR_EXCHANGE_OVERRIDES = Object.freeze({
-  DECK: "NYSE",
-  VRT: "NYSE",
-});
+// TS: 2026-07-30 09:05 ET
 
 function newsRadarSymbol(stock) {
+  if (stock.proName) return stock.proName;
   const ticker = String(stock.ticker).toUpperCase();
-  const exchange = NEWS_RADAR_EXCHANGE_OVERRIDES[ticker] ?? "NASDAQ";
+  const exchange = String(stock.exchange || "NASDAQ").toUpperCase();
   return `${exchange}:${ticker}`;
 }
 
@@ -18,7 +14,6 @@ function newsRadarText(selector, value) {
 
 function createTradingViewShell(frame) {
   frame.replaceChildren();
-
   const container = document.createElement("div");
   container.className = "tradingview-widget-container";
   container.style.width = "100%";
@@ -37,7 +32,6 @@ function createTradingViewShell(frame) {
 function mountNewsWidget(frame, stock) {
   const symbol = newsRadarSymbol(stock);
   const container = createTradingViewShell(frame);
-
   const copyright = document.createElement("div");
   copyright.className = "tradingview-widget-copyright";
 
@@ -69,7 +63,6 @@ function mountNewsWidget(frame, stock) {
 function mountReactionChart(frame, stock) {
   const symbol = newsRadarSymbol(stock);
   const container = createTradingViewShell(frame);
-
   const copyright = document.createElement("div");
   copyright.className = "tradingview-widget-copyright";
 
@@ -115,7 +108,6 @@ function mountReactionChart(frame, stock) {
 
 function populateNewsRadarSelect(select, stocks) {
   select.replaceChildren();
-
   stocks.forEach((stock) => {
     const option = document.createElement("option");
     option.value = String(stock.ticker).toUpperCase();
@@ -129,13 +121,9 @@ function setupNewsRadar(stocks) {
   const buttons = document.querySelector("[data-news-radar-buttons]");
   const newsFrame = document.querySelector("[data-news-radar-feed]");
   const chartFrame = document.querySelector("[data-news-radar-chart]");
-
   if (!select || !buttons || !newsFrame || !chartFrame || stocks.length === 0) return;
 
-  const byTicker = new Map(
-    stocks.map((stock) => [String(stock.ticker).toUpperCase(), stock]),
-  );
-
+  const byTicker = new Map(stocks.map((stock) => [String(stock.ticker).toUpperCase(), stock]));
   populateNewsRadarSelect(select, stocks);
 
   const params = new URLSearchParams(window.location.search);
@@ -151,17 +139,22 @@ function setupNewsRadar(stocks) {
     newsRadarText("[data-news-radar-company]", `${stock.name} · ${stock.sector}`);
     newsRadarText("[data-news-radar-feed-title]", `${ticker} TOP STORIES`);
     newsRadarText("[data-news-radar-chart-title]", `${ticker} PRICE REACTION`);
-    newsRadarText("[data-news-radar-status]", "NEWS AND CHART REQUESTED");
+    newsRadarText("[data-news-radar-status]", "25-STOCK NEWS AND CHART REQUESTED");
 
-    const monsterLink = document.querySelector("[data-news-radar-monster-link]");
-    if (monsterLink) {
-      monsterLink.href = `monster-check.html?ticker=${encodeURIComponent(ticker)}`;
-      monsterLink.textContent = `OPEN ${ticker} MONSTER CHECK™`;
+    const researchLink = document.querySelector("[data-news-radar-monster-link]");
+    if (researchLink) {
+      if (stock.monsterCheck) {
+        researchLink.href = `monster-check.html?ticker=${encodeURIComponent(ticker)}`;
+        researchLink.textContent = `OPEN ${ticker} MONSTER CHECK™`;
+      } else {
+        researchLink.href = `coverage-universe.html#external-market-coverage`;
+        researchLink.textContent = `${ticker} EXTERNAL COVERAGE ONLY`;
+      }
     }
 
     const compareLink = document.querySelector("[data-news-radar-compare-link]");
     if (compareLink) {
-      compareLink.href = `market-explorer.html?left=${encodeURIComponent(ticker)}&right=NVDA`;
+      compareLink.href = `market-explorer.html?left=${encodeURIComponent(ticker)}&right=NVDA&mode=compare`;
       compareLink.textContent = `COMPARE ${ticker} WITH NVDA`;
     }
 
@@ -179,9 +172,7 @@ function setupNewsRadar(stocks) {
     mountReactionChart(chartFrame, stock);
 
     const chartSource = document.querySelector("[data-news-radar-chart-source]");
-    if (chartSource) {
-      chartSource.href = `https://www.tradingview.com/symbols/${symbol.replace(":", "-")}/`;
-    }
+    if (chartSource) chartSource.href = `https://www.tradingview.com/symbols/${symbol.replace(":", "-")}/`;
   }
 
   buttons.replaceChildren();
@@ -207,18 +198,13 @@ function setupNewsRadar(stocks) {
 
 async function startNewsRadar() {
   try {
-    const response = await fetch("data/stocks.json");
-    if (!response.ok) throw new Error("Unable to load the pilot stock list.");
-
+    const response = await fetch("data/market-universe.json");
+    if (!response.ok) throw new Error("Unable to load the external market universe.");
     const stocks = await response.json();
-    const ordered = [...stocks].sort((left, right) =>
-      String(left.ticker).localeCompare(String(right.ticker)),
-    );
-
+    const ordered = [...stocks].sort((left, right) => String(left.ticker).localeCompare(String(right.ticker)));
     setupNewsRadar(ordered);
   } catch (_error) {
     newsRadarText("[data-news-radar-status]", "NEWS RADAR COULD NOT LOAD");
-
     document.querySelectorAll("[data-news-radar-feed], [data-news-radar-chart]").forEach((frame) => {
       frame.replaceChildren();
       const message = document.createElement("p");
