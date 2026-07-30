@@ -1,14 +1,15 @@
-<!-- TS: 2026-07-30 09:05 ET -->
+<!-- TS: 2026-07-30 09:17 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Coverage Universe | Next Year’s Monsters™</title>
-  <meta name="description" content="See the 15 demonstration Monster Check stocks, the 10 additional external chart-and-news stocks, and the roadmap toward larger verified coverage.">
+  <meta name="description" content="Search the 25-stock external market universe, see which 15 companies have demonstration Monster Checks, and track the roadmap toward larger verified coverage.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/coverage-universe.css">
+  <link rel="stylesheet" href="assets/coverage-finder.css">
 </head>
 <body class="coverage-page">
 
@@ -53,6 +54,27 @@
       TradingView supplies the visible prices, charts, and stories, which may be delayed. Internal live coverage still requires saved quotes, SEC evidence, sources, versioned ratings, and genuine update timestamps in the production database.
     </div>
 
+    <section class="coverage-finder" aria-labelledby="coverage-finder-title">
+      <div class="coverage-finder-head">
+        <h2 id="coverage-finder-title">FIND A<br><strong>STOCK.</strong></h2>
+        <p>Type a ticker, company name, or sector. Every match tells you whether a demonstration Monster Check exists and gives direct access to its chart and News Radar. This search pattern can grow toward 2,000 companies without creating 2,000 buttons.</p>
+      </div>
+
+      <div class="coverage-finder-controls">
+        <input class="coverage-finder-input" data-coverage-finder-input aria-label="Search the coverage universe" placeholder="TYPE A TICKER, COMPANY, OR SECTOR" autocomplete="off">
+        <button class="coverage-finder-clear" data-coverage-finder-clear type="button">CLEAR</button>
+      </div>
+
+      <div class="coverage-finder-filters" role="group" aria-label="Filter stock coverage">
+        <button class="coverage-finder-filter is-active" data-coverage-finder-filter="all" type="button" aria-pressed="true">ALL 25</button>
+        <button class="coverage-finder-filter" data-coverage-finder-filter="monster" type="button" aria-pressed="false">MONSTER CHECK AVAILABLE</button>
+        <button class="coverage-finder-filter" data-coverage-finder-filter="market" type="button" aria-pressed="false">CHARTS &amp; NEWS ONLY</button>
+      </div>
+
+      <p class="coverage-finder-summary" data-coverage-finder-summary aria-live="polite">LOADING STOCK FINDER</p>
+      <div class="coverage-finder-results" data-coverage-finder-results aria-live="polite"></div>
+    </section>
+
     <section class="coverage-section" aria-labelledby="current-universe-title">
       <div class="coverage-section-head">
         <h2 id="current-universe-title">THE CURRENT<br>MONSTER 15.</h2>
@@ -95,6 +117,7 @@
 </footer>
 
 <script src="assets/coverage-universe.js"></script>
+<script src="assets/coverage-finder.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>
 </html>
