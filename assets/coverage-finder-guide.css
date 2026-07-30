@@ -1,0 +1,79 @@
+/* TS: 2026-07-30 11:15 ET */
+
+.coverage-finder-how {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.coverage-finder-how article {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  background: #19201d;
+}
+
+.coverage-finder-how strong,
+.coverage-finder-how span {
+  display: block;
+}
+
+.coverage-finder-how strong {
+  color: #b8f34a;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .04em;
+}
+
+.coverage-finder-how span {
+  margin-top: 6px;
+  color: #d4dad5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.coverage-finder-example-label {
+  margin: 22px 0 9px;
+  color: #d9aa31;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .045em;
+}
+
+.coverage-finder-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.coverage-finder-example {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, .42);
+  border-radius: 999px;
+  background: transparent;
+  color: #fffaf0;
+  padding: 0 15px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .025em;
+  cursor: pointer;
+}
+
+.coverage-finder-example:hover,
+.coverage-finder-example:focus-visible {
+  border-color: #b8f34a;
+  background: #b8f34a;
+  color: #101311;
+}
+
+@media (max-width: 760px) {
+  .coverage-finder-how {
+    grid-template-columns: 1fr;
+  }
+
+  .coverage-finder-example {
+    flex: 1 1 calc(50% - 9px);
+  }
+}
