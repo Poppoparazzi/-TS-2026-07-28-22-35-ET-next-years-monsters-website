@@ -1,0 +1,91 @@
+/* TS: 2026-07-29 22:15 ET */
+
+.market-snapshot {
+  margin: 58px 0 72px;
+  padding: clamp(24px, 4vw, 48px);
+  border: 2px solid #111;
+  background: #101512;
+  color: #f7f2e7;
+}
+
+.market-snapshot-head {
+  display: grid;
+  grid-template-columns: minmax(260px, .85fr) minmax(300px, 1.15fr);
+  gap: 42px;
+  align-items: end;
+  margin-bottom: 26px;
+}
+
+.market-snapshot h2 {
+  margin: 0;
+  font-family: var(--editorial-display-font, "Segoe UI", Arial, sans-serif);
+  font-size: clamp(42px, 5vw, 72px);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: .94;
+}
+
+.market-snapshot-head p {
+  margin: 0;
+  color: #cbd1cd;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.snapshot-badge {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 9px 12px;
+  border-left: 5px solid var(--editorial-gold, #d9aa31);
+  background: rgba(255, 255, 255, .07);
+  color: #f7f2e7;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .045em;
+  line-height: 1.4;
+}
+
+.market-snapshot-frame {
+  height: 520px;
+  overflow: hidden;
+  border: 1px solid #777d78;
+  background: white;
+}
+
+.market-snapshot .tradingview-widget-container,
+.market-snapshot .tradingview-widget-container__widget {
+  min-height: 100%;
+}
+
+.market-snapshot .tradingview-widget-copyright {
+  padding: 5px 10px;
+  background: white;
+  font-size: 11px;
+}
+
+.snapshot-note {
+  margin: 20px 0 0;
+  padding: 18px 20px;
+  border-left: 6px solid var(--editorial-red, #b72d27);
+  background: rgba(255, 255, 255, .07);
+  color: #d5dad6;
+  line-height: 1.6;
+}
+
+.snapshot-note strong {
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .market-snapshot-head {
+    grid-template-columns: 1fr;
+  }
+
+  .market-snapshot {
+    padding: 24px 18px;
+  }
+
+  .market-snapshot-frame {
+    height: 440px;
+  }
+}
