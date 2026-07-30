@@ -1,11 +1,11 @@
-<!-- TS: 2026-07-29 22:15 ET -->
+<!-- TS: 2026-07-29 22:25 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Live Data Status | Next Year’s Monsters™</title>
-  <meta name="description" content="See exactly what is complete, what is pending, and how the Next Year’s Monsters™ stock data rollout moves from one verified ticker to the live Top 25.">
+  <meta name="description" content="See exactly what is complete, explore market snapshots for the original 15 stocks, and follow the Next Year’s Monsters™ rollout toward a verified live Top 25.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/live-status.css">
@@ -53,53 +53,35 @@
       <span data-readiness-message>AAPL is the first technical test, not a recommendation. The public API and database are not connected yet, so this board is showing verified repository status rather than invented live progress.</span>
     </div>
 
-    <section class="market-snapshot" aria-labelledby="aapl-snapshot-title">
+    <section class="market-snapshot" aria-labelledby="market-snapshot-title">
       <div class="market-snapshot-head">
         <div>
-          <p class="status-kicker">VISIBLE MARKET DATA TONIGHT</p>
-          <h2 id="aapl-snapshot-title">AAPL MARKET<br>SNAPSHOT</h2>
+          <p class="status-kicker">15-STOCK MARKET SNAPSHOT EXPLORER</p>
+          <h2 id="market-snapshot-title">$<span data-market-ticker>AAPL</span> MARKET<br>SNAPSHOT</h2>
         </div>
         <div>
-          <p>This embedded chart provides an immediate Apple price-and-chart view from TradingView. It is external market data and may be delayed. It does not count as a saved Next Year’s Monsters™ live quote, SEC check, or Monster Rating™.</p>
-          <span class="snapshot-badge">EXTERNAL MARKET SNAPSHOT · NOT YET OUR LIVE PIPELINE</span>
+          <p>Switch among all 15 pilot stocks to inspect price movement, volume, and multiple chart ranges. These TradingView charts provide external market context and may be delayed. They do not count as saved Next Year’s Monsters™ quotes, SEC checks, or Monster Ratings™.</p>
+          <span class="snapshot-badge">EXTERNAL MARKET SNAPSHOTS · NOT YET OUR LIVE PIPELINE</span>
         </div>
       </div>
-      <div class="market-snapshot-frame" aria-label="Apple stock market snapshot provided by TradingView">
-        <div class="tradingview-widget-container" style="height:100%;width:100%">
-          <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px);width:100%"></div>
-          <div class="tradingview-widget-copyright">
-            <a href="https://www.tradingview.com/symbols/NASDAQ-AAPL/" rel="noopener nofollow" target="_blank"><span class="blue-text">Apple stock price</span></a><span class="trademark"> by TradingView</span>
-          </div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
-          {
-            "symbols": [["Apple", "NASDAQ:AAPL|1D"]],
-            "chartOnly": false,
-            "width": "100%",
-            "height": "100%",
-            "locale": "en",
-            "colorTheme": "light",
-            "autosize": true,
-            "showVolume": true,
-            "showMA": false,
-            "hideDateRanges": false,
-            "hideMarketStatus": false,
-            "hideSymbolLogo": false,
-            "scalePosition": "right",
-            "scaleMode": "Normal",
-            "fontFamily": "Arial, Helvetica, sans-serif",
-            "fontSize": "10",
-            "noTimeScale": false,
-            "valuesTracking": "1",
-            "changeMode": "price-and-percent",
-            "chartType": "area",
-            "lineWidth": 2,
-            "lineType": 0,
-            "dateRanges": ["1d|1", "1m|30", "3m|60", "12m|1D", "60m|1W", "all|1M"]
-          }
-          </script>
+
+      <div class="snapshot-controls">
+        <div class="snapshot-select-group">
+          <label for="market-ticker-select">CHOOSE A PILOT STOCK</label>
+          <select id="market-ticker-select" data-market-select aria-label="Choose a pilot stock"></select>
         </div>
+        <div class="snapshot-stock-buttons" data-market-buttons aria-label="Pilot stock shortcut buttons"></div>
       </div>
-      <p class="snapshot-note"><strong>What this proves:</strong> Visitors can see current market context now. <strong>What it does not prove:</strong> our secure provider, database history, SEC record, or versioned Monster Rating™ has gone live.</p>
+
+      <div class="snapshot-selection">
+        <span><strong>SELECTED:</strong> <span data-market-selected>Apple · Technology</span></span>
+        <a data-market-check-link href="monster-check.html?ticker=AAPL">OPEN AAPL MONSTER CHECK™</a>
+      </div>
+
+      <div class="market-snapshot-frame" data-market-widget aria-live="polite">
+        <p class="snapshot-loading">Loading market snapshot…</p>
+      </div>
+      <p class="snapshot-note"><strong>What this proves:</strong> visitors can compare current market context across the complete 15-stock pilot now. <strong>What it does not prove:</strong> our secure provider, database history, SEC records, or versioned Monster Ratings™ have gone live.</p>
     </section>
 
     <section class="status-section" aria-labelledby="rollout-stages-title">
