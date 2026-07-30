@@ -1,16 +1,16 @@
-<!-- TS: 2026-07-30 01:37 ET -->
+<!-- TS: 2026-07-30 07:21 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Market Explorer | Next Year’s Monsters™</title>
-  <meta name="description" content="Compare any two stocks from the Next Year’s Monsters™ 15-stock pilot using interactive external market charts and direct Monster Check™ links.">
+  <meta name="description" content="Study one stock in a large chart or compare any two stocks from the Next Year’s Monsters™ 15-stock pilot using interactive external market charts.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/market-explorer.css">
 </head>
-<body class="market-explorer-page">
+<body class="market-explorer-page is-single-mode">
 
 <header class="site-header home-header">
   <div class="home-nav-shell">
@@ -33,16 +33,16 @@
 <main>
   <section class="explorer-hero">
     <div class="explorer-shell">
-      <p class="explorer-kicker">COMPARE THE MARKET. THEN READ THE EVIDENCE.</p>
-      <h1>TWO-STOCK<br><strong>MARKET EXPLORER</strong></h1>
-      <p class="explorer-intro">Choose any two companies from the 15-stock pilot and inspect their price movement, volume, and multiple chart ranges side by side. The charts provide external market context. The Monster Check™ pages explain the demonstration evidence framework.</p>
+      <p class="explorer-kicker">STUDY ONE STOCK. OR COMPARE TWO.</p>
+      <h1>MARKET<br><strong>EXPLORER</strong></h1>
+      <p class="explorer-intro">Open one company in a large white-background chart for focused study, or switch to two-chart comparison mode to inspect relative price movement, volume, and multiple time ranges side by side.</p>
     </div>
   </section>
 
   <div class="explorer-main">
     <section class="explorer-trust-strip" aria-label="Market Explorer features">
       <article><strong>15</strong><span>PILOT STOCKS</span></article>
-      <article><strong>2</strong><span>SIDE-BY-SIDE CHARTS</span></article>
+      <article><strong data-explorer-chart-count>1</strong><span>VISIBLE CHARTS</span></article>
       <article><strong>6</strong><span>BUILT-IN TIME RANGES</span></article>
       <article><strong data-explorer-status>LOADING</strong><span>EXPLORER STATUS</span></article>
     </section>
@@ -52,19 +52,30 @@
       <span>TradingView supplies the chart snapshots. These charts do not make the demonstration Monster Ratings™ live and do not replace the planned secure quote, SEC, database, news, or rating pipeline.</span>
     </div>
 
-    <section class="explorer-controls" aria-label="Choose stocks to compare">
+    <section class="explorer-mode-panel" aria-label="Choose chart viewing mode">
+      <div>
+        <strong>CHOOSE YOUR VIEW</strong>
+        <span>Single Chart gives one company the full width. Compare Two keeps both companies on the same screen.</span>
+      </div>
+      <div class="explorer-mode-buttons" role="group" aria-label="Chart view mode">
+        <button class="is-active" data-explorer-mode="single" type="button" aria-pressed="true">SINGLE CHART</button>
+        <button data-explorer-mode="compare" type="button" aria-pressed="false">COMPARE TWO</button>
+      </div>
+    </section>
+
+    <section class="explorer-controls" aria-label="Choose stocks to chart">
       <div class="explorer-select-group">
-        <label for="explorer-left-select">LEFT CHART</label>
+        <label for="explorer-left-select">PRIMARY CHART</label>
         <select id="explorer-left-select" data-explorer-left-select></select>
       </div>
-      <button class="explorer-swap" data-explorer-swap type="button">SWAP CHARTS ⇄</button>
-      <div class="explorer-select-group">
-        <label for="explorer-right-select">RIGHT CHART</label>
+      <button class="explorer-swap" data-explorer-swap data-comparison-only type="button">SWAP CHARTS ⇄</button>
+      <div class="explorer-select-group" data-comparison-only>
+        <label for="explorer-right-select">COMPARISON CHART</label>
         <select id="explorer-right-select" data-explorer-right-select></select>
       </div>
     </section>
 
-    <section class="explorer-compare-grid" aria-label="Two-stock market comparison">
+    <section class="explorer-compare-grid" data-explorer-grid aria-label="Market chart display">
       <article class="explorer-chart-card">
         <div class="explorer-chart-head">
           <div class="explorer-chart-title">
@@ -77,11 +88,11 @@
           </div>
         </div>
         <div class="explorer-chart-frame" data-explorer-left-frame aria-live="polite">
-          <p class="explorer-loading">Loading left market chart…</p>
+          <p class="explorer-loading">Loading primary market chart…</p>
         </div>
       </article>
 
-      <article class="explorer-chart-card">
+      <article class="explorer-chart-card" data-comparison-only>
         <div class="explorer-chart-head">
           <div class="explorer-chart-title">
             <strong>$<span data-explorer-right-ticker>NVDA</span></strong>
@@ -93,7 +104,7 @@
           </div>
         </div>
         <div class="explorer-chart-frame" data-explorer-right-frame aria-live="polite">
-          <p class="explorer-loading">Loading right market chart…</p>
+          <p class="explorer-loading">Loading comparison market chart…</p>
         </div>
       </article>
     </section>
@@ -101,9 +112,9 @@
     <section class="explorer-quick-section explorer-section" aria-labelledby="quick-load-title">
       <div class="explorer-quick-head">
         <h2 id="quick-load-title">LOAD ANY<br>PILOT STOCK.</h2>
-        <p>Use a ticker button to place that company into the left chart while keeping the right chart in place for comparison. The dropdowns remain available for any combination.</p>
+        <p>Use a ticker button to place that company into the primary chart. Single Chart gives it the full width; Compare Two leaves the second company in place.</p>
       </div>
-      <div class="explorer-buttons" data-explorer-buttons aria-label="Load a pilot stock into the left chart"></div>
+      <div class="explorer-buttons" data-explorer-buttons aria-label="Load a pilot stock into the primary chart"></div>
     </section>
 
     <div class="explorer-footer-note">
@@ -113,7 +124,7 @@
 </main>
 
 <footer class="home-footer">
-  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>COMPARE THE CHART. THEN QUESTION THE EVIDENCE.</span></div>
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>STUDY ONE CHART. COMPARE TWO. THEN QUESTION THE EVIDENCE.</span></div>
   <p><strong>Educational Use Only:</strong> Nothing in the Market Explorer is a recommendation to buy, sell, or hold a security. Investing involves risk, including possible loss of principal.</p>
 </footer>
 
