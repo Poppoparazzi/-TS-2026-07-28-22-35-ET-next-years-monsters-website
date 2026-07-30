@@ -1,13 +1,9 @@
-// TS: 2026-07-30 07:21 ET
-
-const EXPLORER_EXCHANGE_OVERRIDES = Object.freeze({
-  DECK: "NYSE",
-  VRT: "NYSE",
-});
+// TS: 2026-07-30 09:05 ET
 
 function explorerSymbol(stock) {
+  if (stock.proName) return stock.proName;
   const ticker = String(stock.ticker).toUpperCase();
-  const exchange = EXPLORER_EXCHANGE_OVERRIDES[ticker] ?? "NASDAQ";
+  const exchange = String(stock.exchange || "NASDAQ").toUpperCase();
   return `${exchange}:${ticker}`;
 }
 
@@ -26,7 +22,6 @@ function explorerText(selector, value) {
 function buildTradingViewWidget(frame, stock) {
   const symbol = explorerSymbol(stock);
   const tradingViewPath = symbol.replace(":", "-");
-
   frame.replaceChildren();
 
   const wrapper = document.createElement("div");
@@ -85,7 +80,6 @@ function buildTradingViewWidget(frame, stock) {
 
 function populateSelect(select, stocks) {
   select.replaceChildren();
-
   stocks.forEach((stock) => {
     const option = document.createElement("option");
     option.value = String(stock.ticker).toUpperCase();
@@ -105,14 +99,9 @@ function setupExplorer(stocks) {
   const chartCount = document.querySelector("[data-explorer-chart-count]");
   const status = document.querySelector("[data-explorer-status]");
 
-  if (!leftSelect || !rightSelect || !swapButton || !quickButtons || !leftFrame || !rightFrame) {
-    return;
-  }
+  if (!leftSelect || !rightSelect || !swapButton || !quickButtons || !leftFrame || !rightFrame) return;
 
-  const byTicker = new Map(
-    stocks.map((stock) => [String(stock.ticker).toUpperCase(), stock]),
-  );
-
+  const byTicker = new Map(stocks.map((stock) => [String(stock.ticker).toUpperCase(), stock]));
   populateSelect(leftSelect, stocks);
   populateSelect(rightSelect, stocks);
 
@@ -145,17 +134,19 @@ function setupExplorer(stocks) {
     explorerText(`[data-explorer-${prefix}-ticker]`, stock.ticker);
     explorerText(`[data-explorer-${prefix}-company]`, `${stock.name} · ${stock.sector}`);
 
-    const monsterLink = document.querySelector(`[data-explorer-${prefix}-monster-link]`);
-    if (monsterLink) {
-      monsterLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
-      monsterLink.textContent = `OPEN ${stock.ticker} MONSTER CHECK™`;
+    const researchLink = document.querySelector(`[data-explorer-${prefix}-monster-link]`);
+    if (researchLink) {
+      if (stock.monsterCheck) {
+        researchLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
+        researchLink.textContent = `OPEN ${stock.ticker} MONSTER CHECK™`;
+      } else {
+        researchLink.href = `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}`;
+        researchLink.textContent = `OPEN ${stock.ticker} NEWS RADAR`;
+      }
     }
 
     const chartLink = document.querySelector(`[data-explorer-${prefix}-chart-link]`);
-    if (chartLink) {
-      const path = explorerSymbol(stock).replace(":", "-");
-      chartLink.href = `https://www.tradingview.com/symbols/${path}/`;
-    }
+    if (chartLink) chartLink.href = `https://www.tradingview.com/symbols/${explorerSymbol(stock).replace(":", "-")}/`;
 
     buildTradingViewWidget(frame, stock);
     updateUrl();
@@ -164,8 +155,8 @@ function setupExplorer(stocks) {
   function setMode(mode, renderComparison = true) {
     currentMode = mode === "compare" ? "compare" : "single";
     const singleMode = currentMode === "single";
-
     document.body.classList.toggle("is-single-mode", singleMode);
+
     modeButtons.forEach((button) => {
       const active = button.dataset.explorerMode === currentMode;
       button.classList.toggle("is-active", active);
@@ -173,22 +164,14 @@ function setupExplorer(stocks) {
     });
 
     if (chartCount) chartCount.textContent = singleMode ? "1" : "2";
-    if (status) {
-      status.textContent = singleMode
-        ? "15 STOCKS READY · SINGLE CHART"
-        : "15 STOCKS READY · COMPARE TWO";
-    }
-
+    if (status) status.textContent = singleMode ? "25 STOCKS READY · SINGLE CHART" : "25 STOCKS READY · COMPARE TWO";
     if (!singleMode && renderComparison) renderSide("right");
     updateUrl();
   }
 
   leftSelect.addEventListener("change", () => renderSide("left"));
   rightSelect.addEventListener("change", () => renderSide("right"));
-
-  modeButtons.forEach((button) => {
-    button.addEventListener("click", () => setMode(button.dataset.explorerMode));
-  });
+  modeButtons.forEach((button) => button.addEventListener("click", () => setMode(button.dataset.explorerMode)));
 
   swapButton.addEventListener("click", () => {
     const leftValue = leftSelect.value;
@@ -219,20 +202,14 @@ function setupExplorer(stocks) {
 
 async function startMarketExplorer() {
   const status = document.querySelector("[data-explorer-status]");
-
   try {
-    const response = await fetch("data/stocks.json");
-    if (!response.ok) throw new Error("Unable to load the pilot stock list.");
-
+    const response = await fetch("data/market-universe.json");
+    if (!response.ok) throw new Error("Unable to load the market universe.");
     const stocks = await response.json();
-    const ordered = [...stocks].sort((left, right) =>
-      String(left.ticker).localeCompare(String(right.ticker)),
-    );
-
+    const ordered = [...stocks].sort((left, right) => String(left.ticker).localeCompare(String(right.ticker)));
     setupExplorer(ordered);
   } catch (_error) {
     if (status) status.textContent = "MARKET EXPLORER COULD NOT LOAD THE STOCK LIST";
-
     document.querySelectorAll(".explorer-chart-frame").forEach((frame) => {
       frame.replaceChildren();
       const message = document.createElement("p");
