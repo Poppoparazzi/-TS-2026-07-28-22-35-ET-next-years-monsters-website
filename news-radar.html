@@ -1,11 +1,11 @@
-<!-- TS: 2026-07-30 06:32 ET -->
+<!-- TS: 2026-07-30 09:05 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>News Radar | Next Year’s Monsters™</title>
-  <meta name="description" content="Track current external news beside price reaction charts for all 15 Next Year’s Monsters™ pilot stocks, with direct links to Monster Check™ and Market Explorer.">
+  <meta name="description" content="Track current external news beside price-reaction charts for the 25-stock external market universe.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/news-radar.css">
@@ -21,14 +21,14 @@
     <nav class="nav-links home-nav-links" aria-label="Main navigation">
       <a href="monster-check.html">MONSTER CHECK</a>
       <a href="top-monsters.html">TOP MONSTERS</a>
-      <a href="market-explorer.html">MARKET EXPLORER</a>
+      <a href="market-explorer.html">FULL CHARTS</a>
       <a href="market-pulse.html">MARKET PULSE</a>
       <a class="active" aria-current="page" href="news-radar.html">NEWS RADAR</a>
       <a href="how-it-works.html">THE SYSTEM</a>
       <a href="vcl-library.html">VCL™ LIBRARY</a>
       <a href="about.html">ABOUT</a>
     </nav>
-    <a class="home-nav-cta" href="live-status.html">LIVE STATUS</a>
+    <a class="home-nav-cta" href="live-status.html">DATA STATUS</a>
   </div>
 </header>
 
@@ -37,13 +37,13 @@
     <div class="news-radar-shell">
       <p class="news-radar-kicker">THE HEADLINE IS ONLY THE BEGINNING</p>
       <h1>NEWS<br><strong>RADAR</strong></h1>
-      <p class="news-radar-intro">Choose any company from the 15-stock pilot. Read current external stories beside the stock’s price reaction, then move into Monster Check™ for the evidence framework. Good news is not automatically a good trade. The market remains annoyingly capable of having expectations.</p>
+      <p class="news-radar-intro">Choose any company from the 25-stock external market universe. Read current stories beside the stock’s price reaction. Fifteen companies also have demonstration Monster Checks; ten currently provide chart-and-news coverage only.</p>
     </div>
   </section>
 
   <div class="news-radar-main">
     <section class="news-radar-trust-strip" aria-label="News Radar coverage">
-      <article><strong>15</strong><span>PILOT STOCKS</span></article>
+      <article><strong>25</strong><span>EXTERNAL MARKET STOCKS</span></article>
       <article><strong>NEWS</strong><span>EXTERNAL TOP STORIES</span></article>
       <article><strong>CHART</strong><span>PRICE REACTION CONTEXT</span></article>
       <article><strong data-news-radar-status>LOADING</strong><span>RADAR STATUS</span></article>
@@ -54,14 +54,14 @@
       <span>TradingView supplies the visible stories and chart. Next Year’s Monsters™ does not yet store, verify, classify, or score these headlines inside its secure production database. A headline on this page does not change a Monster Rating™.</span>
     </div>
 
-    <section class="news-radar-controls" aria-label="Choose a pilot stock for news and price reaction">
+    <section class="news-radar-controls" aria-label="Choose a market stock for news and price reaction">
       <div class="news-radar-select-group">
-        <label for="news-radar-select">CHOOSE A PILOT STOCK</label>
+        <label for="news-radar-select">CHOOSE A MARKET STOCK</label>
         <select id="news-radar-select" data-news-radar-select></select>
       </div>
       <div class="news-radar-actions">
         <a data-news-radar-monster-link href="monster-check.html?ticker=AAPL">OPEN AAPL MONSTER CHECK™</a>
-        <a data-news-radar-compare-link href="market-explorer.html?left=AAPL&right=NVDA">COMPARE AAPL WITH NVDA</a>
+        <a data-news-radar-compare-link href="market-explorer.html?left=AAPL&right=NVDA&mode=compare">COMPARE AAPL WITH NVDA</a>
       </div>
     </section>
 
@@ -96,12 +96,12 @@
       </article>
     </section>
 
-    <section class="news-radar-buttons-section" aria-labelledby="news-radar-pilot-title">
+    <section class="news-radar-buttons-section" aria-labelledby="news-radar-market-title">
       <div class="news-radar-section-head">
-        <h2 id="news-radar-pilot-title">SCAN THE<br>MONSTER 15.</h2>
-        <p>Load any pilot company with one click. The selected ticker is also written into the page address, so a specific News Radar view can be bookmarked or shared.</p>
+        <h2 id="news-radar-market-title">SCAN THE<br>MARKET 25.</h2>
+        <p>Load any external market-coverage company with one click. The selected ticker is written into the page address so a specific News Radar view can be bookmarked or shared.</p>
       </div>
-      <div class="news-radar-buttons" data-news-radar-buttons aria-label="Load news and chart for a pilot stock"></div>
+      <div class="news-radar-buttons" data-news-radar-buttons aria-label="Load news and chart for a market stock"></div>
     </section>
 
     <section class="news-radar-rules" aria-labelledby="news-radar-rules-title">
