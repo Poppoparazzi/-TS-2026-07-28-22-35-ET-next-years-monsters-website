@@ -1,4 +1,7 @@
-// TS: 2026-07-30 ET
+// TS: 2026-07-30 07:17 ET
+
+const MARKET_EXPLORER_URL =
+  "https://poppoparazzi.github.io/-TS-2026-07-28-22-35-ET-next-years-monsters-website/market-explorer.html";
 
 const PULSE_MONSTER_SYMBOLS = Object.freeze([
   { s: "NASDAQ:AAPL", d: "Apple" },
@@ -59,7 +62,7 @@ function mountMarketOverview() {
       locale: "en",
       width: "100%",
       height: "100%",
-      largeChartUrl: "market-explorer.html",
+      largeChartUrl: MARKET_EXPLORER_URL,
       isTransparent: true,
       showSymbolLogo: true,
       showFloatingTooltip: true,
@@ -132,7 +135,7 @@ function mountMarketHeatmap() {
       blockSize: "market_cap_basic",
       blockColor: "change",
       locale: "en",
-      symbolUrl: "",
+      symbolUrl: MARKET_EXPLORER_URL,
       colorTheme: "dark",
       hasTopBar: true,
       isDataSetEnabled: true,
