@@ -1,8 +1,12 @@
-// TS: 2026-07-29 12:13 ET
+// TS: 2026-07-29 21:49 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { loadConfig, type AppConfig } from "./config.js";
+import {
+  createDatabaseReadinessProvider,
+  type DatabaseReadinessProvider,
+} from "./database/readiness.js";
 import { createMarketDataProvider } from "./providers/index.js";
 import {
   type MarketDataProvider,
@@ -28,6 +32,7 @@ export interface BuildAppOptions {
   readonly config?: AppConfig;
   readonly provider?: MarketDataProvider;
   readonly secProvider?: SecDataProvider;
+  readonly readinessProvider?: DatabaseReadinessProvider;
   readonly logger?: boolean;
 }
 
@@ -54,6 +59,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const config = options.config ?? loadConfig();
   const provider = options.provider ?? createMarketDataProvider(config);
   const secProvider = options.secProvider ?? createSecDataProvider(config);
+  const readinessProvider =
+    options.readinessProvider ?? createDatabaseReadinessProvider(config);
   const app = Fastify({
     logger:
       options.logger === false
@@ -70,10 +77,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     methods: ["GET", "OPTIONS"],
   });
 
+  app.addHook("onClose", async () => {
+    await readinessProvider.close();
+  });
+
   app.get("/api/health", async () => ({
     status: "ok",
     service: "next-years-monsters-api",
-    version: "0.2.0",
+    version: "0.3.0",
     timestamp: new Date().toISOString(),
     marketData: {
       provider: provider.name,
@@ -82,6 +93,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     sec: {
       provider: secProvider.name,
       configured: secProvider.configured,
+    },
+    database: {
+      provider: readinessProvider.name,
+      configured: readinessProvider.configured,
     },
   }));
 
@@ -96,8 +111,15 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       configured: secProvider.configured,
       userAgentExposed: false,
     },
+    database: {
+      provider: readinessProvider.name,
+      configured: readinessProvider.configured,
+      connectionStringExposed: false,
+    },
     timestamp: new Date().toISOString(),
   }));
+
+  app.get("/api/readiness", async () => readinessProvider.getSnapshot());
 
   app.get<{ Querystring: TickerQuery }>("/api/tickers", async (request, reply) => {
     const query = request.query.q?.trim() ?? "";
