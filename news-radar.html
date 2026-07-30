@@ -1,0 +1,134 @@
+<!-- TS: 2026-07-30 06:32 ET -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>News Radar | Next Year’s Monsters™</title>
+  <meta name="description" content="Track current external news beside price reaction charts for all 15 Next Year’s Monsters™ pilot stocks, with direct links to Monster Check™ and Market Explorer.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/editorial-type.css">
+  <link rel="stylesheet" href="assets/news-radar.css">
+</head>
+<body class="news-radar-page">
+
+<header class="site-header home-header">
+  <div class="home-nav-shell">
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
+      <span class="home-brand-arrow">↗</span>
+      <span>NEXT YEAR’S MONSTERS™</span>
+    </a>
+    <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a href="monster-check.html">MONSTER CHECK</a>
+      <a href="top-monsters.html">TOP MONSTERS</a>
+      <a href="market-explorer.html">MARKET EXPLORER</a>
+      <a href="market-pulse.html">MARKET PULSE</a>
+      <a class="active" aria-current="page" href="news-radar.html">NEWS RADAR</a>
+      <a href="how-it-works.html">THE SYSTEM</a>
+      <a href="vcl-library.html">VCL™ LIBRARY</a>
+      <a href="about.html">ABOUT</a>
+    </nav>
+    <a class="home-nav-cta" href="live-status.html">LIVE STATUS</a>
+  </div>
+</header>
+
+<main>
+  <section class="news-radar-hero">
+    <div class="news-radar-shell">
+      <p class="news-radar-kicker">THE HEADLINE IS ONLY THE BEGINNING</p>
+      <h1>NEWS<br><strong>RADAR</strong></h1>
+      <p class="news-radar-intro">Choose any company from the 15-stock pilot. Read current external stories beside the stock’s price reaction, then move into Monster Check™ for the evidence framework. Good news is not automatically a good trade. The market remains annoyingly capable of having expectations.</p>
+    </div>
+  </section>
+
+  <div class="news-radar-main">
+    <section class="news-radar-trust-strip" aria-label="News Radar coverage">
+      <article><strong>15</strong><span>PILOT STOCKS</span></article>
+      <article><strong>NEWS</strong><span>EXTERNAL TOP STORIES</span></article>
+      <article><strong>CHART</strong><span>PRICE REACTION CONTEXT</span></article>
+      <article><strong data-news-radar-status>LOADING</strong><span>RADAR STATUS</span></article>
+    </section>
+
+    <div class="news-radar-notice">
+      <strong>EXTERNAL NEWS AND MARKET DATA · MAY BE DELAYED</strong>
+      <span>TradingView supplies the visible stories and chart. Next Year’s Monsters™ does not yet store, verify, classify, or score these headlines inside its secure production database. A headline on this page does not change a Monster Rating™.</span>
+    </div>
+
+    <section class="news-radar-controls" aria-label="Choose a pilot stock for news and price reaction">
+      <div class="news-radar-select-group">
+        <label for="news-radar-select">CHOOSE A PILOT STOCK</label>
+        <select id="news-radar-select" data-news-radar-select></select>
+      </div>
+      <div class="news-radar-actions">
+        <a data-news-radar-monster-link href="monster-check.html?ticker=AAPL">OPEN AAPL MONSTER CHECK™</a>
+        <a data-news-radar-compare-link href="market-explorer.html?left=AAPL&right=NVDA">COMPARE AAPL WITH NVDA</a>
+      </div>
+    </section>
+
+    <div class="news-radar-selection">
+      <strong data-news-radar-ticker>$AAPL</strong>
+      <span data-news-radar-company>Apple · Technology</span>
+    </div>
+
+    <section class="news-radar-grid" aria-label="Selected stock news and price reaction">
+      <article class="news-radar-card">
+        <div class="news-radar-card-head">
+          <div>
+            <span>CURRENT STORIES</span>
+            <strong data-news-radar-feed-title>AAPL TOP STORIES</strong>
+          </div>
+        </div>
+        <div class="news-radar-frame" data-news-radar-feed aria-live="polite">
+          <p class="news-radar-loading">Loading external news stories…</p>
+        </div>
+      </article>
+
+      <article class="news-radar-card">
+        <div class="news-radar-card-head">
+          <div>
+            <span>WHAT DID THE STOCK ACTUALLY DO?</span>
+            <strong data-news-radar-chart-title>AAPL PRICE REACTION</strong>
+          </div>
+        </div>
+        <div class="news-radar-frame" data-news-radar-chart aria-live="polite">
+          <p class="news-radar-loading">Loading external price chart…</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="news-radar-buttons-section" aria-labelledby="news-radar-pilot-title">
+      <div class="news-radar-section-head">
+        <h2 id="news-radar-pilot-title">SCAN THE<br>MONSTER 15.</h2>
+        <p>Load any pilot company with one click. The selected ticker is also written into the page address, so a specific News Radar view can be bookmarked or shared.</p>
+      </div>
+      <div class="news-radar-buttons" data-news-radar-buttons aria-label="Load news and chart for a pilot stock"></div>
+    </section>
+
+    <section class="news-radar-rules" aria-labelledby="news-radar-rules-title">
+      <div class="news-radar-section-head">
+        <h2 id="news-radar-rules-title">NEWS NEEDS<br>DISCIPLINE.</h2>
+        <p>The future production system will not declare a headline positive merely because it sounds cheerful. Every item must be sourced, dated, connected to evidence, and compared with the stock’s actual response.</p>
+      </div>
+      <div class="news-radar-rule-grid">
+        <article><strong>1 · VERIFY THE SOURCE</strong><span>Prefer official filings, company releases, and reputable reporting. Repetition is not verification.</span></article>
+        <article><strong>2 · RECORD THE TIME</strong><span>Compare publication time with the price move instead of assigning causation after the fact.</span></article>
+        <article><strong>3 · IDENTIFY THE DRIVER</strong><span>Separate company news from sector, macro, rates, or sympathy movement.</span></article>
+        <article><strong>4 · LABEL THE IMPACT</strong><span>Strengthens evidence, weakens evidence, adds a catalyst, adds a risk, or causes no rating change.</span></article>
+      </div>
+    </section>
+
+    <div class="news-radar-footer-note">
+      <strong>Educational notice:</strong> News can be incomplete, revised, misunderstood, already priced in, or overwhelmed by broader market conditions. Nothing on this page is a recommendation to buy, sell, or hold a security.
+    </div>
+  </div>
+</main>
+
+<footer class="home-footer">
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>READ THE NEWS. WATCH THE REACTION. THEN QUESTION THE EVIDENCE.</span></div>
+  <p><strong>Educational Use Only:</strong> Investing involves risk, including possible loss of principal.</p>
+</footer>
+
+<script src="assets/news-radar.js"></script>
+<script src="assets/market-ticker-strip.js"></script>
+</body>
+</html>
