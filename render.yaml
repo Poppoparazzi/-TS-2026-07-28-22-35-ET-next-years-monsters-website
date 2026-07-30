@@ -1,4 +1,4 @@
-# TS: 2026-07-29 12:30 ET
+# TS: 2026-07-29 21:54 ET
 
 services:
   - type: web
@@ -19,6 +19,8 @@ services:
         value: 0.0.0.0
       - key: CORS_ORIGIN
         value: https://poppoparazzi.github.io
+      - key: DATABASE_URL
+        sync: false
       - key: MARKET_DATA_PROVIDER
         value: twelve-data
       - key: TWELVE_DATA_API_KEY
