@@ -21,7 +21,7 @@ function ensureExplorerCoverageUi(side) {
     actions.append(coverageLink);
   }
 
-  return { badge, coverageLink };
+  return { badge, coverageLink, actions };
 }
 
 async function startExplorerCoverageLabels() {
@@ -46,6 +46,7 @@ async function startExplorerCoverageLabels() {
     const select = side === "left" ? leftSelect : rightSelect;
     const stock = byTicker.get(String(select.value).toUpperCase());
     const ui = ensureExplorerCoverageUi(side);
+    const researchLink = document.querySelector(`[data-explorer-${side}-monster-link]`);
     if (!stock || !ui) return;
 
     ui.badge.classList.toggle("is-monster-check", Boolean(stock.monsterCheck));
@@ -61,6 +62,11 @@ async function startExplorerCoverageLabels() {
       ui.coverageLink.href = "coverage-universe.html#external-market-coverage";
       ui.coverageLink.textContent = "WHY NO RATING YET?";
       ui.coverageLink.setAttribute("aria-label", `Learn why ${stock.ticker} has no Monster Rating yet`);
+
+      if (researchLink) {
+        researchLink.href = `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}#current-stories`;
+        researchLink.textContent = `OPEN ${stock.ticker} CURRENT STORIES`;
+      }
     }
   };
 
@@ -69,8 +75,8 @@ async function startExplorerCoverageLabels() {
     updateSide("right");
   };
 
-  leftSelect.addEventListener("change", () => updateSide("left"));
-  rightSelect.addEventListener("change", () => updateSide("right"));
+  leftSelect.addEventListener("change", () => window.setTimeout(() => updateSide("left"), 0));
+  rightSelect.addEventListener("change", () => window.setTimeout(() => updateSide("right"), 0));
 
   const optionObserver = new MutationObserver(updateAll);
   optionObserver.observe(leftSelect, { childList: true });
