@@ -19,6 +19,29 @@ async function startNewsRadarEntryHelp() {
     <a href="#current-stories">VIEW CURRENT STORIES ↓</a>
     <a href="#choose-stock">CHOOSE A STOCK</a>
   `;
+
+  const backButton = document.createElement("button");
+  backButton.className = "news-radar-back-button";
+  backButton.type = "button";
+  backButton.textContent = "BACK TO WHERE YOU LEFT OFF";
+  backButton.addEventListener("click", () => {
+    let cameFromThisSite = false;
+    try {
+      cameFromThisSite = Boolean(document.referrer)
+        && new URL(document.referrer).origin === window.location.origin;
+    } catch (_error) {
+      cameFromThisSite = false;
+    }
+
+    if (cameFromThisSite && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.href = "coverage-universe.html";
+  });
+
+  heroActions.append(backButton);
   heroIntro.insertAdjacentElement("afterend", heroActions);
 
   const sourceLink = document.createElement("a");
