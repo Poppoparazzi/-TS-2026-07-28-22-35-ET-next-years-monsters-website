@@ -1,4 +1,4 @@
-// TS: 2026-07-30 08:34 ET
+// TS: 2026-07-30 08:48 ET
 
 function normalizeMonsterTicker(value) {
   return String(value ?? "")
@@ -42,7 +42,8 @@ function pairMonsterShortcutCharts() {
 
     button.dataset.monsterShortcutPaired = "";
     button.classList.add("monster-shortcut-check");
-    button.textContent = `${ticker} CHECK`;
+    button.textContent = ticker;
+    button.title = `Run the ${ticker} Monster Check`;
     button.setAttribute("aria-label", `Run Monster Check for ${ticker}`);
 
     const wrapper = document.createElement("span");
