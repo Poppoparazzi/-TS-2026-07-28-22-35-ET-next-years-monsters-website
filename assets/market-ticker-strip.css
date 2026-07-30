@@ -1,0 +1,102 @@
+/* TS: 2026-07-29 22:41 ET */
+
+.nym-market-tape {
+  position: relative;
+  z-index: 4;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  border-bottom: 1px solid rgba(255, 255, 255, .14);
+  background: #080d0b;
+  color: #f7f2e7;
+}
+
+.nym-market-tape-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: min(1440px, 96vw);
+  margin: 0 auto;
+  padding: 8px 12px 6px;
+}
+
+.nym-market-tape-label {
+  color: var(--editorial-lime, #b8f34a);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.nym-market-tape-head a {
+  color: #f7f2e7;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+.nym-market-tape-head a:hover,
+.nym-market-tape-head a:focus-visible {
+  color: var(--editorial-lime, #b8f34a);
+}
+
+.nym-market-tape-widget {
+  min-height: 48px;
+  overflow: hidden;
+  background: #080d0b;
+}
+
+.nym-market-tape-widget .tradingview-widget-container,
+.nym-market-tape-widget .tradingview-widget-container__widget {
+  min-height: 48px;
+}
+
+.nym-market-tape-links {
+  display: flex;
+  gap: 8px;
+  width: min(1440px, 96vw);
+  margin: 0 auto;
+  padding: 6px 12px 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.nym-market-tape-links a {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  color: #f7f2e7;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.nym-market-tape-links a:hover,
+.nym-market-tape-links a:focus-visible {
+  border-color: var(--editorial-lime, #b8f34a);
+  background: var(--editorial-lime, #b8f34a);
+  color: #080d0b;
+}
+
+.nym-market-tape-note {
+  width: min(1440px, 96vw);
+  margin: 0 auto;
+  padding: 0 12px 8px;
+  color: #aeb6b0;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .nym-market-tape-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .nym-market-tape-head a {
+    font-size: 10px;
+  }
+}
