@@ -1,4 +1,4 @@
-// TS: 2026-07-30 09:05 ET
+// TS: 2026-07-30 09:43 ET
 
 function coverageText(selector, value) {
   const node = document.querySelector(selector);
@@ -30,8 +30,8 @@ function createCoverageCard(stock, mode) {
   }
 
   const newsLink = document.createElement("a");
-  newsLink.href = `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}`;
-  newsLink.textContent = "OPEN NEWS RADAR →";
+  newsLink.href = `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}#current-stories`;
+  newsLink.textContent = "OPEN CURRENT STORIES →";
 
   card.append(ticker, company, sector, primaryLink, newsLink);
   return card;
