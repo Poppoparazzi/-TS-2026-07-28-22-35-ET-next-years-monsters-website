@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-29 16:42 ET -->
+<!-- TS: 2026-07-29 21:52 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -40,16 +40,16 @@
 
   <div class="status-main">
     <section class="status-summary" aria-label="Current rollout totals">
-      <article><strong>15/15</strong><span>DEMO PROFILES PUBLISHED</span></article>
-      <article><strong>0/15</strong><span>LIVE QUOTES SAVED</span></article>
-      <article><strong>0/15</strong><span>SEC CHECKS SAVED</span></article>
-      <article><strong>0/15</strong><span>LIVE RATINGS SAVED</span></article>
-      <article><strong>10</strong><span>TOP 25 SLOTS OPEN</span></article>
+      <article><strong data-demo-count>15/15</strong><span>DEMO PROFILES PUBLISHED</span></article>
+      <article><strong data-quote-count>0/15</strong><span>USABLE QUOTES SAVED</span></article>
+      <article><strong data-sec-count>0/15</strong><span>SEC CHECKS SAVED</span></article>
+      <article><strong data-rating-count>0/15</strong><span>LIVE RATINGS SAVED</span></article>
+      <article><strong data-open-slot-count>10</strong><span>TOP 25 SLOTS OPEN</span></article>
     </section>
 
     <div class="status-next">
-      <strong>NEXT VISIBLE RESULT: AAPL LIVE TEST</strong>
-      <span>AAPL is the first technical test, not a recommendation. It must show a genuine quote, official SEC status, source disclosure, and real Last Updated time. Two successful refreshes are required before the rollout expands.</span>
+      <strong data-readiness-headline>NEXT VISIBLE RESULT: AAPL LIVE TEST</strong>
+      <span data-readiness-message>AAPL is the first technical test, not a recommendation. The public API and database are not connected yet, so this board is showing verified repository status rather than invented live progress.</span>
     </div>
 
     <section class="status-section" aria-labelledby="rollout-stages-title">
@@ -68,7 +68,7 @@
     <section class="status-section" aria-labelledby="pilot-status-title">
       <div class="status-section-head">
         <h2 id="pilot-status-title">THE ORIGINAL 15.<br>STOCK BY STOCK.</h2>
-        <p>Each row identifies what already exists and what remains missing. The status is deliberately blunt because decorative optimism does not count as market data.</p>
+        <p>Each row identifies what already exists and what remains missing. Once the secure API is deployed, the same rows will update from saved database records instead of static project status.</p>
       </div>
       <div class="status-list" data-status-list>
         <p class="leaderboard-empty">Loading the 15-stock rollout checklist…</p>
@@ -102,7 +102,7 @@
       <div class="pipeline-grid">
         <article><strong>MARKET QUOTES</strong><span>Twelve Data adapter built. Private provider key and deployed backend still required.</span></article>
         <article><strong>SEC FILINGS & FACTS</strong><span>Official EDGAR adapter built. Deployed service and saved database records still required.</span></article>
-        <article><strong>DATABASE HISTORY</strong><span>PostgreSQL schema and migration runner built. A private hosted database still needs to be provisioned.</span></article>
+        <article><strong>DATABASE HISTORY</strong><span>PostgreSQL schema, migrations, and readiness API built. A private hosted database still needs to be provisioned.</span></article>
         <article><strong>STOCK NEWS</strong><span>Ticker news and press-release feed not connected yet. News will require sources, timestamps, and explicit rating impact.</span></article>
       </div>
     </section>
@@ -118,6 +118,7 @@
   <p><strong>Educational Use Only:</strong> Nothing on this status page is a recommendation to buy, sell, or hold a security.</p>
 </footer>
 
+<script src="assets/runtime-config.js"></script>
 <script src="assets/live-status.js"></script>
 </body>
 </html>
