@@ -1,4 +1,4 @@
-// TS: 2026-07-29 11:49 ET
+// TS: 2026-07-29 21:50 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -22,6 +22,7 @@ function testConfig(): AppConfig {
     marketDataProvider: "twelve-data",
     twelveDataApiKey: TEST_SECRET,
     secUserAgent: "NextYearsMonsters test@example.test",
+    databaseUrl: null,
   });
 }
 
@@ -80,6 +81,8 @@ test("health and provider status never expose configured secrets", async (t) => 
   assert.equal(combined.includes(TEST_SECRET), false);
   assert.equal(status.json().marketData.secretExposed, false);
   assert.equal(status.json().sec.userAgentExposed, false);
+  assert.equal(status.json().database.connectionStringExposed, false);
+  assert.equal(health.json().database.configured, false);
 });
 
 test("ticker search requires a query and caps the requested limit", async (t) => {
@@ -131,4 +134,15 @@ test("unconfigured provider returns a clear 503 instead of invented data", async
   assert.equal(response.json().error, "provider_not_configured");
   assert.match(response.json().message, /not configured/i);
   assert.equal(response.body.includes("123.45"), false);
+});
+
+test("readiness route returns 503 until the private database is configured", async (t) => {
+  const app = await buildApp({ config: testConfig(), logger: false });
+  t.after(async () => app.close());
+
+  const response = await app.inject({ method: "GET", url: "/api/readiness" });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "provider_not_configured");
+  assert.match(response.json().message, /database readiness provider/i);
 });
