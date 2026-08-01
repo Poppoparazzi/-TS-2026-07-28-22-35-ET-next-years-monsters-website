@@ -1,27 +1,33 @@
 # Next Year’s Monsters™ — Phase 3 Provider Decision
 
-<!-- TS: 2026-07-29 10:36 ET -->
+<!-- TS: 2026-08-01 17:48 ET -->
 
 ## Decision
 
 Use a replaceable provider architecture rather than tying Monster Rating™ to one vendor.
 
-### Development market-data provider
+### Public market display — revised August 1, 2026
 
-**Twelve Data** is the recommended first development provider for ticker reference data, timestamped U.S. quotes, historical bars, technical inputs, and WebSocket experiments.
+Use **TradingView's free hosted widgets** for visible public price and chart context. The widgets include their own data and branding; availability can be real-time, delayed, or end-of-day depending on the market. This matches a one-year research product without purchasing unnecessary low-latency exchange data.
+
+Keep the provider-neutral backend quote adapter, batch endpoint, cache, timestamps, and failure handling ready, but leave the raw quote provider unconfigured in production until an external-display license is selected deliberately.
+
+### Private development adapter
+
+**Twelve Data** remains a supported private-development adapter for ticker reference data and timestamped quote experiments. It is not approved as the public display source under an individual/internal/non-display plan.
 
 Reasons:
 
 - It covers listed U.S. equities and offers REST and WebSocket access.
 - Its credit model is documented clearly enough to estimate early development usage.
 - It supports real-time U.S. equity data without placing a provider key in browser JavaScript.
-- It provides a practical path from the current 15-stock test to 100, 500, and approximately 2,000 symbols.
+- It provides a useful way to validate the provider-neutral interface without embedding a key in the browser.
 
 Important limitation:
 
 Twelve Data states that its default real-time U.S. feed is sourced from venues that do not require additional exchange licensing and represents only a portion of total U.S. trading volume. The site must therefore label the feed accurately. It must not call this a full consolidated SIP quote unless a licensed consolidated product is purchased.
 
-External display rights must be confirmed before public launch. Personal or internal-use plans are not automatically permission to redistribute data to website visitors.
+External display rights must be confirmed before enabling it publicly. Personal, internal, or non-display plans are not permission to redistribute raw data to website visitors, and a 25-symbol request consumes per-symbol credits even when submitted as one batch.
 
 ### Official filings and reported financial facts
 
@@ -53,7 +59,8 @@ Neither provider should be used for unrestricted public display until its commer
 
 - Front end: existing GitHub Pages website.
 - Backend: Node.js + TypeScript + Fastify.
-- Market-data adapter: Twelve Data first.
+- Public charts and price context: TradingView hosted widgets.
+- Private raw market-data adapter: Twelve Data supported but production-unconfigured pending display rights.
 - Filings adapter: SEC data.sec.gov.
 - News adapter: unconfigured until development credentials and display terms are approved.
 - Database: PostgreSQL in the next backend milestone.
@@ -84,11 +91,11 @@ Every news response must expose:
 2. Add `GET /api/health`.
 3. Add secure environment-variable handling.
 4. Add a `MarketDataProvider` interface.
-5. Add a Twelve Data adapter without committing a real API key.
-6. Add ticker lookup and current quote endpoints for the original 15 stocks.
-7. Connect the website to the backend while retaining the demonstration fallback.
-8. Add the SEC filings adapter.
-9. Select and license the production news provider.
+5. Retain the Twelve Data adapter without committing a real API key.
+6. Publish the cached single-quote and 25-symbol batch endpoints.
+7. Keep TradingView widgets on the public website while retaining the demonstration fallback.
+8. Extend the SEC adapter with verified issuer-continuity handling.
+9. Select and license raw market data or news only when the product requires capabilities the public widgets and SEC cannot provide.
 
 ## Approval gate before public live data
 
