@@ -1,40 +1,36 @@
-<!-- TS: 2026-07-28 19:20 ET -->
-# Next Year’s Monsters™ Five-Page Rebuild
+<!-- TS: 2026-08-01 14:28 ET -->
+# Next Year’s Monsters™ Website
 
-This package reconstructs the short Codex-style website prototype as a durable folder that can be placed in GitHub.
+Live website: [https://nextyearsmonsters.com](https://nextyearsmonsters.com)
 
-## Included pages
+This repository contains the public GitHub Pages website and the provider-neutral TypeScript backend prepared for the secure live-data phase.
 
-1. `index.html` — full-color landing page, Captain Breakout frame, and approved bull-sound button.
-2. `monster-check.html` — working search across the 15 VCL stocks.
-3. `how-it-works.html` — Monster Rating™, Monster DNA™, Market Weather™, Tipping Point™, and VCL™ process.
-4. `vcl-library.html` — the 15-company Visual Case Library list.
-5. `about.html` — project and rollout explanation.
+## Public experience
+
+The live site includes the editorial landing page, Monster Check™, Top Monsters, Stock Directory, Full Charts, Market Pulse, News Radar, the Visual Case Library, and the Live Data Rollout Board.
 
 ## What works now
 
-- Five-page responsive website.
-- Search by ticker or company name for all 15 VCL companies.
+- Responsive editorial website at the production domain.
+- Search and detailed educational Monster Checks for all 15 VCL companies.
+- External chart and news coverage across the current 25-stock market universe.
 - Clearly labeled illustrative demo scores.
-- Bull-sound button wired to the approved TuneTank WAV filename.
-- Captain Breakout image frame uses `object-fit: contain`, preventing the head crop.
-- No external libraries are required.
+- Approved Captain Breakout™ artwork displayed without cropping or substitution.
+- GitHub Pages deployment with apex and `www` routing and HTTPS.
+- Secure backend scaffold for provider quotes, SEC filings and facts, PostgreSQL readiness, and demonstration fallback behavior.
+- Automated backend typechecking and tests.
 
-## What still requires the original assets
+## Production work remaining
 
-Place these exact files in `assets/`:
+- Deploy the private backend and PostgreSQL service.
+- Configure the backend host with approved provider credentials and the SEC contact header.
+- Connect the verified public API address in `assets/runtime-config.js`.
+- Save the first genuine quote and SEC status records.
+- Implement and calibrate Monster Rating™ Version 1 before labeling any rating as live.
+- Select a news provider whose public-display and redistribution rights are approved.
+- Add accounts, subscriptions, watchlists, and alerts only after the core live-data path is dependable.
 
-- `captain_breakout.png`
-- `tunetank-bull-mad-mooing.wav`
-
-The code intentionally does not invent or substitute either approved asset.
-
-## What is not live yet
-
-- The package is not connected to `NextYearsMonsters.com`.
-- The package is not yet stored in a GitHub repository.
-- The ratings are not live market calculations.
-- The waitlist, accounts, subscriptions, alerts, and live charts require backend services.
+Until those milestones pass, the site keeps educational ratings clearly labeled as demonstrations and never substitutes invented live data.
 
 ## Preview locally
 
@@ -48,13 +44,6 @@ Then open:
 
     http://localhost:8000
 
-## GitHub Pages deployment
+## Deployment
 
-1. Create a repository named `next-years-monsters-website`.
-2. Upload every file and folder in this package.
-3. Open **Settings → Pages**.
-4. Choose **Deploy from a branch**.
-5. Select `main` and `/ (root)`.
-6. Save.
-
-After the repository exists and is shared with the connected GitHub app, the files can be inspected and updated directly.
+GitHub Pages publishes `main` from `/ (root)`. The repository `CNAME` file connects the live domain. The backend deployment blueprint is `render.yaml`; private values must be configured only on the backend host and must never be committed to this repository.
