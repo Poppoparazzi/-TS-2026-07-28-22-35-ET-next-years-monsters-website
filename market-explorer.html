@@ -1,11 +1,11 @@
-<!-- TS: 2026-07-30 09:43 ET -->
+<!-- TS: 2026-08-01 18:24 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Market Explorer | Next Year’s Monsters™</title>
-  <meta name="description" content="Study one stock in a large chart or compare any two stocks from the 25-stock external market universe using interactive charts.">
+  <meta name="description" content="Look up an exact ticker in the official SEC company directory, then study its delayed external chart or compare two stocks side by side.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/market-explorer.css">
@@ -37,13 +37,13 @@
     <div class="explorer-shell">
       <p class="explorer-kicker">STUDY ONE STOCK. OR COMPARE TWO.</p>
       <h1>MARKET<br><strong>EXPLORER</strong></h1>
-      <p class="explorer-intro">Open one company in a large white-background chart for focused study, or switch to two-chart comparison mode to inspect relative price movement, volume, and multiple time ranges side by side.</p>
+      <p class="explorer-intro">Enter an exact U.S. ticker to verify its official SEC identity and open its external market chart, or compare two companies side by side. Charts may be delayed; a chart does not imply that a Monster Rating™ exists.</p>
     </div>
   </section>
 
   <div class="explorer-main">
     <section class="explorer-trust-strip" aria-label="Market Explorer features">
-      <article><strong>25</strong><span>EXTERNAL MARKET STOCKS</span></article>
+      <article><strong>10K+</strong><span>OFFICIAL SEC TICKER RECORDS</span></article>
       <article><strong data-explorer-chart-count>1</strong><span>VISIBLE CHARTS</span></article>
       <article><strong>6</strong><span>BUILT-IN TIME RANGES</span></article>
       <article><strong data-explorer-status>LOADING</strong><span>EXPLORER STATUS</span></article>
@@ -51,8 +51,17 @@
 
     <div class="explorer-notice">
       <strong>EXTERNAL MARKET DATA · MAY BE DELAYED</strong>
-      <span>TradingView supplies the chart snapshots. The 25-stock chart universe does not mean all 25 companies have Monster Ratings™. Fifteen currently have demonstration profiles; ten are chart-and-news coverage only. Each selected stock is now labeled clearly above its chart.</span>
+      <span>TradingView supplies the chart snapshots. The SEC supplies official company identity and filings—not stock prices. Fifteen companies currently have demonstration Monster Checks; every other successfully verified ticker remains unrated.</span>
     </div>
+
+    <form class="explorer-ticker-form" data-explorer-ticker-form>
+      <label for="explorer-ticker-input">CHECK AN EXACT STOCK TICKER</label>
+      <div>
+        <input id="explorer-ticker-input" data-explorer-ticker-input placeholder="TRY IBM, GE, CAT, KO, OR LMT" autocomplete="off" aria-describedby="explorer-ticker-message">
+        <button type="submit">VERIFY &amp; OPEN CHART</button>
+      </div>
+      <small id="explorer-ticker-message" data-explorer-ticker-message>Official SEC identity first. External chart second. No Monster Rating™ will be invented.</small>
+    </form>
 
     <section class="explorer-mode-panel" aria-label="Choose chart viewing mode">
       <div>
@@ -114,7 +123,7 @@
     <section class="explorer-quick-section explorer-section" aria-labelledby="quick-load-title">
       <div class="explorer-quick-head">
         <h2 id="quick-load-title">LOAD ANY<br>MARKET STOCK.</h2>
-        <p>Use a ticker button to place any of the 25 external market-coverage companies into the primary chart. The label above the chart tells you whether a Monster Check demonstration exists or whether the company currently has charts and news only.</p>
+        <p>Use a starter button below or enter another exact ticker above. The original 25 remain quick-load examples; the SEC lookup opens additional verified companies without assigning them a Monster Rating™.</p>
       </div>
       <div class="explorer-buttons" data-explorer-buttons aria-label="Load an external market stock into the primary chart"></div>
     </section>
@@ -130,6 +139,7 @@
   <p><strong>Educational Use Only:</strong> Nothing in the Market Explorer is a recommendation to buy, sell, or hold a security. Investing involves risk, including possible loss of principal.</p>
 </footer>
 
+<script src="assets/runtime-config.js"></script>
 <script src="assets/market-explorer.js"></script>
 <script src="assets/market-explorer-coverage.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
