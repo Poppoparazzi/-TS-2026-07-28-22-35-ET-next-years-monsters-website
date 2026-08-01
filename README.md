@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-01 14:28 ET -->
+<!-- TS: 2026-08-01 14:37 ET -->
 # Next Year’s Monsters™ Website
 
 Live website: [https://nextyearsmonsters.com](https://nextyearsmonsters.com)
@@ -22,8 +22,9 @@ The live site includes the editorial landing page, Monster Check™, Top Monster
 
 ## Production work remaining
 
-- Deploy the private backend and PostgreSQL service.
-- Configure the backend host with approved provider credentials and the SEC contact header.
+- Deploy the SEC-first backend and configure its SEC contact header.
+- Connect PostgreSQL after the first official filing path is verified.
+- Choose a market-data provider and plan whose license permits public display before connecting quotes.
 - Connect the verified public API address in `assets/runtime-config.js`.
 - Save the first genuine quote and SEC status records.
 - Implement and calibrate Monster Rating™ Version 1 before labeling any rating as live.
