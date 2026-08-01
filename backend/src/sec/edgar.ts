@@ -1,4 +1,4 @@
-// TS: 2026-07-29 12:08 ET
+// TS: 2026-08-01 15:25 ET
 
 import {
   type SecCompany,
@@ -294,14 +294,18 @@ export class SecEdgarDataProvider implements SecDataProvider {
         continue;
       }
 
-      byTicker.set(ticker, {
-        ticker,
-        cik,
-        cikPadded: paddedCik(cik),
-        companyName,
-        exchange,
-        sourceUrl,
-      });
+      // The SEC feed can contain duplicate ticker rows for a public parent and a
+      // newly registered subsidiary. Preserve the SEC's first (primary) mapping.
+      if (!byTicker.has(ticker)) {
+        byTicker.set(ticker, {
+          ticker,
+          cik,
+          cikPadded: paddedCik(cik),
+          companyName,
+          exchange,
+          sourceUrl,
+        });
+      }
     }
 
     this.tickerCache = {
