@@ -1,4 +1,4 @@
-// TS: 2026-07-29 12:17 ET
+// TS: 2026-08-01 14:23 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -39,6 +39,7 @@ function testConfig(): AppConfig {
     marketDataProvider: "unconfigured",
     twelveDataApiKey: null,
     secUserAgent: null,
+    databaseUrl: null,
   });
 }
 
