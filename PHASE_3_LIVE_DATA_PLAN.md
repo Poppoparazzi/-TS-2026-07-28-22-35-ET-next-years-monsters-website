@@ -1,6 +1,6 @@
 # Next Year’s Monsters™ — Phase 3 Live Data Plan
 
-<!-- TS: 2026-07-29 10:23 ET -->
+<!-- TS: 2026-08-01 17:48 ET -->
 
 ## Goal
 
@@ -22,18 +22,18 @@ Core experience:
 
 ## Honest definition of “real time”
 
-The website can display live or near-live prices continuously while the Monster Rating™ updates on a controlled schedule and whenever material evidence changes.
+The website can display clearly labeled delayed prices while the Monster Rating™ updates on an evidence-driven schedule. This is a one-year research product, not a day-trading terminal.
 
 Recommended cadence:
 
-- Price, quote, and volume display: streaming or frequent snapshot updates.
-- Intraday technical factors: recompute every 1–5 minutes.
-- Monster Rating™: recompute every 5 minutes during market hours and immediately after a material news or filing event.
+- Price, quote, and volume display: delayed widget or periodic snapshot with its source and freshness disclosed.
+- Technical factors: recompute after the daily close, with an optional limited intraday refresh only when it materially improves the one-year thesis.
+- Monster Rating™: recompute nightly and after a verified material filing, earnings release, or company event.
 - Financial-statement factors: update when a new SEC filing is processed.
 - News-impact factors: update when verified articles or company filings arrive.
 - Historical backfill and quality checks: nightly.
 
-This avoids recalculating 2,000 ratings on every individual trade while still delivering a current, responsive result.
+This avoids recalculating 2,000 ratings on noise, keeps infrastructure and licensing costs proportionate, and aligns every update with the site's one-year investment horizon.
 
 ## Proposed stock universe
 
@@ -240,17 +240,19 @@ Success test: users can search the full universe and receive a timestamped resul
 
 The major non-code issue is permission to display market data publicly.
 
-Development can begin with delayed data, a limited exchange feed, or provider sandbox access. Public consolidated real-time prices may require a business agreement and exchange redistribution permissions. Provider selection must be based on both technical capability and legal display rights.
+Public price context will initially use TradingView's free hosted widgets, whose available markets can be real-time, delayed, or end-of-day depending on the exchange. The page must retain TradingView branding and disclose that market information may be delayed.
+
+The secure raw-quote adapter remains optional and unconfigured in production until a provider plan explicitly permits commercial external display at a cost justified by the product. Personal, internal, and non-display plans must never be repurposed for public redistribution.
 
 ## Immediate next work
 
-1. Research and compare suitable market-data and news providers.
-2. Choose the development provider and confirm display rights, coverage, rate limits, and cost.
-3. Create the TypeScript backend scaffold.
-4. Add `/api/health` and secure environment handling.
-5. Add ticker search and quote endpoints for the existing 15 stocks.
-6. Connect the current website to the backend without removing the demonstration fallback.
-7. Document every commit and test result.
+1. Publish and verify the provider-neutral 25-symbol batch quote cache.
+2. Keep TradingView widgets as the public delayed chart-and-price source.
+3. Add issuer-continuity records so successor companies can retain verified predecessor filing history.
+4. Provision PostgreSQL and save normalized SEC facts with their source context.
+5. Implement and test Monster Rating™ Version 1 using daily and filing-driven evidence.
+6. Replace each demonstration rating only after the corresponding live record passes the readiness checks twice.
+7. Document every commit, test result, data source, and unavailable-data state.
 
 ## Definition of Phase 3 success
 
