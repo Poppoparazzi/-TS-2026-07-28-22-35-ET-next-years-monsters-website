@@ -1,4 +1,47 @@
-// TS: 2026-07-30 09:05 ET
+// TS: 2026-08-01 18:24 ET
+
+function explorerApiBaseUrl() {
+  const raw = window.NYM_CONFIG?.apiBaseUrl;
+  if (typeof raw !== "string" || !raw.trim()) return "";
+  return raw.trim().replace(/\/$/, "");
+}
+
+function normalizeExplorerTicker(value) {
+  const ticker = String(value ?? "").trim().toUpperCase();
+  return /^[A-Z0-9.-]{1,15}$/.test(ticker) ? ticker : "";
+}
+
+function tradingViewExchange(value) {
+  const exchange = String(value ?? "").trim().toUpperCase();
+  if (exchange === "NASDAQ") return "NASDAQ";
+  if (exchange === "NYSE") return "NYSE";
+  if (exchange === "NYSE AMERICAN" || exchange === "AMEX") return "AMEX";
+  if (exchange === "OTC") return "OTC";
+  return "NASDAQ";
+}
+
+async function loadOfficialExplorerStock(ticker) {
+  const apiBaseUrl = explorerApiBaseUrl();
+  if (!apiBaseUrl) throw new Error("The official SEC service is not configured.");
+
+  const response = await fetch(`${apiBaseUrl}/api/sec/company/${encodeURIComponent(ticker)}`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(65_000),
+  });
+
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("The official SEC company record could not be loaded.");
+
+  const company = await response.json();
+  return {
+    ticker: company.ticker,
+    name: company.companyName,
+    sector: "Official SEC company record",
+    exchange: tradingViewExchange(company.exchange),
+    monsterCheck: false,
+    officialSec: true,
+  };
+}
 
 function explorerSymbol(stock) {
   if (stock.proName) return stock.proName;
@@ -98,6 +141,9 @@ function setupExplorer(stocks) {
   const modeButtons = [...document.querySelectorAll("[data-explorer-mode]")];
   const chartCount = document.querySelector("[data-explorer-chart-count]");
   const status = document.querySelector("[data-explorer-status]");
+  const tickerForm = document.querySelector("[data-explorer-ticker-form]");
+  const tickerInput = document.querySelector("[data-explorer-ticker-input]");
+  const tickerMessage = document.querySelector("[data-explorer-ticker-message]");
 
   if (!leftSelect || !rightSelect || !swapButton || !quickButtons || !leftFrame || !rightFrame) return;
 
@@ -140,8 +186,8 @@ function setupExplorer(stocks) {
         researchLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
         researchLink.textContent = `OPEN ${stock.ticker} MONSTER CHECK™`;
       } else {
-        researchLink.href = `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}`;
-        researchLink.textContent = `OPEN ${stock.ticker} NEWS RADAR`;
+        researchLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
+        researchLink.textContent = `OPEN ${stock.ticker} SEC CHECK`;
       }
     }
 
@@ -164,7 +210,7 @@ function setupExplorer(stocks) {
     });
 
     if (chartCount) chartCount.textContent = singleMode ? "1" : "2";
-    if (status) status.textContent = singleMode ? "25 STOCKS READY · SINGLE CHART" : "25 STOCKS READY · COMPARE TWO";
+    if (status) status.textContent = singleMode ? "EXACT TICKER READY · SINGLE CHART" : "EXACT TICKERS READY · COMPARE TWO";
     if (!singleMode && renderComparison) renderSide("right");
     updateUrl();
   }
@@ -195,6 +241,48 @@ function setupExplorer(stocks) {
     quickButtons.append(button);
   });
 
+  if (tickerForm && tickerInput) {
+    tickerForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const ticker = normalizeExplorerTicker(tickerInput.value);
+
+      if (!ticker) {
+        if (tickerMessage) tickerMessage.textContent = "Enter an exact ticker using letters, numbers, a period, or a hyphen.";
+        return;
+      }
+
+      tickerInput.disabled = true;
+      if (tickerMessage) tickerMessage.textContent = `Checking $${ticker} against the official SEC directory…`;
+
+      try {
+        let stock = byTicker.get(ticker);
+        if (!stock) {
+          stock = await loadOfficialExplorerStock(ticker);
+          if (!stock) {
+            if (tickerMessage) tickerMessage.textContent = `No current SEC-listed company match was found for $${ticker}.`;
+            return;
+          }
+          byTicker.set(ticker, stock);
+          [leftSelect, rightSelect].forEach((select) => {
+            const option = document.createElement("option");
+            option.value = ticker;
+            option.textContent = `${ticker} · ${stock.name}`;
+            select.append(option);
+          });
+        }
+
+        leftSelect.value = ticker;
+        renderSide("left");
+        if (tickerMessage) tickerMessage.textContent = `$${ticker} verified through the SEC. The external chart may be delayed.`;
+        leftFrame.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch (_error) {
+        if (tickerMessage) tickerMessage.textContent = "The official company lookup is temporarily unavailable. Please try again shortly.";
+      } finally {
+        tickerInput.disabled = false;
+      }
+    });
+  }
+
   setMode(currentMode, false);
   renderSide("left");
   if (currentMode === "compare") renderSide("right");
@@ -206,6 +294,29 @@ async function startMarketExplorer() {
     const response = await fetch("data/market-universe.json");
     if (!response.ok) throw new Error("Unable to load the market universe.");
     const stocks = await response.json();
+    const params = new URLSearchParams(window.location.search);
+    const requested = [
+      params.get("left"),
+      params.get("right"),
+      tickerFromWidgetSymbol(params.get("tvwidgetsymbol")),
+    ]
+      .map(normalizeExplorerTicker)
+      .filter(Boolean);
+    const known = new Set(stocks.map((stock) => String(stock.ticker).toUpperCase()));
+
+    for (const ticker of requested) {
+      if (known.has(ticker)) continue;
+      try {
+        const officialStock = await loadOfficialExplorerStock(ticker);
+        if (officialStock) {
+          stocks.push(officialStock);
+          known.add(ticker);
+        }
+      } catch (_error) {
+        // The starter chart list remains usable when the free API is waking or unavailable.
+      }
+    }
+
     const ordered = [...stocks].sort((left, right) => String(left.ticker).localeCompare(String(right.ticker)));
     setupExplorer(ordered);
   } catch (_error) {
