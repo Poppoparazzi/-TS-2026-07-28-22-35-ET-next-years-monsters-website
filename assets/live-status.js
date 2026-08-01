@@ -1,4 +1,4 @@
-// TS: 2026-07-29 22:25 ET
+// TS: 2026-08-01 15:14 ET
 
 const STATUS_CONFIG = window.NYM_CONFIG ?? {};
 const TRADINGVIEW_EXCHANGE_OVERRIDES = Object.freeze({
@@ -285,7 +285,8 @@ function setupMarketExplorer(stocks) {
 async function fetchReadinessSnapshot(apiBaseUrl) {
   const response = await fetch(`${apiBaseUrl}/api/readiness`, {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(7_000),
+    // Render's free service can need roughly a minute to wake after inactivity.
+    signal: AbortSignal.timeout(65_000),
   });
 
   if (!response.ok) {
