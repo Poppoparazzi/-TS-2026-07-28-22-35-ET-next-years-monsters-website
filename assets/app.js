@@ -1,4 +1,4 @@
-// TS: 2026-07-29 09:10 ET
+// TS: 2026-08-01 15:25 ET
 const DEMO_NOTICE = "Illustrative demonstration only. This is not live market data, current news, investment advice, or a recommendation.";
 const EDUCATIONAL_DISCLAIMER = "Monster Rating™ is an educational framework for organizing evidence. It is not a buy, sell, or hold recommendation, does not predict future performance, and may become outdated as company results, prices, market conditions, and verified news change. Investing involves risk, including possible loss of principal.";
 
@@ -86,6 +86,34 @@ async function loadStocks() {
   return response.json();
 }
 
+function getPublicApiBaseUrl() {
+  const raw = window.NYM_CONFIG?.apiBaseUrl;
+  if (typeof raw !== "string" || !raw.trim()) return null;
+
+  try {
+    const url = new URL(raw.trim());
+    const localDevelopment = ["localhost", "127.0.0.1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localDevelopment) return null;
+    return url.href.replace(/\/$/, "");
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function loadSecCompany(ticker) {
+  const apiBaseUrl = getPublicApiBaseUrl();
+  if (!apiBaseUrl) throw new Error("The official SEC service is not connected.");
+
+  const response = await fetch(`${apiBaseUrl}/api/sec/company/${encodeURIComponent(ticker)}`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(65_000),
+  });
+
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("The official SEC company record could not be loaded.");
+  return response.json();
+}
+
 function tierClass(score) {
   if (score >= 90) return "platinum";
   if (score >= 75) return "gold";
@@ -159,10 +187,68 @@ function renderMissingResult(result, query) {
   result.style.display = "block";
   result.innerHTML = `
     <div class="monster-empty-state">
-      <p class="monster-demo-flag">15-STOCK EDUCATIONAL DEMONSTRATION</p>
+      <p class="monster-demo-flag">NO SEC COMPANY MATCH FOUND</p>
       <h2>${safeQuery}</h2>
-      <p>This working version contains the 15 stocks from the book’s Visual Case Library. A licensed market-data service and scoring backend are required before other U.S. tickers can receive a current, verified Monster Rating™.</p>
+      <p>Enter an exact U.S. ticker symbol. The original 15 Visual Case Library companies include deeper educational demonstrations; other SEC-listed companies can return an official SEC profile without an invented Monster Rating™.</p>
       <div class="monster-education-disclaimer"><strong>DEMONSTRATION NOTICE:</strong> ${escapeHtml(DEMO_NOTICE)}</div>
+    </div>`;
+}
+
+function renderSecLoading(result, ticker) {
+  result.style.display = "block";
+  result.innerHTML = `
+    <div class="monster-empty-state">
+      <p class="monster-demo-flag">CHECKING OFFICIAL SEC RECORDS</p>
+      <h2>$${escapeHtml(ticker)}</h2>
+      <p>The free data service may need about one minute to wake after inactivity. No price, news item, or Monster Rating™ will be substituted while the official record loads.</p>
+    </div>`;
+}
+
+function renderSecError(result, ticker) {
+  result.style.display = "block";
+  result.innerHTML = `
+    <div class="monster-empty-state">
+      <p class="monster-demo-flag">SEC SERVICE TEMPORARILY UNAVAILABLE</p>
+      <h2>$${escapeHtml(ticker)}</h2>
+      <p>The official company record could not be loaded. Please try the exact ticker again shortly. No live value or rating was invented.</p>
+      <div class="monster-education-disclaimer"><strong>DATA NOTICE:</strong> ${escapeHtml(EDUCATIONAL_DISCLAIMER)}</div>
+    </div>`;
+}
+
+function renderSecCompanyResult(result, company) {
+  const exchange = company.exchange || "U.S. SEC REGISTRANT";
+
+  result.style.display = "block";
+  result.innerHTML = `
+    <div class="monster-result-head">
+      <div class="monster-result-identity">
+        <p class="monster-demo-flag">OFFICIAL SEC COMPANY RECORD · NO VERIFIED RATING ASSIGNED</p>
+        <h2><span>$${escapeHtml(company.ticker)}</span> ${escapeHtml(company.companyName)}</h2>
+        <p class="monster-result-sector">${escapeHtml(exchange)} · SEC CIK ${escapeHtml(company.cikPadded)}</p>
+      </div>
+      <div class="monster-score-card silver" aria-label="No verified Monster Rating assigned">
+        <span>VERIFIED MONSTER RATING™</span>
+        <strong>—</strong>
+        <em>NOT YET RATED</em>
+      </div>
+    </div>
+
+    <div class="monster-result-grid">
+      <section class="monster-result-panel">
+        <span>01 / OFFICIAL IDENTITY</span>
+        <h3>SEC COMPANY RECORD</h3>
+        <p>This company identity comes from the SEC’s official ticker and CIK mapping. Its latest filing appears in the live strip above when available.</p>
+      </section>
+      <section class="monster-result-panel monster-result-panel-risk">
+        <span>02 / EVIDENCE BOUNDARY</span>
+        <h3>NO RATING INVENTED</h3>
+        <p>A filing record does not automatically create a Monster Rating™. Verified market data, evidence rules, risks, and versioned calculations are still required.</p>
+      </section>
+    </div>
+
+    <div class="monster-education-disclaimer">
+      <strong>OFFICIAL SOURCE:</strong> <a href="${escapeHtml(company.sourceUrl)}" target="_blank" rel="noopener noreferrer">Open the SEC company-ticker source ↗</a><br>
+      <strong>EDUCATIONAL DISCLAIMER:</strong> ${escapeHtml(EDUCATIONAL_DISCLAIMER)}
     </div>`;
 }
 
@@ -261,6 +347,7 @@ async function setupMonsterCheck() {
 
   const byTicker = new Map(stocks.map(stock => [stock.ticker.toUpperCase(), stock]));
   const byName = new Map(stocks.map(stock => [stock.name.toUpperCase(), stock]));
+  let requestGeneration = 0;
 
   const findStock = (query) => {
     if (!query) return null;
@@ -277,14 +364,42 @@ async function setupMonsterCheck() {
     renderStockResult(result, stock);
   };
 
-  const run = () => {
+  const run = async () => {
     const query = input.value.trim().toUpperCase();
-    render(findStock(query), query);
+    const stock = findStock(query);
+    const generation = ++requestGeneration;
+
+    if (stock) {
+      render(stock, query);
+      return;
+    }
+
+    if (!/^[A-Z0-9.-]{1,15}$/.test(query)) {
+      renderMissingResult(result, query);
+      return;
+    }
+
+    renderSecLoading(result, query);
+    button.disabled = true;
+    button.textContent = "CHECKING SEC…";
+
+    try {
+      const company = await loadSecCompany(query);
+      if (generation !== requestGeneration) return;
+      company ? renderSecCompanyResult(result, company) : renderMissingResult(result, query);
+    } catch (_error) {
+      if (generation === requestGeneration) renderSecError(result, query);
+    } finally {
+      if (generation === requestGeneration) {
+        button.disabled = false;
+        button.textContent = "RUN THE CHECK";
+      }
+    }
   };
 
-  button.addEventListener("click", run);
+  button.addEventListener("click", () => void run());
   input.addEventListener("keydown", event => {
-    if (event.key === "Enter") run();
+    if (event.key === "Enter") void run();
   });
 
   if (suggestions) {
@@ -295,7 +410,7 @@ async function setupMonsterCheck() {
       chip.textContent = ticker;
       chip.addEventListener("click", () => {
         input.value = ticker;
-        render(byTicker.get(ticker), ticker);
+        void run();
       });
       suggestions.appendChild(chip);
     });
