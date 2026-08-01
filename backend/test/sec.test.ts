@@ -1,4 +1,4 @@
-// TS: 2026-08-01 14:23 ET
+// TS: 2026-08-01 15:25 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -102,6 +102,39 @@ test("SEC adapter resolves a ticker and normalizes recent filings", async () => 
     assert.match(filings[0]?.primaryDocumentUrl ?? "", /000032019326000001\/aapl-20260627\.htm$/);
     assert.equal(requestedUrls.filter((url) => url.endsWith("company_tickers_exchange.json")).length, 1);
     assert.equal(userAgents.every((value) => value === SEC_USER_AGENT), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("SEC adapter keeps the primary mapping when a ticker appears more than once", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async (input) => {
+    const url = typeof input === "string" ? input : input.toString();
+
+    if (url.endsWith("company_tickers_exchange.json")) {
+      return new Response(
+        JSON.stringify({
+          fields: ["cik", "name", "ticker", "exchange"],
+          data: [
+            [34088, "EXXON MOBIL CORP", "XOM", "NYSE"],
+            [2115436, "ExxonMobil Holdings Corp", "XOM", "NYSE"],
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+
+    throw new Error(`Unexpected SEC test URL: ${url}`);
+  }) as typeof fetch;
+
+  try {
+    const provider = new SecEdgarDataProvider(SEC_USER_AGENT);
+    const company = await provider.getCompany("XOM");
+
+    assert.equal(company.cik, 34088);
+    assert.equal(company.companyName, "EXXON MOBIL CORP");
   } finally {
     globalThis.fetch = originalFetch;
   }
