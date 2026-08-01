@@ -13,7 +13,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
-    "test": "tsx --test test/*.test.ts",
+    "test": "node --import tsx --test test/*.test.ts",
     "check": "npm run typecheck && npm run test:typecheck && npm test",
     "db:migrate": "tsx src/database/migrate.ts"
   },
