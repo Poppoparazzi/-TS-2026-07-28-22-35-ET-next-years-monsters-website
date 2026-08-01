@@ -1,6 +1,6 @@
 # Next Year’s Monsters™ API
 
-<!-- TS: 2026-07-29 21:55 ET -->
+<!-- TS: 2026-08-01 17:36 ET -->
 
 This folder contains the provider-neutral TypeScript backend for the live-data phase of Monster Check™.
 
@@ -14,18 +14,20 @@ Implemented:
 - `GET /api/readiness`.
 - `GET /api/tickers?q=apple`.
 - `GET /api/quotes/AAPL`.
+- `GET /api/quotes?symbols=AAPL,NVDA,MSFT` (up to 25 unique symbols).
 - `GET /api/sec/company/AAPL`.
 - `GET /api/sec/filings/AAPL?limit=10`.
 - `GET /api/sec/facts/AAPL`.
 - Secure environment-variable configuration.
 - Provider-neutral market-data and SEC-data contracts.
 - Twelve Data quote and symbol-search adapter.
+- Provider-neutral quote cache, concurrent batch loading, request deduplication, and per-symbol failure containment.
 - Official SEC ticker mapping, submissions, filing links, and selected XBRL company-facts adapter.
 - PostgreSQL schema, pilot seed data, live-readiness views, and checksum-protected migration runner.
 - Database-backed pilot and Top 25 readiness API with no connection-string exposure.
 - Honest feed and SEC-context disclosures.
 - Safe unconfigured-provider behavior when credentials, the SEC user agent, or the database are absent.
-- Automated route, secret-exposure, malformed-symbol, quote-normalization, missing-price, SEC-filing, SEC-fact, and readiness tests.
+- Automated route, secret-exposure, malformed-symbol, batch-limit, cache, partial-failure, quote-normalization, missing-price, SEC-filing, SEC-fact, and readiness tests.
 - GitHub Actions workflow for typechecking and tests on backend changes.
 - Public runtime configuration file with no credentials.
 - Landing-page and dedicated Monster Check™ live quote and latest-filing client.
@@ -34,10 +36,9 @@ Implemented:
 
 Not implemented yet:
 
-- Deployed public API URL.
-- Active public API address in `assets/runtime-config.js`.
 - Provisioned private PostgreSQL service with migrations applied.
 - Saved production quote, filing, and rating records.
+- Licensed raw market-data feed for public redistribution. TradingView's free public widgets remain the visible chart-and-price source until one is selected.
 - News provider.
 - Monster Rating™ Version 1 engine.
 - Rating history refresh jobs.
@@ -61,6 +62,8 @@ The development server defaults to `http://localhost:8787`.
 - Never commit `.env`, `DATABASE_URL`, or provider keys.
 - Never place provider or database credentials in GitHub Pages JavaScript.
 - Never describe the Twelve Data default U.S. feed as a full consolidated SIP quote.
+- Never use an individual/internal/non-display market-data plan for public redistribution. Confirm display rights before enabling a raw quote provider on the public site.
+- Do not purchase real-time exchange speed merely for appearance: Next Year’s Monsters™ is designed to work with clearly timestamped delayed or end-of-day data.
 - Never expose the Twelve Data key, SEC contact address, or database connection string in an API response.
 - Never fabricate a quote, filing, fact, readiness result, or source when a provider is missing or unavailable.
 - Retain SEC fact form, fiscal period, unit, period dates, filed date, accession number, and source link.
@@ -88,7 +91,7 @@ The GitHub Actions workflow `.github/workflows/backend-checks.yml` runs the same
 - `/api/health` returns HTTP 200 and reports each provider’s configured status.
 - `/api/provider-status` confirms that market-data, SEC, and database secrets are not exposed.
 - `/api/readiness` returns HTTP 503 until `DATABASE_URL` is configured.
-- `/api/tickers` and `/api/quotes/:symbol` return HTTP 503 rather than fabricated market data.
+- `/api/tickers`, `/api/quotes/:symbol`, and `/api/quotes?symbols=...` return HTTP 503 rather than fabricated market data.
 - `/api/sec/company/:symbol`, `/api/sec/filings/:symbol`, and `/api/sec/facts/:symbol` return HTTP 503 until `SEC_USER_AGENT` is configured.
 - The website continues showing the labeled 15-stock demonstration because the public runtime API address remains blank.
 
@@ -98,6 +101,7 @@ With Twelve Data configured:
 
 - `/api/tickers?q=apple` returns supported U.S. common-stock matches.
 - `/api/quotes/AAPL` returns a normalized timestamped quote with provider and feed-disclosure fields.
+- `/api/quotes?symbols=AAPL,NVDA,MSFT` returns independent per-symbol results, summary counts, retrieval time, and cache policy without exposing the provider key.
 
 With a valid SEC user agent configured:
 
