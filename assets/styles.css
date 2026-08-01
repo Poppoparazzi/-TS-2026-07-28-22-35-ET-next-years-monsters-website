@@ -1,4 +1,4 @@
-/* TS: 2026-08-01 15:32 ET */
+/* TS: 2026-08-01 16:55 ET */
 :root {
   --navy:#06111f; --navy2:#0b1e33; --panel:#102a44; --panel2:#153554;
   --green:#39d98a; --green2:#85f3bd; --gold:#f5c84b; --cream:#fff7dc;
@@ -118,9 +118,8 @@ footer{padding:38px 0 54px;border-top:1px solid var(--line);color:var(--muted);f
 .home-nav-cta{justify-self:end;background:var(--editorial-black);color:white;text-decoration:none;padding:15px 23px;font-weight:950;font-size:13px;letter-spacing:.04em}
 .home-hero{min-height:730px;display:grid;grid-template-columns:50% 50%;background:var(--editorial-black);position:relative;overflow:hidden}
 .home-hero-copy{padding:76px clamp(32px,5.2vw,92px) 70px;position:relative;z-index:3;background:linear-gradient(90deg,#111715 0%,#111715 78%,rgba(17,23,21,.9) 100%)}
-.home-fingerprint-mark{position:absolute;top:24px;right:28px;width:clamp(110px,10vw,170px);color:var(--editorial-lime);opacity:.3;transform:rotate(8deg);pointer-events:none}
-.home-fingerprint-mark svg{display:block;width:100%;height:auto;filter:drop-shadow(0 0 18px rgba(168,223,52,.16))}
-.home-fingerprint-mark path{fill:none;stroke:currentColor;stroke-width:5.5;stroke-linecap:round;stroke-linejoin:round}
+.home-fingerprint-mark{position:absolute;top:16px;right:20px;width:clamp(145px,12vw,220px);opacity:.42;transform:rotate(7deg);pointer-events:none}
+.home-fingerprint-mark img{display:block;width:100%;height:auto;filter:drop-shadow(0 0 20px rgba(168,223,52,.18))}
 .home-kicker{margin:0 0 28px;color:var(--editorial-lime);font-size:13px;font-weight:950;letter-spacing:.045em;display:flex;align-items:center;gap:12px}
 .home-kicker span{display:block;width:42px;height:4px;background:currentColor}
 .home-hero h1{margin:0;color:#f7f2e7;font-size:clamp(82px,9.3vw,164px);line-height:.82;font-weight:950}
