@@ -1,4 +1,4 @@
-// TS: 2026-08-01 14:37 ET
+// TS: 2026-08-01 15:14 ET
 
 (() => {
   const CONFIG = window.NYM_CONFIG ?? {};
@@ -29,7 +29,8 @@
   async function requestJson(path) {
     const response = await fetch(`${apiBaseUrl}${path}`, {
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(7_000),
+      // Render's free service can need roughly a minute to wake after inactivity.
+      signal: AbortSignal.timeout(65_000),
     });
 
     if (!response.ok) {
