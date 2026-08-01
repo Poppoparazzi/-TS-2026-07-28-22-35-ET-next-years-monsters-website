@@ -1,4 +1,4 @@
-// TS: 2026-07-29 21:49 ET
+// TS: 2026-08-01 14:22 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -181,11 +181,19 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   app.setErrorHandler((error, request, reply) => {
+    const errorStatusCode =
+      typeof error === "object" &&
+      error !== null &&
+      "statusCode" in error &&
+      typeof error.statusCode === "number"
+        ? error.statusCode
+        : null;
+    const errorMessage = error instanceof Error ? error.message : "Request failed.";
     const statusCode =
       error instanceof ProviderNotConfiguredError
         ? 503
-        : typeof error.statusCode === "number"
-          ? error.statusCode
+        : errorStatusCode !== null
+          ? errorStatusCode
           : 500;
 
     request.log.error({ error, statusCode }, "API request failed");
@@ -200,7 +208,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       message:
         statusCode >= 500 && !(error instanceof ProviderNotConfiguredError)
           ? "The data service could not complete the request."
-          : error.message,
+          : errorMessage,
       timestamp: new Date().toISOString(),
     });
   });
