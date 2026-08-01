@@ -1,4 +1,4 @@
-# TS: 2026-07-29 21:54 ET
+# TS: 2026-08-01 14:22 ET
 
 services:
   - type: web
@@ -18,7 +18,7 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: CORS_ORIGIN
-        value: https://poppoparazzi.github.io
+        value: https://nextyearsmonsters.com,https://www.nextyearsmonsters.com,https://poppoparazzi.github.io
       - key: DATABASE_URL
         sync: false
       - key: MARKET_DATA_PROVIDER
