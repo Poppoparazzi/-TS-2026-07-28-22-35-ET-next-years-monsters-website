@@ -1,4 +1,4 @@
-// TS: 2026-07-29 21:50 ET
+// TS: 2026-08-01 17:24 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -31,6 +31,8 @@ class StaticMarketDataProvider implements MarketDataProvider {
   public readonly configured = true;
   public quoteCalls = 0;
 
+  public constructor(private readonly failingSymbols = new Set<string>()) {}
+
   public async searchTickers(
     query: string,
     limit = 10,
@@ -48,6 +50,9 @@ class StaticMarketDataProvider implements MarketDataProvider {
 
   public async getQuote(symbol: string): Promise<QuoteSnapshot> {
     this.quoteCalls += 1;
+    if (this.failingSymbols.has(symbol)) {
+      throw new Error(`Test-only failure for ${symbol}.`);
+    }
     return {
       symbol,
       companyName: "Test Company",
@@ -114,6 +119,74 @@ test("quote route normalizes valid symbols and rejects unsupported characters", 
   assert.equal(invalid.statusCode, 400);
   assert.equal(invalid.json().error, "invalid_symbol");
   assert.equal(provider.quoteCalls, 1);
+});
+
+test("quote cache reuses a recent provider result", async (t) => {
+  const provider = new StaticMarketDataProvider();
+  const app = await buildApp({ config: testConfig(), provider, logger: false });
+  t.after(async () => app.close());
+
+  const first = await app.inject({ method: "GET", url: "/api/quotes/AAPL" });
+  const second = await app.inject({ method: "GET", url: "/api/quotes/AAPL" });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(provider.quoteCalls, 1);
+  assert.deepEqual(second.json(), first.json());
+});
+
+test("batch quote route deduplicates symbols and contains partial failures", async (t) => {
+  const provider = new StaticMarketDataProvider(new Set(["FAIL"]));
+  const app = await buildApp({
+    config: testConfig(),
+    provider,
+    quoteBatchConcurrency: 2,
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/quotes?symbols=aapl,NVDA,AAPL,FAIL",
+  });
+  const payload = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(payload.requestedCount, 3);
+  assert.equal(payload.successCount, 2);
+  assert.equal(payload.failureCount, 1);
+  assert.deepEqual(
+    payload.results.map((result: { symbol: string }) => result.symbol),
+    ["AAPL", "NVDA", "FAIL"],
+  );
+  assert.equal(payload.results[2].error, "quote_unavailable");
+  assert.equal(response.body.includes("Test-only failure"), false);
+  assert.equal(provider.quoteCalls, 3);
+});
+
+test("batch quote route validates missing, malformed, and oversized requests", async (t) => {
+  const provider = new StaticMarketDataProvider();
+  const app = await buildApp({ config: testConfig(), provider, logger: false });
+  t.after(async () => app.close());
+
+  const missing = await app.inject({ method: "GET", url: "/api/quotes" });
+  const malformed = await app.inject({
+    method: "GET",
+    url: "/api/quotes?symbols=AAPL,BAD%2F..%2FSYMBOL",
+  });
+  const oversizedSymbols = Array.from({ length: 26 }, (_, index) => `S${index}`).join(",");
+  const oversized = await app.inject({
+    method: "GET",
+    url: `/api/quotes?symbols=${oversizedSymbols}`,
+  });
+
+  assert.equal(missing.statusCode, 400);
+  assert.equal(missing.json().error, "missing_symbols");
+  assert.equal(malformed.statusCode, 400);
+  assert.equal(malformed.json().error, "invalid_symbols");
+  assert.equal(oversized.statusCode, 400);
+  assert.equal(oversized.json().error, "too_many_symbols");
+  assert.equal(provider.quoteCalls, 0);
 });
 
 test("unconfigured provider returns a clear 503 instead of invented data", async (t) => {
