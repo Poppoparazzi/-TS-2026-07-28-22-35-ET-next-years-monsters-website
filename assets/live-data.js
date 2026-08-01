@@ -1,4 +1,4 @@
-// TS: 2026-07-29 12:06 ET
+// TS: 2026-08-01 14:37 ET
 
 (() => {
   const CONFIG = window.NYM_CONFIG ?? {};
@@ -152,15 +152,16 @@
     linkNode.textContent = "OPEN OFFICIAL SEC DOCUMENT ↗";
   }
 
-  function renderUnavailable(section, message) {
-    section.dataset.liveStatus = "unavailable";
-    section.querySelector("[data-live-price]").textContent = "Temporarily unavailable";
+  function renderQuoteUnavailable(section) {
+    section.querySelector("[data-live-price]").textContent = "Not connected";
     section.querySelector("[data-live-change]").textContent = "Demonstration rating remains below.";
-    section.querySelector("[data-live-freshness]").textContent = "DEMO FALLBACK ACTIVE";
+    section.querySelector("[data-live-freshness]").textContent = "MARKET DATA NOT CONNECTED";
     section.querySelector("[data-live-time]").textContent = "No live value was substituted.";
+  }
+
+  function renderFilingUnavailable(section) {
     section.querySelector("[data-live-filing-form]").textContent = "SEC connection unavailable";
     section.querySelector("[data-live-filing-link]").textContent = "";
-    section.querySelector("[data-live-disclosure]").textContent = message;
   }
 
   async function refreshLiveData(result, ticker) {
@@ -177,20 +178,36 @@
     const current = requestState.get(result);
     if (!current || current.generation !== generation || current.ticker !== ticker) return;
 
-    if (quoteResult.status === "rejected") {
-      renderUnavailable(section, quoteResult.reason?.message || "Live quote could not be loaded.");
-      return;
+    const quoteLoaded = quoteResult.status === "fulfilled";
+    const filingLoaded = filingResult.status === "fulfilled";
+
+    if (quoteLoaded) {
+      renderQuote(section, quoteResult.value);
+    } else {
+      renderQuoteUnavailable(section);
     }
 
-    renderQuote(section, quoteResult.value);
-
-    if (filingResult.status === "fulfilled") {
+    if (filingLoaded) {
       renderFiling(section, filingResult.value);
-      section.dataset.liveStatus = "live";
     } else {
+      renderFilingUnavailable(section);
+    }
+
+    if (quoteLoaded && filingLoaded) {
+      section.dataset.liveStatus = "live";
+    } else if (quoteLoaded || filingLoaded) {
       section.dataset.liveStatus = "partial";
-      section.querySelector("[data-live-filing-form]").textContent = "SEC data temporarily unavailable";
-      section.querySelector("[data-live-filing-link]").textContent = "";
+
+      if (filingLoaded) {
+        section.querySelector("[data-live-disclosure]").textContent =
+          "Official SEC filing loaded. Market quote remains disconnected, and the demonstration rating below was not changed.";
+      }
+    } else {
+      section.dataset.liveStatus = "unavailable";
+      section.querySelector("[data-live-disclosure]").textContent =
+        quoteResult.reason?.message ||
+        filingResult.reason?.message ||
+        "The live services could not be reached. No live value was substituted.";
     }
   }
 
