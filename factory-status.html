@@ -1,11 +1,11 @@
-<!-- TS: 2026-08-02 17:40 ET -->
+<!-- TS: 2026-08-02 18:35 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>500-Stock Factory Status | Next Year’s Monsters™</title>
-  <meta name="description" content="See the live bulk-processing status for the first 500 Next Year’s Monsters stock profiles, including queued, processing, completed, unresolved, failed, and stale SEC evidence records.">
+  <meta name="description" content="See the live bulk-processing status for the first 500 Next Year’s Monsters stock profiles, including queued, in-batch processing, completed, unresolved, failed, and stale SEC evidence records.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/factory-status.css">
@@ -34,7 +34,7 @@
     <div class="factory-shell">
       <p class="factory-kicker">BULK PIPELINE · REAL COUNTS · NO HANDCRAFTED STOCK PAGES</p>
       <h1>THE 500-STOCK<br><strong>FACTORY STATUS.</strong></h1>
-      <p class="factory-hero-copy">This page reads the production bulk-status endpoint. It shows which companies are queued, processing, complete, partial, unresolved, failed, or stale, plus exactly which SEC evidence is stored. Quotes and current Monster Ratings™ remain incomplete until licensed market data and the production scoring engine are connected.</p>
+      <p class="factory-hero-copy">This page reads the production bulk-status endpoint. It shows which companies are queued, claimed into the current batch, complete, partial, unresolved, failed, or stale, plus exactly which SEC evidence is stored. Quotes and current Monster Ratings™ remain incomplete until licensed market data and the production scoring engine are connected.</p>
     </div>
   </section>
 
@@ -48,7 +48,7 @@
       <article data-summary-tone="lime"><strong data-factory-universe>0</strong><span>Companies in database</span></article>
       <article><strong data-factory-examined>0</strong><span>Companies examined</span></article>
       <article data-summary-tone="silver"><strong data-factory-queued>0</strong><span>SEC queued</span></article>
-      <article><strong data-factory-processing>0</strong><span>SEC processing</span></article>
+      <article><strong data-factory-processing>0</strong><span>SEC in batch / processing</span></article>
       <article data-summary-tone="lime"><strong data-factory-complete>0</strong><span>SEC complete</span></article>
       <article><strong data-factory-partial>0</strong><span>SEC partial</span></article>
       <article><strong data-factory-unresolved>0</strong><span>SEC unresolved</span></article>
@@ -73,7 +73,7 @@
     <section id="factory-table">
       <div class="factory-section-head">
         <h2>COMPANY BY<br>COMPANY.</h2>
-        <p>A temporary failure receives a retry time and an error record. A permanent SEC 404 becomes unresolved and leaves the retry queue. Neither one stops the remaining companies. The table refreshes automatically every minute while this page remains open.</p>
+        <p>The factory claims the whole batch first, then processes SEC records with three controlled workers. Therefore, “in batch / processing” includes companies waiting their turn inside the current run, not hundreds of simultaneous SEC requests. A temporary failure receives a retry time; a permanent SEC 404 becomes unresolved. The table refreshes automatically every minute.</p>
       </div>
 
       <div class="factory-table-wrap">
