@@ -1,4 +1,4 @@
-// TS: 2026-08-02 15:34 ET
+// TS: 2026-08-02 17:17 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -249,6 +249,9 @@ export class PostgresUniverseStore implements UniverseStore {
       const partialCount = companies.filter((company) => company.secStage === "partial").length;
       const failedCount = companies.filter((company) => company.secStage === "failed").length;
       const staleCount = companies.filter((company) => company.secStage === "stale").length;
+      const unresolvedCount = companies.filter(
+        (company) => company.secStage === "unresolved",
+      ).length;
       const secIdentityCount = companies.filter((company) => company.hasSecIdentity).length;
       const filingCompleteCount = companies.filter((company) => company.hasFilings).length;
       const factsCompleteCount = companies.filter((company) => company.hasFacts).length;
@@ -275,6 +278,7 @@ export class PostgresUniverseStore implements UniverseStore {
         partialCount,
         failedCount,
         staleCount,
+        unresolvedCount,
         secIdentityCount,
         filingCompleteCount,
         factsCompleteCount,
