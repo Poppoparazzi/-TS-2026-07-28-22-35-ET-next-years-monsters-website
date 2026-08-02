@@ -1,4 +1,4 @@
-// TS: 2026-08-02 13:31 ET
+// TS: 2026-08-02 13:39 ET
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -50,6 +50,15 @@ function isLocalReference(value) {
     && !value.startsWith("data:");
 }
 
+function decodeLocalReference(value, sourceFile) {
+  try {
+    return decodeURIComponent(value);
+  } catch (_error) {
+    fail(`${sourceFile} contains a malformed URL-encoded local reference: ${value}`);
+    return value;
+  }
+}
+
 function validateLocalReferences() {
   const htmlFiles = readdirSync(root)
     .filter((name) => extname(name) === ".html")
@@ -65,7 +74,8 @@ function validateLocalReferences() {
       if (!isLocalReference(rawReference)) continue;
 
       const cleanReference = rawReference.split(/[?#]/, 1)[0];
-      const relativePath = normalize(cleanReference.replace(/^\.\//, ""));
+      const decodedReference = decodeLocalReference(cleanReference, name);
+      const relativePath = normalize(decodedReference.replace(/^\.\//, ""));
       if (!relativePath || relativePath.startsWith("..")) continue;
 
       if (!existsSync(join(root, relativePath))) {
