@@ -1,4 +1,4 @@
-// TS: 2026-08-02 10:01 ET
+// TS: 2026-08-02 10:27 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -31,39 +31,93 @@ async function loadNymMarketUniverse() {
 }
 
 function ensureMarketTickerStyles() {
-  if (document.querySelector('link[data-nym-market-tape-style]')) return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = "assets/market-ticker-strip.css";
-  link.dataset.nymMarketTapeStyle = "";
-  document.head.append(link);
+  if (!document.querySelector('link[data-nym-market-tape-style]')) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "assets/market-ticker-strip.css";
+    link.dataset.nymMarketTapeStyle = "";
+    document.head.append(link);
+  }
+
+  if (document.getElementById("nym-start-here-nav-style")) return;
+  const style = document.createElement("style");
+  style.id = "nym-start-here-nav-style";
+  style.textContent = `
+    .nav-links a.nym-home-link,
+    .home-nav-links a.nym-home-link {
+      font-weight: 950 !important;
+      white-space: nowrap;
+    }
+    .nav-links a.nym-start-here-primary,
+    .home-nav-links a.nym-start-here-primary {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      min-height: 46px !important;
+      padding: 0 20px !important;
+      border: 2px solid #080c0b !important;
+      border-radius: 0 !important;
+      background: var(--editorial-lime, #a8df34) !important;
+      color: #080c0b !important;
+      box-shadow: 5px 5px 0 rgba(8,12,11,.24) !important;
+      font-size: 13px !important;
+      font-weight: 950 !important;
+      letter-spacing: .055em !important;
+      white-space: nowrap !important;
+    }
+    .nav-links a.nym-start-here-primary:hover,
+    .nav-links a.nym-start-here-primary.active,
+    .home-nav-links a.nym-start-here-primary:hover,
+    .home-nav-links a.nym-start-here-primary.active {
+      background: #b8f34a !important;
+      border-color: #080c0b !important;
+      color: #080c0b !important;
+      transform: translateY(-1px);
+    }
+    @media (max-width: 1050px) {
+      .nav-links a.nym-start-here-primary,
+      .home-nav-links a.nym-start-here-primary {
+        min-height: 40px !important;
+        padding: 0 14px !important;
+        font-size: 11px !important;
+      }
+    }
+  `;
+  document.head.append(style);
 }
 
 function currentNymPageName() {
-  const pathname = window.location.pathname || "";
-  const last = pathname.split("/").filter(Boolean).pop() || "index.html";
-  return last === "" ? "index.html" : last;
+  return (window.location.pathname || "")
+    .split("/")
+    .filter(Boolean)
+    .pop() || "index.html";
+}
+
+function setActiveIfCurrent(link, filename) {
+  if (currentNymPageName() === filename) {
+    link.classList.add("active");
+    link.setAttribute("aria-current", "page");
+  }
 }
 
 function ensureCoreNavigationLinks(navigation) {
-  const currentPage = currentNymPageName();
+  ensureMarketTickerStyles();
+  const links = [...navigation.querySelectorAll("a")];
 
-  let homeLink = [...navigation.querySelectorAll("a")].find((item) => {
+  let homeLink = links.find((item) => {
     const href = item.getAttribute("href") || "";
     return href === "index.html" || href.endsWith("/index.html") || href === "./";
   });
   if (!homeLink) {
     homeLink = document.createElement("a");
     homeLink.href = "index.html";
-    navigation.prepend(homeLink);
   }
+  navigation.insertBefore(homeLink, navigation.firstChild);
+  homeLink.classList.add("nym-home-link");
   homeLink.textContent = "HOME";
   homeLink.title = "Return to the Next Year’s Monsters homepage";
   homeLink.setAttribute("aria-label", "Return to the homepage");
-  if (currentPage === "index.html") {
-    homeLink.classList.add("active");
-    homeLink.setAttribute("aria-current", "page");
-  }
+  setActiveIfCurrent(homeLink, "index.html");
 
   let startLink = [...navigation.querySelectorAll("a")].find((item) =>
     item.getAttribute("href")?.includes("start-here.html"),
@@ -71,15 +125,29 @@ function ensureCoreNavigationLinks(navigation) {
   if (!startLink) {
     startLink = document.createElement("a");
     startLink.href = "start-here.html";
-    homeLink.insertAdjacentElement("afterend", startLink);
   }
+  homeLink.insertAdjacentElement("afterend", startLink);
+  startLink.classList.add("nym-start-here-primary");
   startLink.textContent = "START HERE";
   startLink.title = "Open the plain-English guide to using this website";
   startLink.setAttribute("aria-label", "Open the Start Here website guide");
-  if (currentPage === "start-here.html") {
-    startLink.classList.add("active");
-    startLink.setAttribute("aria-current", "page");
+  setActiveIfCurrent(startLink, "start-here.html");
+}
+
+function ensureNavLink(navigation, href, label, title, filename) {
+  let link = [...navigation.querySelectorAll("a")].find((item) =>
+    item.getAttribute("href")?.includes(href),
+  );
+  if (!link) {
+    link = document.createElement("a");
+    link.href = href;
+    navigation.append(link);
   }
+  link.textContent = label;
+  link.title = title;
+  link.setAttribute("aria-label", title);
+  setActiveIfCurrent(link, filename);
+  return link;
 }
 
 function ensureMarketExplorerNavLink() {
@@ -87,64 +155,10 @@ function ensureMarketExplorerNavLink() {
   if (!navigation) return;
 
   ensureCoreNavigationLinks(navigation);
-
-  let link = [...navigation.querySelectorAll("a")].find((item) =>
-    item.getAttribute("href")?.includes("market-explorer.html"),
-  );
-  if (!link) {
-    link = document.createElement("a");
-    link.href = "market-explorer.html";
-    navigation.append(link);
-  }
-  link.textContent = "FULL CHARTS";
-  link.title = "Open the full white-background Market Explorer charts";
-  link.setAttribute("aria-label", "Open full stock charts in Market Explorer");
-  if (currentNymPageName() === "market-explorer.html") {
-    link.classList.add("active");
-    link.setAttribute("aria-current", "page");
-  }
-
-  let pulseLink = [...navigation.querySelectorAll("a")].find((item) =>
-    item.getAttribute("href")?.includes("market-pulse.html"),
-  );
-  if (!pulseLink) {
-    pulseLink = document.createElement("a");
-    pulseLink.href = "market-pulse.html";
-    pulseLink.textContent = "MARKET PULSE";
-    navigation.append(pulseLink);
-  }
-  if (currentNymPageName() === "market-pulse.html") {
-    pulseLink.classList.add("active");
-    pulseLink.setAttribute("aria-current", "page");
-  }
-
-  let newsLink = [...navigation.querySelectorAll("a")].find((item) =>
-    item.getAttribute("href")?.includes("news-radar.html"),
-  );
-  if (!newsLink) {
-    newsLink = document.createElement("a");
-    newsLink.href = "news-radar.html";
-    newsLink.textContent = "NEWS RADAR";
-    navigation.append(newsLink);
-  }
-  if (currentNymPageName() === "news-radar.html") {
-    newsLink.classList.add("active");
-    newsLink.setAttribute("aria-current", "page");
-  }
-
-  let coverageLink = [...navigation.querySelectorAll("a")].find((item) =>
-    item.getAttribute("href")?.includes("coverage-universe.html"),
-  );
-  if (!coverageLink) {
-    coverageLink = document.createElement("a");
-    coverageLink.href = "coverage-universe.html";
-    coverageLink.textContent = "COVERAGE";
-    navigation.append(coverageLink);
-  }
-  if (currentNymPageName() === "coverage-universe.html") {
-    coverageLink.classList.add("active");
-    coverageLink.setAttribute("aria-current", "page");
-  }
+  ensureNavLink(navigation, "market-explorer.html", "FULL CHARTS", "Open full stock charts in Market Explorer", "market-explorer.html");
+  ensureNavLink(navigation, "market-pulse.html", "MARKET PULSE", "Open Market Pulse", "market-pulse.html");
+  ensureNavLink(navigation, "news-radar.html", "NEWS RADAR", "Open News Radar", "news-radar.html");
+  ensureNavLink(navigation, "coverage-universe.html", "COVERAGE", "Open the stock coverage universe", "coverage-universe.html");
 }
 
 async function createMarketTickerStrip() {
