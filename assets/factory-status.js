@@ -1,9 +1,10 @@
-// TS: 2026-08-02 15:53 ET
+// TS: 2026-08-02 17:41 ET
 
 (() => {
   "use strict";
 
   const EXPECTED_API_VERSION = "0.6.0";
+  const FACTORY_LIMIT = 500;
   const refreshButton = document.querySelector("[data-factory-refresh]");
   const checkedNode = document.querySelector("[data-factory-checked]");
   const tableBody = document.querySelector("[data-factory-body]");
@@ -54,8 +55,15 @@
   }
 
   function statusPill(status) {
-    const normalized = ["queued", "processing", "complete", "partial", "failed", "stale"]
-      .includes(status)
+    const normalized = [
+      "queued",
+      "processing",
+      "complete",
+      "partial",
+      "failed",
+      "stale",
+      "unresolved",
+    ].includes(status)
       ? status
       : "queued";
     return `<span class="factory-pill ${normalized}">${escapeHtml(normalized)}</span>`;
@@ -72,6 +80,7 @@
     setText("[data-factory-processing]", payload.processingCount ?? 0);
     setText("[data-factory-complete]", payload.secCompleteCount ?? 0);
     setText("[data-factory-partial]", payload.partialCount ?? 0);
+    setText("[data-factory-unresolved]", payload.unresolvedCount ?? 0);
     setText("[data-factory-failed]", payload.failedCount ?? 0);
     setText("[data-factory-stale]", payload.staleCount ?? 0);
     setText("[data-factory-filings]", payload.filingCompleteCount ?? 0);
@@ -122,6 +131,7 @@
       processingCount: 0,
       secCompleteCount: 0,
       partialCount: 0,
+      unresolvedCount: 0,
       failedCount: 0,
       staleCount: 0,
       filingCompleteCount: 0,
@@ -155,7 +165,7 @@
   function verifyProductionHealth(health) {
     if (health?.version !== EXPECTED_API_VERSION) {
       throw new Error(
-        `Render is still serving backend version ${health?.version || "unknown"}. The 100-stock factory requires version ${EXPECTED_API_VERSION}, so the latest main branch has not been deployed.`,
+        `Render is still serving backend version ${health?.version || "unknown"}. The 500-stock factory requires version ${EXPECTED_API_VERSION}, so the latest main branch has not been deployed.`,
       );
     }
 
@@ -185,7 +195,7 @@
       const health = await requestJson(`${baseUrl}/api/health`);
       verifyProductionHealth(health);
 
-      const payload = await requestJson(`${baseUrl}/api/universe/status?limit=100`);
+      const payload = await requestJson(`${baseUrl}/api/universe/status?limit=${FACTORY_LIMIT}`);
       renderSummary(payload);
       renderRows(payload.companies);
       if (checkedNode) {
