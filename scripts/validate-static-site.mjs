@@ -1,4 +1,4 @@
-// TS: 2026-08-02 15:31 ET
+// TS: 2026-08-02 17:47 ET
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -154,29 +154,43 @@ function validateFactoryStatus() {
     "data-factory-queued",
     "data-factory-processing",
     "data-factory-complete",
+    "data-factory-unresolved",
     "data-factory-failed",
     "data-factory-stale",
     "data-factory-progress-bar",
     "data-factory-body",
   ].forEach((attribute) => {
     if (!html.includes(attribute)) {
-      fail(`100-stock factory page is missing required hook: ${attribute}`);
+      fail(`500-stock factory page is missing required hook: ${attribute}`);
     }
   });
 
-  if (!script.includes("/api/universe/status?limit=100")) {
-    fail("100-stock factory page does not read the bulk universe status endpoint.");
+  if (!script.includes("FACTORY_LIMIT = 500")) {
+    fail("500-stock factory page does not set the bulk universe request limit to 500.");
+  }
+  if (!script.includes("/api/universe/status?limit=${FACTORY_LIMIT}")) {
+    fail("500-stock factory page does not read the bulk universe status endpoint.");
   }
 
-  ["queuedCount", "processingCount", "secCompleteCount", "failedCount", "staleCount"]
-    .forEach((field) => {
-      if (!script.includes(field)) {
-        fail(`100-stock factory logic does not display required progress field: ${field}`);
-      }
-    });
+  [
+    "queuedCount",
+    "processingCount",
+    "secCompleteCount",
+    "unresolvedCount",
+    "failedCount",
+    "staleCount",
+  ].forEach((field) => {
+    if (!script.includes(field)) {
+      fail(`500-stock factory logic does not display required progress field: ${field}`);
+    }
+  });
 
-  if (!read("assets/market-ticker-strip.js").includes("factory-status.html")) {
-    fail("Site-wide navigation does not include the 100-stock factory page.");
+  const navigationScript = read("assets/market-ticker-strip.js");
+  if (!navigationScript.includes("factory-status.html")) {
+    fail("Site-wide navigation does not include the 500-stock factory page.");
+  }
+  if (!navigationScript.includes("500-STOCK FACTORY")) {
+    fail("Site-wide navigation still labels the factory with the old company count.");
   }
 }
 
