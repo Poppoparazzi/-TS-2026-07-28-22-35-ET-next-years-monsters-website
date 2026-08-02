@@ -1,0 +1,3 @@
+// TS: 2026-08-02 17:29 ET
+
+Re-run validation after adding unresolvedCount to the universe status test fixture.
