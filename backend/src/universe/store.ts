@@ -1,9 +1,10 @@
-// TS: 2026-08-02 14:27 ET
+// TS: 2026-08-02 14:54 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
 import { ProviderNotConfiguredError } from "../providers/types.js";
 import type {
+  PipelineStatus,
   UniverseCompany,
   UniverseCompanyStatus,
   UniverseImportSummary,
@@ -20,6 +21,12 @@ interface UniverseStatusRow {
   readonly exchange: string | null;
   readonly sec_cik: string | null;
   readonly is_pilot: boolean;
+  readonly sec_status: PipelineStatus;
+  readonly sec_attempt_count: string | number;
+  readonly last_error: string | null;
+  readonly last_started_at: Date | string | null;
+  readonly last_completed_at: Date | string | null;
+  readonly next_retry_at: Date | string | null;
   readonly has_sec_identity: boolean;
   readonly has_filings: boolean;
   readonly has_facts: boolean;
@@ -32,6 +39,15 @@ function isoTimestamp(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) throw new Error("Database returned an invalid timestamp.");
   return date.toISOString();
+}
+
+function nullableTimestamp(value: Date | string | null): string | null {
+  return value === null ? null : isoTimestamp(value);
+}
+
+function count(value: string | number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export class UnconfiguredUniverseStore implements UniverseStore {
@@ -74,7 +90,7 @@ export class PostgresUniverseStore implements UniverseStore {
       await client.query("BEGIN");
 
       for (const company of companies) {
-        await client.query(
+        const companyResult = await client.query<{ id: string | number }>(
           `
             INSERT INTO companies (
               ticker,
@@ -84,14 +100,47 @@ export class PostgresUniverseStore implements UniverseStore {
               sec_cik,
               is_active
             )
-            VALUES ($1, $2, $3, 'USD', $4, true)
+            SELECT
+              $1,
+              $2,
+              $3,
+              'USD',
+              CASE
+                WHEN EXISTS (
+                  SELECT 1
+                  FROM companies existing
+                  WHERE existing.sec_cik = $4 AND existing.ticker <> $1
+                ) THEN NULL
+                ELSE $4
+              END,
+              true
             ON CONFLICT (ticker) DO UPDATE SET
               company_name = EXCLUDED.company_name,
               exchange = COALESCE(EXCLUDED.exchange, companies.exchange),
               sec_cik = COALESCE(EXCLUDED.sec_cik, companies.sec_cik),
               is_active = true
+            RETURNING id
           `,
           [company.ticker, company.companyName, company.exchange, company.cikPadded],
+        );
+
+        const companyId = companyResult.rows[0]?.id;
+        if (companyId === undefined) {
+          throw new Error(`Unable to import universe company ${company.ticker}.`);
+        }
+
+        await client.query(
+          `
+            INSERT INTO company_pipeline_status (
+              company_id,
+              sec_status,
+              quote_status,
+              rating_status
+            )
+            VALUES ($1, 'queued', 'unconfigured', 'blocked')
+            ON CONFLICT (company_id) DO NOTHING
+          `,
+          [companyId],
         );
       }
 
@@ -131,6 +180,12 @@ export class PostgresUniverseStore implements UniverseStore {
               c.exchange,
               c.sec_cik,
               c.is_pilot,
+              COALESCE(cps.sec_status, 'queued') AS sec_status,
+              COALESCE(cps.sec_attempt_count, 0) AS sec_attempt_count,
+              cps.last_error,
+              cps.last_started_at,
+              cps.last_completed_at,
+              cps.next_retry_at,
               (c.sec_cik IS NOT NULL) AS has_sec_identity,
               EXISTS (
                 SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id
@@ -148,6 +203,7 @@ export class PostgresUniverseStore implements UniverseStore {
               ) AS has_rating,
               c.updated_at
             FROM companies c
+            LEFT JOIN company_pipeline_status cps ON cps.company_id = c.id
             WHERE c.is_active = true
             ORDER BY c.is_pilot DESC, c.ticker
             LIMIT $1
@@ -165,6 +221,12 @@ export class PostgresUniverseStore implements UniverseStore {
           exchange: row.exchange,
           secCik: row.sec_cik,
           isPilot: row.is_pilot,
+          secStage: row.sec_status,
+          secAttemptCount: count(row.sec_attempt_count),
+          lastError: row.last_error,
+          lastStartedAt: nullableTimestamp(row.last_started_at),
+          lastCompletedAt: nullableTimestamp(row.last_completed_at),
+          nextRetryAt: nullableTimestamp(row.next_retry_at),
           hasSecIdentity: row.has_sec_identity,
           hasFilings: row.has_filings,
           hasFacts: row.has_facts,
@@ -174,6 +236,16 @@ export class PostgresUniverseStore implements UniverseStore {
         }),
       );
 
+      const queuedCount = companies.filter((company) => company.secStage === "queued").length;
+      const processingCount = companies.filter(
+        (company) => company.secStage === "processing",
+      ).length;
+      const secCompleteCount = companies.filter(
+        (company) => company.secStage === "complete",
+      ).length;
+      const partialCount = companies.filter((company) => company.secStage === "partial").length;
+      const failedCount = companies.filter((company) => company.secStage === "failed").length;
+      const staleCount = companies.filter((company) => company.secStage === "stale").length;
       const secIdentityCount = companies.filter((company) => company.hasSecIdentity).length;
       const filingCompleteCount = companies.filter((company) => company.hasFilings).length;
       const factsCompleteCount = companies.filter((company) => company.hasFacts).length;
@@ -194,6 +266,12 @@ export class PostgresUniverseStore implements UniverseStore {
         requestedLimit: safeLimit,
         universeSize: Number(totalResult.rows[0]?.universe_size ?? 0),
         examinedCount: companies.length,
+        queuedCount,
+        processingCount,
+        secCompleteCount,
+        partialCount,
+        failedCount,
+        staleCount,
         secIdentityCount,
         filingCompleteCount,
         factsCompleteCount,
