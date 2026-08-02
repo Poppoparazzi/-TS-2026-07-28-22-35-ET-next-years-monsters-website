@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:41 ET
+// TS: 2026-08-02 18:36 ET
 
 (() => {
   "use strict";
@@ -66,7 +66,8 @@
     ].includes(status)
       ? status
       : "queued";
-    return `<span class="factory-pill ${normalized}">${escapeHtml(normalized)}</span>`;
+    const label = normalized === "processing" ? "in batch" : normalized;
+    return `<span class="factory-pill ${normalized}">${escapeHtml(label)}</span>`;
   }
 
   function evidenceCheck(label, ready) {
