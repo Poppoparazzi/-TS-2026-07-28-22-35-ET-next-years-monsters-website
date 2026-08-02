@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-29 22:41 ET -->
+<!-- TS: 2026-08-02 13:26 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/data-status.css">
+  <link rel="stylesheet" href="assets/vcl-tier-table.css">
 </head>
 <body>
 
@@ -41,24 +42,32 @@
     <span class="badge silver">60–74 Silver</span>
     <span class="badge goblin">Under 60 Goblin / Cemetery Risk</span>
   </div>
+  <p class="vcl-sort-note">ORDERED BY TIER, THEN HIGHEST DEMO SCORE, THEN TICKER. EACH ROW USES THE SAME COLOR AS ITS RATING BAND.</p>
   <div class="table-wrap">
-    <table>
+    <table class="vcl-tier-table">
       <thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th>Demo tier</th><th>Demo score</th></tr></thead>
-      <tbody><tr><td><strong>AAPL</strong></td><td>Apple</td><td>Technology</td><td>Gold Monster</td><td>88 demo</td></tr>
-<tr><td><strong>NVDA</strong></td><td>NVIDIA</td><td>Semiconductors</td><td>Platinum Monster</td><td>96 demo</td></tr>
-<tr><td><strong>MNST</strong></td><td>Monster Beverage</td><td>Consumer Staples</td><td>Gold Monster</td><td>86 demo</td></tr>
-<tr><td><strong>AMZN</strong></td><td>Amazon</td><td>Consumer / Cloud</td><td>Platinum Monster</td><td>90 demo</td></tr>
-<tr><td><strong>TSLA</strong></td><td>Tesla</td><td>Automotive / Technology</td><td>Silver Watchlist</td><td>72 demo</td></tr>
-<tr><td><strong>NFLX</strong></td><td>Netflix</td><td>Media</td><td>Gold Monster</td><td>84 demo</td></tr>
-<tr><td><strong>AMD</strong></td><td>Advanced Micro Devices</td><td>Semiconductors</td><td>Gold Monster</td><td>79 demo</td></tr>
-<tr><td><strong>COST</strong></td><td>Costco</td><td>Retail</td><td>Gold Monster</td><td>84 demo</td></tr>
-<tr><td><strong>VRT</strong></td><td>Vertiv</td><td>Industrial Technology</td><td>Platinum Monster</td><td>91 demo</td></tr>
-<tr><td><strong>AXON</strong></td><td>Axon Enterprise</td><td>Public Safety Technology</td><td>Platinum Monster</td><td>90 demo</td></tr>
-<tr><td><strong>DECK</strong></td><td>Deckers Outdoor</td><td>Consumer Discretionary</td><td>Gold Monster</td><td>82 demo</td></tr>
-<tr><td><strong>WING</strong></td><td>Wingstop</td><td>Restaurants</td><td>Gold Monster</td><td>78 demo</td></tr>
-<tr><td><strong>META</strong></td><td>Meta Platforms</td><td>Technology / Advertising</td><td>Gold Monster</td><td>89 demo</td></tr>
-<tr><td><strong>APP</strong></td><td>AppLovin</td><td>Advertising Technology</td><td>Platinum Monster</td><td>92 demo</td></tr>
-<tr><td><strong>MSFT</strong></td><td>Microsoft</td><td>Technology</td><td>Platinum Monster</td><td>93 demo</td></tr></tbody>
+      <tbody>
+        <tr class="vcl-tier-row vcl-tier-row-platinum"><td colspan="5">Platinum Monsters · 90–100</td></tr>
+        <tr data-tier="platinum"><td><strong>NVDA</strong></td><td>NVIDIA</td><td>Semiconductors</td><td><span class="vcl-tier-pill platinum">Platinum Monster</span></td><td class="vcl-score">96 demo</td></tr>
+        <tr data-tier="platinum"><td><strong>MSFT</strong></td><td>Microsoft</td><td>Technology</td><td><span class="vcl-tier-pill platinum">Platinum Monster</span></td><td class="vcl-score">93 demo</td></tr>
+        <tr data-tier="platinum"><td><strong>APP</strong></td><td>AppLovin</td><td>Advertising Technology</td><td><span class="vcl-tier-pill platinum">Platinum Monster</span></td><td class="vcl-score">92 demo</td></tr>
+        <tr data-tier="platinum"><td><strong>VRT</strong></td><td>Vertiv</td><td>Industrial Technology</td><td><span class="vcl-tier-pill platinum">Platinum Monster</span></td><td class="vcl-score">91 demo</td></tr>
+        <tr data-tier="platinum"><td><strong>AMZN</strong></td><td>Amazon</td><td>Consumer / Cloud</td><td><span class="vcl-tier-pill platinum">Platinum Monster</span></td><td class="vcl-score">90 demo</td></tr>
+        <tr data-tier="platinum"><td><strong>AXON</strong></td><td>Axon Enterprise</td><td>Public Safety Technology</td><td><span class="vcl-tier-pill platinum">Platinum Monster</span></td><td class="vcl-score">90 demo</td></tr>
+
+        <tr class="vcl-tier-row vcl-tier-row-gold"><td colspan="5">Gold Monsters · 75–89</td></tr>
+        <tr data-tier="gold"><td><strong>META</strong></td><td>Meta Platforms</td><td>Technology / Advertising</td><td><span class="vcl-tier-pill gold">Gold Monster</span></td><td class="vcl-score">89 demo</td></tr>
+        <tr data-tier="gold"><td><strong>AAPL</strong></td><td>Apple</td><td>Technology</td><td><span class="vcl-tier-pill gold">Gold Monster</span></td><td class="vcl-score">88 demo</td></tr>
+        <tr data-tier="gold"><td><strong>MNST</strong></td><td>Monster Beverage</td><td>Consumer Staples</td><td><span class="vcl-tier-pill gold">Gold Monster</span></td><td class="vcl-score">86 demo</td></tr>
+        <tr data-tier="gold"><td><strong>COST</strong></td><td>Costco</td><td>Retail</td><td><span class="vcl-tier-pill gold">Gold Monster</span></td><td class="vcl-score">84 demo</td></tr>
+        <tr data-tier="gold"><td><strong>NFLX</strong></td><td>Netflix</td><td>Media</td><td><span class="vcl-tier-pill gold">Gold Monster</span></td><td class="vcl-score">84 demo</td></tr>
+        <tr data-tier="gold"><td><strong>DECK</strong></td><td>Deckers Outdoor</td><td>Consumer Discretionary</td><td><span class="vcl-tier-pill gold">Gold Monster</span></td><td class="vcl-score">82 demo</td></tr>
+        <tr data-tier="gold"><td><strong>AMD</strong></td><td>Advanced Micro Devices</td><td>Semiconductors</td><td><span class="vcl-tier-pill gold">Gold Monster</span></td><td class="vcl-score">79 demo</td></tr>
+        <tr data-tier="gold"><td><strong>WING</strong></td><td>Wingstop</td><td>Restaurants</td><td><span class="vcl-tier-pill gold">Gold Monster</span></td><td class="vcl-score">78 demo</td></tr>
+
+        <tr class="vcl-tier-row vcl-tier-row-silver"><td colspan="5">Silver Watchlist · 60–74</td></tr>
+        <tr data-tier="silver"><td><strong>TSLA</strong></td><td>Tesla</td><td>Automotive / Technology</td><td><span class="vcl-tier-pill silver">Silver Watchlist</span></td><td class="vcl-score">72 demo</td></tr>
+      </tbody>
     </table>
   </div>
   <div class="notice">The production VCL pages will use real dated charts, price labels, Tipping Point™, Market Weather™, Move Driver™, and the investment lesson from each case.</div>
