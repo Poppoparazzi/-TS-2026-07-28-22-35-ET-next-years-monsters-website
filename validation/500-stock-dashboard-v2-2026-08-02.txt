@@ -1,0 +1,3 @@
+<!-- TS: 2026-08-02 17:50 ET -->
+
+Re-run static validation after updating the dashboard checker and site-wide factory navigation to 500 stocks.
