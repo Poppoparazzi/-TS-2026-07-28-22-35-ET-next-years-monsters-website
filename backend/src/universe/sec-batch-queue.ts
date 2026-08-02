@@ -1,4 +1,4 @@
-// TS: 2026-08-02 14:56 ET
+// TS: 2026-08-02 14:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -183,9 +183,9 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
         UPDATE company_pipeline_status cps
         SET
           sec_status = 'failed',
-          last_error = left($2, 1_000),
+          last_error = left($2, 1000),
           next_retry_at = now() + make_interval(
-            mins => LEAST(GREATEST(cps.sec_attempt_count, 1) * 15, 1_440)
+            mins => LEAST(GREATEST(cps.sec_attempt_count, 1) * 15, 1440)
           )
         FROM companies c
         WHERE c.id = cps.company_id AND c.ticker = $1
