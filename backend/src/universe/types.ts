@@ -1,4 +1,4 @@
-// TS: 2026-08-02 14:52 ET
+// TS: 2026-08-02 17:12 ET
 
 export type PipelineStatus =
   | "queued"
@@ -6,7 +6,8 @@ export type PipelineStatus =
   | "complete"
   | "partial"
   | "failed"
-  | "stale";
+  | "stale"
+  | "unresolved";
 
 export interface UniverseCompany {
   readonly ticker: string;
@@ -57,6 +58,7 @@ export interface UniverseStatusSummary {
   readonly partialCount: number;
   readonly failedCount: number;
   readonly staleCount: number;
+  readonly unresolvedCount: number;
   readonly secIdentityCount: number;
   readonly filingCompleteCount: number;
   readonly factsCompleteCount: number;
