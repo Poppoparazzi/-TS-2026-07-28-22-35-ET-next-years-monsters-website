@@ -1,0 +1,3 @@
+TS: 2026-08-02 15:14 ET
+
+Temporary PR marker to run backend and static validation for the bulk SEC worker factory.
