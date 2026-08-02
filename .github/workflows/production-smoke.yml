@@ -1,0 +1,44 @@
+# TS: 2026-08-02 15:42 ET
+
+name: Production smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 12 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "render.yaml"
+      - "factory-status.html"
+      - "assets/factory-status.*"
+      - "scripts/verify-production.mjs"
+      - ".github/workflows/production-smoke.yml"
+  pull_request:
+    paths:
+      - ".production-smoke-trigger*"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify Render API, 100-company database, and public factory page
+        env:
+          NYM_EXPECTED_VERSION: "0.6.0"
+          NYM_SMOKE_ATTEMPTS: "10"
+          NYM_SMOKE_DELAY_MS: "30000"
+        run: node scripts/verify-production.mjs
