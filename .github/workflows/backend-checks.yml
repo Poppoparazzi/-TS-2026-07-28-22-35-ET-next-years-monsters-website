@@ -1,9 +1,14 @@
-# TS: 2026-07-29 11:55 ET
+# TS: 2026-08-01 21:26 ET
 
 name: Phase 3 Backend Checks
 
 on:
   push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-checks.yml"
+  pull_request:
     branches: [main]
     paths:
       - "backend/**"
