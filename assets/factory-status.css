@@ -1,4 +1,4 @@
-/* TS: 2026-08-02 15:23 ET */
+/* TS: 2026-08-02 17:42 ET */
 
 .factory-page {
   margin: 0;
@@ -271,6 +271,7 @@
 .factory-pill.partial { background: #f0d180; color: #241a05; }
 .factory-pill.failed { background: #ef9187; color: #27100e; }
 .factory-pill.stale { background: #d2a7df; color: #26122d; }
+.factory-pill.unresolved { background: #f5b35f; color: #2a1705; }
 
 .factory-check {
   display: inline-flex;
