@@ -1,15 +1,24 @@
-// TS: 2026-08-01 17:24 ET
+// TS: 2026-08-01 21:19 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildApp } from "../src/app.js";
 import type { AppConfig } from "../src/config.js";
+import type {
+  PersistenceStore,
+  StoredCompanySnapshot,
+} from "../src/database/persistence.js";
 import { UnconfiguredMarketDataProvider } from "../src/providers/unconfigured.js";
 import type {
   MarketDataProvider,
   QuoteSnapshot,
   TickerSearchResult,
 } from "../src/providers/types.js";
+import type {
+  SecCompany,
+  SecCompanyFactsSummary,
+  SecFilingSummary,
+} from "../src/sec/types.js";
 
 const TEST_SECRET = "test-secret-that-must-never-appear";
 
@@ -72,6 +81,57 @@ class StaticMarketDataProvider implements MarketDataProvider {
   }
 }
 
+class MemoryPersistenceStore implements PersistenceStore {
+  public readonly name = "memory-test-database";
+  public readonly configured = true;
+  public quoteSaves = 0;
+  private readonly snapshots = new Map<string, StoredCompanySnapshot>();
+
+  public async saveQuote(quote: QuoteSnapshot): Promise<void> {
+    this.quoteSaves += 1;
+    this.snapshots.set(
+      quote.symbol,
+      Object.freeze({
+        ticker: quote.symbol,
+        companyName: quote.companyName ?? quote.symbol,
+        exchange: quote.exchange,
+        currency: quote.currency,
+        secCik: null,
+        updatedAt: quote.retrievedAt,
+        latestQuote: Object.freeze({
+          provider: quote.provider,
+          price: quote.price,
+          change: quote.change,
+          percentChange: quote.percentChange,
+          volume: quote.volume,
+          marketSession: quote.marketSession,
+          freshness: quote.freshness,
+          providerTimestamp: quote.providerTimestamp,
+          retrievedAt: quote.retrievedAt,
+          feedDisclosure: quote.feedDisclosure,
+        }),
+        latestFiling: null,
+        filingCount: 0,
+        factCount: 0,
+        ratingCount: 0,
+      }),
+    );
+  }
+
+  public async saveSecCompany(_company: SecCompany): Promise<void> {}
+  public async saveSecFilings(
+    _company: SecCompany,
+    _filings: readonly SecFilingSummary[],
+  ): Promise<void> {}
+  public async saveSecFacts(_summary: SecCompanyFactsSummary): Promise<void> {}
+
+  public async getStoredCompany(symbol: string): Promise<StoredCompanySnapshot | null> {
+    return this.snapshots.get(symbol) ?? null;
+  }
+
+  public async close(): Promise<void> {}
+}
+
 test("health and provider status never expose configured secrets", async (t) => {
   const provider = new StaticMarketDataProvider();
   const app = await buildApp({ config: testConfig(), provider, logger: false });
@@ -119,6 +179,42 @@ test("quote route normalizes valid symbols and rejects unsupported characters", 
   assert.equal(invalid.statusCode, 400);
   assert.equal(invalid.json().error, "invalid_symbol");
   assert.equal(provider.quoteCalls, 1);
+});
+
+test("quote retrieval persists a snapshot that can be read later", async (t) => {
+  const provider = new StaticMarketDataProvider();
+  const persistenceStore = new MemoryPersistenceStore();
+  const app = await buildApp({
+    config: testConfig(),
+    provider,
+    persistenceStore,
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const quote = await app.inject({ method: "GET", url: "/api/quotes/aapl" });
+  const stored = await app.inject({ method: "GET", url: "/api/stored/AAPL" });
+
+  assert.equal(quote.statusCode, 200);
+  assert.equal(stored.statusCode, 200);
+  assert.equal(persistenceStore.quoteSaves, 1);
+  assert.equal(stored.json().ticker, "AAPL");
+  assert.equal(stored.json().latestQuote.price, 123.45);
+  assert.equal(stored.json().database, "memory-test-database");
+});
+
+test("stored snapshot route reports a missing persisted company honestly", async (t) => {
+  const app = await buildApp({
+    config: testConfig(),
+    persistenceStore: new MemoryPersistenceStore(),
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({ method: "GET", url: "/api/stored/MISSING" });
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.json().error, "stored_company_not_found");
 });
 
 test("quote cache reuses a recent provider result", async (t) => {
