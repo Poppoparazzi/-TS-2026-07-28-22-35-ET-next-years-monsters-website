@@ -1,6 +1,6 @@
 {
   "name": "next-years-monsters-api",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Secure TypeScript backend for Next Year’s Monsters Monster Check live data.",
@@ -18,7 +18,8 @@
     "db:migrate": "tsx src/database/migrate.ts",
     "db:verify": "tsx src/database/verify.ts",
     "pilot:refresh": "tsx src/jobs/run-pilot-refresh.ts",
-    "universe:import": "tsx src/jobs/import-sec-universe.ts"
+    "universe:import": "tsx src/jobs/import-sec-universe.ts",
+    "universe:refresh-sec": "tsx src/jobs/run-sec-universe-batch.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
