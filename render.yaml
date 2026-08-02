@@ -1,4 +1,10 @@
-# TS: 2026-08-01 14:55 ET
+# TS: 2026-08-01 20:59 ET
+
+databases:
+  - name: next-years-monsters-db
+    plan: free
+    region: virginia
+    ipAllowList: []
 
 services:
   - type: web
@@ -8,6 +14,7 @@ services:
     region: virginia
     rootDir: backend
     buildCommand: npm install --include=dev --no-audit --no-fund && npm run check && npm run build
+    preDeployCommand: npm run db:migrate
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
@@ -18,6 +25,10 @@ services:
         value: 0.0.0.0
       - key: CORS_ORIGIN
         value: https://nextyearsmonsters.com,https://www.nextyearsmonsters.com,https://poppoparazzi.github.io
+      - key: DATABASE_URL
+        fromDatabase:
+          name: next-years-monsters-db
+          property: connectionString
       - key: MARKET_DATA_PROVIDER
         value: unconfigured
       - key: SEC_USER_AGENT
