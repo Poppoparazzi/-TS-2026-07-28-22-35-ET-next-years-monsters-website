@@ -1,11 +1,15 @@
-// TS: 2026-08-02 14:35 ET
+// TS: 2026-08-02 15:05 ET
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { refreshStalePilotOnStartup } from "./jobs/startup-pilot-refresh.js";
+import { runSecUniverseBatchOnStartup } from "./jobs/startup-sec-universe-batch.js";
 import { importUniverseOnStartup } from "./jobs/startup-universe-import.js";
 
-async function runStartupJobs(config: ReturnType<typeof loadConfig>, app: Awaited<ReturnType<typeof buildApp>>): Promise<void> {
+async function runStartupJobs(
+  config: ReturnType<typeof loadConfig>,
+  app: Awaited<ReturnType<typeof buildApp>>,
+): Promise<void> {
   try {
     const universeSummary = await importUniverseOnStartup(config);
     app.log.info({ universeImport: universeSummary }, "Startup universe import completed");
@@ -13,6 +17,16 @@ async function runStartupJobs(config: ReturnType<typeof loadConfig>, app: Awaite
     app.log.error(
       { error },
       "Startup universe import failed without stopping the public API",
+    );
+  }
+
+  try {
+    const batchSummary = await runSecUniverseBatchOnStartup(config);
+    app.log.info({ secUniverseBatch: batchSummary }, "Startup SEC universe batch completed");
+  } catch (error: unknown) {
+    app.log.error(
+      { error },
+      "Startup SEC universe batch failed without stopping the public API",
     );
   }
 
