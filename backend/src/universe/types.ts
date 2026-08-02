@@ -1,4 +1,12 @@
-// TS: 2026-08-02 14:23 ET
+// TS: 2026-08-02 14:52 ET
+
+export type PipelineStatus =
+  | "queued"
+  | "processing"
+  | "complete"
+  | "partial"
+  | "failed"
+  | "stale";
 
 export interface UniverseCompany {
   readonly ticker: string;
@@ -23,6 +31,12 @@ export interface UniverseCompanyStatus {
   readonly exchange: string | null;
   readonly secCik: string | null;
   readonly isPilot: boolean;
+  readonly secStage: PipelineStatus;
+  readonly secAttemptCount: number;
+  readonly lastError: string | null;
+  readonly lastStartedAt: string | null;
+  readonly lastCompletedAt: string | null;
+  readonly nextRetryAt: string | null;
   readonly hasSecIdentity: boolean;
   readonly hasFilings: boolean;
   readonly hasFacts: boolean;
@@ -37,6 +51,12 @@ export interface UniverseStatusSummary {
   readonly requestedLimit: number;
   readonly universeSize: number;
   readonly examinedCount: number;
+  readonly queuedCount: number;
+  readonly processingCount: number;
+  readonly secCompleteCount: number;
+  readonly partialCount: number;
+  readonly failedCount: number;
+  readonly staleCount: number;
   readonly secIdentityCount: number;
   readonly filingCompleteCount: number;
   readonly factsCompleteCount: number;
