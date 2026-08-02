@@ -1,4 +1,4 @@
-// TS: 2026-08-02 16:14 ET
+// TS: 2026-08-02 17:32 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -7,6 +7,7 @@ const factoryPageUrl = (process.env.NYM_FACTORY_PAGE_URL ||
   "https://poppoparazzi.github.io/-TS-2026-07-28-22-35-ET-next-years-monsters-website/factory-status.html")
   .trim();
 const expectedVersion = (process.env.NYM_EXPECTED_VERSION || "0.6.0").trim();
+const expectedUniverseMinimum = Number(process.env.NYM_EXPECTED_UNIVERSE_MIN || "500");
 const attemptCount = Number(process.env.NYM_SMOKE_ATTEMPTS || "10");
 const delayMs = Number(process.env.NYM_SMOKE_DELAY_MS || "30000");
 
@@ -44,7 +45,7 @@ async function requestPage(url) {
   const html = await response.text();
 
   if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}.`);
-  if (!html.includes("THE 100-STOCK") || !html.includes("data-factory-body")) {
+  if (!html.includes("STOCK FACTORY") || !html.includes("data-factory-body")) {
     throw new Error("The deployed factory page does not contain the expected dashboard content.");
   }
 }
@@ -83,10 +84,10 @@ function validateUniverse(status, startup) {
   const problems = [];
 
   if (status?.configured !== true) problems.push("universe endpoint is not configured");
-  if (Number(status?.universeSize || 0) < 100) {
+  if (Number(status?.universeSize || 0) < expectedUniverseMinimum) {
     problems.push(`only ${status?.universeSize || 0} companies are stored`);
   }
-  if (Number(status?.examinedCount || 0) < 100) {
+  if (Number(status?.examinedCount || 0) < expectedUniverseMinimum) {
     problems.push(`only ${status?.examinedCount || 0} companies were returned`);
   }
 
@@ -97,6 +98,7 @@ function validateUniverse(status, startup) {
     status?.partialCount,
     status?.failedCount,
     status?.staleCount,
+    status?.unresolvedCount,
   ].reduce((total, value) => total + Number(value || 0), 0);
 
   if (pipelineTotal !== Number(status?.examinedCount || 0)) {
@@ -116,7 +118,7 @@ async function verifyOnce() {
   validateHealth(health);
 
   const [universe, startup] = await Promise.all([
-    requestJson(`${apiBaseUrl}/api/universe/status?limit=100`),
+    requestJson(`${apiBaseUrl}/api/universe/status?limit=${expectedUniverseMinimum}`),
     optionalJson(`${apiBaseUrl}/api/startup-status`),
   ]);
   validateUniverse(universe, startup);
@@ -138,6 +140,7 @@ async function verifyOnce() {
     partialCount: universe.partialCount,
     failedCount: universe.failedCount,
     staleCount: universe.staleCount,
+    unresolvedCount: universe.unresolvedCount,
     filingCompleteCount: universe.filingCompleteCount,
     factsCompleteCount: universe.factsCompleteCount,
     quoteCompleteCount: universe.quoteCompleteCount,
