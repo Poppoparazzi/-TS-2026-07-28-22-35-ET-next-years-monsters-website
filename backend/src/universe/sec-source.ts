@@ -1,4 +1,4 @@
-// TS: 2026-08-02 14:24 ET
+// TS: 2026-08-02 14:25 ET
 
 import type { UniverseCompany } from "./types.js";
 
@@ -39,6 +39,7 @@ export function parseSecUniversePayload(
   }
 
   const byTicker = new Map<string, UniverseCompany>();
+  const usedCiks = new Set<number>();
 
   for (const row of payload.data ?? []) {
     const cik = safeNumber(row[cikIndex]);
@@ -46,8 +47,17 @@ export function parseSecUniversePayload(
     const ticker = normalizedTicker(row[tickerIndex]);
     const exchange = exchangeIndex >= 0 ? safeText(row[exchangeIndex]) : null;
 
-    if (cik === null || !companyName || !ticker || byTicker.has(ticker)) continue;
+    if (
+      cik === null ||
+      !companyName ||
+      !ticker ||
+      byTicker.has(ticker) ||
+      usedCiks.has(cik)
+    ) {
+      continue;
+    }
 
+    usedCiks.add(cik);
     byTicker.set(ticker, {
       ticker,
       companyName,
