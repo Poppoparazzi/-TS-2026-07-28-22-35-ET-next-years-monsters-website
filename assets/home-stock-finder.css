@@ -72,7 +72,61 @@
   line-height: 1.5;
 }
 
-@media (max-width: 680px) {
+/* TS: 2026-08-02 08:20 EDT */
+.home-hero-art {
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 730px;
+  background:
+    radial-gradient(circle at 58% 34%, rgba(168, 223, 52, .22) 0, rgba(168, 223, 52, .10) 22%, transparent 48%),
+    radial-gradient(circle at 72% 52%, rgba(217, 168, 37, .18) 0, rgba(217, 168, 37, .08) 24%, transparent 52%),
+    linear-gradient(180deg, #060c0e 0%, #0a1515 52%, #050808 100%) !important;
+}
+
+.home-hero-art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .34;
+  background:
+    linear-gradient(180deg, rgba(6,12,14,.25), rgba(6,12,14,.60)),
+    repeating-linear-gradient(0deg, transparent 0 26px, rgba(168,223,52,.065) 26px 27px),
+    repeating-linear-gradient(90deg, transparent 0 54px, rgba(217,168,37,.055) 54px 55px);
+}
+
+.hero-chart-lines {
+  display: none !important;
+}
+
+.home-hero-art img[data-captain-image].home-bull-rider-hero {
+  position: absolute !important;
+  right: -18% !important;
+  top: 4% !important;
+  bottom: auto !important;
+  width: min(172%, 1380px) !important;
+  max-width: none !important;
+  height: auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: drop-shadow(0 32px 44px rgba(0, 0, 0, .55)) !important;
+  z-index: 2 !important;
+}
+
+.home-hero-art .asset-placeholder[data-captain-placeholder] {
+  display: none !important;
+}
+
+.hero-art-caption {
+  z-index: 3;
+  background: rgba(5, 8, 8, .72);
+  color: #f3efe3;
+  border: 1px solid rgba(255, 255, 255, .14);
+}
+
+@media (max-width: 980px) {
   .home-stock-finder {
     width: 100%;
     margin-top: 20px;
@@ -101,5 +155,15 @@
     width: 100%;
     justify-content: center;
     text-align: center;
+  }
+
+  .home-hero-art {
+    min-height: 560px;
+  }
+
+  .home-hero-art img[data-captain-image].home-bull-rider-hero {
+    right: -14% !important;
+    top: 6% !important;
+    width: min(158%, 980px) !important;
   }
 }
