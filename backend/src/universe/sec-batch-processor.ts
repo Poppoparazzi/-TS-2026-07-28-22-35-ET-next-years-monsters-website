@@ -1,10 +1,19 @@
-// TS: 2026-08-02 14:59 ET
+// TS: 2026-08-02 15:10 ET
 
 import type { AppConfig } from "../config.js";
-import { refreshPilotSymbol } from "../jobs/pilot-refresh.js";
-import { createPersistenceStore } from "../database/persistence.js";
+import {
+  createPersistenceStore,
+  type PersistenceStore,
+} from "../database/persistence.js";
+import {
+  refreshPilotSymbol,
+  type PilotRefreshDependencies,
+  type PilotRefreshResult,
+} from "../jobs/pilot-refresh.js";
 import { createMarketDataProvider } from "../providers/index.js";
+import type { MarketDataProvider } from "../providers/types.js";
 import { createSecDataProvider } from "../sec/index.js";
+import type { SecDataProvider } from "../sec/types.js";
 import { createSecBatchQueue, type SecBatchQueue } from "./sec-batch-queue.js";
 
 export interface SecBatchRunOptions {
@@ -32,6 +41,17 @@ export interface SecBatchRunSummary {
   readonly completedAt: string;
 }
 
+export interface SecBatchProcessorDependencies {
+  readonly queue?: SecBatchQueue;
+  readonly persistenceStore?: PersistenceStore;
+  readonly secProvider?: SecDataProvider;
+  readonly marketProvider?: MarketDataProvider;
+  readonly refreshSymbol?: (
+    symbol: string,
+    dependencies: PilotRefreshDependencies,
+  ) => Promise<PilotRefreshResult>;
+}
+
 function boundedInteger(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(Math.trunc(value), minimum), maximum);
 }
@@ -43,15 +63,18 @@ function safeMessage(error: unknown): string {
 export async function runSecUniverseBatch(
   config: AppConfig,
   options: SecBatchRunOptions,
-  queueOverride?: SecBatchQueue,
+  dependencies: SecBatchProcessorDependencies = {},
 ): Promise<SecBatchRunSummary> {
   const batchSize = boundedInteger(options.batchSize, 1, 500);
   const concurrency = boundedInteger(options.concurrency, 1, 8);
   const maxAgeHours = boundedInteger(options.maxAgeHours, 1, 24 * 30);
-  const queue = queueOverride ?? createSecBatchQueue(config);
-  const persistenceStore = createPersistenceStore(config);
-  const secProvider = createSecDataProvider(config);
-  const marketProvider = createMarketDataProvider(config);
+  const queue = dependencies.queue ?? createSecBatchQueue(config);
+  const persistenceStore =
+    dependencies.persistenceStore ?? createPersistenceStore(config);
+  const secProvider = dependencies.secProvider ?? createSecDataProvider(config);
+  const marketProvider =
+    dependencies.marketProvider ?? createMarketDataProvider(config);
+  const refreshSymbol = dependencies.refreshSymbol ?? refreshPilotSymbol;
 
   try {
     if (!queue.configured || !persistenceStore.configured || !secProvider.configured) {
@@ -84,7 +107,7 @@ export async function runSecUniverseBatch(
         if (!candidate) return;
 
         try {
-          await refreshPilotSymbol(candidate.ticker, {
+          await refreshSymbol(candidate.ticker, {
             marketProvider,
             secProvider,
             persistenceStore,
