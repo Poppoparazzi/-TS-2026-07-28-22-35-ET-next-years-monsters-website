@@ -1,0 +1,3 @@
+TS: 2026-08-02 15:36 ET
+
+Disposable validation marker for the PostgreSQL universe-import cast fix.
