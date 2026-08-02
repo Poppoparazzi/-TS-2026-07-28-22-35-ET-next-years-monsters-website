@@ -1,0 +1,3 @@
+TS: 2026-08-02 15:59 ET
+
+Trigger production smoke after the guarded migration checksum repair and PostgreSQL universe import cast fix.
