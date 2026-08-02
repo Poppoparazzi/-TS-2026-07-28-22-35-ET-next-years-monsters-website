@@ -1,39 +1,53 @@
-// TS: 2026-08-02 15:05 ET
+// TS: 2026-08-02 16:07 ET
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { refreshStalePilotOnStartup } from "./jobs/startup-pilot-refresh.js";
 import { runSecUniverseBatchOnStartup } from "./jobs/startup-sec-universe-batch.js";
 import { importUniverseOnStartup } from "./jobs/startup-universe-import.js";
+import {
+  markStartupJobCompleted,
+  markStartupJobFailed,
+  markStartupJobRunning,
+} from "./startup-status.js";
 
 async function runStartupJobs(
   config: ReturnType<typeof loadConfig>,
   app: Awaited<ReturnType<typeof buildApp>>,
 ): Promise<void> {
+  markStartupJobRunning("universeImport");
   try {
     const universeSummary = await importUniverseOnStartup(config);
+    markStartupJobCompleted("universeImport", universeSummary);
     app.log.info({ universeImport: universeSummary }, "Startup universe import completed");
   } catch (error: unknown) {
+    markStartupJobFailed("universeImport", error);
     app.log.error(
       { error },
       "Startup universe import failed without stopping the public API",
     );
   }
 
+  markStartupJobRunning("secUniverseBatch");
   try {
     const batchSummary = await runSecUniverseBatchOnStartup(config);
+    markStartupJobCompleted("secUniverseBatch", batchSummary);
     app.log.info({ secUniverseBatch: batchSummary }, "Startup SEC universe batch completed");
   } catch (error: unknown) {
+    markStartupJobFailed("secUniverseBatch", error);
     app.log.error(
       { error },
       "Startup SEC universe batch failed without stopping the public API",
     );
   }
 
+  markStartupJobRunning("pilotRefresh");
   try {
     const pilotSummary = await refreshStalePilotOnStartup(config);
+    markStartupJobCompleted("pilotRefresh", pilotSummary);
     app.log.info({ pilotRefresh: pilotSummary }, "Startup pilot refresh completed");
   } catch (error: unknown) {
+    markStartupJobFailed("pilotRefresh", error);
     app.log.error(
       { error },
       "Startup pilot refresh failed without stopping the public API",
