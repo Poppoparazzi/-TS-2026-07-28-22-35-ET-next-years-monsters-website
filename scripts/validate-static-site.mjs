@@ -1,4 +1,4 @@
-// TS: 2026-08-02 13:39 ET
+// TS: 2026-08-02 15:31 ET
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -143,10 +143,48 @@ function validateVerificationLedger() {
   }
 }
 
+function validateFactoryStatus() {
+  const html = read("factory-status.html");
+  const script = read("assets/factory-status.js");
+
+  [
+    "data-factory-refresh",
+    "data-factory-checked",
+    "data-factory-universe",
+    "data-factory-queued",
+    "data-factory-processing",
+    "data-factory-complete",
+    "data-factory-failed",
+    "data-factory-stale",
+    "data-factory-progress-bar",
+    "data-factory-body",
+  ].forEach((attribute) => {
+    if (!html.includes(attribute)) {
+      fail(`100-stock factory page is missing required hook: ${attribute}`);
+    }
+  });
+
+  if (!script.includes("/api/universe/status?limit=100")) {
+    fail("100-stock factory page does not read the bulk universe status endpoint.");
+  }
+
+  ["queuedCount", "processingCount", "secCompleteCount", "failedCount", "staleCount"]
+    .forEach((field) => {
+      if (!script.includes(field)) {
+        fail(`100-stock factory logic does not display required progress field: ${field}`);
+      }
+    });
+
+  if (!read("assets/market-ticker-strip.js").includes("factory-status.html")) {
+    fail("Site-wide navigation does not include the 100-stock factory page.");
+  }
+}
+
 validateJavaScript();
 validateLocalReferences();
 validateVclOrder();
 validateVerificationLedger();
+validateFactoryStatus();
 
 if (failures.length) {
   console.error("Static-site validation failed:");
