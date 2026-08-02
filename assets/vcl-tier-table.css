@@ -1,0 +1,145 @@
+/* TS: 2026-08-02 13:26 ET */
+
+.vcl-sort-note {
+  margin: 14px 0 22px;
+  color: #cbd2cc;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .025em;
+}
+
+.vcl-tier-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vcl-tier-table th {
+  background: #132232;
+  color: #f0c63c;
+  text-align: left;
+}
+
+.vcl-tier-table th,
+.vcl-tier-table td {
+  padding: 16px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.16);
+}
+
+.vcl-tier-table tbody tr.vcl-tier-row td {
+  padding: 11px 14px;
+  border-top: 3px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.vcl-tier-table .vcl-tier-row-platinum td {
+  background: #dfe7ed;
+  color: #17212a;
+}
+
+.vcl-tier-table .vcl-tier-row-gold td {
+  background: #e0af29;
+  color: #17120a;
+}
+
+.vcl-tier-table .vcl-tier-row-silver td {
+  background: #b9c3c9;
+  color: #121719;
+}
+
+.vcl-tier-table .vcl-tier-row-goblin td {
+  background: #ef9187;
+  color: #27100e;
+}
+
+.vcl-tier-table tr[data-tier] {
+  background: #102234;
+}
+
+.vcl-tier-table tr[data-tier] td:first-child {
+  border-left: 7px solid transparent;
+}
+
+.vcl-tier-table tr[data-tier="platinum"] {
+  background: linear-gradient(90deg, rgba(223,231,237,.16), rgba(16,34,52,.92) 38%);
+}
+
+.vcl-tier-table tr[data-tier="platinum"] td:first-child {
+  border-left-color: #dfe7ed;
+}
+
+.vcl-tier-table tr[data-tier="gold"] {
+  background: linear-gradient(90deg, rgba(224,175,41,.16), rgba(16,34,52,.92) 38%);
+}
+
+.vcl-tier-table tr[data-tier="gold"] td:first-child {
+  border-left-color: #e0af29;
+}
+
+.vcl-tier-table tr[data-tier="silver"] {
+  background: linear-gradient(90deg, rgba(185,195,201,.16), rgba(16,34,52,.92) 38%);
+}
+
+.vcl-tier-table tr[data-tier="silver"] td:first-child {
+  border-left-color: #b9c3c9;
+}
+
+.vcl-tier-table tr[data-tier="goblin"] {
+  background: linear-gradient(90deg, rgba(239,145,135,.18), rgba(16,34,52,.92) 38%);
+}
+
+.vcl-tier-table tr[data-tier="goblin"] td:first-child {
+  border-left-color: #ef9187;
+}
+
+.vcl-tier-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .025em;
+  white-space: nowrap;
+}
+
+.vcl-tier-pill.platinum {
+  background: #dfe7ed;
+  color: #17212a;
+}
+
+.vcl-tier-pill.gold {
+  background: #e0af29;
+  color: #17120a;
+}
+
+.vcl-tier-pill.silver {
+  background: #b9c3c9;
+  color: #121719;
+}
+
+.vcl-tier-pill.goblin {
+  background: #ef9187;
+  color: #27100e;
+}
+
+.vcl-score {
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .vcl-tier-table th,
+  .vcl-tier-table td {
+    padding: 13px 10px;
+  }
+
+  .vcl-tier-table {
+    min-width: 760px;
+  }
+}
