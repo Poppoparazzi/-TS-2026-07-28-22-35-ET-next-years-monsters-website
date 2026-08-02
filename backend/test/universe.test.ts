@@ -1,10 +1,11 @@
-// TS: 2026-08-02 15:08 ET
+// TS: 2026-08-02 15:35 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildApp } from "../src/app.js";
 import type { AppConfig } from "../src/config.js";
 import { parseSecUniversePayload } from "../src/universe/sec-source.js";
+import { UPSERT_UNIVERSE_COMPANY_SQL } from "../src/universe/store.js";
 import type {
   UniverseCompany,
   UniverseImportSummary,
@@ -95,6 +96,14 @@ test("SEC universe parser normalizes, sorts, limits, and deduplicates ticker and
     ["0000000001", "0000000002"],
   );
   assert.equal(companies[0]?.sourceUrl, "https://example.test/sec-universe.json");
+});
+
+test("bulk universe upsert pins PostgreSQL parameter types", () => {
+  assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$1::varchar\(15\)/);
+  assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$2::text/);
+  assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$3::text/);
+  assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$4::varchar\(10\)/);
+  assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /NULL::varchar\(10\)/);
 });
 
 test("bulk universe status endpoint caps the requested company count", async (t) => {
