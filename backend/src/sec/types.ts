@@ -1,4 +1,4 @@
-// TS: 2026-07-29 12:02 ET
+// TS: 2026-08-02 17:09 ET
 
 export interface SecCompany {
   readonly ticker: string;
@@ -65,5 +65,12 @@ export class SecCompanyNotFoundError extends Error {
   public constructor(symbol: string) {
     super(`No SEC company mapping was found for ${symbol}.`);
     this.name = "SecCompanyNotFoundError";
+  }
+}
+
+export class SecEdgarRequestError extends Error {
+  public constructor(public readonly statusCode: number) {
+    super(`SEC EDGAR request failed with HTTP ${statusCode}.`);
+    this.name = "SecEdgarRequestError";
   }
 }
