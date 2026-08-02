@@ -1,4 +1,4 @@
-// TS: 2026-08-02 15:40 ET
+// TS: 2026-08-02 16:14 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -28,6 +28,14 @@ async function requestJson(url) {
   return payload;
 }
 
+async function optionalJson(url) {
+  try {
+    return await requestJson(url);
+  } catch {
+    return null;
+  }
+}
+
 async function requestPage(url) {
   const response = await fetch(url, {
     headers: { Accept: "text/html" },
@@ -55,7 +63,23 @@ function validateHealth(health) {
   if (problems.length) throw new Error(problems.join("; "));
 }
 
-function validateUniverse(status) {
+function startupDiagnostic(startup) {
+  if (!startup) return "startup diagnostics unavailable, likely an older deployment";
+
+  const commit = startup.deploymentCommit || "unknown commit";
+  const importJob = startup.jobs?.universeImport;
+  const batchJob = startup.jobs?.secUniverseBatch;
+  const importDetail = importJob?.error || JSON.stringify(importJob?.summary ?? null);
+  const batchDetail = batchJob?.error || JSON.stringify(batchJob?.summary ?? null);
+
+  return [
+    `commit ${commit}`,
+    `universe import ${importJob?.state || "missing"}: ${importDetail}`,
+    `SEC batch ${batchJob?.state || "missing"}: ${batchDetail}`,
+  ].join("; ");
+}
+
+function validateUniverse(status, startup) {
   const problems = [];
 
   if (status?.configured !== true) problems.push("universe endpoint is not configured");
@@ -81,20 +105,27 @@ function validateUniverse(status) {
     );
   }
 
-  if (problems.length) throw new Error(problems.join("; "));
+  if (problems.length) {
+    problems.push(startupDiagnostic(startup));
+    throw new Error(problems.join("; "));
+  }
 }
 
 async function verifyOnce() {
   const health = await requestJson(`${apiBaseUrl}/api/health`);
   validateHealth(health);
 
-  const universe = await requestJson(`${apiBaseUrl}/api/universe/status?limit=100`);
-  validateUniverse(universe);
+  const [universe, startup] = await Promise.all([
+    requestJson(`${apiBaseUrl}/api/universe/status?limit=100`),
+    optionalJson(`${apiBaseUrl}/api/startup-status`),
+  ]);
+  validateUniverse(universe, startup);
 
   await requestPage(factoryPageUrl);
 
   return {
     apiVersion: health.version,
+    deploymentCommit: startup?.deploymentCommit ?? null,
     marketProvider: health.marketData?.provider,
     marketConfigured: Boolean(health.marketData?.configured),
     secProvider: health.sec?.provider,
@@ -111,6 +142,7 @@ async function verifyOnce() {
     factsCompleteCount: universe.factsCompleteCount,
     quoteCompleteCount: universe.quoteCompleteCount,
     ratingCompleteCount: universe.ratingCompleteCount,
+    startupJobs: startup?.jobs ?? null,
     generatedAt: universe.generatedAt,
   };
 }
