@@ -1,4 +1,4 @@
-// TS: 2026-08-01 21:16 ET
+// TS: 2026-08-02 14:32 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -19,6 +19,8 @@ import {
 import { QuoteService } from "./quotes/service.js";
 import { createSecDataProvider } from "./sec/index.js";
 import type { SecDataProvider } from "./sec/types.js";
+import { createUniverseStore } from "./universe/store.js";
+import type { UniverseStore } from "./universe/types.js";
 
 interface TickerQuery {
   readonly q?: string;
@@ -43,6 +45,7 @@ export interface BuildAppOptions {
   readonly secProvider?: SecDataProvider;
   readonly readinessProvider?: DatabaseReadinessProvider;
   readonly persistenceStore?: PersistenceStore;
+  readonly universeStore?: UniverseStore;
   readonly quoteCacheTtlMs?: number;
   readonly quoteBatchConcurrency?: number;
   readonly logger?: boolean;
@@ -105,6 +108,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const readinessProvider =
     options.readinessProvider ?? createDatabaseReadinessProvider(config);
   const persistenceStore = options.persistenceStore ?? createPersistenceStore(config);
+  const universeStore = options.universeStore ?? createUniverseStore(config);
   const app = Fastify({
     logger:
       options.logger === false
@@ -122,13 +126,17 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   app.addHook("onClose", async () => {
-    await Promise.all([readinessProvider.close(), persistenceStore.close()]);
+    await Promise.all([
+      readinessProvider.close(),
+      persistenceStore.close(),
+      universeStore.close(),
+    ]);
   });
 
   app.get("/api/health", async () => ({
     status: "ok",
     service: "next-years-monsters-api",
-    version: "0.4.0",
+    version: "0.5.0",
     timestamp: new Date().toISOString(),
     marketData: {
       provider: provider.name,
@@ -141,6 +149,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     database: {
       provider: persistenceStore.name,
       configured: persistenceStore.configured,
+    },
+    universe: {
+      provider: universeStore.name,
+      configured: universeStore.configured,
     },
   }));
 
@@ -160,10 +172,20 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       configured: persistenceStore.configured,
       connectionStringExposed: false,
     },
+    universe: {
+      provider: universeStore.name,
+      configured: universeStore.configured,
+      connectionStringExposed: false,
+    },
     timestamp: new Date().toISOString(),
   }));
 
   app.get("/api/readiness", async () => readinessProvider.getSnapshot());
+
+  app.get<{ Querystring: LimitQuery }>("/api/universe/status", async (request) => {
+    const limit = parseLimit(request.query.limit, 100, 2_500);
+    return universeStore.getStatus(limit);
+  });
 
   app.get<{ Params: SymbolParams }>("/api/stored/:symbol", async (request, reply) => {
     const symbol = normalizeTickerSymbol(request.params.symbol);
