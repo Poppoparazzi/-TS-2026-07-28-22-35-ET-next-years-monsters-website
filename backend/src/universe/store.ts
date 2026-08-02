@@ -1,4 +1,4 @@
-// TS: 2026-08-02 14:54 ET
+// TS: 2026-08-02 15:34 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -14,6 +14,38 @@ import type {
 
 const { Pool } = pg;
 type DatabasePool = InstanceType<typeof Pool>;
+
+export const UPSERT_UNIVERSE_COMPANY_SQL = `
+  INSERT INTO companies (
+    ticker,
+    company_name,
+    exchange,
+    currency,
+    sec_cik,
+    is_active
+  )
+  SELECT
+    $1::varchar(15),
+    $2::text,
+    $3::text,
+    'USD',
+    CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM companies existing
+        WHERE existing.sec_cik = $4::varchar(10)
+          AND existing.ticker <> $1::varchar(15)
+      ) THEN NULL::varchar(10)
+      ELSE $4::varchar(10)
+    END,
+    true
+  ON CONFLICT (ticker) DO UPDATE SET
+    company_name = EXCLUDED.company_name,
+    exchange = COALESCE(EXCLUDED.exchange, companies.exchange),
+    sec_cik = COALESCE(EXCLUDED.sec_cik, companies.sec_cik),
+    is_active = true
+  RETURNING id
+`;
 
 interface UniverseStatusRow {
   readonly ticker: string;
@@ -91,36 +123,7 @@ export class PostgresUniverseStore implements UniverseStore {
 
       for (const company of companies) {
         const companyResult = await client.query<{ id: string | number }>(
-          `
-            INSERT INTO companies (
-              ticker,
-              company_name,
-              exchange,
-              currency,
-              sec_cik,
-              is_active
-            )
-            SELECT
-              $1,
-              $2,
-              $3,
-              'USD',
-              CASE
-                WHEN EXISTS (
-                  SELECT 1
-                  FROM companies existing
-                  WHERE existing.sec_cik = $4 AND existing.ticker <> $1
-                ) THEN NULL
-                ELSE $4
-              END,
-              true
-            ON CONFLICT (ticker) DO UPDATE SET
-              company_name = EXCLUDED.company_name,
-              exchange = COALESCE(EXCLUDED.exchange, companies.exchange),
-              sec_cik = COALESCE(EXCLUDED.sec_cik, companies.sec_cik),
-              is_active = true
-            RETURNING id
-          `,
+          UPSERT_UNIVERSE_COMPANY_SQL,
           [company.ticker, company.companyName, company.exchange, company.cikPadded],
         );
 
