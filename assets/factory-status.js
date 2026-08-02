@@ -1,8 +1,9 @@
-// TS: 2026-08-02 15:25 ET
+// TS: 2026-08-02 15:53 ET
 
 (() => {
   "use strict";
 
+  const EXPECTED_API_VERSION = "0.6.0";
   const refreshButton = document.querySelector("[data-factory-refresh]");
   const checkedNode = document.querySelector("[data-factory-checked]");
   const tableBody = document.querySelector("[data-factory-body]");
@@ -113,11 +114,59 @@
       </tr>`).join("");
   }
 
+  function resetSummary() {
+    renderSummary({
+      universeSize: 0,
+      examinedCount: 0,
+      queuedCount: 0,
+      processingCount: 0,
+      secCompleteCount: 0,
+      partialCount: 0,
+      failedCount: 0,
+      staleCount: 0,
+      filingCompleteCount: 0,
+      factsCompleteCount: 0,
+      quoteCompleteCount: 0,
+      ratingCompleteCount: 0,
+    });
+  }
+
   function renderUnavailable(message) {
+    resetSummary();
     if (tableBody) {
       tableBody.innerHTML = `<tr><td colspan="12"><p class="factory-empty">${escapeHtml(message)} No completion values were invented.</p></td></tr>`;
     }
-    if (checkedNode) checkedNode.textContent = "FACTORY STATUS UNAVAILABLE";
+    if (checkedNode) checkedNode.textContent = "FACTORY STATUS BLOCKED";
+  }
+
+  async function requestJson(url) {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(65_000),
+    });
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(payload?.message || `${url} returned HTTP ${response.status}.`);
+    }
+    return payload;
+  }
+
+  function verifyProductionHealth(health) {
+    if (health?.version !== EXPECTED_API_VERSION) {
+      throw new Error(
+        `Render is still serving backend version ${health?.version || "unknown"}. The 100-stock factory requires version ${EXPECTED_API_VERSION}, so the latest main branch has not been deployed.`,
+      );
+    }
+
+    const missing = [];
+    if (!health?.database?.configured) missing.push("production database");
+    if (!health?.sec?.configured) missing.push("SEC provider");
+    if (!health?.universe?.configured) missing.push("bulk universe store");
+
+    if (missing.length) {
+      throw new Error(`Render version ${EXPECTED_API_VERSION} is live, but these services are not configured: ${missing.join(", ")}.`);
+    }
   }
 
   async function loadFactoryStatus() {
@@ -133,19 +182,14 @@
     }
 
     try {
-      const response = await fetch(`${baseUrl}/api/universe/status?limit=100`, {
-        headers: { Accept: "application/json" },
-        signal: AbortSignal.timeout(65_000),
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.message || `Factory endpoint returned HTTP ${response.status}.`);
-      }
+      const health = await requestJson(`${baseUrl}/api/health`);
+      verifyProductionHealth(health);
 
+      const payload = await requestJson(`${baseUrl}/api/universe/status?limit=100`);
       renderSummary(payload);
       renderRows(payload.companies);
       if (checkedNode) {
-        checkedNode.textContent = `LAST CHECKED ${formatTimestamp(payload.generatedAt || new Date().toISOString()).toUpperCase()}`;
+        checkedNode.textContent = `BACKEND ${health.version} · LAST CHECKED ${formatTimestamp(payload.generatedAt || new Date().toISOString()).toUpperCase()}`;
       }
     } catch (error) {
       renderUnavailable(error instanceof Error ? error.message : "The factory endpoint could not be reached.");
