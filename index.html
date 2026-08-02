@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-01 17:58 ET -->
+<!-- TS: 2026-08-02 08:04 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -16,6 +16,26 @@
       overflow-wrap: normal;
       word-break: normal;
       hyphens: none;
+    }
+    .home-hero-art img[data-captain-image].home-bull-rider-hero {
+      width: min(128%, 1080px);
+      max-width: none;
+      height: auto;
+      object-fit: contain;
+      object-position: center bottom;
+      transform: translateX(-5%) translateY(4%);
+      filter: drop-shadow(0 28px 38px rgba(0,0,0,.45));
+      position: relative;
+      z-index: 2;
+    }
+    .home-hero-art .asset-placeholder[data-captain-placeholder] {
+      display: none;
+    }
+    @media (max-width: 980px) {
+      .home-hero-art img[data-captain-image].home-bull-rider-hero {
+        width: min(120%, 860px);
+        transform: translateX(-2%) translateY(2%);
+      }
     }
   </style>
   <link rel="stylesheet" href="assets/editorial-type.css">
@@ -88,9 +108,9 @@
       </div>
     </div>
 
-    <div class="home-hero-art" aria-label="Captain Breakout full-color artwork">
+    <div class="home-hero-art" aria-label="Captain Breakout riding a charging bull">
       <div class="hero-chart-lines" aria-hidden="true"></div>
-      <img data-captain-image src="captain_breakout.png" alt="Captain Breakout in full color, wearing the approved navy and gold suit with CB cuffs and dollar-sign belt buckle">
+      <img data-captain-image class="home-bull-rider-hero" src="final%20bull%20on%20HOmep%3Bage%20Aug%202.png" alt="Captain Breakout riding a charging bull with a rising stock-chart arrow">
       <div class="asset-placeholder" data-captain-placeholder>
         <div><strong>Captain Breakout™</strong>The approved full-color image belongs here.</div>
       </div>
