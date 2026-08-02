@@ -1,6 +1,6 @@
 # START HERE — Next Year’s Monsters™ Website
 
-<!-- TS: 2026-08-02 15:20 ET -->
+<!-- TS: 2026-08-02 15:55 ET -->
 
 This file is the permanent starting point for every future ChatGPT or Codex session working on this website.
 
@@ -19,65 +19,85 @@ Open and read these files before making any changes:
 1. `START_HERE.md`
 2. `PROJECT_HANDOFF_2026-07-29.md`
 3. `BULK_2000_PLAN.md`
-4. The latest relevant files and commits in the repository
+4. `RENDER_DEPLOYMENT_REQUIRED.md`
+5. The latest relevant files, issues, workflow results, and commits in the repository
 
-Do not rely on prior chat memory as the source of truth. The repository and its handoff files are the source of truth.
+Do not rely on prior chat memory as the source of truth. The repository, workflow results, and handoff files are the source of truth.
 
 ## Current verified project status
 
-- GitHub Pages static website exists and the redesigned editorial landing page is committed.
-- The approved Captain Breakout™ branding is installed. Do not replace, crop, redesign, or regenerate the approved character artwork.
-- A public `start-here.html` guide has been added, with HOME and START HERE navigation helpers across the site.
-- Monster Check™ now has a launch-style result renderer with Monster Rating™, tier, Tipping Point™, Market Weather™, Move Driver™, Monster DNA™, chart access, News Radar access, and clearly labeled demonstration language.
-- All 15 original VCL™ pilot companies now appear as Monster Check™ quick picks: AAPL, NVDA, MNST, AMZN, TSLA, NFLX, AMD, COST, VRT, AXON, DECK, WING, META, APP, and MSFT.
-- The VCL™ Library table is ordered by tier, then highest demonstration score, then ticker. Platinum, Gold, and Silver groups have matching row accents and tier badges.
-- The cramped live-data board typography was reduced, the filing column was widened, and responsive wrapping was improved.
-- `verification-ledger.html` checks the 15 pilot companies against the public SEC company service and persistent production snapshots.
-- The Website Data Status page creates production connection cards for the public API, market-data provider, official SEC service, and production database using `/api/health`.
-- A guarded startup pilot refresh saves official SEC identity, filings, and facts for missing or stale pilot records.
-- `MARKET_DATA_PROVIDER` remains deliberately set to `unconfigured`; no live or delayed quote provider is currently connected.
-- The 15 companies remain the VCL™ demonstration/pilot set. They are not represented as a freshly verified live ranking of today’s top 15 stocks.
-- The repository contains `BULK_2000_PLAN.md`. New coverage must use a repeatable bulk pipeline rather than handcrafted stock pages.
-- Backend version `0.6.0` includes the official SEC universe parser, bulk importer, retry-safe SEC worker queue, and `/api/universe/status` endpoint.
-- Render is configured to import the first 100 SEC companies automatically through `AUTO_IMPORT_UNIVERSE_LIMIT=100`.
-- Render is also configured to process a 100-company SEC evidence batch through `AUTO_SEC_BATCH_SIZE=100`, with concurrency `3` and a 24-hour stale threshold.
-- The importer reuses the existing `companies` table, normalizes tickers and CIKs, deduplicates ticker/CIK collisions, and imports the selected universe in one transaction.
-- The `company_pipeline_status` table records queued, processing, complete, partial, failed, and stale SEC states, attempt counts, retry times, last errors, and completion timestamps.
-- The SEC batch queue claims work safely with PostgreSQL row locking, recovers abandoned processing jobs, and retries failures without stopping successful companies.
-- `/api/universe/status?limit=100` reports universe size, queued count, processing count, SEC complete count, partial count, failed count, stale count, SEC identity coverage, filing coverage, fact coverage, quote coverage, rating coverage, and per-company status.
-- The same endpoint accepts limits up to 2,500, allowing the same machinery to report 100, 500, and 2,000-company milestones.
-- Do not fabricate live ratings, live quotes, or current news.
+- The static website, Monster Check™ demonstration, VCL™ Library, verification ledger, market tools, and approved Captain Breakout™ branding are committed.
+- The 15 original VCL™ companies remain the demonstration/pilot set. They are not represented as a freshly verified live ranking of today’s top 15 stocks.
+- `MARKET_DATA_PROVIDER` remains deliberately set to `unconfigured`; no licensed live or delayed quote provider is currently connected.
+- New stock coverage must use the bulk pipeline in `BULK_2000_PLAN.md`, not handcrafted pages.
+- Backend source version `0.6.0` contains:
+  - the official SEC universe parser
+  - the transactional bulk importer
+  - the `company_pipeline_status` table
+  - queued, processing, complete, partial, failed, and stale states
+  - retry times, attempt counts, last errors, and abandoned-job recovery
+  - controlled-concurrency SEC worker processing
+  - `/api/universe/status` for up to 2,500 companies
+- Render configuration in the repository requests:
+  - 100-company automatic import
+  - 100-company SEC evidence batch
+  - concurrency `3`
+  - 24-hour stale threshold
+  - PostgreSQL migration and verification before deployment
+- `factory-status.html` is the public 100-Stock Factory Status page. It shows summary counts, progress, evidence coverage, attempts, retry times, timestamps, and errors.
+- The factory page checks `/api/health` first and explicitly reports when Render is still serving an old backend instead of displaying misleading zeroes.
+- A production smoke workflow now checks Render, the 100-company database, pipeline-state reconciliation, and the deployed factory page.
 
 ## Completed and validated on August 2, 2026
 
 1. Reordered and color-coded the 15-stock VCL™ table.
 2. Reduced oversized and cramped live-data board typography.
-3. Added the live 15-stock verification ledger page.
-4. Added automated static-site checks and public provider-health cards.
-5. Added the guarded stale-record startup refresh for the 15 pilot companies.
+3. Added the 15-stock verification ledger and production provider-health cards.
+4. Added automated static-site validation.
+5. Added the guarded pilot SEC refresh.
 6. Added the bulk 2,000-stock implementation plan.
-7. Added the official SEC universe parser and 100-company importer.
-8. Added the automatic Render startup import for the first 100 companies.
-9. Added the bulk universe status endpoint for up to 2,500 companies.
-10. Added the retry-safe SEC pipeline table, worker queue, controlled-concurrency processor, manual command, and automatic startup batch.
-11. Added a deliberate one-company failure test proving the other companies continue successfully.
-12. Bulk-universe validation passed:
+7. Added the SEC universe parser and transactional 100-company importer.
+8. Added the bulk universe status endpoint for up to 2,500 companies.
+9. Added the retry-safe SEC pipeline table, queue, worker pool, manual command, and startup batch.
+10. Added failure-isolation tests proving one company does not stop successful companies.
+11. Added the public 100-Stock Factory Status page and site-wide navigation link.
+12. Added production smoke testing from GitHub Actions.
+13. Bulk-universe validation passed:
     - Phase 3 Backend Checks run `30761148428`
     - Static site checks run `30761148461`
-13. SEC batch-factory validation passed:
+14. SEC batch-factory validation passed:
     - Phase 3 Backend Checks run `30761443871`
     - Static site checks run `30761443883`
+15. Factory dashboard validation passed:
+    - Phase 3 Backend Checks run `30761660242`
+    - Static site checks run `30761660234`
+
+## Confirmed production blocker
+
+Production smoke run `30761741073` queried the live Render service 10 times over approximately five minutes.
+
+Every request returned:
+
+- live API version `0.3.0`
+- expected source version `0.6.0`
+- production database not configured
+- bulk universe store not configured
+
+This proves the live Render service has not deployed current `main` or synchronized the current Blueprint configuration. The GitHub factory code and tests are not the current blocker.
+
+The deployment blocker is tracked in GitHub issue `#13` and documented in `RENDER_DEPLOYMENT_REQUIRED.md`.
 
 ## Immediate next work
 
-1. Add a public 100-Stock Factory Status page that reads `/api/universe/status?limit=100` and displays queued, processing, complete, partial, failed, and stale counts.
-2. Confirm Render deployed backend version `0.6.0`, applied migration `999_bulk_company_pipeline_status.sql`, imported the first 100 companies, and ran the first SEC batch.
-3. Confirm `SEC_USER_AGENT` is set in Render. Automatic SEC work cannot run without it.
-4. Inspect the production `/api/universe/status?limit=100` results and verify stored company, filing, fact, retry, and failure counts.
-5. Increase the same pipeline checkpoint from 100 to 500 only after the 100-company production run is proven.
-6. Increase from 500 to 2,000 only after the same queue and retry behavior remains stable.
-7. Connect a licensed live/delayed quote source before producing current Monster Ratings™.
-8. Update this file after each completed milestone and commit every completed change immediately to `main`.
+1. In Render, synchronize the Blueprint or reconnect the service to the correct repository, branch, and `backend` root directory.
+2. Add `SEC_USER_AGENT` manually in Render because `sync: false` values are not populated by later Blueprint updates.
+3. Confirm `DATABASE_URL` is linked to `next-years-monsters-db`.
+4. Use **Save, rebuild, and deploy**, then **Manual Deploy → Deploy latest commit**. Do not merely restart the old service.
+5. Confirm `/api/health` reports version `0.6.0` and configured database, SEC, and universe providers.
+6. Confirm `/api/universe/status?limit=100` returns at least 100 companies and reconciled pipeline counts.
+7. Re-run the production smoke workflow until it passes.
+8. Only after the 100-company production run is proven, increase the same pipeline to 500 and then 2,000.
+9. Connect a licensed quote provider before producing current Monster Ratings™.
 
 ## Locked design and data rules
 
@@ -93,4 +113,4 @@ Do not rely on prior chat memory as the source of truth. The repository and its 
 
 If a ChatGPT conversation disappears, open a new chat and paste this instruction:
 
-> Continue the Next Year’s Monsters™ website from the GitHub repository `Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website`. Read `START_HERE.md`, `PROJECT_HANDOFF_2026-07-29.md`, and `BULK_2000_PLAN.md` first. Treat the repository as the source of truth and verify the latest commits before describing project status.
+> Continue the Next Year’s Monsters™ website from the GitHub repository `Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website`. Read `START_HERE.md`, `PROJECT_HANDOFF_2026-07-29.md`, `BULK_2000_PLAN.md`, and `RENDER_DEPLOYMENT_REQUIRED.md` first. Treat the repository, GitHub issue #13, and workflow results as the source of truth before describing project status.
