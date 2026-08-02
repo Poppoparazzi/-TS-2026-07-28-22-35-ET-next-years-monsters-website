@@ -1,4 +1,4 @@
-# TS: 2026-08-01 20:59 ET
+# TS: 2026-08-01 21:08 ET
 
 databases:
   - name: next-years-monsters-db
@@ -14,7 +14,7 @@ services:
     region: virginia
     rootDir: backend
     buildCommand: npm install --include=dev --no-audit --no-fund && npm run check && npm run build
-    preDeployCommand: npm run db:migrate
+    preDeployCommand: npm run db:migrate && npm run db:verify
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
