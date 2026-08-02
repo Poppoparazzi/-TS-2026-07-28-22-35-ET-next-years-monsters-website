@@ -1,6 +1,6 @@
 # START HERE — Next Year’s Monsters™ Website
 
-<!-- TS: 2026-08-02 14:03 ET -->
+<!-- TS: 2026-08-02 14:46 ET -->
 
 This file is the permanent starting point for every future ChatGPT or Codex session working on this website.
 
@@ -18,7 +18,8 @@ Open and read these files before making any changes:
 
 1. `START_HERE.md`
 2. `PROJECT_HANDOFF_2026-07-29.md`
-3. The latest relevant files and commits in the repository
+3. `BULK_2000_PLAN.md`
+4. The latest relevant files and commits in the repository
 
 Do not rely on prior chat memory as the source of truth. The repository and its handoff files are the source of truth.
 
@@ -32,16 +33,16 @@ Do not rely on prior chat memory as the source of truth. The repository and its 
 - The VCL™ Library table is ordered by tier, then highest demonstration score, then ticker. Platinum, Gold, and Silver groups have matching row accents and tier badges.
 - The cramped live-data board typography was reduced, the filing column was widened, and responsive wrapping was improved.
 - `verification-ledger.html` checks the 15 pilot companies against the public SEC company service and persistent production snapshots.
-- The verification ledger reports SEC identity, stored filing/fact evidence, stored quote status, production rating-history status, last stored check, and evidence gaps.
-- The verification ledger is linked from the VCL™ Library and added to site-wide navigation.
-- The Website Data Status page now creates production connection cards for the public API, market-data provider, official SEC service, and production database using `/api/health`.
-- The repository has a static-site validation workflow that checks browser JavaScript syntax, local links, VCL tier order/color hooks, all 15 ledger tickers, and the correct SEC and stored-snapshot routes.
-- A guarded startup pilot refresh now checks persistent records and refreshes only missing or records older than 24 hours.
-- The guarded refresh saves official SEC company identity, filings, and facts even while market quotes remain unconfigured.
-- Refresh failures are logged without stopping the public API.
-- Render is configured to enable the guarded startup refresh with a 24-hour maximum age.
+- The Website Data Status page creates production connection cards for the public API, market-data provider, official SEC service, and production database using `/api/health`.
+- A guarded startup pilot refresh saves official SEC identity, filings, and facts for missing or stale pilot records.
 - `MARKET_DATA_PROVIDER` remains deliberately set to `unconfigured`; no live or delayed quote provider is currently connected.
-- The 15 companies remain the VCL™ demonstration/pilot set. They are not yet represented as a freshly verified live ranking of today’s top 15 stocks.
+- The 15 companies remain the VCL™ demonstration/pilot set. They are not represented as a freshly verified live ranking of today’s top 15 stocks.
+- The repository now contains `BULK_2000_PLAN.md`. New coverage must use a repeatable bulk pipeline rather than handcrafted stock pages.
+- Backend version `0.5.0` now includes an official SEC universe parser, bulk database importer, and `/api/universe/status` endpoint.
+- Render is configured to import the first 100 SEC companies automatically at startup through `AUTO_IMPORT_UNIVERSE_LIMIT=100`.
+- The importer reuses the existing `companies` table, normalizes tickers and CIKs, deduplicates ticker/CIK collisions, and imports the selected universe in one database transaction.
+- `/api/universe/status?limit=100` reports universe size, SEC identity coverage, filing coverage, fact coverage, quote coverage, rating coverage, fully complete count, incomplete count, and per-company status.
+- The same endpoint accepts limits up to 2,500, allowing the same machinery to report 100, 500, and 2,000-company milestones.
 - Do not fabricate live ratings, live quotes, or current news.
 
 ## Completed and validated on August 2, 2026
@@ -49,24 +50,26 @@ Do not rely on prior chat memory as the source of truth. The repository and its 
 1. Reordered and color-coded the 15-stock VCL™ table.
 2. Reduced oversized and cramped live-data board typography.
 3. Added the live 15-stock verification ledger page.
-4. Added the verification ledger to the VCL™ page and site-wide navigation.
-5. Kept historical demonstration scores visibly separate from stored production rating records.
-6. Added automated static-site checks; GitHub Actions validation passed.
-7. Added public provider-health cards to the Website Data Status page; validation passed.
-8. Added the guarded stale-record startup refresh for the 15 pilot companies.
-9. Backend TypeScript, tests, and static-site checks passed for the startup refresh:
-   - Phase 3 Backend Checks run `30759597685`
-   - Static site checks run `30759597683`
+4. Added automated static-site checks and public provider-health cards.
+5. Added the guarded stale-record startup refresh for the 15 pilot companies.
+6. Added the bulk 2,000-stock implementation plan.
+7. Added the official SEC universe parser and 100-company importer.
+8. Added the automatic Render startup import for the first 100 companies.
+9. Added the bulk universe status endpoint for up to 2,500 companies.
+10. Added parser and endpoint tests.
+11. Backend TypeScript, tests, and static-site checks passed for the bulk-universe milestone:
+    - Phase 3 Backend Checks run `30761148428`
+    - Static site checks run `30761148461`
 
 ## Immediate next work
 
-1. Confirm Render deployed the latest `main` commits and that `/api/health` reports the expected API, SEC, and database states.
-2. Confirm `SEC_USER_AGENT` is set in Render. The automatic SEC refresh cannot run without it.
-3. Inspect the 15-stock verification ledger after startup refresh and confirm which persistent records were actually created.
-4. Confirm database migrations and readback through `/api/stored/:symbol` in production.
-5. Connect a reliable licensed live/delayed quote source and preserve clear timestamps and source labels.
-6. Test Monster Check™, Top Monsters, charts, News Radar, Start Here, Verification, Data Status, and navigation on desktop and mobile.
-7. Review remaining pages for oversized typography, accidental wrapping, and inconsistent rating colors.
+1. Build a batch SEC evidence processor that selects imported companies missing filings or facts and refreshes them with controlled concurrency, retries, and failure isolation.
+2. Add bulk-processing progress fields: queued, processing, SEC complete, failed, stale, and last error.
+3. Confirm Render deployed backend version `0.5.0` and imported the first 100 companies.
+4. Confirm `SEC_USER_AGENT` is set in Render. Automatic SEC work cannot run without it.
+5. Inspect `/api/universe/status?limit=100` after deployment and verify the stored counts.
+6. Increase the same pipeline checkpoints from 100 to 500 and then 2,000 only after the 100-company run is proven.
+7. Connect a licensed live/delayed quote source before producing current Monster Ratings™.
 8. Update this file after each completed milestone and commit every completed change immediately to `main`.
 
 ## Locked design and data rules
@@ -76,10 +79,11 @@ Do not rely on prior chat memory as the source of truth. The repository and its 
 - The screen finds evidence; it does not promise winners.
 - Use clearly labeled demonstration data until licensed APIs and the production scoring engine are connected and verified.
 - Do not claim the 15 VCL™ companies are the current Top 15 unless the current scoring process has actually verified and ranked them.
+- No handcrafted profile page may be created for each new stock during the 100, 500, or 2,000-company scale tests.
 - Use only the approved TuneTank bull-mad-mooing WAV later if the bull sound is added.
 
 ## Recovery rule
 
 If a ChatGPT conversation disappears, open a new chat and paste this instruction:
 
-> Continue the Next Year’s Monsters™ website from the GitHub repository `Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website`. Read `START_HERE.md` and `PROJECT_HANDOFF_2026-07-29.md` first. Treat the repository as the source of truth and verify the latest commits before describing project status.
+> Continue the Next Year’s Monsters™ website from the GitHub repository `Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website`. Read `START_HERE.md`, `PROJECT_HANDOFF_2026-07-29.md`, and `BULK_2000_PLAN.md` first. Treat the repository as the source of truth and verify the latest commits before describing project status.
