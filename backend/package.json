@@ -1,6 +1,6 @@
 {
   "name": "next-years-monsters-api",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "Secure TypeScript backend for Next Year’s Monsters Monster Check live data.",
@@ -15,7 +15,8 @@
     "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
     "check": "npm run typecheck && npm run test:typecheck && npm test",
-    "db:migrate": "tsx src/database/migrate.ts"
+    "db:migrate": "tsx src/database/migrate.ts",
+    "db:verify": "tsx src/database/verify.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
