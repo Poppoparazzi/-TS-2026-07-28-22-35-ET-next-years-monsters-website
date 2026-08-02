@@ -1,4 +1,4 @@
-// TS: 2026-08-02 14:57 ET
+// TS: 2026-08-02 17:13 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -18,6 +18,7 @@ export interface SecBatchQueue {
   claim(limit: number, maxAgeHours: number): Promise<readonly SecBatchCandidate[]>;
   markComplete(ticker: string): Promise<void>;
   markFailed(ticker: string, message: string): Promise<void>;
+  markUnresolved(ticker: string, message: string): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -47,6 +48,10 @@ export class UnconfiguredSecBatchQueue implements SecBatchQueue {
   }
 
   public async markFailed(_ticker: string, _message: string): Promise<void> {
+    throw new ProviderNotConfiguredError("SEC batch queue database");
+  }
+
+  public async markUnresolved(_ticker: string, _message: string): Promise<void> {
     throw new ProviderNotConfiguredError("SEC batch queue database");
   }
 
@@ -187,6 +192,22 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
           next_retry_at = now() + make_interval(
             mins => LEAST(GREATEST(cps.sec_attempt_count, 1) * 15, 1440)
           )
+        FROM companies c
+        WHERE c.id = cps.company_id AND c.ticker = $1
+      `,
+      [ticker, message],
+    );
+  }
+
+  public async markUnresolved(ticker: string, message: string): Promise<void> {
+    await this.pool.query(
+      `
+        UPDATE company_pipeline_status cps
+        SET
+          sec_status = 'unresolved',
+          last_error = left($2, 1000),
+          last_completed_at = now(),
+          next_retry_at = NULL
         FROM companies c
         WHERE c.id = cps.company_id AND c.ticker = $1
       `,
