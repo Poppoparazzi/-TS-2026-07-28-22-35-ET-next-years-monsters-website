@@ -1,7 +1,44 @@
-// TS: 2026-08-02 13:44 ET
+// TS: 2026-08-02 13:47 ET
 
 (() => {
   "use strict";
+
+  function ensureHealthPanel() {
+    if (document.querySelector("[data-status-connections]")) return;
+
+    const summary = document.querySelector(".status-summary");
+    const next = document.querySelector(".status-next");
+    if (!summary || !next) return;
+
+    const section = document.createElement("section");
+    section.className = "status-connections";
+    section.dataset.statusConnections = "";
+    section.setAttribute("aria-label", "Production provider connection status");
+    section.innerHTML = `
+      <article class="status-connection-card" data-api-connection-card data-connection-state="unavailable">
+        <span>PUBLIC BACKEND</span>
+        <strong data-connection-provider>CHECKING API…</strong>
+        <em data-connection-detail>The public health endpoint is being checked.</em>
+      </article>
+      <article class="status-connection-card" data-market-connection-card data-connection-state="unavailable">
+        <span>MARKET DATA PROVIDER</span>
+        <strong data-connection-provider>CHECKING PROVIDER…</strong>
+        <em data-connection-detail>The server will report whether a quote provider is configured.</em>
+      </article>
+      <article class="status-connection-card" data-sec-connection-card data-connection-state="unavailable">
+        <span>OFFICIAL SEC SERVICE</span>
+        <strong data-connection-provider>CHECKING SEC…</strong>
+        <em data-connection-detail>The server will report whether official company and filing data is configured.</em>
+      </article>
+      <article class="status-connection-card" data-database-connection-card data-connection-state="unavailable">
+        <span>PRODUCTION DATABASE</span>
+        <strong data-connection-provider>CHECKING DATABASE…</strong>
+        <em data-connection-detail>The server will report whether persistent storage is configured.</em>
+      </article>
+      <p class="status-connection-time" data-health-checked>PUBLIC HEALTH CHECK IN PROGRESS</p>`;
+
+    next.insertAdjacentElement("beforebegin", section);
+  }
 
   function apiBaseUrl() {
     const raw = window.NYM_CONFIG?.apiBaseUrl;
@@ -110,6 +147,8 @@
   }
 
   async function checkHealth() {
+    ensureHealthPanel();
+
     const baseUrl = apiBaseUrl();
     if (!baseUrl) {
       renderUnavailable("The public backend address is not configured in the website runtime settings.");
@@ -128,5 +167,9 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => void checkHealth());
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => void checkHealth());
+  } else {
+    void checkHealth();
+  }
 })();
