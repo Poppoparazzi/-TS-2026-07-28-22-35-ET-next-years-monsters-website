@@ -1,0 +1,3 @@
+// TS: 2026-08-02 17:24 ET
+
+Validate the 500-company universe import, permanent SEC unresolved state, and non-retrying HTTP 404 classification.
