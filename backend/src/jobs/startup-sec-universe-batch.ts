@@ -1,4 +1,4 @@
-// TS: 2026-08-02 15:02 ET
+// TS: 2026-08-02 17:16 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -41,9 +41,11 @@ export async function runSecUniverseBatchOnStartup(
       requestedBatchSize: 0,
       claimedCount: 0,
       succeededCount: 0,
+      unresolvedCount: 0,
       failedCount: 0,
       concurrency: 0,
       maxAgeHours: 0,
+      unresolvedTickers: Object.freeze([]),
       failures: Object.freeze([]),
       reason: "Automatic SEC universe processing is disabled.",
       completedAt: new Date().toISOString(),
