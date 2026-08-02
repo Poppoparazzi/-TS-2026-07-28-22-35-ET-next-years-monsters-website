@@ -1,0 +1,80 @@
+<!-- TS: 2026-08-02 13:31 ET -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>15-Stock Verification Ledger | Next Year’s Monsters™</title>
+  <meta name="description" content="A transparent verification ledger showing the current SEC, stored filing, quote, and production-rating status of the original 15-stock Next Year’s Monsters VCL demonstration set.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/editorial-type.css">
+  <link rel="stylesheet" href="assets/verification-ledger.css">
+</head>
+<body class="verification-page">
+
+<header class="site-header home-header">
+  <div class="home-nav-shell">
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
+      <span class="home-brand-arrow">↗</span>
+      <span>NEXT YEAR’S MONSTERS™</span>
+    </a>
+    <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a href="monster-check.html">MONSTER CHECK</a>
+      <a href="top-monsters.html">TOP MONSTERS</a>
+      <a href="how-it-works.html">THE SYSTEM</a>
+      <a href="vcl-library.html">VCL™ LIBRARY</a>
+      <a class="active" href="verification-ledger.html">VERIFICATION</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="verification-hero">
+    <p class="home-kicker"><span></span> EVIDENCE STATUS · NO DECORATIVE CLAIMS</p>
+    <h1>15-STOCK<br>VERIFICATION<br>LEDGER.</h1>
+    <p>This page checks the original Visual Case Library™ pilot set against the public SEC service and the production snapshot database. A historical demonstration score is not treated as a current verified Monster Rating™.</p>
+    <div class="verification-controls">
+      <button class="verification-run" type="button" data-run-verification>RUN 15-STOCK VERIFICATION</button>
+      <span class="verification-timestamp" data-verification-timestamp>NOT CHECKED IN THIS SESSION</span>
+    </div>
+  </section>
+
+  <section class="verification-summary" aria-label="Verification totals">
+    <article><span>SEC IDENTITIES VERIFIED</span><strong data-sec-count>0</strong><em>Official company and CIK matches returned by the public SEC service.</em></article>
+    <article><span>STORED PILOT RECORDS</span><strong data-stored-count>0</strong><em>Companies with a persistent production snapshot in the database.</em></article>
+    <article><span>QUOTE SNAPSHOTS STORED</span><strong data-quote-count>0</strong><em>Companies whose stored record includes a market quote and source label.</em></article>
+    <article><span>PRODUCTION RATINGS STORED</span><strong data-rating-count>0</strong><em>Verified rating-history records, not historical VCL demonstrations.</em></article>
+  </section>
+
+  <section class="verification-ledger-shell">
+    <p class="verification-note"><strong>Reading the ledger:</strong> green means the checked evidence exists, gold means pending or not yet refreshed, red means unavailable or missing, and pale gray means the value is still a historical demonstration rather than a production rating.</p>
+    <div class="verification-table-wrap">
+      <table class="verification-table">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>SEC identity</th>
+            <th>Stored filings / facts</th>
+            <th>Stored quote</th>
+            <th>Rating data</th>
+            <th>Last stored check</th>
+            <th>Evidence gap</th>
+          </tr>
+        </thead>
+        <tbody data-verification-body></tbody>
+      </table>
+    </div>
+    <p class="verification-footer-note"><strong>Boundary:</strong> This ledger verifies whether evidence is present in the connected services. It does not declare a stock attractive, safe, or guaranteed to rise. The screen does not find guaranteed winners. It finds evidence.</p>
+  </section>
+</main>
+
+<footer class="home-footer">
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>VERIFY THE DATA BEFORE TRUSTING THE RATING.</span></div>
+  <p><strong>Educational Use Only:</strong> Monster Rating™ is not a recommendation to buy, sell, or hold any security and does not guarantee future performance. Investing involves risk, including possible loss of principal.</p>
+</footer>
+
+<script src="assets/runtime-config.js"></script>
+<script src="assets/verification-ledger.js"></script>
+<script src="assets/market-ticker-strip.js"></script>
+</body>
+</html>
