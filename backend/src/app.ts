@@ -1,8 +1,12 @@
-// TS: 2026-08-01 17:24 ET
+// TS: 2026-08-01 21:16 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { loadConfig, type AppConfig } from "./config.js";
+import {
+  createPersistenceStore,
+  type PersistenceStore,
+} from "./database/persistence.js";
 import {
   createDatabaseReadinessProvider,
   type DatabaseReadinessProvider,
@@ -38,6 +42,7 @@ export interface BuildAppOptions {
   readonly provider?: MarketDataProvider;
   readonly secProvider?: SecDataProvider;
   readonly readinessProvider?: DatabaseReadinessProvider;
+  readonly persistenceStore?: PersistenceStore;
   readonly quoteCacheTtlMs?: number;
   readonly quoteBatchConcurrency?: number;
   readonly logger?: boolean;
@@ -99,6 +104,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const secProvider = options.secProvider ?? createSecDataProvider(config);
   const readinessProvider =
     options.readinessProvider ?? createDatabaseReadinessProvider(config);
+  const persistenceStore = options.persistenceStore ?? createPersistenceStore(config);
   const app = Fastify({
     logger:
       options.logger === false
@@ -116,13 +122,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   app.addHook("onClose", async () => {
-    await readinessProvider.close();
+    await Promise.all([readinessProvider.close(), persistenceStore.close()]);
   });
 
   app.get("/api/health", async () => ({
     status: "ok",
     service: "next-years-monsters-api",
-    version: "0.3.0",
+    version: "0.4.0",
     timestamp: new Date().toISOString(),
     marketData: {
       provider: provider.name,
@@ -133,8 +139,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       configured: secProvider.configured,
     },
     database: {
-      provider: readinessProvider.name,
-      configured: readinessProvider.configured,
+      provider: persistenceStore.name,
+      configured: persistenceStore.configured,
     },
   }));
 
@@ -150,14 +156,33 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       userAgentExposed: false,
     },
     database: {
-      provider: readinessProvider.name,
-      configured: readinessProvider.configured,
+      provider: persistenceStore.name,
+      configured: persistenceStore.configured,
       connectionStringExposed: false,
     },
     timestamp: new Date().toISOString(),
   }));
 
   app.get("/api/readiness", async () => readinessProvider.getSnapshot());
+
+  app.get<{ Params: SymbolParams }>("/api/stored/:symbol", async (request, reply) => {
+    const symbol = normalizeTickerSymbol(request.params.symbol);
+    if (!symbol) return sendInvalidSymbol(reply);
+
+    const snapshot = await persistenceStore.getStoredCompany(symbol);
+    if (!snapshot) {
+      return reply.code(404).send({
+        error: "stored_company_not_found",
+        message: `No persisted record was found for ${symbol}.`,
+      });
+    }
+
+    return {
+      ...snapshot,
+      database: persistenceStore.name,
+      retrievedAt: new Date().toISOString(),
+    };
+  });
 
   app.get<{ Querystring: TickerQuery }>("/api/tickers", async (request, reply) => {
     const query = request.query.q?.trim() ?? "";
@@ -184,7 +209,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get<{ Params: SymbolParams }>("/api/quotes/:symbol", async (request, reply) => {
     const symbol = normalizeTickerSymbol(request.params.symbol);
     if (!symbol) return sendInvalidSymbol(reply);
-    return quoteService.getQuote(symbol);
+
+    const quote = await quoteService.getQuote(symbol);
+    if (persistenceStore.configured) {
+      await persistenceStore.saveQuote(quote).catch((error) => {
+        request.log.error({ error, symbol }, "Unable to persist quote snapshot");
+      });
+    }
+    return quote;
   });
 
   app.get<{ Querystring: SymbolsQuery }>("/api/quotes", async (request, reply) => {
@@ -223,6 +255,18 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     const results = await quoteService.getQuotes(parsed.symbols);
     const successCount = results.filter((result) => result.status === "ok").length;
 
+    if (persistenceStore.configured) {
+      const saveResults = await Promise.allSettled(
+        results
+          .filter((result) => result.status === "ok")
+          .map((result) => persistenceStore.saveQuote(result.quote)),
+      );
+      const failedSaves = saveResults.filter((result) => result.status === "rejected").length;
+      if (failedSaves > 0) {
+        request.log.error({ failedSaves }, "Unable to persist one or more batch quote snapshots");
+      }
+    }
+
     return {
       requestedCount: parsed.symbols.length,
       successCount,
@@ -237,7 +281,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get<{ Params: SymbolParams }>("/api/sec/company/:symbol", async (request, reply) => {
     const symbol = normalizeTickerSymbol(request.params.symbol);
     if (!symbol) return sendInvalidSymbol(reply);
-    return secProvider.getCompany(symbol);
+
+    const company = await secProvider.getCompany(symbol);
+    if (persistenceStore.configured) {
+      await persistenceStore.saveSecCompany(company).catch((error) => {
+        request.log.error({ error, symbol }, "Unable to persist SEC company record");
+      });
+    }
+    return company;
   });
 
   app.get<{ Params: SymbolParams; Querystring: LimitQuery }>(
@@ -247,7 +298,16 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       if (!symbol) return sendInvalidSymbol(reply);
 
       const limit = parseLimit(request.query.limit, 10, 50);
-      const filings = await secProvider.getRecentFilings(symbol, limit);
+      const [company, filings] = await Promise.all([
+        secProvider.getCompany(symbol),
+        secProvider.getRecentFilings(symbol, limit),
+      ]);
+
+      if (persistenceStore.configured) {
+        await persistenceStore.saveSecFilings(company, filings).catch((error) => {
+          request.log.error({ error, symbol }, "Unable to persist SEC filings");
+        });
+      }
 
       return {
         ticker: symbol,
@@ -262,7 +322,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get<{ Params: SymbolParams }>("/api/sec/facts/:symbol", async (request, reply) => {
     const symbol = normalizeTickerSymbol(request.params.symbol);
     if (!symbol) return sendInvalidSymbol(reply);
-    return secProvider.getCompanyFacts(symbol);
+
+    const summary = await secProvider.getCompanyFacts(symbol);
+    if (persistenceStore.configured) {
+      await persistenceStore.saveSecFacts(summary).catch((error) => {
+        request.log.error({ error, symbol }, "Unable to persist SEC company facts");
+      });
+    }
+    return summary;
   });
 
   app.setErrorHandler((error, request, reply) => {
