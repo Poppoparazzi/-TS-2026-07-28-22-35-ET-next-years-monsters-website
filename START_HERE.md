@@ -1,6 +1,6 @@
 # START HERE — Next Year’s Monsters™ Website
 
-<!-- TS: 2026-08-02 14:46 ET -->
+<!-- TS: 2026-08-02 15:20 ET -->
 
 This file is the permanent starting point for every future ChatGPT or Codex session working on this website.
 
@@ -37,11 +37,14 @@ Do not rely on prior chat memory as the source of truth. The repository and its 
 - A guarded startup pilot refresh saves official SEC identity, filings, and facts for missing or stale pilot records.
 - `MARKET_DATA_PROVIDER` remains deliberately set to `unconfigured`; no live or delayed quote provider is currently connected.
 - The 15 companies remain the VCL™ demonstration/pilot set. They are not represented as a freshly verified live ranking of today’s top 15 stocks.
-- The repository now contains `BULK_2000_PLAN.md`. New coverage must use a repeatable bulk pipeline rather than handcrafted stock pages.
-- Backend version `0.5.0` now includes an official SEC universe parser, bulk database importer, and `/api/universe/status` endpoint.
-- Render is configured to import the first 100 SEC companies automatically at startup through `AUTO_IMPORT_UNIVERSE_LIMIT=100`.
-- The importer reuses the existing `companies` table, normalizes tickers and CIKs, deduplicates ticker/CIK collisions, and imports the selected universe in one database transaction.
-- `/api/universe/status?limit=100` reports universe size, SEC identity coverage, filing coverage, fact coverage, quote coverage, rating coverage, fully complete count, incomplete count, and per-company status.
+- The repository contains `BULK_2000_PLAN.md`. New coverage must use a repeatable bulk pipeline rather than handcrafted stock pages.
+- Backend version `0.6.0` includes the official SEC universe parser, bulk importer, retry-safe SEC worker queue, and `/api/universe/status` endpoint.
+- Render is configured to import the first 100 SEC companies automatically through `AUTO_IMPORT_UNIVERSE_LIMIT=100`.
+- Render is also configured to process a 100-company SEC evidence batch through `AUTO_SEC_BATCH_SIZE=100`, with concurrency `3` and a 24-hour stale threshold.
+- The importer reuses the existing `companies` table, normalizes tickers and CIKs, deduplicates ticker/CIK collisions, and imports the selected universe in one transaction.
+- The `company_pipeline_status` table records queued, processing, complete, partial, failed, and stale SEC states, attempt counts, retry times, last errors, and completion timestamps.
+- The SEC batch queue claims work safely with PostgreSQL row locking, recovers abandoned processing jobs, and retries failures without stopping successful companies.
+- `/api/universe/status?limit=100` reports universe size, queued count, processing count, SEC complete count, partial count, failed count, stale count, SEC identity coverage, filing coverage, fact coverage, quote coverage, rating coverage, and per-company status.
 - The same endpoint accepts limits up to 2,500, allowing the same machinery to report 100, 500, and 2,000-company milestones.
 - Do not fabricate live ratings, live quotes, or current news.
 
@@ -56,19 +59,23 @@ Do not rely on prior chat memory as the source of truth. The repository and its 
 7. Added the official SEC universe parser and 100-company importer.
 8. Added the automatic Render startup import for the first 100 companies.
 9. Added the bulk universe status endpoint for up to 2,500 companies.
-10. Added parser and endpoint tests.
-11. Backend TypeScript, tests, and static-site checks passed for the bulk-universe milestone:
+10. Added the retry-safe SEC pipeline table, worker queue, controlled-concurrency processor, manual command, and automatic startup batch.
+11. Added a deliberate one-company failure test proving the other companies continue successfully.
+12. Bulk-universe validation passed:
     - Phase 3 Backend Checks run `30761148428`
     - Static site checks run `30761148461`
+13. SEC batch-factory validation passed:
+    - Phase 3 Backend Checks run `30761443871`
+    - Static site checks run `30761443883`
 
 ## Immediate next work
 
-1. Build a batch SEC evidence processor that selects imported companies missing filings or facts and refreshes them with controlled concurrency, retries, and failure isolation.
-2. Add bulk-processing progress fields: queued, processing, SEC complete, failed, stale, and last error.
-3. Confirm Render deployed backend version `0.5.0` and imported the first 100 companies.
-4. Confirm `SEC_USER_AGENT` is set in Render. Automatic SEC work cannot run without it.
-5. Inspect `/api/universe/status?limit=100` after deployment and verify the stored counts.
-6. Increase the same pipeline checkpoints from 100 to 500 and then 2,000 only after the 100-company run is proven.
+1. Add a public 100-Stock Factory Status page that reads `/api/universe/status?limit=100` and displays queued, processing, complete, partial, failed, and stale counts.
+2. Confirm Render deployed backend version `0.6.0`, applied migration `999_bulk_company_pipeline_status.sql`, imported the first 100 companies, and ran the first SEC batch.
+3. Confirm `SEC_USER_AGENT` is set in Render. Automatic SEC work cannot run without it.
+4. Inspect the production `/api/universe/status?limit=100` results and verify stored company, filing, fact, retry, and failure counts.
+5. Increase the same pipeline checkpoint from 100 to 500 only after the 100-company production run is proven.
+6. Increase from 500 to 2,000 only after the same queue and retry behavior remains stable.
 7. Connect a licensed live/delayed quote source before producing current Monster Ratings™.
 8. Update this file after each completed milestone and commit every completed change immediately to `main`.
 
