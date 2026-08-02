@@ -1,4 +1,4 @@
-// TS: 2026-08-02 10:27 ET
+// TS: 2026-08-02 13:31 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -159,6 +159,7 @@ function ensureMarketExplorerNavLink() {
   ensureNavLink(navigation, "market-pulse.html", "MARKET PULSE", "Open Market Pulse", "market-pulse.html");
   ensureNavLink(navigation, "news-radar.html", "NEWS RADAR", "Open News Radar", "news-radar.html");
   ensureNavLink(navigation, "coverage-universe.html", "COVERAGE", "Open the stock coverage universe", "coverage-universe.html");
+  ensureNavLink(navigation, "verification-ledger.html", "VERIFICATION", "Open the 15-stock verification ledger", "verification-ledger.html");
 }
 
 async function createMarketTickerStrip() {
