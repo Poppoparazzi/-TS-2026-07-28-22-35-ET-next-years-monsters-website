@@ -1,4 +1,4 @@
-// TS: 2026-08-02 15:12 ET
+// TS: 2026-08-02 17:20 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -12,11 +12,12 @@ import type {
   PilotRefreshResult,
 } from "../src/jobs/pilot-refresh.js";
 import { UnconfiguredMarketDataProvider } from "../src/providers/unconfigured.js";
-import type {
-  SecCompany,
-  SecCompanyFactsSummary,
-  SecDataProvider,
-  SecFilingSummary,
+import {
+  type SecCompany,
+  type SecCompanyFactsSummary,
+  type SecDataProvider,
+  SecEdgarRequestError,
+  type SecFilingSummary,
 } from "../src/sec/types.js";
 import type {
   SecBatchCandidate,
@@ -42,6 +43,7 @@ class MemoryQueue implements SecBatchQueue {
   public readonly configured = true;
   public readonly completed: string[] = [];
   public readonly failed: { ticker: string; message: string }[] = [];
+  public readonly unresolved: { ticker: string; message: string }[] = [];
   public closed = false;
 
   public async claim(
@@ -51,6 +53,7 @@ class MemoryQueue implements SecBatchQueue {
     return Object.freeze([
       Object.freeze({ ticker: "AAPL", attemptCount: 1 }),
       Object.freeze({ ticker: "FAIL", attemptCount: 2 }),
+      Object.freeze({ ticker: "NOSEC", attemptCount: 1 }),
       Object.freeze({ ticker: "NVDA", attemptCount: 1 }),
     ]);
   }
@@ -61,6 +64,10 @@ class MemoryQueue implements SecBatchQueue {
 
   public async markFailed(ticker: string, message: string): Promise<void> {
     this.failed.push({ ticker, message });
+  }
+
+  public async markUnresolved(ticker: string, message: string): Promise<void> {
+    this.unresolved.push({ ticker, message });
   }
 
   public async close(): Promise<void> {
@@ -127,6 +134,7 @@ async function refreshOverride(
   _dependencies: PilotRefreshDependencies,
 ): Promise<PilotRefreshResult> {
   if (symbol === "FAIL") throw new Error("Synthetic SEC failure.");
+  if (symbol === "NOSEC") throw new SecEdgarRequestError(404);
 
   return Object.freeze({
     symbol,
@@ -138,7 +146,7 @@ async function refreshOverride(
   });
 }
 
-test("bulk SEC workers isolate one failure and complete the remaining companies", async () => {
+test("bulk SEC workers isolate transient failures and permanently classify SEC 404s", async () => {
   const queue = new MemoryQueue();
   const persistenceStore = new MemoryPersistence();
 
@@ -155,10 +163,15 @@ test("bulk SEC workers isolate one failure and complete the remaining companies"
   );
 
   assert.equal(summary.status, "completed");
-  assert.equal(summary.claimedCount, 3);
+  assert.equal(summary.claimedCount, 4);
   assert.equal(summary.succeededCount, 2);
+  assert.equal(summary.unresolvedCount, 1);
   assert.equal(summary.failedCount, 1);
+  assert.deepEqual(summary.unresolvedTickers, ["NOSEC"]);
   assert.deepEqual(queue.completed.sort(), ["AAPL", "NVDA"]);
+  assert.deepEqual(queue.unresolved, [
+    { ticker: "NOSEC", message: "SEC EDGAR request failed with HTTP 404." },
+  ]);
   assert.deepEqual(queue.failed, [
     { ticker: "FAIL", message: "Synthetic SEC failure." },
   ]);
