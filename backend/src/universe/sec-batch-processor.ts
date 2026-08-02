@@ -1,4 +1,4 @@
-// TS: 2026-08-02 15:10 ET
+// TS: 2026-08-02 17:15 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -33,9 +33,11 @@ export interface SecBatchRunSummary {
   readonly requestedBatchSize: number;
   readonly claimedCount: number;
   readonly succeededCount: number;
+  readonly unresolvedCount: number;
   readonly failedCount: number;
   readonly concurrency: number;
   readonly maxAgeHours: number;
+  readonly unresolvedTickers: readonly string[];
   readonly failures: readonly SecBatchFailure[];
   readonly reason: string | null;
   readonly completedAt: string;
@@ -58,6 +60,15 @@ function boundedInteger(value: number, minimum: number, maximum: number): number
 
 function safeMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown SEC batch processing failure.";
+}
+
+function isPermanentSecNotFound(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error &&
+    error.statusCode === 404
+  );
 }
 
 export async function runSecUniverseBatch(
@@ -83,9 +94,11 @@ export async function runSecUniverseBatch(
         requestedBatchSize: batchSize,
         claimedCount: 0,
         succeededCount: 0,
+        unresolvedCount: 0,
         failedCount: 0,
         concurrency,
         maxAgeHours,
+        unresolvedTickers: Object.freeze([]),
         failures: Object.freeze([]),
         reason: "DATABASE_URL and SEC_USER_AGENT are required for bulk SEC processing.",
         completedAt: new Date().toISOString(),
@@ -94,7 +107,9 @@ export async function runSecUniverseBatch(
 
     const candidates = [...(await queue.claim(batchSize, maxAgeHours))];
     const failures: SecBatchFailure[] = [];
+    const unresolvedTickers: string[] = [];
     let succeededCount = 0;
+    let unresolvedCount = 0;
     let failedCount = 0;
     let nextIndex = 0;
 
@@ -116,6 +131,14 @@ export async function runSecUniverseBatch(
           succeededCount += 1;
         } catch (error) {
           const message = safeMessage(error);
+
+          if (isPermanentSecNotFound(error)) {
+            unresolvedCount += 1;
+            unresolvedTickers.push(candidate.ticker);
+            await queue.markUnresolved(candidate.ticker, message);
+            continue;
+          }
+
           failedCount += 1;
           failures.push(
             Object.freeze({
@@ -136,9 +159,11 @@ export async function runSecUniverseBatch(
       requestedBatchSize: batchSize,
       claimedCount: candidates.length,
       succeededCount,
+      unresolvedCount,
       failedCount,
       concurrency,
       maxAgeHours,
+      unresolvedTickers: Object.freeze(unresolvedTickers),
       failures: Object.freeze(failures),
       reason: null,
       completedAt: new Date().toISOString(),
