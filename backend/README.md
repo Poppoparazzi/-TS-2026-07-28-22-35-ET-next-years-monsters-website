@@ -1,6 +1,6 @@
 # Next Year’s Monsters™ API
 
-<!-- TS: 2026-08-01 21:22 ET -->
+<!-- TS: 2026-08-01 21:52 ET -->
 
 This folder contains the provider-neutral TypeScript backend for the live-data phase of Monster Check™.
 
@@ -27,12 +27,13 @@ Implemented:
 - PostgreSQL schema, pilot seed data, live-readiness views, and checksum-protected migration runner.
 - PostgreSQL persistence layer for companies, quotes, SEC filings, and selected SEC facts.
 - Automatic persistence after successful quote, SEC company, filing, and fact retrieval.
+- Tested pilot refresh command for AAPL, selected tickers, or the original 15-stock pilot.
 - Database-backed pilot and Top 25 readiness API with no connection-string exposure.
 - Render Blueprint declaration for a private PostgreSQL database, automatic migrations, and pre-start database verification.
 - Honest feed and SEC-context disclosures.
 - Safe unconfigured-provider behavior when credentials, the SEC user agent, or the database are absent.
-- Automated route, secret-exposure, malformed-symbol, batch-limit, cache, partial-failure, persistence, stored-retrieval, quote-normalization, missing-price, SEC-filing, SEC-fact, and readiness tests.
-- GitHub Actions workflow for typechecking and tests on backend changes.
+- Automated route, secret-exposure, malformed-symbol, batch-limit, cache, partial-failure, persistence, stored-retrieval, quote-normalization, missing-price, SEC-filing, SEC-fact, pilot-refresh, and readiness tests.
+- GitHub Actions workflow for typechecking and tests on backend pushes and pull requests.
 - Public runtime configuration file with no credentials.
 - Landing-page and dedicated Monster Check™ live quote and latest-filing client.
 - Live Data Rollout Board prepared to read saved readiness directly from the API.
@@ -63,6 +64,28 @@ Not completed or confirmed yet:
 
 The development server defaults to `http://localhost:8787`.
 
+## Pilot refresh commands
+
+Refresh AAPL and verify that the saved record can be read back:
+
+```bash
+npm run pilot:refresh -- AAPL
+```
+
+Refresh selected tickers:
+
+```bash
+npm run pilot:refresh -- AAPL MSFT NVDA
+```
+
+Refresh the original 15-stock pilot:
+
+```bash
+npm run pilot:refresh -- --all
+```
+
+The command requires `DATABASE_URL` and `SEC_USER_AGENT`. It saves SEC identity, recent filings, and selected company facts. It saves a quote only when an approved market-data provider is configured. A missing or failed quote provider does not erase successful SEC progress, and the command fails if the saved company cannot be read back from PostgreSQL.
+
 ## Safety rules
 
 - Never commit `.env`, `DATABASE_URL`, or provider keys.
@@ -91,7 +114,7 @@ That command performs:
 - Test TypeScript checking.
 - Node test execution through `tsx`.
 
-The GitHub Actions workflow `.github/workflows/backend-checks.yml` runs the same command whenever backend files change on `main`.
+The GitHub Actions workflow `.github/workflows/backend-checks.yml` runs the same command whenever backend files change on `main` or in a pull request targeting `main`.
 
 ## Expected behavior without credentials
 
@@ -131,10 +154,9 @@ With a verified public API address configured:
 
 ## Next implementation
 
-1. Confirm the backend typechecks and tests are green.
-2. Confirm Render synchronized the Blueprint, created PostgreSQL, ran migrations, and passed `db:verify`.
-3. Retrieve AAPL through the quote and SEC endpoints so the persistence layer saves the records.
-4. Restart or redeploy the API.
-5. Confirm `/api/stored/AAPL` returns the same saved records after restart.
-6. Repeat the persistence proof once more.
-7. Begin Monster Rating™ Version 1 only after the live-data path passes twice.
+1. Confirm Render synchronized the Blueprint, created PostgreSQL, ran migrations, and passed `db:verify`.
+2. Run `npm run pilot:refresh -- AAPL` inside the configured Render service.
+3. Restart or redeploy the API.
+4. Confirm `/api/stored/AAPL` returns the same saved records after restart.
+5. Repeat the persistence proof once more.
+6. Begin Monster Rating™ Version 1 only after the live-data path passes twice.
