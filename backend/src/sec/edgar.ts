@@ -1,4 +1,4 @@
-// TS: 2026-08-01 15:25 ET
+// TS: 2026-08-02 17:10 ET
 
 import {
   type SecCompany,
@@ -7,6 +7,7 @@ import {
   type SecFactSnapshot,
   type SecFilingSummary,
   SecCompanyNotFoundError,
+  SecEdgarRequestError,
 } from "./types.js";
 
 const SEC_FILES_BASE_URL = "https://www.sec.gov/files";
@@ -251,7 +252,7 @@ export class SecEdgarDataProvider implements SecDataProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`SEC EDGAR request failed with HTTP ${response.status}.`);
+        throw new SecEdgarRequestError(response.status);
       }
 
       return (await response.json()) as T;
@@ -294,8 +295,6 @@ export class SecEdgarDataProvider implements SecDataProvider {
         continue;
       }
 
-      // The SEC feed can contain duplicate ticker rows for a public parent and a
-      // newly registered subsidiary. Preserve the SEC's first (primary) mapping.
       if (!byTicker.has(ticker)) {
         byTicker.set(ticker, {
           ticker,
