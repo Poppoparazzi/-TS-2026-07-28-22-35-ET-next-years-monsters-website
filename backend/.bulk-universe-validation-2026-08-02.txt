@@ -1,3 +1,0 @@
-TS: 2026-08-02 14:40 ET
-
-Temporary validation marker for the 100-company bulk universe importer and status endpoint.
