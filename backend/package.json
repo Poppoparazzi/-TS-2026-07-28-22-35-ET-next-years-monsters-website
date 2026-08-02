@@ -16,7 +16,8 @@
     "test": "node --import tsx --test test/*.test.ts",
     "check": "npm run typecheck && npm run test:typecheck && npm test",
     "db:migrate": "tsx src/database/migrate.ts",
-    "db:verify": "tsx src/database/verify.ts"
+    "db:verify": "tsx src/database/verify.ts",
+    "pilot:refresh": "tsx src/jobs/run-pilot-refresh.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
