@@ -1,4 +1,4 @@
-// TS: 2026-08-02 16:07 ET
+// TS: 2026-08-02 16:12 ET
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
@@ -6,6 +6,7 @@ import { refreshStalePilotOnStartup } from "./jobs/startup-pilot-refresh.js";
 import { runSecUniverseBatchOnStartup } from "./jobs/startup-sec-universe-batch.js";
 import { importUniverseOnStartup } from "./jobs/startup-universe-import.js";
 import {
+  getStartupStatusSnapshot,
   markStartupJobCompleted,
   markStartupJobFailed,
   markStartupJobRunning,
@@ -58,6 +59,8 @@ async function runStartupJobs(
 async function start(): Promise<void> {
   const config = loadConfig();
   const app = await buildApp();
+
+  app.get("/api/startup-status", async () => getStartupStatusSnapshot());
 
   try {
     await app.listen({
