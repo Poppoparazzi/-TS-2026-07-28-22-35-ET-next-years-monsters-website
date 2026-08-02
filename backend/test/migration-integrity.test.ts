@@ -1,4 +1,4 @@
-// TS: 2026-08-02 15:47 ET
+// TS: 2026-08-02 15:51 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -10,7 +10,7 @@ import {
 
 interface QueryCall {
   readonly text: string;
-  readonly values?: readonly unknown[];
+  readonly values: readonly unknown[] | undefined;
 }
 
 class FakeIntegrityClient implements MigrationIntegrityClient {
