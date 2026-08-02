@@ -1,4 +1,4 @@
-// TS: 2026-07-30 09:05 ET
+// TS: 2026-08-02 10:01 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -39,9 +39,54 @@ function ensureMarketTickerStyles() {
   document.head.append(link);
 }
 
+function currentNymPageName() {
+  const pathname = window.location.pathname || "";
+  const last = pathname.split("/").filter(Boolean).pop() || "index.html";
+  return last === "" ? "index.html" : last;
+}
+
+function ensureCoreNavigationLinks(navigation) {
+  const currentPage = currentNymPageName();
+
+  let homeLink = [...navigation.querySelectorAll("a")].find((item) => {
+    const href = item.getAttribute("href") || "";
+    return href === "index.html" || href.endsWith("/index.html") || href === "./";
+  });
+  if (!homeLink) {
+    homeLink = document.createElement("a");
+    homeLink.href = "index.html";
+    navigation.prepend(homeLink);
+  }
+  homeLink.textContent = "HOME";
+  homeLink.title = "Return to the Next Year’s Monsters homepage";
+  homeLink.setAttribute("aria-label", "Return to the homepage");
+  if (currentPage === "index.html") {
+    homeLink.classList.add("active");
+    homeLink.setAttribute("aria-current", "page");
+  }
+
+  let startLink = [...navigation.querySelectorAll("a")].find((item) =>
+    item.getAttribute("href")?.includes("start-here.html"),
+  );
+  if (!startLink) {
+    startLink = document.createElement("a");
+    startLink.href = "start-here.html";
+    homeLink.insertAdjacentElement("afterend", startLink);
+  }
+  startLink.textContent = "START HERE";
+  startLink.title = "Open the plain-English guide to using this website";
+  startLink.setAttribute("aria-label", "Open the Start Here website guide");
+  if (currentPage === "start-here.html") {
+    startLink.classList.add("active");
+    startLink.setAttribute("aria-current", "page");
+  }
+}
+
 function ensureMarketExplorerNavLink() {
   const navigation = document.querySelector("nav.nav-links");
   if (!navigation) return;
+
+  ensureCoreNavigationLinks(navigation);
 
   let link = [...navigation.querySelectorAll("a")].find((item) =>
     item.getAttribute("href")?.includes("market-explorer.html"),
@@ -54,7 +99,7 @@ function ensureMarketExplorerNavLink() {
   link.textContent = "FULL CHARTS";
   link.title = "Open the full white-background Market Explorer charts";
   link.setAttribute("aria-label", "Open full stock charts in Market Explorer");
-  if (window.location.pathname.endsWith("market-explorer.html")) {
+  if (currentNymPageName() === "market-explorer.html") {
     link.classList.add("active");
     link.setAttribute("aria-current", "page");
   }
@@ -68,7 +113,7 @@ function ensureMarketExplorerNavLink() {
     pulseLink.textContent = "MARKET PULSE";
     navigation.append(pulseLink);
   }
-  if (window.location.pathname.endsWith("market-pulse.html")) {
+  if (currentNymPageName() === "market-pulse.html") {
     pulseLink.classList.add("active");
     pulseLink.setAttribute("aria-current", "page");
   }
@@ -82,7 +127,7 @@ function ensureMarketExplorerNavLink() {
     newsLink.textContent = "NEWS RADAR";
     navigation.append(newsLink);
   }
-  if (window.location.pathname.endsWith("news-radar.html")) {
+  if (currentNymPageName() === "news-radar.html") {
     newsLink.classList.add("active");
     newsLink.setAttribute("aria-current", "page");
   }
@@ -96,7 +141,7 @@ function ensureMarketExplorerNavLink() {
     coverageLink.textContent = "COVERAGE";
     navigation.append(coverageLink);
   }
-  if (window.location.pathname.endsWith("coverage-universe.html")) {
+  if (currentNymPageName() === "coverage-universe.html") {
     coverageLink.classList.add("active");
     coverageLink.setAttribute("aria-current", "page");
   }
