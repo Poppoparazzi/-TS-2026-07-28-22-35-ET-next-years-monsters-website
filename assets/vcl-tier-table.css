@@ -1,11 +1,32 @@
-/* TS: 2026-08-02 13:26 ET */
+/* TS: 2026-08-02 13:31 ET */
 
 .vcl-sort-note {
-  margin: 14px 0 22px;
+  margin: 14px 0 14px;
   color: #cbd2cc;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: .025em;
+}
+
+.vcl-ledger-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin: 0 0 24px;
+  padding: 0 18px;
+  border: 2px solid #080c0b;
+  background: #b8f34a;
+  color: #080c0b;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+.vcl-ledger-link:hover,
+.vcl-ledger-link:focus-visible {
+  background: #d9aa31;
 }
 
 .vcl-tier-table {
