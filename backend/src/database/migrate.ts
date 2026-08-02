@@ -1,10 +1,11 @@
-// TS: 2026-07-29 16:19 ET
+// TS: 2026-08-02 15:46 ET
 
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { repairKnownMigrationChecksum } from "./migration-integrity.js";
 
 const { Client } = pg;
 type DatabaseClient = InstanceType<typeof Client>;
@@ -128,9 +129,22 @@ async function migrate(): Promise<void> {
 
       if (priorChecksum) {
         if (priorChecksum !== migrationChecksum) {
-          throw new Error(
-            `Applied migration ${filename} has changed. Add a new migration instead of editing history.`,
+          const repaired = await repairKnownMigrationChecksum(
+            client,
+            filename,
+            priorChecksum,
+            migrationChecksum,
           );
+
+          if (!repaired) {
+            throw new Error(
+              `Applied migration ${filename} has changed. Add a new migration instead of editing history.`,
+            );
+          }
+
+          applied.set(filename, migrationChecksum);
+          console.log(`REPAIRED ${filename}`);
+          continue;
         }
 
         console.log(`SKIP ${filename}`);
