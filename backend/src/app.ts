@@ -1,4 +1,4 @@
-// TS: 2026-08-02 14:32 ET
+// TS: 2026-08-02 15:19 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -136,7 +136,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get("/api/health", async () => ({
     status: "ok",
     service: "next-years-monsters-api",
-    version: "0.5.0",
+    version: "0.6.0",
     timestamp: new Date().toISOString(),
     marketData: {
       provider: provider.name,
