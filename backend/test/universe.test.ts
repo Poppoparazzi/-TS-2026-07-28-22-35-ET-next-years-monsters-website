@@ -1,4 +1,4 @@
-// TS: 2026-08-03 14:02 ET
+// TS: 2026-08-03 17:39 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -7,6 +7,7 @@ import type { AppConfig } from "../src/config.js";
 import { parseSecUniversePayload } from "../src/universe/sec-source.js";
 import {
   DEACTIVATE_UNIVERSE_SQL,
+  RELEASE_INACTIVE_CIK_SQL,
   UPSERT_UNIVERSE_COMPANY_SQL,
 } from "../src/universe/store.js";
 import type {
@@ -102,9 +103,13 @@ test("SEC universe parser preserves source priority, limits, and deduplicates ti
   assert.equal(companies[0]?.sourceUrl, "https://example.test/sec-universe.json");
 });
 
-test("bulk universe import replaces the active candidate set and records source priority", () => {
+test("bulk universe import replaces the active candidate set and safely transfers inactive CIKs", () => {
   assert.match(DEACTIVATE_UNIVERSE_SQL, /UPDATE companies/);
   assert.match(DEACTIVATE_UNIVERSE_SQL, /SET is_active = false/);
+  assert.match(RELEASE_INACTIVE_CIK_SQL, /UPDATE companies/);
+  assert.match(RELEASE_INACTIVE_CIK_SQL, /sec_cik = NULL/);
+  assert.match(RELEASE_INACTIVE_CIK_SQL, /is_active = false/);
+  assert.match(RELEASE_INACTIVE_CIK_SQL, /ticker <> \$2::varchar\(15\)/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$1::varchar\(15\)/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$2::text/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$3::text/);
