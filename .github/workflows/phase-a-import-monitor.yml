@@ -1,0 +1,128 @@
+# TS: 2026-08-02 22:27 ET
+
+name: Phase A import monitor
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-phase-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Watch Render and verify the import-only 2,000-company state
+        run: |
+          node --input-type=module <<'NODE'
+          const apiBaseUrl = "https://next-years-monsters-api.onrender.com";
+          const expectedCommit = "ae825b0a401f96991a3a38d9bccc6d8597e1ae20";
+          const attemptCount = 20;
+          const delayMs = 30_000;
+
+          function sleep(milliseconds) {
+            return new Promise((resolve) => setTimeout(resolve, milliseconds));
+          }
+
+          async function requestJson(path) {
+            const response = await fetch(`${apiBaseUrl}${path}`, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(70_000),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+              throw new Error(`${path} returned HTTP ${response.status}.`);
+            }
+            return payload;
+          }
+
+          let lastSummary = null;
+
+          for (let attempt = 1; attempt <= attemptCount; attempt += 1) {
+            const [health, startup, status] = await Promise.all([
+              requestJson("/api/health"),
+              requestJson("/api/startup-status"),
+              requestJson("/api/universe/status?limit=2000"),
+            ]);
+
+            const summary = {
+              attempt,
+              checkedAt: new Date().toISOString(),
+              apiVersion: health?.version || null,
+              deploymentCommit: startup?.deploymentCommit || null,
+              expectedCommit,
+              startupImportState: startup?.jobs?.universeImport?.state || null,
+              startupImportSummary: startup?.jobs?.universeImport?.summary || null,
+              startupSecBatchState: startup?.jobs?.secUniverseBatch?.state || null,
+              startupSecBatchSummary: startup?.jobs?.secUniverseBatch?.summary || null,
+              universeSize: Number(status.universeSize || 0),
+              examinedCount: Number(status.examinedCount || 0),
+              queuedCount: Number(status.queuedCount || 0),
+              processingCount: Number(status.processingCount || 0),
+              secCompleteCount: Number(status.secCompleteCount || 0),
+              unresolvedCount: Number(status.unresolvedCount || 0),
+              failedCount: Number(status.failedCount || 0),
+              partialCount: Number(status.partialCount || 0),
+              staleCount: Number(status.staleCount || 0),
+              filingCompleteCount: Number(status.filingCompleteCount || 0),
+              factsCompleteCount: Number(status.factsCompleteCount || 0),
+              quoteCompleteCount: Number(status.quoteCompleteCount || 0),
+              ratingCompleteCount: Number(status.ratingCompleteCount || 0),
+              generatedAt: status.generatedAt || null,
+            };
+
+            lastSummary = summary;
+            console.log(`Phase A production check ${attempt}/${attemptCount}:`);
+            console.log(JSON.stringify(summary, null, 2));
+
+            const importCompleted =
+              summary.startupImportState === "completed" &&
+              Number(summary.startupImportSummary?.requestedLimit || 0) === 2000 &&
+              Number(summary.startupImportSummary?.importedCount || 0) === 2000;
+
+            const secProcessingDisabled =
+              summary.startupSecBatchState === "completed" &&
+              summary.startupSecBatchSummary?.status === "skipped" &&
+              Number(summary.startupSecBatchSummary?.requestedBatchSize || 0) === 0;
+
+            const phaseAComplete =
+              summary.deploymentCommit === expectedCommit &&
+              importCompleted &&
+              secProcessingDisabled &&
+              summary.universeSize >= 2000 &&
+              summary.examinedCount === 2000 &&
+              summary.queuedCount === 1500 &&
+              summary.processingCount === 0 &&
+              summary.secCompleteCount + summary.unresolvedCount === 500 &&
+              summary.failedCount === 0 &&
+              summary.partialCount === 0 &&
+              summary.staleCount === 0 &&
+              summary.filingCompleteCount === 450 &&
+              summary.factsCompleteCount === 400 &&
+              summary.quoteCompleteCount === 0 &&
+              summary.ratingCompleteCount === 0;
+
+            if (phaseAComplete) {
+              console.log("Phase A is complete: 2,000 imported, 1,500 queued, and SEC processing remained disabled.");
+              process.exit(0);
+            }
+
+            if (attempt < attemptCount) await sleep(delayMs);
+          }
+
+          throw new Error(
+            `Phase A did not reach the verified import-only state during the monitor window: ${JSON.stringify(lastSummary)}`,
+          );
+          NODE
