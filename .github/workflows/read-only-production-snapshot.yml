@@ -1,0 +1,132 @@
+# TS: 2026-08-03 17:22 ET
+
+name: Read-only production snapshot
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Read live Render production counts
+        run: |
+          node --input-type=module <<'NODE'
+          import { writeFile } from "node:fs/promises";
+
+          const apiBaseUrl = "https://next-years-monsters-api.onrender.com";
+          const attempts = 12;
+          const delayMs = 30_000;
+
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+          async function requestJson(path) {
+            const response = await fetch(`${apiBaseUrl}${path}`, {
+              headers: {
+                Accept: "application/json",
+                "User-Agent": "NextYearsMonsters-ReadOnly-Production-Snapshot/1.0",
+              },
+              signal: AbortSignal.timeout(90_000),
+            });
+            const text = await response.text();
+            let payload = null;
+            try {
+              payload = JSON.parse(text);
+            } catch {
+              throw new Error(`${path} returned non-JSON HTTP ${response.status}: ${text.slice(0, 180)}`);
+            }
+            if (!response.ok) {
+              throw new Error(`${path} returned HTTP ${response.status}: ${JSON.stringify(payload).slice(0, 180)}`);
+            }
+            return payload;
+          }
+
+          function counts(payload) {
+            return {
+              universeSize: Number(payload?.universeSize || 0),
+              examinedCount: Number(payload?.examinedCount || 0),
+              queuedCount: Number(payload?.queuedCount || 0),
+              processingCount: Number(payload?.processingCount || 0),
+              secCompleteCount: Number(payload?.secCompleteCount || 0),
+              unresolvedCount: Number(payload?.unresolvedCount || 0),
+              failedCount: Number(payload?.failedCount || 0),
+              partialCount: Number(payload?.partialCount || 0),
+              staleCount: Number(payload?.staleCount || 0),
+              filingCompleteCount: Number(payload?.filingCompleteCount || 0),
+              factsCompleteCount: Number(payload?.factsCompleteCount || 0),
+              quoteCompleteCount: Number(payload?.quoteCompleteCount || 0),
+              ratingCompleteCount: Number(payload?.ratingCompleteCount || 0),
+            };
+          }
+
+          let lastError = null;
+          for (let attempt = 1; attempt <= attempts; attempt += 1) {
+            try {
+              // Wake the free Render service first, then read the three production views.
+              const health = await requestJson("/api/health");
+              const startup = await requestJson("/api/startup-status");
+              const reserve = await requestJson("/api/universe/status?limit=2300");
+              const published = await requestJson("/api/universe/status?limit=2000");
+
+              const snapshot = {
+                checkedAt: new Date().toISOString(),
+                attempt,
+                health: {
+                  version: health?.version || null,
+                  databaseConfigured: Boolean(health?.database?.configured),
+                  secConfigured: Boolean(health?.sec?.configured),
+                  universeConfigured: Boolean(health?.universe?.configured),
+                },
+                startup: {
+                  deploymentCommit: startup?.deploymentCommit || null,
+                  importState: startup?.jobs?.universeImport?.state || null,
+                  importSummary: startup?.jobs?.universeImport?.summary || null,
+                  batchState: startup?.jobs?.secUniverseBatch?.state || null,
+                  batchSummary: startup?.jobs?.secUniverseBatch?.summary || null,
+                },
+                reserve2300: counts(reserve),
+                public2000: counts(published),
+              };
+
+              snapshot.reconciliation = {
+                reserveTerminal: snapshot.reserve2300.secCompleteCount + snapshot.reserve2300.unresolvedCount,
+                reserveOutstanding: snapshot.reserve2300.queuedCount + snapshot.reserve2300.processingCount + snapshot.reserve2300.failedCount + snapshot.reserve2300.partialCount + snapshot.reserve2300.staleCount,
+                publicTerminal: snapshot.public2000.secCompleteCount + snapshot.public2000.unresolvedCount,
+                publicOutstanding: snapshot.public2000.queuedCount + snapshot.public2000.processingCount + snapshot.public2000.failedCount + snapshot.public2000.partialCount + snapshot.public2000.staleCount,
+                publicHas2000Complete: snapshot.public2000.examinedCount === 2000 && snapshot.public2000.secCompleteCount === 2000,
+              };
+
+              await writeFile("production-status.json", `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+              console.log("NYM_LIVE_PRODUCTION_SNAPSHOT");
+              console.log(JSON.stringify(snapshot, null, 2));
+              process.exit(0);
+            } catch (error) {
+              lastError = error instanceof Error ? error.message : String(error);
+              console.log(`Read attempt ${attempt}/${attempts} failed: ${lastError}`);
+              if (attempt < attempts) await sleep(delayMs);
+            }
+          }
+
+          const failure = {
+            checkedAt: new Date().toISOString(),
+            error: lastError || "Unknown production snapshot failure",
+          };
+          await writeFile("production-status.json", `${JSON.stringify(failure, null, 2)}\n`, "utf8");
+          throw new Error(`Unable to read the live production endpoints after ${attempts} attempts: ${failure.error}`);
+          NODE
+
+      - name: Upload production snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nym-production-status
+          path: production-status.json
+          if-no-files-found: error
+          retention-days: 7
