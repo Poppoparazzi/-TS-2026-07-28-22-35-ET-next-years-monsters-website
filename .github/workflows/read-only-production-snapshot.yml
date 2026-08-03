@@ -1,4 +1,4 @@
-# TS: 2026-08-03 17:22 ET
+# TS: 2026-08-03 17:28 ET
 
 name: Read-only production snapshot
 
@@ -6,6 +6,11 @@ on:
   pull_request:
     branches:
       - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   workflow_dispatch:
 
 permissions:
@@ -69,7 +74,6 @@ jobs:
           let lastError = null;
           for (let attempt = 1; attempt <= attempts; attempt += 1) {
             try {
-              // Wake the free Render service first, then read the three production views.
               const health = await requestJson("/api/health");
               const startup = await requestJson("/api/startup-status");
               const reserve = await requestJson("/api/universe/status?limit=2300");
