@@ -1,0 +1,60 @@
+# TS: 2026-08-03 04:14 ET
+
+name: Phase B live queue snapshot
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Capture two live queue snapshots
+        run: |
+          node --input-type=module <<'NODE'
+          const url = "https://next-years-monsters-api.onrender.com/api/universe/status?limit=2000";
+
+          async function getStatus(label) {
+            const response = await fetch(url, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(70_000),
+            });
+            const status = await response.json();
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const summary = {
+              label,
+              checkedAt: new Date().toISOString(),
+              queuedCount: Number(status.queuedCount || 0),
+              processingCount: Number(status.processingCount || 0),
+              secCompleteCount: Number(status.secCompleteCount || 0),
+              unresolvedCount: Number(status.unresolvedCount || 0),
+              failedCount: Number(status.failedCount || 0),
+              partialCount: Number(status.partialCount || 0),
+              staleCount: Number(status.staleCount || 0),
+              examinedCount: Number(status.examinedCount || 0),
+              generatedAt: status.generatedAt || null,
+            };
+            console.log(JSON.stringify(summary));
+            return summary;
+          }
+
+          const first = await getStatus("first");
+          await new Promise((resolve) => setTimeout(resolve, 20_000));
+          const second = await getStatus("second");
+
+          console.log(JSON.stringify({
+            trend: second.queuedCount < first.queuedCount ? "decreasing" : second.queuedCount === first.queuedCount ? "unchanged" : "increasing",
+            queuedChange: second.queuedCount - first.queuedCount,
+            completedChange: second.secCompleteCount - first.secCompleteCount,
+            unresolvedChange: second.unresolvedCount - first.unresolvedCount,
+            first,
+            second,
+          }, null, 2));
+          NODE
