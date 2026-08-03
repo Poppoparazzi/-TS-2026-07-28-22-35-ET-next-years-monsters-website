@@ -1,4 +1,4 @@
-# TS: 2026-08-03 04:14 ET
+# TS: 2026-08-03 13:59 ET
 
 name: Phase B live queue snapshot
 
@@ -16,45 +16,50 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Capture two live queue snapshots
+      - name: Capture deployment and reserve-pool snapshot
         run: |
           node --input-type=module <<'NODE'
-          const url = "https://next-years-monsters-api.onrender.com/api/universe/status?limit=2000";
+          const apiBaseUrl = "https://next-years-monsters-api.onrender.com";
 
-          async function getStatus(label) {
-            const response = await fetch(url, {
+          async function getJson(path) {
+            const response = await fetch(`${apiBaseUrl}${path}`, {
               headers: { Accept: "application/json" },
               signal: AbortSignal.timeout(70_000),
             });
-            const status = await response.json();
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const summary = {
-              label,
-              checkedAt: new Date().toISOString(),
-              queuedCount: Number(status.queuedCount || 0),
-              processingCount: Number(status.processingCount || 0),
-              secCompleteCount: Number(status.secCompleteCount || 0),
-              unresolvedCount: Number(status.unresolvedCount || 0),
-              failedCount: Number(status.failedCount || 0),
-              partialCount: Number(status.partialCount || 0),
-              staleCount: Number(status.staleCount || 0),
-              examinedCount: Number(status.examinedCount || 0),
-              generatedAt: status.generatedAt || null,
-            };
-            console.log(JSON.stringify(summary));
-            return summary;
+            const payload = await response.json();
+            if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
+            return payload;
           }
 
-          const first = await getStatus("first");
-          await new Promise((resolve) => setTimeout(resolve, 20_000));
-          const second = await getStatus("second");
+          const [startup, reserve, published] = await Promise.all([
+            getJson("/api/startup-status"),
+            getJson("/api/universe/status?limit=2300"),
+            getJson("/api/universe/status?limit=2000"),
+          ]);
 
           console.log(JSON.stringify({
-            trend: second.queuedCount < first.queuedCount ? "decreasing" : second.queuedCount === first.queuedCount ? "unchanged" : "increasing",
-            queuedChange: second.queuedCount - first.queuedCount,
-            completedChange: second.secCompleteCount - first.secCompleteCount,
-            unresolvedChange: second.unresolvedCount - first.unresolvedCount,
-            first,
-            second,
+            checkedAt: new Date().toISOString(),
+            deploymentCommit: startup?.deploymentCommit || null,
+            importState: startup?.jobs?.universeImport?.state || null,
+            importSummary: startup?.jobs?.universeImport?.summary || null,
+            batchState: startup?.jobs?.secUniverseBatch?.state || null,
+            batchSummary: startup?.jobs?.secUniverseBatch?.summary || null,
+            reserve: {
+              universeSize: Number(reserve.universeSize || 0),
+              examinedCount: Number(reserve.examinedCount || 0),
+              queuedCount: Number(reserve.queuedCount || 0),
+              processingCount: Number(reserve.processingCount || 0),
+              secCompleteCount: Number(reserve.secCompleteCount || 0),
+              unresolvedCount: Number(reserve.unresolvedCount || 0),
+              failedCount: Number(reserve.failedCount || 0),
+            },
+            published: {
+              examinedCount: Number(published.examinedCount || 0),
+              queuedCount: Number(published.queuedCount || 0),
+              processingCount: Number(published.processingCount || 0),
+              secCompleteCount: Number(published.secCompleteCount || 0),
+              unresolvedCount: Number(published.unresolvedCount || 0),
+              failedCount: Number(published.failedCount || 0),
+            },
           }, null, 2));
           NODE
