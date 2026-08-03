@@ -1,0 +1,136 @@
+# TS: 2026-08-03 13:50 ET
+
+name: Reserve pool production monitor
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-reserve-pool:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Verify deployed 2,300-candidate reserve pool and clean public 2,000
+        run: |
+          node --input-type=module <<'NODE'
+          const apiBaseUrl = "https://next-years-monsters-api.onrender.com";
+          const expectedCommit = "9ace8b0f12b7b1a478ecb6fcc8a12454e02ceee2";
+          const attemptCount = 110;
+          const delayMs = 30_000;
+
+          function sleep(milliseconds) {
+            return new Promise((resolve) => setTimeout(resolve, milliseconds));
+          }
+
+          async function requestJson(path) {
+            const response = await fetch(`${apiBaseUrl}${path}`, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(70_000),
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}.`);
+            return payload;
+          }
+
+          let lastSummary = null;
+
+          for (let attempt = 1; attempt <= attemptCount; attempt += 1) {
+            try {
+              const [startup, reserve, published] = await Promise.all([
+                requestJson("/api/startup-status"),
+                requestJson("/api/universe/status?limit=2300"),
+                requestJson("/api/universe/status?limit=2000"),
+              ]);
+
+              const summary = {
+                attempt,
+                checkedAt: new Date().toISOString(),
+                deploymentCommit: startup?.deploymentCommit || null,
+                expectedCommit,
+                importState: startup?.jobs?.universeImport?.state || null,
+                importSummary: startup?.jobs?.universeImport?.summary || null,
+                batchState: startup?.jobs?.secUniverseBatch?.state || null,
+                batchSummary: startup?.jobs?.secUniverseBatch?.summary || null,
+                reserve: {
+                  universeSize: Number(reserve.universeSize || 0),
+                  examinedCount: Number(reserve.examinedCount || 0),
+                  queuedCount: Number(reserve.queuedCount || 0),
+                  processingCount: Number(reserve.processingCount || 0),
+                  secCompleteCount: Number(reserve.secCompleteCount || 0),
+                  unresolvedCount: Number(reserve.unresolvedCount || 0),
+                  failedCount: Number(reserve.failedCount || 0),
+                  partialCount: Number(reserve.partialCount || 0),
+                  staleCount: Number(reserve.staleCount || 0),
+                },
+                published: {
+                  examinedCount: Number(published.examinedCount || 0),
+                  queuedCount: Number(published.queuedCount || 0),
+                  processingCount: Number(published.processingCount || 0),
+                  secCompleteCount: Number(published.secCompleteCount || 0),
+                  unresolvedCount: Number(published.unresolvedCount || 0),
+                  failedCount: Number(published.failedCount || 0),
+                  partialCount: Number(published.partialCount || 0),
+                  staleCount: Number(published.staleCount || 0),
+                  quoteCompleteCount: Number(published.quoteCompleteCount || 0),
+                  ratingCompleteCount: Number(published.ratingCompleteCount || 0),
+                },
+              };
+
+              lastSummary = summary;
+              console.log(`Reserve-pool production check ${attempt}/${attemptCount}:`);
+              console.log(JSON.stringify(summary, null, 2));
+
+              const importReady =
+                summary.importState === "completed" &&
+                Number(summary.importSummary?.requestedLimit || 0) === 2300 &&
+                Number(summary.importSummary?.importedCount || 0) === 2300;
+
+              const batchFinished =
+                summary.batchState === "completed" &&
+                Number(summary.batchSummary?.requestedBatchSize || 0) === 2300;
+
+              const reserveFinished =
+                summary.reserve.universeSize >= 2300 &&
+                summary.reserve.examinedCount === 2300 &&
+                summary.reserve.queuedCount === 0 &&
+                summary.reserve.processingCount === 0 &&
+                summary.reserve.partialCount === 0 &&
+                summary.reserve.staleCount === 0;
+
+              const publicTwoThousandClean =
+                summary.published.examinedCount === 2000 &&
+                summary.published.secCompleteCount === 2000 &&
+                summary.published.queuedCount === 0 &&
+                summary.published.processingCount === 0 &&
+                summary.published.unresolvedCount === 0 &&
+                summary.published.failedCount === 0 &&
+                summary.published.partialCount === 0 &&
+                summary.published.staleCount === 0 &&
+                summary.published.quoteCompleteCount === 0 &&
+                summary.published.ratingCompleteCount === 0;
+
+              if (
+                summary.deploymentCommit === expectedCommit &&
+                importReady &&
+                batchFinished &&
+                reserveFinished &&
+                publicTwoThousandClean
+              ) {
+                console.log("SUCCESS: the public universe contains 2,000 SEC-complete companies, backed by a processed 2,300-candidate reserve pool.");
+                process.exit(0);
+              }
+            } catch (error) {
+              console.log(`Attempt ${attempt} could not complete: ${error instanceof Error ? error.message : String(error)}`);
+            }
+
+            if (attempt < attemptCount) await sleep(delayMs);
+          }
+
+          throw new Error(`Reserve pool did not reach the clean production target: ${JSON.stringify(lastSummary)}`);
+          NODE
