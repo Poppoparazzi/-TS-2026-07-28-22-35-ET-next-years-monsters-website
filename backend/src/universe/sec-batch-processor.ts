@@ -1,4 +1,4 @@
-// TS: 2026-08-02 21:38 ET
+// TS: 2026-08-02 21:48 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -76,7 +76,7 @@ export async function runSecUniverseBatch(
   options: SecBatchRunOptions,
   dependencies: SecBatchProcessorDependencies = {},
 ): Promise<SecBatchRunSummary> {
-  const batchSize = boundedInteger(options.batchSize, 1, 500);
+  const batchSize = boundedInteger(options.batchSize, 1, 2_500);
   const concurrency = boundedInteger(options.concurrency, 1, 8);
   const maxAgeHours = boundedInteger(options.maxAgeHours, 1, 24 * 30);
   const queue = dependencies.queue ?? createSecBatchQueue(config);
