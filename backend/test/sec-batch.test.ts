@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:20 ET
+// TS: 2026-08-02 21:38 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -44,18 +44,21 @@ class MemoryQueue implements SecBatchQueue {
   public readonly completed: string[] = [];
   public readonly failed: { ticker: string; message: string }[] = [];
   public readonly unresolved: { ticker: string; message: string }[] = [];
+  public readonly claimLimits: number[] = [];
   public closed = false;
+  private readonly candidates: SecBatchCandidate[] = [
+    Object.freeze({ ticker: "AAPL", attemptCount: 1 }),
+    Object.freeze({ ticker: "FAIL", attemptCount: 2 }),
+    Object.freeze({ ticker: "NOSEC", attemptCount: 1 }),
+    Object.freeze({ ticker: "NVDA", attemptCount: 1 }),
+  ];
 
   public async claim(
-    _limit: number,
+    limit: number,
     _maxAgeHours: number,
   ): Promise<readonly SecBatchCandidate[]> {
-    return Object.freeze([
-      Object.freeze({ ticker: "AAPL", attemptCount: 1 }),
-      Object.freeze({ ticker: "FAIL", attemptCount: 2 }),
-      Object.freeze({ ticker: "NOSEC", attemptCount: 1 }),
-      Object.freeze({ ticker: "NVDA", attemptCount: 1 }),
-    ]);
+    this.claimLimits.push(limit);
+    return Object.freeze(this.candidates.splice(0, limit));
   }
 
   public async markComplete(ticker: string): Promise<void> {
@@ -146,7 +149,7 @@ async function refreshOverride(
   });
 }
 
-test("bulk SEC workers isolate transient failures and permanently classify SEC 404s", async () => {
+test("bulk SEC workers use recoverable waves, isolate failures, and classify SEC 404s", async () => {
   const queue = new MemoryQueue();
   const persistenceStore = new MemoryPersistence();
 
@@ -176,6 +179,7 @@ test("bulk SEC workers isolate transient failures and permanently classify SEC 4
     { ticker: "FAIL", message: "Synthetic SEC failure." },
   ]);
   assert.equal(summary.failures[0]?.attemptCount, 2);
+  assert.deepEqual(queue.claimLimits, [3, 3, 3]);
   assert.equal(queue.closed, true);
   assert.equal(persistenceStore.closed, true);
 });
