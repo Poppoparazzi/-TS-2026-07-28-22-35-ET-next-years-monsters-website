@@ -1,4 +1,4 @@
-// TS: 2026-08-03 14:02 ET
+// TS: 2026-08-03 17:38 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -19,6 +19,16 @@ export const DEACTIVATE_UNIVERSE_SQL = `
   UPDATE companies
   SET is_active = false
   WHERE is_active = true
+`;
+
+export const RELEASE_INACTIVE_CIK_SQL = `
+  UPDATE companies
+  SET
+    sec_cik = NULL,
+    updated_at = clock_timestamp()
+  WHERE sec_cik = $1::varchar(10)
+    AND ticker <> $2::varchar(15)
+    AND is_active = false
 `;
 
 export const UPSERT_UNIVERSE_COMPANY_SQL = `
@@ -133,6 +143,12 @@ export class PostgresUniverseStore implements UniverseStore {
       await client.query(DEACTIVATE_UNIVERSE_SQL);
 
       for (const company of companies) {
+        // A ticker change can leave the same SEC registrant attached to an old,
+        // now-inactive company row. Release that inactive CIK before assigning it
+        // to the selected active ticker, while preserving active-ticker conflict
+        // protection in the upsert itself.
+        await client.query(RELEASE_INACTIVE_CIK_SQL, [company.cikPadded, company.ticker]);
+
         const companyResult = await client.query<{ id: string | number }>(
           UPSERT_UNIVERSE_COMPANY_SQL,
           [company.ticker, company.companyName, company.exchange, company.cikPadded],
