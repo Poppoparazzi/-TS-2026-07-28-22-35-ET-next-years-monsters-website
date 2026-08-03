@@ -1,0 +1,131 @@
+# TS: 2026-08-02 23:00 ET
+
+name: Phase B SEC processing monitor
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-phase-b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Watch Render and verify the completed 2,000-company SEC state
+        run: |
+          node --input-type=module <<'NODE'
+          const apiBaseUrl = "https://next-years-monsters-api.onrender.com";
+          const expectedCommit = "0b0388d9b2eba7feff9ad4ccfddc4b4ec88ecb73";
+          const attemptCount = 80;
+          const delayMs = 30_000;
+
+          function sleep(milliseconds) {
+            return new Promise((resolve) => setTimeout(resolve, milliseconds));
+          }
+
+          async function requestJson(path) {
+            const response = await fetch(`${apiBaseUrl}${path}`, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(70_000),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+              throw new Error(`${path} returned HTTP ${response.status}.`);
+            }
+            return payload;
+          }
+
+          let lastSummary = null;
+
+          for (let attempt = 1; attempt <= attemptCount; attempt += 1) {
+            const [health, startup, status] = await Promise.all([
+              requestJson("/api/health"),
+              requestJson("/api/startup-status"),
+              requestJson("/api/universe/status?limit=2000"),
+            ]);
+
+            const summary = {
+              attempt,
+              checkedAt: new Date().toISOString(),
+              apiVersion: health?.version || null,
+              deploymentCommit: startup?.deploymentCommit || null,
+              expectedCommit,
+              startupImportState: startup?.jobs?.universeImport?.state || null,
+              startupImportSummary: startup?.jobs?.universeImport?.summary || null,
+              startupSecBatchState: startup?.jobs?.secUniverseBatch?.state || null,
+              startupSecBatchSummary: startup?.jobs?.secUniverseBatch?.summary || null,
+              universeSize: Number(status.universeSize || 0),
+              examinedCount: Number(status.examinedCount || 0),
+              queuedCount: Number(status.queuedCount || 0),
+              processingCount: Number(status.processingCount || 0),
+              secCompleteCount: Number(status.secCompleteCount || 0),
+              unresolvedCount: Number(status.unresolvedCount || 0),
+              failedCount: Number(status.failedCount || 0),
+              partialCount: Number(status.partialCount || 0),
+              staleCount: Number(status.staleCount || 0),
+              filingCompleteCount: Number(status.filingCompleteCount || 0),
+              factsCompleteCount: Number(status.factsCompleteCount || 0),
+              quoteCompleteCount: Number(status.quoteCompleteCount || 0),
+              ratingCompleteCount: Number(status.ratingCompleteCount || 0),
+              generatedAt: status.generatedAt || null,
+            };
+
+            lastSummary = summary;
+            console.log(`Phase B production check ${attempt}/${attemptCount}:`);
+            console.log(JSON.stringify(summary, null, 2));
+
+            const importReady =
+              summary.startupImportState === "completed" &&
+              Number(summary.startupImportSummary?.requestedLimit || 0) === 2000 &&
+              Number(summary.startupImportSummary?.importedCount || 0) === 2000;
+
+            const secBatchCompleted =
+              summary.startupSecBatchState === "completed" &&
+              Number(summary.startupSecBatchSummary?.requestedBatchSize || 0) === 2000 &&
+              Number(summary.startupSecBatchSummary?.failedCount || 0) === 0;
+
+            const phaseBComplete =
+              summary.deploymentCommit === expectedCommit &&
+              importReady &&
+              secBatchCompleted &&
+              summary.universeSize >= 2000 &&
+              summary.examinedCount === 2000 &&
+              summary.queuedCount === 0 &&
+              summary.processingCount === 0 &&
+              summary.failedCount === 0 &&
+              summary.partialCount === 0 &&
+              summary.staleCount === 0 &&
+              summary.secCompleteCount + summary.unresolvedCount === 2000 &&
+              summary.filingCompleteCount === summary.secCompleteCount &&
+              summary.factsCompleteCount <= summary.filingCompleteCount &&
+              summary.quoteCompleteCount === 0 &&
+              summary.ratingCompleteCount === 0;
+
+            if (phaseBComplete) {
+              console.log(
+                `Phase B is complete: ${summary.secCompleteCount} SEC complete, ` +
+                  `${summary.unresolvedCount} unresolved, and zero queued, processing, or failed.`,
+              );
+              process.exit(0);
+            }
+
+            if (attempt < attemptCount) await sleep(delayMs);
+          }
+
+          throw new Error(
+            `Phase B did not reach the completed 2,000-company state during the monitor window: ${JSON.stringify(lastSummary)}`,
+          );
+          NODE
