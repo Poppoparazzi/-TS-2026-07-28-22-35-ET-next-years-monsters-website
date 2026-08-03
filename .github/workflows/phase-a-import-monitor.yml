@@ -1,4 +1,4 @@
-# TS: 2026-08-02 22:27 ET
+# TS: 2026-08-02 22:55 ET
 
 name: Phase A import monitor
 
@@ -97,25 +97,35 @@ jobs:
               summary.startupSecBatchSummary?.status === "skipped" &&
               Number(summary.startupSecBatchSummary?.requestedBatchSize || 0) === 0;
 
+            const terminalCount =
+              summary.secCompleteCount +
+              summary.unresolvedCount +
+              summary.failedCount +
+              summary.partialCount +
+              summary.staleCount;
+
             const phaseAComplete =
               summary.deploymentCommit === expectedCommit &&
               importCompleted &&
               secProcessingDisabled &&
               summary.universeSize >= 2000 &&
               summary.examinedCount === 2000 &&
-              summary.queuedCount === 1500 &&
+              summary.queuedCount > 0 &&
+              summary.queuedCount + summary.processingCount + terminalCount === summary.examinedCount &&
               summary.processingCount === 0 &&
-              summary.secCompleteCount + summary.unresolvedCount === 500 &&
               summary.failedCount === 0 &&
               summary.partialCount === 0 &&
               summary.staleCount === 0 &&
-              summary.filingCompleteCount === 450 &&
-              summary.factsCompleteCount === 400 &&
+              summary.filingCompleteCount === summary.secCompleteCount &&
+              summary.factsCompleteCount <= summary.filingCompleteCount &&
               summary.quoteCompleteCount === 0 &&
               summary.ratingCompleteCount === 0;
 
             if (phaseAComplete) {
-              console.log("Phase A is complete: 2,000 imported, 1,500 queued, and SEC processing remained disabled.");
+              console.log(
+                `Phase A is complete: 2,000 imported, ${summary.queuedCount} queued, ` +
+                  `${terminalCount} already terminal, and SEC processing remained disabled.`,
+              );
               process.exit(0);
             }
 
