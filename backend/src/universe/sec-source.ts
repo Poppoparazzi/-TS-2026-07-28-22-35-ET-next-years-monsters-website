@@ -1,4 +1,4 @@
-// TS: 2026-08-02 14:25 ET
+// TS: 2026-08-03 13:39 ET
 
 import type { UniverseCompany } from "./types.js";
 
@@ -68,11 +68,9 @@ export function parseSecUniversePayload(
     });
   }
 
-  return Object.freeze(
-    [...byTicker.values()]
-      .sort((left, right) => left.ticker.localeCompare(right.ticker))
-      .slice(0, safeLimit),
-  );
+  // Preserve the SEC file's upstream priority order. Alphabetically sorting here
+  // previously discarded the useful large-company-first ordering before limiting.
+  return Object.freeze([...byTicker.values()].slice(0, safeLimit));
 }
 
 export async function loadSecUniverse(
