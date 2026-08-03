@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:17 ET
+// TS: 2026-08-03 13:39 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -22,7 +22,8 @@ export const UPSERT_UNIVERSE_COMPANY_SQL = `
     exchange,
     currency,
     sec_cik,
-    is_active
+    is_active,
+    updated_at
   )
   SELECT
     $1::varchar(15),
@@ -38,12 +39,14 @@ export const UPSERT_UNIVERSE_COMPANY_SQL = `
       ) THEN NULL::varchar(10)
       ELSE $4::varchar(10)
     END,
-    true
+    true,
+    clock_timestamp()
   ON CONFLICT (ticker) DO UPDATE SET
     company_name = EXCLUDED.company_name,
     exchange = COALESCE(EXCLUDED.exchange, companies.exchange),
     sec_cik = COALESCE(EXCLUDED.sec_cik, companies.sec_cik),
-    is_active = true
+    is_active = true,
+    updated_at = EXCLUDED.updated_at
   RETURNING id
 `;
 
@@ -208,7 +211,11 @@ export class PostgresUniverseStore implements UniverseStore {
             FROM companies c
             LEFT JOIN company_pipeline_status cps ON cps.company_id = c.id
             WHERE c.is_active = true
-            ORDER BY c.is_pilot DESC, c.ticker
+            ORDER BY
+              c.is_pilot DESC,
+              CASE WHEN COALESCE(cps.sec_status, 'queued') = 'complete' THEN 0 ELSE 1 END,
+              c.updated_at ASC,
+              c.ticker
             LIMIT $1
           `,
           [safeLimit],

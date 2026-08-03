@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:27 ET
+// TS: 2026-08-03 13:39 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -72,7 +72,7 @@ class MemoryUniverseStore implements UniverseStore {
   public async close(): Promise<void> {}
 }
 
-test("SEC universe parser normalizes, sorts, limits, and deduplicates ticker and CIK", () => {
+test("SEC universe parser preserves source priority, limits, and deduplicates ticker and CIK", () => {
   const companies = parseSecUniversePayload(
     {
       fields: ["cik", "name", "ticker", "exchange"],
@@ -90,21 +90,22 @@ test("SEC universe parser normalizes, sorts, limits, and deduplicates ticker and
 
   assert.deepEqual(
     companies.map((company) => company.ticker),
-    ["AAA", "BBB"],
+    ["ZETA", "AAA"],
   );
   assert.deepEqual(
     companies.map((company) => company.cikPadded),
-    ["0000000001", "0000000002"],
+    ["0000000003", "0000000001"],
   );
   assert.equal(companies[0]?.sourceUrl, "https://example.test/sec-universe.json");
 });
 
-test("bulk universe upsert pins PostgreSQL parameter types", () => {
+test("bulk universe upsert pins PostgreSQL parameter types and records import priority", () => {
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$1::varchar\(15\)/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$2::text/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$3::text/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$4::varchar\(10\)/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /NULL::varchar\(10\)/);
+  assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /clock_timestamp\(\)/);
 });
 
 test("bulk universe status endpoint caps the requested company count", async (t) => {
