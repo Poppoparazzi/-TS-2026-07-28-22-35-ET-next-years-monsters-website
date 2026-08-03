@@ -1,6 +1,6 @@
 # START HERE — Next Year’s Monsters™ Website
 
-<!-- TS: 2026-08-02 21:22 ET -->
+<!-- TS: 2026-08-02 22:08 ET -->
 
 This file is the permanent starting point for every future ChatGPT or Codex session working on this website.
 
@@ -24,33 +24,35 @@ Open and read these files before making any changes:
 2. `PROJECT_HANDOFF_2026-07-29.md`
 3. `BULK_2000_PLAN.md`
 4. `RENDER_DEPLOYMENT_REQUIRED.md`
-5. The latest relevant files, workflow results, Render production status, and commits
+5. The latest relevant files, workflow results, Render production status, commits, and open pull requests
 
 Do not rely on prior chat memory as the source of truth. The repository, workflow results, and verified production endpoints are the source of truth.
 
 ## Current verified production status
 
 - Render is live on backend version `0.6.0` with PostgreSQL, the SEC provider, and the bulk universe store configured.
-- Production deployment commit begins `dd29db5`.
+- Production deployment commit is `5f90832376e736dfb46d29fcb4d1c88572740b0b`.
 - The 500-company startup import completed successfully:
   - `requestedLimit: 500`
   - `importedCount: 500`
   - `universeSize: 514`
 - The public 500-Stock Factory Status dashboard is live.
-- At the last verified production check on August 2, 2026:
+- Final verified 500-company totals on August 2, 2026:
   - 500 companies examined
-  - 238 SEC complete
-  - 237 still in the claimed batch
-  - 25 SEC unresolved
-  - 0 retry failures
+  - 450 SEC complete
+  - 50 SEC unresolved
+  - 0 queued
+  - 0 processing
+  - 0 failed
+  - 0 partial
   - 0 stale
-  - 238 filing records complete
-  - 212 company-fact records complete
+  - 450 filing records complete
+  - 400 company-fact records complete
   - 0 licensed quotes stored
   - 0 current Monster Ratings™ stored
-- The pipeline totals reconciled correctly: `238 complete + 237 in batch + 25 unresolved = 500`.
-- The SEC worker pool uses controlled concurrency `3`. Records labeled `processing` are now displayed publicly as `IN BATCH`; they are not all simultaneous SEC connections.
-- The factory dashboard refreshes automatically every minute.
+- The final SEC totals reconcile exactly: `450 complete + 50 unresolved = 500`.
+- GitHub Actions production smoke run `30777623553` passed against the live Render deployment.
+- The SEC worker pool uses controlled concurrency `3` and now claims only concurrency-sized waves, preventing hundreds of records from being stranded as processing after a deployment interruption.
 - Permanent SEC HTTP 404 results are labeled `unresolved` and excluded from endless retries.
 - Temporary failures retain retry times and do not stop other companies.
 - `MARKET_DATA_PROVIDER` remains deliberately `unconfigured`; no licensed live or delayed quote provider is connected.
@@ -77,24 +79,30 @@ Do not rely on prior chat memory as the source of truth. The repository, workflo
 17. Deployed and verified the 500-company production import.
 18. Upgraded the public dashboard and navigation to 500 stocks.
 19. Clarified the public processing label to `IN BATCH` and documented concurrency `3`.
-20. Final 500-stock backend validation passed:
-    - Phase 3 Backend Checks run `30767428224`
-    - Static site checks run `30767428219`
-21. Final 500-stock dashboard validation passed:
-    - Static site checks run `30767626605`
+20. Repaired the abandoned-batch problem by processing SEC candidates in recoverable waves of three.
+21. Manually deployed repaired commit `5f90832376e736dfb46d29fcb4d1c88572740b0b` to Render.
+22. Final production validation passed with `450 SEC complete + 50 unresolved = 500`, `0 processing`, and `0 failed`.
+23. Production smoke run `30777623553` passed.
+24. Draft pull request `#29`, titled `Prepare controlled 2,000-company SEC capacity`, passed:
+    - Phase 3 Backend Checks run `30777842862`
+    - Static site checks run `30777842865`
+25. Pull request `#29` remains draft and unmerged, so the live Render limits remain at 500.
 
-## Immediate next work
+## Immediate next work: controlled move from 500 to 2,000
 
-1. Let the existing 500-company SEC batch finish without starting another deployment or restart.
-2. Recheck `/api/universe/status?limit=500` and confirm:
-   - `processingCount: 0`
-   - `failedCount: 0`
-   - `secCompleteCount + unresolvedCount = 500`
-3. Run the production smoke workflow against the completed 500-company state.
-4. Update this file with the final 500-company completion totals.
-5. Then prepare the same bulk pipeline for 2,000 companies without creating individual stock pages.
-6. Before producing current Monster Ratings™, connect a licensed quote provider and a versioned production scoring engine.
-7. Continue improving the public dashboard so batch progress, unresolved identities, SEC evidence, quotes, and ratings remain plainly separated.
+1. Treat the 500-company milestone as complete and do not rerun it unnecessarily.
+2. Review draft pull request `#29` and confirm its branch is current with `main` before merging.
+3. Merge only the tested 2,000-capability support first; do not immediately change every Render limit in the same step.
+4. Use a staged rollout:
+   - Phase A: import the 2,000-company universe without starting a full SEC batch in the same deployment.
+   - Phase B: verify the database universe size and the first 2,000 examined records.
+   - Phase C: enable SEC processing for 2,000 with concurrency `3` and recoverable wave claims.
+   - Phase D: monitor until `processingCount: 0`, `failedCount: 0`, and `secCompleteCount + unresolvedCount = 2000`.
+   - Phase E: run the production smoke test and record the final 2,000-company totals.
+   - Phase F: disable one-time startup import and batch bootstrap settings after successful completion so future deployments do not rerun the whole load.
+5. Do not create individual stock profile pages during the 2,000-company scale test.
+6. Keep SEC evidence, unresolved identities, quotes, ratings, and VCL™ demonstrations plainly separated on the public dashboard.
+7. Before producing current Monster Ratings™, connect a licensed quote provider and a versioned production scoring engine.
 
 ## Locked design and data rules
 
@@ -111,4 +119,4 @@ Do not rely on prior chat memory as the source of truth. The repository, workflo
 
 If a ChatGPT conversation disappears, open a new chat and paste this instruction:
 
-> Continue the Next Year’s Monsters™ website from the GitHub repository `Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website`. Read `START_HERE.md`, `PROJECT_HANDOFF_2026-07-29.md`, `BULK_2000_PLAN.md`, and `RENDER_DEPLOYMENT_REQUIRED.md` first. Treat the repository, workflow results, Render production endpoints, and latest commits as the source of truth. The 500-company import is already live and verified; first check whether the remaining SEC batch has finished before making any deployment or scaling changes.
+> Continue the Next Year’s Monsters™ website from the GitHub repository `Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website`. Read `START_HERE.md`, `PROJECT_HANDOFF_2026-07-29.md`, `BULK_2000_PLAN.md`, and `RENDER_DEPLOYMENT_REQUIRED.md` first. Treat the repository, workflow results, Render production endpoints, latest commits, and open pull requests as the source of truth. The 500-company SEC milestone is complete at 450 SEC complete, 50 unresolved, 0 processing, and 0 failed. The next phase is the controlled 500-to-2,000 rollout. Review draft pull request #29 before changing Render production limits.
