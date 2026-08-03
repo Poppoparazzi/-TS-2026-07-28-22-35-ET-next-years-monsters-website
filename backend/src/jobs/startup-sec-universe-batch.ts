@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:16 ET
+// TS: 2026-08-02 21:48 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -32,7 +32,7 @@ export async function runSecUniverseBatchOnStartup(
     "AUTO_SEC_BATCH_SIZE",
     0,
     0,
-    500,
+    2_500,
   );
 
   if (batchSize === 0) {
