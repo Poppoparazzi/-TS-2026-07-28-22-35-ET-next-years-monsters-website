@@ -1,11 +1,14 @@
-// TS: 2026-08-03 13:39 ET
+// TS: 2026-08-03 14:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildApp } from "../src/app.js";
 import type { AppConfig } from "../src/config.js";
 import { parseSecUniversePayload } from "../src/universe/sec-source.js";
-import { UPSERT_UNIVERSE_COMPANY_SQL } from "../src/universe/store.js";
+import {
+  DEACTIVATE_UNIVERSE_SQL,
+  UPSERT_UNIVERSE_COMPANY_SQL,
+} from "../src/universe/store.js";
 import type {
   UniverseCompany,
   UniverseImportSummary,
@@ -99,12 +102,15 @@ test("SEC universe parser preserves source priority, limits, and deduplicates ti
   assert.equal(companies[0]?.sourceUrl, "https://example.test/sec-universe.json");
 });
 
-test("bulk universe upsert pins PostgreSQL parameter types and records import priority", () => {
+test("bulk universe import replaces the active candidate set and records source priority", () => {
+  assert.match(DEACTIVATE_UNIVERSE_SQL, /UPDATE companies/);
+  assert.match(DEACTIVATE_UNIVERSE_SQL, /SET is_active = false/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$1::varchar\(15\)/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$2::text/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$3::text/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /\$4::varchar\(10\)/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /NULL::varchar\(10\)/);
+  assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /existing\.is_active = true/);
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /clock_timestamp\(\)/);
 });
 

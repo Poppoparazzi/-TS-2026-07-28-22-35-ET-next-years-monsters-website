@@ -1,4 +1,4 @@
-// TS: 2026-08-03 13:39 ET
+// TS: 2026-08-03 14:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -14,6 +14,12 @@ import type {
 
 const { Pool } = pg;
 type DatabasePool = InstanceType<typeof Pool>;
+
+export const DEACTIVATE_UNIVERSE_SQL = `
+  UPDATE companies
+  SET is_active = false
+  WHERE is_active = true
+`;
 
 export const UPSERT_UNIVERSE_COMPANY_SQL = `
   INSERT INTO companies (
@@ -36,6 +42,7 @@ export const UPSERT_UNIVERSE_COMPANY_SQL = `
         FROM companies existing
         WHERE existing.sec_cik = $4::varchar(10)
           AND existing.ticker <> $1::varchar(15)
+          AND existing.is_active = true
       ) THEN NULL::varchar(10)
       ELSE $4::varchar(10)
     END,
@@ -123,6 +130,7 @@ export class PostgresUniverseStore implements UniverseStore {
 
     try {
       await client.query("BEGIN");
+      await client.query(DEACTIVATE_UNIVERSE_SQL);
 
       for (const company of companies) {
         const companyResult = await client.query<{ id: string | number }>(
