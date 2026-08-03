@@ -1,4 +1,4 @@
-# TS: 2026-08-03 13:50 ET
+# TS: 2026-08-03 14:04 ET
 
 name: Reserve pool production monitor
 
@@ -20,7 +20,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           const apiBaseUrl = "https://next-years-monsters-api.onrender.com";
-          const expectedCommit = "9ace8b0f12b7b1a478ecb6fcc8a12454e02ceee2";
+          const expectedCommit = "d8b922e37f6bda202566e54fec96e61e7bad479a";
           const attemptCount = 110;
           const delayMs = 30_000;
 
@@ -96,7 +96,7 @@ jobs:
                 Number(summary.batchSummary?.requestedBatchSize || 0) === 2300;
 
               const reserveFinished =
-                summary.reserve.universeSize >= 2300 &&
+                summary.reserve.universeSize === 2300 &&
                 summary.reserve.examinedCount === 2300 &&
                 summary.reserve.queuedCount === 0 &&
                 summary.reserve.processingCount === 0 &&
@@ -122,7 +122,7 @@ jobs:
                 reserveFinished &&
                 publicTwoThousandClean
               ) {
-                console.log("SUCCESS: the public universe contains 2,000 SEC-complete companies, backed by a processed 2,300-candidate reserve pool.");
+                console.log("SUCCESS: the public universe contains 2,000 SEC-complete companies, backed by an exact 2,300-candidate active reserve pool.");
                 process.exit(0);
               }
             } catch (error) {
