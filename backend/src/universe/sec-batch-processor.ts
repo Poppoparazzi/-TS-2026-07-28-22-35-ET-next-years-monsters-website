@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:15 ET
+// TS: 2026-08-02 21:38 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -105,59 +105,59 @@ export async function runSecUniverseBatch(
       });
     }
 
-    const candidates = [...(await queue.claim(batchSize, maxAgeHours))];
     const failures: SecBatchFailure[] = [];
     const unresolvedTickers: string[] = [];
+    let claimedCount = 0;
     let succeededCount = 0;
     let unresolvedCount = 0;
     let failedCount = 0;
-    let nextIndex = 0;
 
-    const workerCount = Math.min(concurrency, Math.max(candidates.length, 1));
-    const workers = Array.from({ length: workerCount }, async () => {
-      while (nextIndex < candidates.length) {
-        const candidateIndex = nextIndex;
-        nextIndex += 1;
-        const candidate = candidates[candidateIndex];
-        if (!candidate) return;
+    while (claimedCount < batchSize) {
+      const remainingCount = batchSize - claimedCount;
+      const claimSize = Math.min(concurrency, remainingCount);
+      const candidates = [...(await queue.claim(claimSize, maxAgeHours))];
 
-        try {
-          await refreshSymbol(candidate.ticker, {
-            marketProvider,
-            secProvider,
-            persistenceStore,
-          });
-          await queue.markComplete(candidate.ticker);
-          succeededCount += 1;
-        } catch (error) {
-          const message = safeMessage(error);
+      if (candidates.length === 0) break;
+      claimedCount += candidates.length;
 
-          if (isPermanentSecNotFound(error)) {
-            unresolvedCount += 1;
-            unresolvedTickers.push(candidate.ticker);
-            await queue.markUnresolved(candidate.ticker, message);
-            continue;
+      await Promise.all(
+        candidates.map(async (candidate) => {
+          try {
+            await refreshSymbol(candidate.ticker, {
+              marketProvider,
+              secProvider,
+              persistenceStore,
+            });
+            await queue.markComplete(candidate.ticker);
+            succeededCount += 1;
+          } catch (error) {
+            const message = safeMessage(error);
+
+            if (isPermanentSecNotFound(error)) {
+              unresolvedCount += 1;
+              unresolvedTickers.push(candidate.ticker);
+              await queue.markUnresolved(candidate.ticker, message);
+              return;
+            }
+
+            failedCount += 1;
+            failures.push(
+              Object.freeze({
+                ticker: candidate.ticker,
+                attemptCount: candidate.attemptCount,
+                message,
+              }),
+            );
+            await queue.markFailed(candidate.ticker, message);
           }
-
-          failedCount += 1;
-          failures.push(
-            Object.freeze({
-              ticker: candidate.ticker,
-              attemptCount: candidate.attemptCount,
-              message,
-            }),
-          );
-          await queue.markFailed(candidate.ticker, message);
-        }
-      }
-    });
-
-    await Promise.all(workers);
+        }),
+      );
+    }
 
     return Object.freeze({
       status: "completed",
       requestedBatchSize: batchSize,
-      claimedCount: candidates.length,
+      claimedCount,
       succeededCount,
       unresolvedCount,
       failedCount,
