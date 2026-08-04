@@ -422,7 +422,7 @@
   }
 
   .vcl-hero h1 {
-    font-size: clamp(58px, 20vw, 86px);
+    font-size: clamp(46px, 13vw, 58px);
   }
 
   .vcl-hero-line {
@@ -459,7 +459,7 @@
 
   .vcl-section-head h2,
   .vcl-next h2 {
-    font-size: clamp(46px, 15vw, 70px);
+    font-size: clamp(42px, 12vw, 58px);
   }
 
   .vcl-section-head > p:last-child {
