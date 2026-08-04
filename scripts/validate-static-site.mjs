@@ -1,4 +1,4 @@
-// TS: 2026-08-03 16:34 ET
+// TS: 2026-08-04 19:18 ET
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -88,23 +88,41 @@ function validateLocalReferences() {
 function validateVclOrder() {
   const html = read("vcl-library.html");
   const tbody = html.match(/<tbody>([\s\S]*?)<\/tbody>/i)?.[1] || "";
-  const tickers = [...tbody.matchAll(/<td><strong>([A-Z]+)<\/strong><\/td>/g)]
+  const tickers = [...tbody.matchAll(/<td><strong>([A-Z]+)<\/strong>/g)]
     .map((match) => match[1]);
   const expected = [
-    "NVDA", "MSFT", "APP", "VRT", "AMZN", "AXON",
-    "META", "AAPL", "MNST", "COST", "NFLX", "DECK", "AMD", "WING",
-    "TSLA",
+    "NVDA", "AAPL", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST",
+    "MSFT", "META", "APP", "VRT", "AXON", "DECK", "WING",
   ];
 
   if (tickers.join(",") !== expected.join(",")) {
-    fail(`VCL tier order changed. Expected ${expected.join(", ")}; found ${tickers.join(", ")}.`);
+    fail(`VCL print-master order changed. Expected ${expected.join(", ")}; found ${tickers.join(", ")}.`);
   }
 
-  ["platinum", "gold", "silver"].forEach((tier) => {
+  ["platinum", "gold", "silver", "bronze", "goblin", "cemetery"].forEach((tier) => {
     if (!html.includes(`data-tier="${tier}"`)) {
-      fail(`VCL table is missing ${tier} row color coding.`);
+      fail(`VCL scale is missing the approved ${tier} rating band.`);
     }
   });
+
+  expected.forEach((ticker) => {
+    if (!html.includes(`monster-check.html?ticker=${ticker}`)) {
+      fail(`VCL case ${ticker} is missing its Monster Check route.`);
+    }
+    if (!html.includes(`market-explorer.html?left=${ticker}&amp;mode=single`)) {
+      fail(`VCL case ${ticker} is missing its Full Charts route.`);
+    }
+  });
+
+  if (!html.includes("Platinum case rating")) {
+    fail("VCL library does not preserve the approved Netflix printed exception.");
+  }
+  if (!html.includes("High-quality compounder case")) {
+    fail("VCL library does not preserve the approved Costco printed exception.");
+  }
+  if (html.includes("production VCL pages will")) {
+    fail("VCL library still contains the obsolete future-only page promise.");
+  }
 }
 
 function validateVerificationLedger() {
