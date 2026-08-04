@@ -105,7 +105,7 @@
 }
 
 .about-hero-line {
-  max-width: 720px;
+  max-width: 520px;
   margin: 30px 0 18px;
   padding-left: 18px;
   border-left: 8px solid var(--about-red);
@@ -115,7 +115,7 @@
 }
 
 .about-hero-text {
-  max-width: 690px;
+  max-width: 540px;
   margin: 0;
   font-size: 19px;
   line-height: 1.55;
@@ -434,6 +434,11 @@
 
   .about-hero-copy {
     width: min(100% - 44px, 760px);
+  }
+
+  .about-hero-line,
+  .about-hero-text {
+    max-width: 650px;
   }
 
   .about-truth-band,
