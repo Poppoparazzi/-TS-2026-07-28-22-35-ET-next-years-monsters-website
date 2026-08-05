@@ -1,4 +1,4 @@
-// TS: 2026-08-05 07:47 ET
+// TS: 2026-08-05 11:28 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -7,6 +7,7 @@ import {
   MONSTER_RATING_ENGINE_VERSION,
   RATING_COMPONENT_SPECIFICATIONS,
   ratingTier,
+  tierExplanation,
 } from "../src/ratings/spec-v1.js";
 import type {
   FinancialPeriodEvidence,
@@ -145,9 +146,11 @@ test("production rating is deterministic, bounded, versioned, and reconciles com
   assert.ok(first.positiveDrivers.length > 0);
 });
 
-test("production tier boundaries are explicit and have no gaps", () => {
+test("production tier boundaries preserve the unresolved 92 owner decision", () => {
   assert.equal(ratingTier(100), "Platinum");
-  assert.equal(ratingTier(92), "Platinum");
+  assert.equal(ratingTier(93), "Platinum");
+  assert.equal(ratingTier(92), "Tier Boundary Unresolved");
+  assert.match(tierExplanation(ratingTier(92)), /owner approval/i);
   assert.equal(ratingTier(91.99), "Gold");
   assert.equal(ratingTier(85), "Gold");
   assert.equal(ratingTier(75), "Silver");
