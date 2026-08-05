@@ -1,4 +1,4 @@
-// TS: 2026-08-05 07:39 ET
+// TS: 2026-08-05 07:43 ET
 
 export type RatingTier =
   | "Platinum"
@@ -97,11 +97,14 @@ export interface RatingComponentResult {
 }
 
 export interface RatingEligibilityReason {
-  /**
-   * Canonical v1 codes are defined by RatingEligibilityCode. This field remains
-   * forward-compatible so a later engine version can add a more specific reason
-   * without making older API clients reject the whole response.
-   */
+  readonly code: Exclude<RatingEligibilityCode, "eligible">;
+  readonly message: string;
+  readonly retryable: boolean;
+  readonly missingEvidence: readonly string[];
+}
+
+export interface RatingReasonDetail {
+  /** Later engine versions may add a more specific detail code. */
   readonly code: string;
   readonly message: string;
   readonly retryable: boolean;
@@ -138,7 +141,7 @@ export interface IneligibleProductionRating extends RatingResultBase {
   readonly tier: null;
   readonly confidence: "unavailable";
   readonly components: readonly RatingComponentResult[];
-  readonly reasons: readonly RatingEligibilityReason[];
+  readonly reasons: readonly RatingReasonDetail[];
   readonly summary: "Not Yet Rated" | "Unresolved SEC Identity" | "Provider Not Connected";
 }
 
