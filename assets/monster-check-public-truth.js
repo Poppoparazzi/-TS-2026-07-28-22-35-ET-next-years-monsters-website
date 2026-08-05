@@ -1,4 +1,4 @@
-// TS: 2026-08-05 13:29 ET
+// TS: 2026-08-05 13:52 ET
 (() => {
   const result = document.querySelector('[data-result]');
   if (!result) return;
@@ -33,6 +33,26 @@
         color: #f1ede2 !important;
       }
 
+      .monster-investigator-door {
+        display: inline-flex;
+        min-height: 48px;
+        margin-top: 22px;
+        padding: 0 19px;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #dda929;
+        color: #fffaf0;
+        font-size: 11px;
+        font-weight: 950;
+        text-decoration: none;
+      }
+
+      .monster-investigator-door:hover,
+      .monster-investigator-door:focus-visible {
+        outline: 3px solid #ef3528;
+        outline-offset: 3px;
+      }
+
       @media (max-width: 900px) {
         .monster-launch-dna,
         .monster-launch-panel,
@@ -42,6 +62,17 @@
       }
     `;
     document.head.append(style);
+  };
+
+  const installInvestigatorDoor = () => {
+    const heroCopy = document.querySelector('.monster-hero-copy');
+    if (!heroCopy || heroCopy.querySelector('.monster-investigator-door')) return;
+
+    const link = document.createElement('a');
+    link.className = 'monster-investigator-door';
+    link.href = 'captain-breakout-investigator.html';
+    link.textContent = 'MEET CB THE INVESTIGATOR →';
+    heroCopy.append(link);
   };
 
   const standardizeResult = () => {
@@ -63,6 +94,7 @@
   };
 
   installContrastFix();
+  installInvestigatorDoor();
   new MutationObserver(standardizeResult).observe(result, {
     childList: true,
     subtree: true,
