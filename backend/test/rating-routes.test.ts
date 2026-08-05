@@ -1,4 +1,4 @@
-// TS: 2026-08-05 08:39 ET
+// TS: 2026-08-05 08:46 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -35,7 +35,7 @@ const storedResult: ProductionRatingResult = Object.freeze({
       direction: "positive",
       explanation: "Verified quality evidence.",
       evidence: Object.freeze([]),
-    },
+    } as const,
   ]),
   positiveDrivers: Object.freeze(["Monster DNA™: 90"]),
   negativeDrivers: Object.freeze([]),
@@ -149,7 +149,7 @@ test("rating routes reject malformed symbols and report missing records honestly
 
   const invalid = await app.inject({
     method: "GET",
-    url: "/api/ratings/AAPL%2Fsecret",
+    url: "/api/ratings/AAPL%24",
   });
   assert.equal(invalid.statusCode, 400);
   assert.equal(invalid.json().error, "invalid_symbol");
