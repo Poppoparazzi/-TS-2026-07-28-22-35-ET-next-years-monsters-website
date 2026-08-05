@@ -12,7 +12,7 @@
   {
     "ticker": "NVDA",
     "name": "NVIDIA",
-    "score": 96,
+    "score": 94,
     "tier": "Platinum Monster",
     "sector": "Semiconductors",
     "why": "AI and data-center leadership, revenue acceleration, margins, and sector dominance.",
@@ -22,8 +22,8 @@
   {
     "ticker": "MNST",
     "name": "Monster Beverage",
-    "score": 86,
-    "tier": "Gold Monster",
+    "score": 92,
+    "tier": "Platinum Monster",
     "sector": "Consumer Staples",
     "why": "A durable brand, distribution strength, category expansion, and long-term compounding DNA.",
     "warning": "Mature-category growth and valuation can slow the climb.",
@@ -32,7 +32,7 @@
   {
     "ticker": "AMZN",
     "name": "Amazon",
-    "score": 90,
+    "score": 91,
     "tier": "Platinum Monster",
     "sector": "Consumer / Cloud",
     "why": "AWS, advertising, logistics scale, and improving operating leverage.",
@@ -42,8 +42,8 @@
   {
     "ticker": "TSLA",
     "name": "Tesla",
-    "score": 72,
-    "tier": "Silver Watchlist",
+    "score": 90,
+    "tier": "Platinum Monster",
     "sector": "Automotive / Technology",
     "why": "Innovation history, brand strength, software ambition, and volatility-driven opportunity.",
     "warning": "Margins, competition, execution risk, and sentiment swings remain substantial.",
@@ -52,8 +52,8 @@
   {
     "ticker": "NFLX",
     "name": "Netflix",
-    "score": 84,
-    "tier": "Gold Monster",
+    "score": 88,
+    "tier": "Platinum Case Rating",
     "sector": "Media",
     "why": "Global scale, pricing power, advertising optionality, and improving cash generation.",
     "warning": "Content costs and subscriber expectations can punish weak quarters.",
@@ -62,7 +62,7 @@
   {
     "ticker": "AMD",
     "name": "Advanced Micro Devices",
-    "score": 79,
+    "score": 89,
     "tier": "Gold Monster",
     "sector": "Semiconductors",
     "why": "Product execution, CPU and GPU exposure, data-center opportunity, and turnaround DNA.",
@@ -82,8 +82,8 @@
   {
     "ticker": "VRT",
     "name": "Vertiv",
-    "score": 91,
-    "tier": "Platinum Monster",
+    "score": 92,
+    "tier": "Platinum Edge",
     "sector": "Industrial Technology",
     "why": "Data-center infrastructure demand, power and cooling exposure, and strong thematic tailwinds.",
     "warning": "A crowded AI-infrastructure trade can create sharp resets.",
@@ -92,8 +92,8 @@
   {
     "ticker": "AXON",
     "name": "Axon Enterprise",
-    "score": 90,
-    "tier": "Platinum Monster",
+    "score": 92,
+    "tier": "Platinum Edge",
     "sector": "Public Safety Technology",
     "why": "Recurring software, connected devices, public-safety adoption, and ecosystem expansion.",
     "warning": "Valuation and government procurement cycles can create volatility.",
@@ -102,8 +102,8 @@
   {
     "ticker": "DECK",
     "name": "Deckers Outdoor",
-    "score": 82,
-    "tier": "Gold Monster",
+    "score": 90,
+    "tier": "Platinum Edge",
     "sector": "Consumer Discretionary",
     "why": "Brand momentum, strong margins, disciplined distribution, and category expansion.",
     "warning": "Fashion cycles and high expectations can change quickly.",
@@ -112,8 +112,8 @@
   {
     "ticker": "WING",
     "name": "Wingstop",
-    "score": 78,
-    "tier": "Gold Monster",
+    "score": 91,
+    "tier": "Platinum Edge",
     "sector": "Restaurants",
     "why": "Asset-light expansion, unit growth, strong brand awareness, and franchise economics.",
     "warning": "Valuation, food costs, and consumer traffic remain risks.",
@@ -122,7 +122,7 @@
   {
     "ticker": "META",
     "name": "Meta Platforms",
-    "score": 89,
+    "score": 88,
     "tier": "Gold Monster",
     "sector": "Technology / Advertising",
     "why": "Advertising scale, engagement, AI-driven efficiency, and powerful cash generation.",
@@ -132,7 +132,7 @@
   {
     "ticker": "APP",
     "name": "AppLovin",
-    "score": 92,
+    "score": 94,
     "tier": "Platinum Monster",
     "sector": "Advertising Technology",
     "why": "Software growth, advertising optimization, strong market momentum, and margin expansion.",
@@ -142,8 +142,8 @@
   {
     "ticker": "MSFT",
     "name": "Microsoft",
-    "score": 93,
-    "tier": "Platinum Monster",
+    "score": 89,
+    "tier": "Gold Monster",
     "sector": "Technology",
     "why": "Cloud scale, enterprise distribution, recurring revenue, AI integration, and cash flow.",
     "warning": "Its size, valuation, and heavy capital spending raise the performance bar.",

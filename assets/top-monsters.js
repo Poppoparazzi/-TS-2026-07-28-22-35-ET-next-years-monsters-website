@@ -118,7 +118,7 @@ async function setupLeaderboard() {
   if (!list) return;
 
   try {
-    const response = await fetch("data/stocks.json", { signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(window.NYM_STATIC_URL?.("data/stocks.json") || "data/stocks.json", { signal: AbortSignal.timeout(15_000) });
     if (!response.ok) throw new Error("Unable to load demonstration rankings.");
     const stocks = await response.json();
     if (!Array.isArray(stocks)) throw new Error("The demonstration ranking file is invalid.");

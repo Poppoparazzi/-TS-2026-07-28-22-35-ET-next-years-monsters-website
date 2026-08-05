@@ -188,7 +188,7 @@ function mountMarketHeatmap() {
 
 async function startMarketPulse() {
   try {
-    const response = await fetch("data/market-universe.json", { cache: "no-store" });
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json", { cache: "no-store" });
     if (!response.ok) throw new Error("Unable to load the Market 25 list.");
 
     const stocks = await response.json();

@@ -1,4 +1,4 @@
-// TS: 2026-08-04 11:47 ET
+// TS: 2026-08-04 22:18 ET
 
 (() => {
   "use strict";
@@ -25,14 +25,6 @@
   function setText(selector, value) {
     const node = document.querySelector(selector);
     if (node) node.textContent = String(value);
-  }
-
-  function matches(company, query) {
-    const needle = normalize(query);
-    if (!needle) return false;
-    return [company.ticker, company.companyName]
-      .map(normalize)
-      .some((value) => value.includes(needle));
   }
 
   function statusLabel(company) {
@@ -73,7 +65,7 @@
     const actions = document.createElement("div");
     actions.className = "coverage-finder-actions";
     actions.append(
-      createAction("coverage-finder-check", `monster-check.html?ticker=${encodeURIComponent(tickerValue)}`, hasDemo ? "OPEN DEMONSTRATION CHECK" : "OPEN SEC PROFILE"),
+      createAction("coverage-finder-check", `stock.html?ticker=${encodeURIComponent(tickerValue)}`, "OPEN STOCK PAGE"),
       createAction("coverage-finder-chart", `market-explorer.html?left=${encodeURIComponent(tickerValue)}&mode=single`, "EXTERNAL CHART"),
     );
 
@@ -93,7 +85,7 @@
 
   async function loadDemoTickers() {
     try {
-      const response = await fetch("data/market-universe.json");
+      const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json");
       if (!response.ok) return new Set();
       const stocks = await response.json();
       return new Set(stocks.filter((stock) => stock.monsterCheck).map((stock) => normalize(stock.ticker)));
@@ -162,28 +154,26 @@
         return;
       }
 
-      const filtered = companies
+      const matched = companies
         .filter((company) => activeFilter === "all" || company.secStage === activeFilter)
-        .filter((company) => matches(company, query))
+        .map((company) => ({ company, rank: window.NYM_SEARCH_RANK?.rank(company, query) ?? Number.POSITIVE_INFINITY }))
+        .filter(({ rank }) => Number.isFinite(rank))
         .sort((left, right) => {
-          const needle = normalize(query);
-          const leftTicker = normalize(left.ticker);
-          const rightTicker = normalize(right.ticker);
-          const leftRank = leftTicker === needle ? 0 : leftTicker.startsWith(needle) ? 1 : 2;
-          const rightRank = rightTicker === needle ? 0 : rightTicker.startsWith(needle) ? 1 : 2;
-          return leftRank - rightRank || leftTicker.localeCompare(rightTicker);
-        })
-        .slice(0, 20);
+          return window.NYM_SEARCH_RANK.compare(left.company, right.company, query);
+        });
+      const visible = matched.slice(0, 20).map(({ company }) => company);
 
-      summary.textContent = `${filtered.length} MATCH${filtered.length === 1 ? "" : "ES"} SHOWN`;
-      if (!filtered.length) {
+      summary.textContent = matched.length > visible.length
+        ? `${matched.length} MATCHES · SHOWING THE BEST ${visible.length}`
+        : `${matched.length} MATCH${matched.length === 1 ? "" : "ES"}`;
+      if (!visible.length) {
         const message = document.createElement("p");
         message.className = "coverage-finder-empty";
         message.textContent = `No public production company matches “${query}” under the selected evidence filter.`;
         results.append(message);
         return;
       }
-      filtered.forEach((company) => results.append(createCard(company, demonstrationTickers)));
+      visible.forEach((company) => results.append(createCard(company, demonstrationTickers)));
     };
 
     input.addEventListener("input", () => { syncQuery(); render(); });

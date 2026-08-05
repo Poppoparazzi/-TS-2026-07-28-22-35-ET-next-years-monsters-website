@@ -81,7 +81,7 @@ const DEMO_OUTLOOK = {
 };
 
 async function loadStocks() {
-  const response = await fetch("data/stocks.json");
+  const response = await fetch(window.NYM_STATIC_URL?.("data/stocks.json") || "data/stocks.json");
   if (!response.ok) throw new Error("Unable to load demo stock data.");
   return response.json();
 }

@@ -1,4 +1,4 @@
-// TS: 2026-08-04 19:18 ET
+// TS: 2026-08-04 22:18 ET
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -128,6 +128,128 @@ function validateVclOrder() {
   }
 }
 
+function validateDemonstrationConsistency() {
+  const expected = new Map([
+    ["NVDA", [94, "Platinum Monster"]],
+    ["AAPL", [88, "Gold Monster"]],
+    ["MNST", [92, "Platinum Monster"]],
+    ["AMZN", [91, "Platinum Monster"]],
+    ["TSLA", [90, "Platinum Monster"]],
+    ["NFLX", [88, "Platinum Case Rating"]],
+    ["AMD", [89, "Gold Monster"]],
+    ["COST", [90, "Platinum Monster"]],
+    ["MSFT", [89, "Gold Monster"]],
+    ["META", [88, "Gold Monster"]],
+    ["APP", [94, "Platinum Monster"]],
+    ["VRT", [92, "Platinum Edge"]],
+    ["AXON", [92, "Platinum Edge"]],
+    ["DECK", [90, "Platinum Edge"]],
+    ["WING", [91, "Platinum Edge"]],
+  ]);
+  let stocks = [];
+  try {
+    stocks = JSON.parse(read("data/stocks.json"));
+  } catch (error) {
+    fail(`Unable to parse data/stocks.json: ${error.message}`);
+    return;
+  }
+
+  expected.forEach(([score, tier], ticker) => {
+    const stock = stocks.find((item) => item.ticker === ticker);
+    if (!stock) {
+      fail(`Demonstration data is missing ${ticker}.`);
+      return;
+    }
+    if (stock.score !== score || stock.tier !== tier) {
+      fail(`Demonstration data for ${ticker} must be ${score} / ${tier}; found ${stock.score} / ${stock.tier}.`);
+    }
+  });
+
+  if (stocks.length !== expected.size) {
+    fail(`Demonstration data must contain exactly ${expected.size} approved VCL cases; found ${stocks.length}.`);
+  }
+
+  const ledger = read("assets/verification-ledger.js");
+  expected.forEach(([score], ticker) => {
+    const pattern = new RegExp(`ticker: ["']${ticker}["'][^\\n]+demoScore: ${score}(?:[, }])`);
+    if (!pattern.test(ledger)) {
+      fail(`Verification Ledger does not use the approved ${ticker} demonstration score ${score}.`);
+    }
+  });
+}
+
+function validateUnifiedStockExperience() {
+  const html = read("stock.html");
+  const script = read("assets/stock-profile.js");
+  const coverageScript = read("assets/coverage-finder.js");
+  const homeSearch = read("assets/home-stock-finder.js");
+  const rankScript = read("assets/search-rank.js");
+
+  ["overview", "sec", "chart", "stories", "rating"].forEach((tab) => {
+    if (!html.includes(`data-stock-tab="${tab}"`) || !html.includes(`data-stock-panel="${tab}"`)) {
+      fail(`Unified stock page is missing its ${tab} tab or panel.`);
+    }
+  });
+
+  ["/api/sec/company/", "/api/sec/filings/", "/api/stored/"].forEach((route) => {
+    if (!script.includes(route)) fail(`Unified stock page does not use required route ${route}.`);
+  });
+
+  if (!script.includes("NOT YET RATED") || !script.includes("DEMONSTRATION RATING")) {
+    fail("Unified stock page does not preserve rating status boundaries.");
+  }
+  if (!script.includes("PROVIDER NOT CONNECTED") || !html.includes("MAY BE DELAYED")) {
+    fail("Unified stock page does not preserve external provider failure and delay labels.");
+  }
+  try {
+    const context = vm.createContext({ window: {} });
+    new vm.Script(rankScript, { filename: "assets/search-rank.js" }).runInContext(context);
+    const rank = context.window.NYM_SEARCH_RANK?.rank;
+    const fordMotor = { ticker: "F", companyName: "FORD MOTOR CO" };
+    const ashford = { ticker: "AINC", companyName: "ASHFORD INC" };
+    if (typeof rank !== "function" || rank(fordMotor, "Ford") >= rank(ashford, "Ford")) {
+      fail("Coverage search does not rank Ford Motor ahead of contains-only company matches.");
+    }
+    if (rank(fordMotor, "F") !== 0 || rank(fordMotor, "FORD MOTOR CO") !== 1) {
+      fail("Coverage search does not prioritize exact ticker and exact company-name matches.");
+    }
+  } catch (error) {
+    fail(`Coverage search ranking could not be tested: ${error.message}`);
+  }
+  if (!coverageScript.includes("stock.html?ticker=")) {
+    fail("Coverage search does not route results to the unified stock page.");
+  }
+  if (!homeSearch.includes('isExactTicker ? "stock.html"')) {
+    fail("Homepage exact-ticker search does not route to the unified stock page.");
+  }
+}
+
+function validateStaticDataVersioning() {
+  const runtime = read("assets/runtime-config.js");
+  if (!runtime.includes("staticDataVersion") || !runtime.includes("NYM_STATIC_URL")) {
+    fail("Runtime configuration does not expose versioned static-data URLs.");
+  }
+
+  const assetsDirectory = join(root, "assets");
+  readdirSync(assetsDirectory)
+    .filter((name) => extname(name) === ".js" && name !== "runtime-config.js")
+    .forEach((name) => {
+      const source = read(join("assets", name));
+      if (/fetch\(\s*["']data\//.test(source)) {
+        fail(`${name} fetches an unversioned static data file.`);
+      }
+    });
+
+  readdirSync(root)
+    .filter((name) => extname(name) === ".html")
+    .forEach((name) => {
+      const html = read(name);
+      if (!html.includes('src="assets/runtime-config.js"')) {
+        fail(`${name} does not load the shared runtime and static-data version.`);
+      }
+    });
+}
+
 function validateVerificationLedger() {
   const html = read("verification-ledger.html");
   const script = read("assets/verification-ledger.js");
@@ -218,8 +340,11 @@ function validateFactoryStatus() {
 validateJavaScript();
 validateLocalReferences();
 validateVclOrder();
+validateDemonstrationConsistency();
 validateVerificationLedger();
 validateFactoryStatus();
+validateUnifiedStockExperience();
+validateStaticDataVersioning();
 
 if (failures.length) {
   console.error("Static-site validation failed:");

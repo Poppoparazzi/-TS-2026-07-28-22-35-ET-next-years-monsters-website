@@ -1,0 +1,93 @@
+<!-- TS: 2026-08-04 22:18 ET -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stock Research | Next Year’s Monsters™</title>
+  <meta name="description" content="Inspect official SEC evidence, external charts and stories, and clearly labeled Next Year’s Monsters demonstration data on one stock page.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/editorial-type.css">
+  <link rel="stylesheet" href="assets/stock-profile.css">
+</head>
+<body class="stock-page">
+<header class="site-header home-header">
+  <div class="home-nav-shell">
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home"><span class="home-brand-arrow">↗</span><span>NEXT YEAR’S MONSTERS™</span></a>
+    <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a href="index.html">HOME</a>
+      <a href="coverage-universe.html">FIND STOCKS</a>
+      <a class="active" href="stock.html?ticker=AAPL">STOCK PAGE</a>
+      <a href="vcl-library.html">VCL™</a>
+    </nav>
+    <a class="home-nav-cta" href="coverage-universe.html">FIND A STOCK</a>
+  </div>
+</header>
+
+<main>
+  <section class="stock-command" aria-labelledby="stock-title">
+    <form class="stock-command-search" data-stock-search>
+      <label for="stock-page-ticker">OPEN ANOTHER STOCK</label>
+      <div><span>$</span><input id="stock-page-ticker" data-stock-search-input aria-label="Enter an exact stock ticker" placeholder="TICKER" autocomplete="off"><button type="submit">OPEN</button></div>
+    </form>
+    <div class="stock-command-title">
+      <p>COMPANY RESEARCH WORKSPACE</p>
+      <h1 id="stock-title"><span data-stock-ticker>$—</span> <strong data-stock-name>LOADING COMPANY</strong></h1>
+      <div class="stock-meta" data-stock-meta aria-live="polite"><span>CHECKING OFFICIAL SEC EVIDENCE</span></div>
+    </div>
+    <button class="stock-watch" data-stock-watch type="button" aria-pressed="false"><span aria-hidden="true">☆</span> ADD TO WATCHLIST</button>
+  </section>
+
+  <section class="stock-source-strip" aria-label="Data source status">
+    <div><span>SEC EVIDENCE</span><strong data-stock-sec-status>CHECKING</strong></div>
+    <div><span>MARKET CONTEXT</span><strong>EXTERNAL · MAY BE DELAYED</strong></div>
+    <div><span>MONSTER RATING™</span><strong data-stock-rating-status>CHECKING</strong></div>
+    <div><span>WATCHLIST</span><strong>THIS BROWSER</strong></div>
+  </section>
+
+  <section class="stock-workspace">
+    <div class="stock-tabs" role="tablist" aria-label="Stock research views">
+      <button type="button" role="tab" aria-selected="true" aria-controls="stock-overview" id="stock-tab-overview" data-stock-tab="overview">OVERVIEW</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="stock-sec" id="stock-tab-sec" data-stock-tab="sec">SEC EVIDENCE</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="stock-chart" id="stock-tab-chart" data-stock-tab="chart">CHART</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="stock-stories" id="stock-tab-stories" data-stock-tab="stories">STORIES</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="stock-rating" id="stock-tab-rating" data-stock-tab="rating">RATING</button>
+    </div>
+
+    <section class="stock-panel" id="stock-overview" role="tabpanel" aria-labelledby="stock-tab-overview" data-stock-panel="overview">
+      <div class="stock-section-heading"><p>01 / CURRENT EVIDENCE</p><h2>WHAT EXISTS<br>FOR THIS STOCK.</h2></div>
+      <div class="stock-overview-grid" data-stock-overview><p class="stock-loading">Loading the company record…</p></div>
+    </section>
+
+    <section class="stock-panel" id="stock-sec" role="tabpanel" aria-labelledby="stock-tab-sec" data-stock-panel="sec" hidden>
+      <div class="stock-section-heading"><p>02 / OFFICIAL SOURCE</p><h2>FOLLOW THE<br>SEC RECEIPTS.</h2></div>
+      <div data-stock-sec><p class="stock-loading">Checking the official company identity and recent filings…</p></div>
+    </section>
+
+    <section class="stock-panel" id="stock-chart" role="tabpanel" aria-labelledby="stock-tab-chart" data-stock-panel="chart" hidden>
+      <div class="stock-section-heading"><p>03 / EXTERNAL MARKET CONTEXT</p><h2>READ THE<br>PRICE ACTION.</h2></div>
+      <div class="stock-provider-frame" data-stock-chart><p class="stock-loading">Loading external chart…</p></div>
+    </section>
+
+    <section class="stock-panel" id="stock-stories" role="tabpanel" aria-labelledby="stock-tab-stories" data-stock-panel="stories" hidden>
+      <div class="stock-section-heading"><p>04 / EXTERNAL STORIES</p><h2>CHECK THE<br>CURRENT STORY.</h2></div>
+      <div class="stock-provider-frame" data-stock-stories><p class="stock-loading">Loading external stories…</p></div>
+    </section>
+
+    <section class="stock-panel" id="stock-rating" role="tabpanel" aria-labelledby="stock-tab-rating" data-stock-panel="rating" hidden>
+      <div class="stock-section-heading"><p>05 / RATING STATUS</p><h2>DEMONSTRATION<br>OR NOT YET RATED.</h2></div>
+      <div data-stock-rating><p class="stock-loading">Checking the approved demonstration library…</p></div>
+    </section>
+  </section>
+</main>
+
+<footer class="home-footer">
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>ONE STOCK. EVERY AVAILABLE RECEIPT.</span></div>
+  <p><strong>Educational Use Only:</strong> Official SEC evidence, external market context, and Demonstration Ratings are not recommendations to buy, sell, or hold a security. Investing involves risk, including possible loss of principal.</p>
+</footer>
+
+<script src="assets/runtime-config.js"></script>
+<script src="assets/stock-profile.js"></script>
+<script src="assets/market-ticker-strip.js"></script>
+</body>
+</html>

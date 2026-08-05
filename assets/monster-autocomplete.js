@@ -70,7 +70,7 @@ async function setupMonsterAutocomplete() {
 
   let stocks = [];
   try {
-    const response = await fetch("data/stocks.json");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/stocks.json") || "data/stocks.json");
     if (!response.ok) throw new Error("Stock list unavailable");
     stocks = await response.json();
   } catch (error) {

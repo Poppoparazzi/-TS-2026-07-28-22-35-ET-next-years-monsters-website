@@ -1,49 +1,15 @@
-// TS: 2026-08-04 18:23 ET
+// TS: 2026-08-03 15:56 ET
 
 (() => {
   "use strict";
 
+  const EXPECTED_API_VERSION = "0.6.0";
   const FACTORY_LIMIT = 2000;
-  const SUMMARY_SELECTORS = Object.freeze([
-    "[data-factory-universe]",
-    "[data-factory-examined]",
-    "[data-factory-queued]",
-    "[data-factory-processing]",
-    "[data-factory-complete]",
-    "[data-factory-partial]",
-    "[data-factory-unresolved]",
-    "[data-factory-failed]",
-    "[data-factory-stale]",
-    "[data-factory-filings]",
-    "[data-factory-facts]",
-    "[data-factory-quotes]",
-    "[data-factory-ratings]",
-  ]);
-  const REQUIRED_COUNT_FIELDS = Object.freeze([
-    "universeSize",
-    "examinedCount",
-    "queuedCount",
-    "processingCount",
-    "secCompleteCount",
-    "partialCount",
-    "unresolvedCount",
-    "failedCount",
-    "staleCount",
-    "filingCompleteCount",
-    "factsCompleteCount",
-    "quoteCompleteCount",
-    "ratingCompleteCount",
-  ]);
-
   const refreshButton = document.querySelector("[data-factory-refresh]");
   const checkedNode = document.querySelector("[data-factory-checked]");
   const tableBody = document.querySelector("[data-factory-body]");
   const progressBar = document.querySelector("[data-factory-progress-bar]");
   const progressText = document.querySelector("[data-factory-progress-text]");
-  let hasRenderedData = false;
-  let requestInFlight = false;
-
-  class PublicStatusError extends Error {}
 
   function apiBaseUrl() {
     const raw = window.NYM_CONFIG?.apiBaseUrl;
@@ -109,22 +75,22 @@
   }
 
   function renderSummary(payload) {
-    setText("[data-factory-universe]", payload.universeSize);
-    setText("[data-factory-examined]", payload.examinedCount);
-    setText("[data-factory-queued]", payload.queuedCount);
-    setText("[data-factory-processing]", payload.processingCount);
-    setText("[data-factory-complete]", payload.secCompleteCount);
-    setText("[data-factory-partial]", payload.partialCount);
-    setText("[data-factory-unresolved]", payload.unresolvedCount);
-    setText("[data-factory-failed]", payload.failedCount);
-    setText("[data-factory-stale]", payload.staleCount);
-    setText("[data-factory-filings]", payload.filingCompleteCount);
-    setText("[data-factory-facts]", payload.factsCompleteCount);
-    setText("[data-factory-quotes]", payload.quoteCompleteCount);
-    setText("[data-factory-ratings]", payload.ratingCompleteCount);
+    setText("[data-factory-universe]", payload.universeSize ?? 0);
+    setText("[data-factory-examined]", payload.examinedCount ?? 0);
+    setText("[data-factory-queued]", payload.queuedCount ?? 0);
+    setText("[data-factory-processing]", payload.processingCount ?? 0);
+    setText("[data-factory-complete]", payload.secCompleteCount ?? 0);
+    setText("[data-factory-partial]", payload.partialCount ?? 0);
+    setText("[data-factory-unresolved]", payload.unresolvedCount ?? 0);
+    setText("[data-factory-failed]", payload.failedCount ?? 0);
+    setText("[data-factory-stale]", payload.staleCount ?? 0);
+    setText("[data-factory-filings]", payload.filingCompleteCount ?? 0);
+    setText("[data-factory-facts]", payload.factsCompleteCount ?? 0);
+    setText("[data-factory-quotes]", payload.quoteCompleteCount ?? 0);
+    setText("[data-factory-ratings]", payload.ratingCompleteCount ?? 0);
 
-    const examined = payload.examinedCount;
-    const complete = payload.secCompleteCount;
+    const examined = Number(payload.examinedCount ?? 0);
+    const complete = Number(payload.secCompleteCount ?? 0);
     const percent = examined > 0 ? Math.min(Math.max((complete / examined) * 100, 0), 100) : 0;
 
     if (progressBar) progressBar.style.width = `${percent.toFixed(1)}%`;
@@ -136,8 +102,8 @@
   function renderRows(companies) {
     if (!tableBody) return;
 
-    if (companies.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan=\"12\"><p class=\"factory-empty\">The production database returned no imported companies. The first universe import has not completed.</p></td></tr>";
+    if (!Array.isArray(companies) || companies.length === 0) {
+      tableBody.innerHTML = "<tr><td colspan=\"12\"><p class=\"factory-empty\">No imported companies were returned. The production database may not have completed its first universe import.</p></td></tr>";
       return;
     }
 
@@ -158,25 +124,30 @@
       </tr>`).join("");
   }
 
-  function renderUnavailableSummary() {
-    SUMMARY_SELECTORS.forEach((selector) => setText(selector, "—"));
-    if (progressBar) progressBar.style.width = "0%";
-    if (progressText) {
-      progressText.textContent = "PROVIDER NOT CONNECTED · No factory totals are being displayed.";
-    }
+  function resetSummary() {
+    renderSummary({
+      universeSize: 0,
+      examinedCount: 0,
+      queuedCount: 0,
+      processingCount: 0,
+      secCompleteCount: 0,
+      partialCount: 0,
+      unresolvedCount: 0,
+      failedCount: 0,
+      staleCount: 0,
+      filingCompleteCount: 0,
+      factsCompleteCount: 0,
+      quoteCompleteCount: 0,
+      ratingCompleteCount: 0,
+    });
   }
 
   function renderUnavailable(message) {
-    if (!hasRenderedData) {
-      renderUnavailableSummary();
-      if (tableBody) {
-        tableBody.innerHTML = `<tr><td colspan="12"><p class="factory-empty"><strong>Provider Not Connected.</strong> ${escapeHtml(message)} No completion values are being claimed.</p></td></tr>`;
-      }
+    resetSummary();
+    if (tableBody) {
+      tableBody.innerHTML = `<tr><td colspan="12"><p class="factory-empty">${escapeHtml(message)} No completion values were invented.</p></td></tr>`;
     }
-
-    if (checkedNode) {
-      checkedNode.textContent = `PROVIDER NOT CONNECTED · LAST ATTEMPT ${formatTimestamp(new Date().toISOString()).toUpperCase()}`;
-    }
+    if (checkedNode) checkedNode.textContent = "FACTORY STATUS BLOCKED";
   }
 
   async function requestJson(url) {
@@ -187,73 +158,35 @@
     const payload = await response.json().catch(() => null);
 
     if (!response.ok) {
-      throw new PublicStatusError(
-        response.status === 503
-          ? "The production data provider is not connected."
-          : "The production data provider could not complete the request.",
-      );
+      throw new Error(payload?.message || `${url} returned HTTP ${response.status}.`);
     }
     return payload;
   }
 
   function verifyProductionHealth(health) {
-    if (!health || typeof health !== "object" || health.status !== "ok") {
-      throw new PublicStatusError("The production health check returned an invalid response.");
+    if (health?.version !== EXPECTED_API_VERSION) {
+      throw new Error(
+        `Render is still serving backend version ${health?.version || "unknown"}. The 2,000-stock factory requires version ${EXPECTED_API_VERSION}, so the latest main branch has not been deployed.`,
+      );
     }
 
     const missing = [];
-    if (!health.database?.configured) missing.push("production database");
-    if (!health.sec?.configured) missing.push("official SEC evidence");
-    if (!health.universe?.configured) missing.push("2,000-company universe");
+    if (!health?.database?.configured) missing.push("production database");
+    if (!health?.sec?.configured) missing.push("SEC provider");
+    if (!health?.universe?.configured) missing.push("bulk universe store");
 
-    if (missing.length > 0) {
-      throw new PublicStatusError(`Required services are not connected: ${missing.join(", ")}.`);
+    if (missing.length) {
+      throw new Error(`Render version ${EXPECTED_API_VERSION} is live, but these services are not configured: ${missing.join(", ")}.`);
     }
-  }
-
-  function validateFactoryPayload(payload) {
-    if (!payload || typeof payload !== "object" || payload.configured !== true) {
-      throw new PublicStatusError("The factory endpoint returned an invalid production status.");
-    }
-    if (!Array.isArray(payload.companies)) {
-      throw new PublicStatusError("The factory endpoint did not return a company status list.");
-    }
-
-    for (const field of REQUIRED_COUNT_FIELDS) {
-      if (!Number.isInteger(payload[field]) || payload[field] < 0) {
-        throw new PublicStatusError("The factory endpoint returned incomplete count data.");
-      }
-    }
-
-    if (payload.examinedCount !== payload.companies.length) {
-      throw new PublicStatusError("The factory endpoint returned totals that do not reconcile with its company list.");
-    }
-
-    const statusTotal =
-      payload.queuedCount +
-      payload.processingCount +
-      payload.secCompleteCount +
-      payload.partialCount +
-      payload.unresolvedCount +
-      payload.failedCount +
-      payload.staleCount;
-    if (statusTotal !== payload.examinedCount) {
-      throw new PublicStatusError("The factory endpoint returned pipeline totals that do not reconcile.");
-    }
-
-    return payload;
   }
 
   async function loadFactoryStatus() {
-    if (requestInFlight) return;
-
     const baseUrl = apiBaseUrl();
     if (!baseUrl) {
       renderUnavailable("The public API address is not configured.");
       return;
     }
 
-    requestInFlight = true;
     if (refreshButton) {
       refreshButton.disabled = true;
       refreshButton.textContent = "CHECKING FACTORY…";
@@ -263,22 +196,15 @@
       const health = await requestJson(`${baseUrl}/api/health`);
       verifyProductionHealth(health);
 
-      const rawPayload = await requestJson(`${baseUrl}/api/universe/status?limit=${FACTORY_LIMIT}`);
-      const payload = validateFactoryPayload(rawPayload);
+      const payload = await requestJson(`${baseUrl}/api/universe/status?limit=${FACTORY_LIMIT}`);
       renderSummary(payload);
       renderRows(payload.companies);
-      hasRenderedData = true;
       if (checkedNode) {
-        const version = typeof health.version === "string" && health.version ? health.version : "connected";
-        checkedNode.textContent = `BACKEND ${version} · LAST CHECKED ${formatTimestamp(payload.generatedAt || new Date().toISOString()).toUpperCase()}`;
+        checkedNode.textContent = `BACKEND ${health.version} · LAST CHECKED ${formatTimestamp(payload.generatedAt || new Date().toISOString()).toUpperCase()}`;
       }
     } catch (error) {
-      const message = error instanceof PublicStatusError
-        ? error.message
-        : "The production data provider could not be reached or returned an invalid response.";
-      renderUnavailable(message);
+      renderUnavailable(error instanceof Error ? error.message : "The factory endpoint could not be reached.");
     } finally {
-      requestInFlight = false;
       if (refreshButton) {
         refreshButton.disabled = false;
         refreshButton.textContent = "REFRESH FACTORY STATUS";

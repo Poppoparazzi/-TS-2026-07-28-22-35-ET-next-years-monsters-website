@@ -21,13 +21,8 @@ function createCoverageCard(stock, mode) {
     : `${stock.sector} · External Market Data May Be Delayed · Not Yet Rated`;
 
   const primaryLink = document.createElement("a");
-  if (mode === "demo") {
-    primaryLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
-    primaryLink.textContent = "OPEN DEMONSTRATION MONSTER CHECK™ →";
-  } else {
-    primaryLink.href = `market-explorer.html?left=${encodeURIComponent(stock.ticker)}&mode=single`;
-    primaryLink.textContent = "OPEN EXTERNAL CHART →";
-  }
+  primaryLink.href = `stock.html?ticker=${encodeURIComponent(stock.ticker)}`;
+  primaryLink.textContent = "OPEN STOCK PAGE →";
 
   const newsLink = document.createElement("a");
   newsLink.href = `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}#current-stories`;
@@ -46,7 +41,7 @@ function renderCoverageGrid(selector, stocks, mode) {
 
 async function startCoverageUniverse() {
   try {
-    const response = await fetch("data/market-universe.json");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json");
     if (!response.ok) throw new Error("Unable to load the Market 25 list.");
 
     const stocks = await response.json();

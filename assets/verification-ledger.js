@@ -1,24 +1,24 @@
-// TS: 2026-08-04 18:23 ET
+// TS: 2026-08-04 22:18 ET
 
 (() => {
   "use strict";
 
   const PILOT = Object.freeze([
-    { ticker: "NVDA", name: "NVIDIA", tier: "platinum", demoScore: 96 },
-    { ticker: "MSFT", name: "Microsoft", tier: "platinum", demoScore: 93 },
-    { ticker: "APP", name: "AppLovin", tier: "platinum", demoScore: 92 },
-    { ticker: "VRT", name: "Vertiv", tier: "platinum", demoScore: 91 },
-    { ticker: "AMZN", name: "Amazon", tier: "platinum", demoScore: 90 },
-    { ticker: "AXON", name: "Axon Enterprise", tier: "platinum", demoScore: 90 },
-    { ticker: "META", name: "Meta Platforms", tier: "gold", demoScore: 89 },
+    { ticker: "NVDA", name: "NVIDIA", tier: "platinum", demoScore: 94 },
+    { ticker: "MSFT", name: "Microsoft", tier: "gold", demoScore: 89 },
+    { ticker: "APP", name: "AppLovin", tier: "platinum", demoScore: 94 },
+    { ticker: "VRT", name: "Vertiv", tier: "platinum", demoScore: 92 },
+    { ticker: "AMZN", name: "Amazon", tier: "platinum", demoScore: 91 },
+    { ticker: "AXON", name: "Axon Enterprise", tier: "platinum", demoScore: 92 },
+    { ticker: "META", name: "Meta Platforms", tier: "gold", demoScore: 88 },
     { ticker: "AAPL", name: "Apple", tier: "gold", demoScore: 88 },
-    { ticker: "MNST", name: "Monster Beverage", tier: "gold", demoScore: 86 },
-    { ticker: "COST", name: "Costco", tier: "gold", demoScore: 84 },
-    { ticker: "NFLX", name: "Netflix", tier: "gold", demoScore: 84 },
-    { ticker: "DECK", name: "Deckers Outdoor", tier: "gold", demoScore: 82 },
-    { ticker: "AMD", name: "Advanced Micro Devices", tier: "gold", demoScore: 79 },
-    { ticker: "WING", name: "Wingstop", tier: "gold", demoScore: 78 },
-    { ticker: "TSLA", name: "Tesla", tier: "silver", demoScore: 72 },
+    { ticker: "MNST", name: "Monster Beverage", tier: "platinum", demoScore: 92 },
+    { ticker: "COST", name: "Costco", tier: "platinum", demoScore: 90 },
+    { ticker: "NFLX", name: "Netflix", tier: "platinum", demoScore: 88 },
+    { ticker: "DECK", name: "Deckers Outdoor", tier: "platinum", demoScore: 90 },
+    { ticker: "AMD", name: "Advanced Micro Devices", tier: "gold", demoScore: 89 },
+    { ticker: "WING", name: "Wingstop", tier: "platinum", demoScore: 91 },
+    { ticker: "TSLA", name: "Tesla", tier: "platinum", demoScore: 90 },
   ]);
 
   const tableBody = document.querySelector("[data-verification-body]");

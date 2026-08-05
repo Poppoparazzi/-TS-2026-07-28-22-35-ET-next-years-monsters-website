@@ -305,7 +305,7 @@ function setupExplorer(stocks) {
 async function startMarketExplorer() {
   const status = document.querySelector("[data-explorer-status]");
   try {
-    const response = await fetch("data/market-universe.json");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json");
     if (!response.ok) throw new Error("Unable to load Market 25");
     const stocks = await response.json();
     if (!Array.isArray(stocks) || !stocks.length) throw new Error("Empty Market 25");

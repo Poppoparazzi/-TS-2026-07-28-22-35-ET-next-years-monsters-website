@@ -1,4 +1,4 @@
-// TS: 2026-08-04 14:34 ET
+// TS: 2026-08-01 17:58 ET
 
 (function initializeHomeDataStatus() {
   "use strict";
@@ -9,7 +9,7 @@
   if (!status) return;
 
   if (!apiBaseUrl) {
-    status.textContent = "PROVIDER NOT CONNECTED";
+    status.textContent = "NOT CONFIGURED";
     status.dataset.state = "unavailable";
     return;
   }
@@ -27,13 +27,11 @@
     })
     .then((health) => {
       const connected = health?.status === "ok" && health?.sec?.configured === true;
-      status.textContent = connected
-        ? "OFFICIAL SEC EVIDENCE · CONNECTED"
-        : "PROVIDER NOT CONNECTED";
+      status.textContent = connected ? "OFFICIAL SEC · CONNECTED" : "TEMPORARILY UNAVAILABLE";
       status.dataset.state = connected ? "connected" : "unavailable";
     })
     .catch(() => {
-      status.textContent = "PROVIDER NOT CONNECTED";
+      status.textContent = "TEMPORARILY UNAVAILABLE";
       status.dataset.state = "unavailable";
     })
     .finally(() => window.clearTimeout(timeout));
