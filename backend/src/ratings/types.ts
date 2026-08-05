@@ -1,4 +1,4 @@
-// TS: 2026-08-05 07:16 ET
+// TS: 2026-08-05 07:39 ET
 
 export type RatingTier =
   | "Platinum"
@@ -97,7 +97,12 @@ export interface RatingComponentResult {
 }
 
 export interface RatingEligibilityReason {
-  readonly code: Exclude<RatingEligibilityCode, "eligible">;
+  /**
+   * Canonical v1 codes are defined by RatingEligibilityCode. This field remains
+   * forward-compatible so a later engine version can add a more specific reason
+   * without making older API clients reject the whole response.
+   */
+  readonly code: string;
   readonly message: string;
   readonly retryable: boolean;
   readonly missingEvidence: readonly string[];
