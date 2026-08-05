@@ -210,6 +210,7 @@
     const tier = result.querySelector('.monster-launch-score-card em')?.textContent?.trim();
     if (score && score !== '—') {
       return {
+        key: `score-${score}-${tier || ''}`,
         heading: `MONSTER RATING™ ${score}`,
         message: tier
           ? `${tier}. CB points to the score; the evidence on the right explains it.`
@@ -222,6 +223,7 @@
       || 'EVIDENCE STATUS';
 
     return {
+      key: `status-${status}`,
       heading: status,
       message: 'No valid production number is available, so CB points to the truthful evidence status instead.',
     };
@@ -232,7 +234,8 @@
       && result.querySelector(':scope > .monster-investigator-content')) {
       const state = getResultState();
       const status = result.querySelector('.monster-investigator-status');
-      if (status) {
+      if (status && status.dataset.stateKey !== state.key) {
+        status.dataset.stateKey = state.key;
         status.innerHTML = `<strong>${state.heading}</strong>${state.message}`;
       }
       return;
@@ -243,11 +246,11 @@
       return;
     }
 
+    const state = getResultState();
     const content = document.createElement('div');
     content.className = 'monster-investigator-content';
     while (result.firstChild) content.append(result.firstChild);
 
-    const state = getResultState();
     const panel = document.createElement('aside');
     panel.className = 'monster-investigator-panel';
     panel.setAttribute(
@@ -257,7 +260,7 @@
     panel.innerHTML = `
       <img src="assets/captain-breakout-investigator.webp" alt="CB the Investigator holding a fingerprint magnifying glass and pointing toward the stock result">
       <span class="monster-investigator-arrow" aria-hidden="true"></span>
-      <p class="monster-investigator-status"><strong>${state.heading}</strong>${state.message}</p>
+      <p class="monster-investigator-status" data-state-key="${state.key}"><strong>${state.heading}</strong>${state.message}</p>
     `;
 
     result.classList.add('monster-investigator-layout');
@@ -274,15 +277,19 @@
 
       result.querySelectorAll('.monster-demo-flag').forEach((label) => {
         const text = label.textContent.trim().toUpperCase();
+        let desired = '';
+
         if (text.includes('DEMONSTRATION RATING')) {
-          label.textContent = 'DEMONSTRATION RATING · NOT LIVE DATA';
+          desired = 'DEMONSTRATION RATING · NOT LIVE DATA';
         } else if (text.includes('OFFICIAL SEC COMPANY RECORD')) {
-          label.textContent = 'OFFICIAL SEC EVIDENCE · NOT YET RATED';
+          desired = 'OFFICIAL SEC EVIDENCE · NOT YET RATED';
         } else if (text.includes('SEC SERVICE TEMPORARILY UNAVAILABLE')) {
-          label.textContent = 'PROVIDER NOT CONNECTED';
+          desired = 'PROVIDER NOT CONNECTED';
         } else if (text.includes('NO SEC COMPANY MATCH FOUND')) {
-          label.textContent = 'UNRESOLVED SEC IDENTITY';
+          desired = 'UNRESOLVED SEC IDENTITY';
         }
+
+        if (desired && label.textContent !== desired) label.textContent = desired;
       });
 
       installInvestigatorResult();
