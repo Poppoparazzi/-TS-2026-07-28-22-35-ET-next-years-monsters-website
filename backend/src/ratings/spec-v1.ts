@@ -1,4 +1,4 @@
-// TS: 2026-08-05 07:18 ET
+// TS: 2026-08-05 11:28 ET
 
 import type { RatingComponentKey, RatingTier } from "./types.js";
 
@@ -8,6 +8,7 @@ export const MINIMUM_MARKET_BARS = 126;
 export const MAXIMUM_MARKET_DATA_AGE_DAYS = 7;
 export const MINIMUM_AVERAGE_DOLLAR_VOLUME_20D = 500_000;
 export const MINIMUM_DATA_COMPLETENESS_SCORE = 70;
+export const UNRESOLVED_GOLD_PLATINUM_BOUNDARY_SCORE = 92;
 
 export interface RatingComponentSpecification {
   readonly key: RatingComponentKey;
@@ -62,7 +63,10 @@ if (Math.abs(weightTotal - 1) > 0.000_001) {
 }
 
 export function ratingTier(score: number): RatingTier {
-  if (score >= 92) return "Platinum";
+  if (score > UNRESOLVED_GOLD_PLATINUM_BOUNDARY_SCORE) return "Platinum";
+  if (score === UNRESOLVED_GOLD_PLATINUM_BOUNDARY_SCORE) {
+    return "Tier Boundary Unresolved";
+  }
   if (score >= 85) return "Gold";
   if (score >= 75) return "Silver";
   if (score >= 65) return "Bronze";
@@ -84,5 +88,7 @@ export function tierExplanation(tier: RatingTier): string {
       return "Weak or inconsistent evidence with substantial execution, market, or data risks.";
     case "Cemetery Risk":
       return "Severe deterioration, weak evidence, or risk signals dominate the current calculation.";
+    case "Tier Boundary Unresolved":
+      return "The 92 boundary between Gold and Platinum requires owner approval; the numerical Production Monster Rating™ remains controlling.";
   }
 }
