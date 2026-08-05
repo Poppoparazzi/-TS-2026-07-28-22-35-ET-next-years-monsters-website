@@ -1,4 +1,4 @@
-// TS: 2026-08-05 07:43 ET
+// TS: 2026-08-05 11:28 ET
 
 export type RatingTier =
   | "Platinum"
@@ -6,7 +6,8 @@ export type RatingTier =
   | "Silver"
   | "Bronze"
   | "Goblin"
-  | "Cemetery Risk";
+  | "Cemetery Risk"
+  | "Tier Boundary Unresolved";
 
 export type RatingEligibilityCode =
   | "eligible"
