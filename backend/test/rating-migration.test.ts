@@ -1,4 +1,4 @@
-// TS: 2026-08-05 08:14 ET
+// TS: 2026-08-05 11:28 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -34,7 +34,15 @@ test("production rating migration upgrades tier and score constraints explicitly
 
   assert.match(sql, /SET tier = 'Bronze'\s+WHERE tier = 'Watch'/);
   assert.match(sql, /SET tier = 'Cemetery Risk'\s+WHERE tier = 'Cemetery'/);
-  for (const tier of ["Platinum", "Gold", "Silver", "Bronze", "Goblin", "Cemetery Risk"]) {
+  for (const tier of [
+    "Platinum",
+    "Gold",
+    "Silver",
+    "Bronze",
+    "Goblin",
+    "Cemetery Risk",
+    "Tier Boundary Unresolved",
+  ]) {
     assert.equal(sql.includes(`'${tier}'`), true);
   }
   assert.match(sql, /score >= 1 AND score <= 100/);
