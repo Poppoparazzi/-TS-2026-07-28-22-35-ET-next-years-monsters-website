@@ -1,4 +1,4 @@
--- TS: 2026-08-05 08:11 ET
+-- TS: 2026-08-05 11:28 ET
 
 BEGIN;
 
@@ -40,7 +40,15 @@ ALTER TABLE monster_rating_runs
 
 ALTER TABLE monster_rating_runs
   ADD CONSTRAINT rating_tier_check CHECK (
-    tier IN ('Platinum', 'Gold', 'Silver', 'Bronze', 'Goblin', 'Cemetery Risk')
+    tier IN (
+      'Platinum',
+      'Gold',
+      'Silver',
+      'Bronze',
+      'Goblin',
+      'Cemetery Risk',
+      'Tier Boundary Unresolved'
+    )
   );
 
 ALTER TABLE monster_rating_runs
