@@ -1,6 +1,6 @@
 # Monster Rating™ Production Specification v1
 
-<!-- TS: 2026-08-05 07:34 ET -->
+<!-- TS: 2026-08-05 11:28 ET -->
 
 ## Status
 
@@ -88,9 +88,17 @@ Every output includes the engine version, calculation time, evidence timestamps,
 
 ## Tier bands
 
+The Product Bible identifies an unresolved owner decision at score `92` because previously discussed bands overlapped:
+
+- Gold: 85–92
+- Platinum: 92–100
+
+Production code must not silently decide that score `92` is Gold or Platinum. Until the owner approves an exact boundary, the numerical Production Monster Rating™ remains controlling and score `92` receives the explicit tier label `Tier Boundary Unresolved`.
+
 | Score | Tier |
 |---:|---|
-| 92–100 | Platinum |
+| 93–100 | Platinum |
+| 92 | Tier Boundary Unresolved |
 | 85–91 | Gold |
 | 75–84 | Silver |
 | 65–74 | Bronze |
