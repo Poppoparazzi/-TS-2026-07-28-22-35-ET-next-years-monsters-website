@@ -1,4 +1,4 @@
-// TS: 2026-08-05 07:33 ET
+// TS: 2026-08-05 07:36 ET
 (() => {
   const result = document.querySelector('[data-result]');
   if (!result) return;
@@ -178,7 +178,12 @@
   };
 
   const installCaptainLayout = () => {
-    if (!result.firstElementChild || result.classList.contains('monster-launch-captain-layout')) return;
+    const hasCaptain = result.querySelector(':scope > .monster-launch-captain');
+    const hasContent = result.querySelector(':scope > .monster-launch-content');
+    if (hasCaptain && hasContent) return;
+    if (!result.firstElementChild) return;
+
+    result.classList.remove('monster-launch-captain-layout');
 
     const content = document.createElement('div');
     content.className = 'monster-launch-content';
