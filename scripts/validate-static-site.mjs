@@ -118,7 +118,10 @@ function validateVclOrder() {
     fail("VCL library does not preserve the approved Netflix printed exception.");
   }
   if (!html.includes("High-quality compounder case")) {
-    fail("VCL library does not preserve the approved Costco printed exception.");
+    fail("VCL library does not preserve the approved Costco case wording.");
+  }
+  if (!/<strong>COST<\/strong>[\s\S]{0,180}<td class="vcl-score">90 \/ 100<\/td>/.test(html)) {
+    fail("VCL library does not show Costco's locked 90 / 100 demonstration rating.");
   }
   if (html.includes("production VCL pages will")) {
     fail("VCL library still contains the obsolete future-only page promise.");
