@@ -1,16 +1,4 @@
-// TS: 2026-08-05 12:00 ET
-
-(function loadHomeMonsterInvestigator() {
-  "use strict";
-
-  if (!document.querySelector(".home-check#monster-check")) return;
-  if (document.querySelector("script[data-home-monster-investigator]")) return;
-
-  const script = document.createElement("script");
-  script.src = "assets/home-monster-investigator.js?v=20260805-1200";
-  script.dataset.homeMonsterInvestigator = "true";
-  document.body.append(script);
-})();
+// TS: 2026-08-05 13:28 ET
 
 (function initializeHomeDataStatus() {
   "use strict";
