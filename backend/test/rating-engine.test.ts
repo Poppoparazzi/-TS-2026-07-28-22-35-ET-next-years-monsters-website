@@ -1,4 +1,4 @@
-// TS: 2026-08-05 07:31 ET
+// TS: 2026-08-05 07:47 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -215,8 +215,8 @@ test("unsupported funds and insufficient liquidity remain unrated", () => {
     eligibleInput({
       securityType: "Exchange Traded Fund",
       marketBars: marketBars(260, {
-        startPrice: 10,
-        dailyChange: 0.01,
+        startPrice: 0.01,
+        dailyChange: 0,
         volume: 1_000,
       }),
     }),
