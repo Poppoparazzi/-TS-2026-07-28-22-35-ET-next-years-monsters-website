@@ -1,6 +1,6 @@
 # Next Year’s Monsters™ — Public Page Completion Audit
 
-<!-- TS: 2026-08-04 07:43 ET -->
+<!-- TS: 2026-08-05 06:36 UTC -->
 
 ## Completion rule
 
@@ -21,7 +21,7 @@ When a promised capability cannot yet be delivered because a licensed provider o
 | Priority | Page | Current verdict | Promise or problem found | Finished when |
 |---|---|---|---|---|
 | P0 | `index.html` | PARTIAL / STALE | Says the directory searches 25 companies while the SEC factory is approaching a public 2,000; describes the site as searchable, updated, and historically accountable although production ratings and history are not connected. | Search routes correctly to current coverage; public factory status is visible; 25-stock external tools are separated from 2,000-company SEC coverage; no unsupported “updated” or history implication remains; all main calls to action work. |
-| P0 | `start-here.html` | REPAIR READY IN PR #42 | Old guide centered on the original 15 and did not explain the public 2,000, factory, or status labels. | PR #42 is reconciled with later page fixes; links and mobile layout pass; descriptions match production truth. |
+| P0 | `start-here.html` | COMPLETE — PR #42 | Reconciled with the later page repairs. All six approved labels are defined exactly; stale rollout, future-rating, live-news, and invented-zero implications are removed; current Coverage, Monster Check™, Factory Status, Top Monsters, charts, Market Pulse, News Radar, Verification, and VCL™ routes are explained without unsupported claims. | Completed in commit `28df3af591147461e80c92bc71466e66b6b2941c`. All referenced public routes were verified, the page has no form or page-specific JavaScript requiring API-failure simulation, and responsive behavior was checked at 900px, 800px, and 560px. GitHub Actions did not register a PR workflow run for that commit; no test failure was reported. |
 | P0 | `monster-check.html` | PARTIAL | Exact SEC ticker lookup and 15 demonstrations work, but the public roadmap advertises live market data, verified news impact, and rating history that do not exist. | Exact ticker flow, SEC identity, filing links, demo labels, chart links, failure states, and mobile layout pass; unsupported roadmap promises are removed from public space or replaced by working current capabilities. |
 | P0 | `top-monsters.html` | SERIOUSLY STALE | Still says 0/15 SEC checks, secure backend not deployed, and “next milestone 1/15”; Rising Stars is an empty future section. | Reads current production evidence status; distinguishes 15 demos from public SEC coverage; removes obsolete rollout milestones; hides Rising Stars until dated production rating history exists; leaderboard actions work. |
 | P0 | `coverage-universe.html` | SERIOUSLY STALE | Calls itself a 25-stock directory and says 2,000-stock coverage is planned and not built. | Searches the production public company universe; clearly separates the external Market 25 from SEC-covered companies; provides filters for SEC complete, unresolved, demo available, chart available, and not yet rated; no obsolete 25-only or “2,000 planned” language remains. |
