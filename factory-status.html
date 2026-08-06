@@ -1,11 +1,11 @@
-<!-- TS: 2026-08-02 18:35 ET -->
+<!-- TS: 2026-08-03 15:56 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>500-Stock Factory Status | Next Year’s Monsters™</title>
-  <meta name="description" content="See the live bulk-processing status for the first 500 Next Year’s Monsters stock profiles, including queued, in-batch processing, completed, unresolved, failed, and stale SEC evidence records.">
+  <title>2,000-Stock Factory Status | Next Year’s Monsters™</title>
+  <meta name="description" content="See the live bulk-processing status for the public 2,000-company Next Year’s Monsters stock universe, including queued, in-batch processing, completed, unresolved, failed, and stale SEC evidence records.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/factory-status.css">
@@ -22,7 +22,7 @@
       <a href="monster-check.html">MONSTER CHECK</a>
       <a href="top-monsters.html">TOP MONSTERS</a>
       <a href="verification-ledger.html">15-STOCK LEDGER</a>
-      <a class="active" href="factory-status.html">500-STOCK FACTORY</a>
+      <a class="active" href="factory-status.html">2,000-STOCK FACTORY</a>
       <a href="live-status.html">DATA STATUS</a>
     </nav>
     <a class="home-nav-cta" href="#factory-table">VIEW COMPANIES</a>
@@ -33,8 +33,8 @@
   <section class="factory-hero">
     <div class="factory-shell">
       <p class="factory-kicker">BULK PIPELINE · REAL COUNTS · NO HANDCRAFTED STOCK PAGES</p>
-      <h1>THE 500-STOCK<br><strong>FACTORY STATUS.</strong></h1>
-      <p class="factory-hero-copy">This page reads the production bulk-status endpoint. It shows which companies are queued, claimed into the current batch, complete, partial, unresolved, failed, or stale, plus exactly which SEC evidence is stored. Quotes and current Monster Ratings™ remain incomplete until licensed market data and the production scoring engine are connected.</p>
+      <h1>THE 2,000-STOCK<br><strong>FACTORY STATUS.</strong></h1>
+      <p class="factory-hero-copy">This page reads the production bulk-status endpoint. It shows the public 2,000-company universe selected from the larger reserve pool, including which companies are queued, processing, complete, partial, unresolved, failed, or stale, plus exactly which SEC evidence is stored. Quotes and current Monster Ratings™ remain incomplete until licensed market data and the production scoring engine are connected.</p>
     </div>
   </section>
 
@@ -44,7 +44,7 @@
       <button type="button" data-factory-refresh>REFRESH FACTORY STATUS</button>
     </section>
 
-    <section class="factory-summary" aria-label="500-stock factory summary">
+    <section class="factory-summary" aria-label="2,000-stock factory summary">
       <article data-summary-tone="lime"><strong data-factory-universe>0</strong><span>Companies in database</span></article>
       <article><strong data-factory-examined>0</strong><span>Companies examined</span></article>
       <article data-summary-tone="silver"><strong data-factory-queued>0</strong><span>SEC queued</span></article>
@@ -73,7 +73,7 @@
     <section id="factory-table">
       <div class="factory-section-head">
         <h2>COMPANY BY<br>COMPANY.</h2>
-        <p>The factory claims the whole batch first, then processes SEC records with three controlled workers. Therefore, “in batch / processing” includes companies waiting their turn inside the current run, not hundreds of simultaneous SEC requests. A temporary failure receives a retry time; a permanent SEC 404 becomes unresolved. The table refreshes automatically every minute.</p>
+        <p>The factory processes SEC records in recoverable waves of three. A deployment interruption can therefore leave at most one small wave to recover instead of stranding hundreds of records. A temporary failure receives a retry time; a permanent SEC 404 becomes unresolved. The table refreshes automatically every minute.</p>
       </div>
 
       <div class="factory-table-wrap">

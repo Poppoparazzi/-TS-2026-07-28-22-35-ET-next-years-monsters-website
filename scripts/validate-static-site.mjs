@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:47 ET
+// TS: 2026-08-04 19:18 ET
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -88,23 +88,44 @@ function validateLocalReferences() {
 function validateVclOrder() {
   const html = read("vcl-library.html");
   const tbody = html.match(/<tbody>([\s\S]*?)<\/tbody>/i)?.[1] || "";
-  const tickers = [...tbody.matchAll(/<td><strong>([A-Z]+)<\/strong><\/td>/g)]
+  const tickers = [...tbody.matchAll(/<td><strong>([A-Z]+)<\/strong>/g)]
     .map((match) => match[1]);
   const expected = [
-    "NVDA", "MSFT", "APP", "VRT", "AMZN", "AXON",
-    "META", "AAPL", "MNST", "COST", "NFLX", "DECK", "AMD", "WING",
-    "TSLA",
+    "NVDA", "AAPL", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST",
+    "MSFT", "META", "APP", "VRT", "AXON", "DECK", "WING",
   ];
 
   if (tickers.join(",") !== expected.join(",")) {
-    fail(`VCL tier order changed. Expected ${expected.join(", ")}; found ${tickers.join(", ")}.`);
+    fail(`VCL print-master order changed. Expected ${expected.join(", ")}; found ${tickers.join(", ")}.`);
   }
 
-  ["platinum", "gold", "silver"].forEach((tier) => {
+  ["platinum", "gold", "silver", "bronze", "goblin", "cemetery"].forEach((tier) => {
     if (!html.includes(`data-tier="${tier}"`)) {
-      fail(`VCL table is missing ${tier} row color coding.`);
+      fail(`VCL scale is missing the approved ${tier} rating band.`);
     }
   });
+
+  expected.forEach((ticker) => {
+    if (!html.includes(`monster-check.html?ticker=${ticker}`)) {
+      fail(`VCL case ${ticker} is missing its Monster Check route.`);
+    }
+    if (!html.includes(`market-explorer.html?left=${ticker}&amp;mode=single`)) {
+      fail(`VCL case ${ticker} is missing its Full Charts route.`);
+    }
+  });
+
+  if (!html.includes("Platinum case rating")) {
+    fail("VCL library does not preserve the approved Netflix printed exception.");
+  }
+  if (!html.includes("High-quality compounder case")) {
+    fail("VCL library does not preserve the approved Costco case wording.");
+  }
+  if (!/<strong>COST<\/strong>[\s\S]{0,180}<td class="vcl-score">90 \/ 100<\/td>/.test(html)) {
+    fail("VCL library does not show Costco's locked 90 / 100 demonstration rating.");
+  }
+  if (html.includes("production VCL pages will")) {
+    fail("VCL library still contains the obsolete future-only page promise.");
+  }
 }
 
 function validateVerificationLedger() {
@@ -161,15 +182,15 @@ function validateFactoryStatus() {
     "data-factory-body",
   ].forEach((attribute) => {
     if (!html.includes(attribute)) {
-      fail(`500-stock factory page is missing required hook: ${attribute}`);
+      fail(`2,000-stock factory page is missing required hook: ${attribute}`);
     }
   });
 
-  if (!script.includes("FACTORY_LIMIT = 500")) {
-    fail("500-stock factory page does not set the bulk universe request limit to 500.");
+  if (!script.includes("FACTORY_LIMIT = 2000")) {
+    fail("2,000-stock factory page does not set the bulk universe request limit to 2,000.");
   }
   if (!script.includes("/api/universe/status?limit=${FACTORY_LIMIT}")) {
-    fail("500-stock factory page does not read the bulk universe status endpoint.");
+    fail("2,000-stock factory page does not read the bulk universe status endpoint.");
   }
 
   [
@@ -181,16 +202,16 @@ function validateFactoryStatus() {
     "staleCount",
   ].forEach((field) => {
     if (!script.includes(field)) {
-      fail(`500-stock factory logic does not display required progress field: ${field}`);
+      fail(`2,000-stock factory logic does not display required progress field: ${field}`);
     }
   });
 
   const navigationScript = read("assets/market-ticker-strip.js");
   if (!navigationScript.includes("factory-status.html")) {
-    fail("Site-wide navigation does not include the 500-stock factory page.");
+    fail("Site-wide navigation does not include the 2,000-stock factory page.");
   }
-  if (!navigationScript.includes("500-STOCK FACTORY")) {
-    fail("Site-wide navigation still labels the factory with the old company count.");
+  if (!navigationScript.includes("2,000-STOCK FACTORY")) {
+    fail("Site-wide navigation does not label the factory with the current 2,000-company target.");
   }
 }
 

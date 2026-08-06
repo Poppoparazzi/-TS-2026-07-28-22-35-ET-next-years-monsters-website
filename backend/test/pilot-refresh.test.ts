@@ -1,4 +1,4 @@
-// TS: 2026-08-01 21:45 ET
+// TS: 2026-08-05 09:20 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -20,6 +20,7 @@ import type {
   SecCompany,
   SecCompanyFactsSummary,
   SecDataProvider,
+  SecFactSnapshot,
   SecFilingSummary,
 } from "../src/sec/types.js";
 
@@ -46,32 +47,33 @@ const filing: SecFilingSummary = Object.freeze({
   primaryDocumentUrl: "https://www.sec.gov/Archives/edgar/data/320193/example.htm",
 });
 
+const revenueFact: SecFactSnapshot = Object.freeze({
+  key: "revenue",
+  taxonomy: "us-gaap",
+  tag: "RevenueFromContractWithCustomerExcludingAssessedTax",
+  label: "Revenue",
+  description: "Test revenue fact.",
+  unit: "USD",
+  value: 100,
+  form: "10-K",
+  fiscalYear: 2025,
+  fiscalPeriod: "FY",
+  periodStart: "2024-09-29",
+  periodEnd: "2025-09-27",
+  filed: "2025-10-31",
+  accessionNumber: "0000320193-25-000001",
+  sourceUrl: "https://www.sec.gov/Archives/edgar/data/320193/example.htm",
+});
+
 const facts: SecCompanyFactsSummary = Object.freeze({
   ticker: "AAPL",
   cik: 320193,
   companyName: "Apple Inc.",
   retrievedAt: "2026-08-01T21:40:00.000Z",
   sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
-  disclosure: "Official SEC company facts.",
-  facts: Object.freeze({
-    revenue: Object.freeze({
-      key: "revenue",
-      taxonomy: "us-gaap",
-      tag: "RevenueFromContractWithCustomerExcludingAssessedTax",
-      label: "Revenue",
-      description: "Test revenue fact.",
-      unit: "USD",
-      value: 100,
-      form: "10-K",
-      fiscalYear: 2025,
-      fiscalPeriod: "FY",
-      periodStart: "2024-09-29",
-      periodEnd: "2025-09-27",
-      filed: "2025-10-31",
-      accessionNumber: "0000320193-25-000001",
-      sourceUrl: "https://www.sec.gov/Archives/edgar/data/320193/example.htm",
-    }),
-  }),
+  disclosure: "Official SEC Evidence",
+  facts: Object.freeze({ revenue: revenueFact }),
+  factHistory: Object.freeze({ revenue: Object.freeze([revenueFact]) }),
 });
 
 const storedSnapshot: StoredCompanySnapshot = Object.freeze({

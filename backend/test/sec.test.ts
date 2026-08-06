@@ -1,4 +1,4 @@
-// TS: 2026-08-01 15:25 ET
+// TS: 2026-08-05 07:51 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -140,7 +140,7 @@ test("SEC adapter keeps the primary mapping when a ticker appears more than once
   }
 });
 
-test("SEC company facts retain context and source links", async () => {
+test("SEC company facts retain context, history, and source links", async () => {
   const originalFetch = globalThis.fetch;
 
   globalThis.fetch = (async (input) => {
@@ -218,8 +218,10 @@ test("SEC company facts retain context and source links", async () => {
     assert.equal(summary.facts.revenue?.form, "10-Q");
     assert.equal(summary.facts.revenue?.fiscalPeriod, "Q3");
     assert.equal(summary.facts.assets?.value, 350_000_000_000);
+    assert.equal(summary.factHistory.revenue?.length, 1);
+    assert.equal(summary.factHistory.assets?.length, 1);
     assert.match(summary.facts.revenue?.sourceUrl ?? "", /0000320193-26-000001-index\.html$/);
-    assert.match(summary.disclosure, /Official SEC EDGAR/i);
+    assert.match(summary.disclosure, /^Official SEC Evidence\./);
   } finally {
     globalThis.fetch = originalFetch;
   }

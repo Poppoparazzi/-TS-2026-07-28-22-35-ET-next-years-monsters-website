@@ -1,10 +1,12 @@
-// TS: 2026-08-02 16:12 ET
+// TS: 2026-08-05 08:34 ET
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { refreshStalePilotOnStartup } from "./jobs/startup-pilot-refresh.js";
 import { runSecUniverseBatchOnStartup } from "./jobs/startup-sec-universe-batch.js";
 import { importUniverseOnStartup } from "./jobs/startup-universe-import.js";
+import { registerRatingRoutes } from "./ratings/routes.js";
+import { createRatingStore } from "./ratings/store.js";
 import {
   getStartupStatusSnapshot,
   markStartupJobCompleted,
@@ -59,8 +61,10 @@ async function runStartupJobs(
 async function start(): Promise<void> {
   const config = loadConfig();
   const app = await buildApp();
+  const ratingStore = createRatingStore(config.databaseUrl);
 
   app.get("/api/startup-status", async () => getStartupStatusSnapshot());
+  await registerRatingRoutes(app, ratingStore);
 
   try {
     await app.listen({
