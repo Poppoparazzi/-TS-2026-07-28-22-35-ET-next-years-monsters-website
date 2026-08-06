@@ -340,14 +340,14 @@
 
 .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
   position: absolute !important;
-  inset: auto auto 0 -14% !important;
-  width: 121% !important;
+  inset: auto auto -2% -22% !important;
+  width: 126% !important;
   max-width: none !important;
-  height: 100% !important;
+  height: 108% !important;
   padding: 0 !important;
   object-fit: contain !important;
-  object-position: center bottom !important;
-  transform: none !important;
+  object-position: center center !important;
+  transform: translateY(-1%) !important;
   filter: brightness(1.01) contrast(1.05) saturate(1.05) !important;
   z-index: 2 !important;
 }
