@@ -1,6 +1,7 @@
 {
-  "release": "2026-08-06-homepage-recovery-1045-ET",
+  "release": "2026-08-06-working-homepage-1102-ET",
   "homepage_reference": "approved-homepage-gold-master-2026-08-06",
+  "working_homepage": true,
   "sec_connection_strip": true,
-  "frontend_branch": "main"
+  "frontend_sources": ["main", "gh-pages"]
 }
