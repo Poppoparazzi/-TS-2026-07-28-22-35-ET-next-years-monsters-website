@@ -1,4 +1,4 @@
-/* TS: 2026-08-06 07:10 ET */
+/* TS: 2026-08-06 07:26 ET */
 
 .home-stock-finder {
   max-width: 760px;
@@ -72,8 +72,20 @@
   line-height: 1.5;
 }
 
-/* Enlarge the approved bull-rider artwork and pull it toward the copy.
-   This closes the empty center gap without changing the homepage structure. */
+/* Match the approved homepage screenshots exactly enough to stop redesigning it. */
+.home-hero-copy {
+  padding-left: clamp(66px, 6.6vw, 116px) !important;
+  padding-right: clamp(42px, 4.4vw, 78px) !important;
+}
+
+.home-fingerprint-mark {
+  top: 32px !important;
+  right: 34px !important;
+  width: clamp(132px, 9vw, 166px) !important;
+  opacity: .28 !important;
+  transform: rotate(7deg) !important;
+}
+
 .home-hero-art {
   min-height: 730px !important;
   background: #07100f !important;
@@ -81,25 +93,25 @@
 
 .home-hero-art img[data-captain-image].home-bull-rider-hero {
   position: absolute !important;
-  top: -7% !important;
+  top: -8% !important;
   right: auto !important;
   bottom: auto !important;
-  left: -12% !important;
-  width: 118% !important;
+  left: -18% !important;
+  width: 128% !important;
   max-width: none !important;
-  height: 114% !important;
+  height: 118% !important;
   padding: 0 !important;
   object-fit: cover !important;
-  object-position: 50% center !important;
+  object-position: center center !important;
   transform: none !important;
-  filter: brightness(.9) contrast(1.06) saturate(1.03) !important;
+  filter: brightness(.92) contrast(1.06) saturate(1.03) !important;
   z-index: 2 !important;
 }
 
 .home-hero-art::after {
   background:
-    linear-gradient(90deg, rgba(8,12,11,.58) 0%, rgba(8,12,11,.16) 14%, transparent 31%),
-    linear-gradient(0deg, rgba(8,12,11,.46), transparent 42%) !important;
+    linear-gradient(90deg, rgba(8,12,11,.48) 0%, rgba(8,12,11,.10) 11%, transparent 24%),
+    linear-gradient(0deg, rgba(8,12,11,.42), transparent 38%) !important;
 }
 
 .home-hero-art .asset-placeholder[data-captain-placeholder] {
@@ -137,15 +149,26 @@
     text-align: center;
   }
 
+  .home-hero-copy {
+    padding-left: 34px !important;
+    padding-right: 34px !important;
+  }
+
+  .home-fingerprint-mark {
+    top: 24px !important;
+    right: 24px !important;
+    width: 116px !important;
+    opacity: .22 !important;
+  }
+
   .home-hero-art {
     min-height: 560px !important;
   }
 
   .home-hero-art img[data-captain-image].home-bull-rider-hero {
-    top: -4% !important;
-    left: -8% !important;
-    width: 112% !important;
-    height: 108% !important;
-    object-position: 50% center !important;
+    top: -5% !important;
+    left: -10% !important;
+    width: 118% !important;
+    height: 110% !important;
   }
 }
