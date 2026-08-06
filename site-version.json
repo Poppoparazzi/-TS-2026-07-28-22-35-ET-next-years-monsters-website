@@ -1,10 +1,10 @@
 {
-  "release": "2026-08-06-one-stage-homepage-hero-1412-ET",
+  "release": "2026-08-06-homepage-fit-pass-1428-ET",
   "homepage_reference": "approved-homepage-gold-master-2026-08-06",
   "working_homepage": true,
   "sec_connection_strip": true,
   "frontend_sources": ["gh-pages"],
-  "composition_fix": "hero-copy-art-fingerprint-search-share-one-coordinate-stage",
-  "gh_pages_index_commit": "476dc266e64b87c3157502decc1ee9c716127450",
-  "updated_at": "2026-08-06T18:12:00Z"
+  "composition_fix": "compressed-one-stage-hero-to-fit-ticker-copy-search-and-bull",
+  "gh_pages_index_commit": "a0e1e7f174b36718ba8cd0449ef19eefc7e74c50",
+  "updated_at": "2026-08-06T18:28:00Z"
 }
