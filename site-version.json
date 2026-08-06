@@ -1,11 +1,11 @@
 {
-  "release": "2026-08-06-layered-bull-dust-homepage-1336-ET",
+  "release": "2026-08-06-homepage-coordinate-pass-1355-ET",
   "homepage_reference": "approved-homepage-gold-master-2026-08-06",
   "working_homepage": true,
   "sec_connection_strip": true,
-  "frontend_sources": ["gh-pages", "main"],
-  "composition_fix": "bull-captain-dust-layered-behind-hero-copy",
-  "gh_pages_commit": "4f5c2dd4c44d1830047f18d857e9a4d5ecc77891",
-  "main_commit": "f93dd27884c026cefec5168cc0bff33017e993bb",
-  "updated_at": "2026-08-06T17:36:00Z"
+  "frontend_sources": ["gh-pages"],
+  "composition_fix": "local-screenshot-tuned-bull-captain-dust-position",
+  "gh_pages_index_commit": "4fc61c5f8ff7b80e1a67328222baf7b2e4cd2ab1",
+  "local_tested_viewports": ["1672x941", "1920x1080"],
+  "updated_at": "2026-08-06T17:55:00Z"
 }
