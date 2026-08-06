@@ -1,9 +1,8 @@
-// TS: 2026-08-01 18:24 ET
+// TS: 2026-08-04 17:48 ET
 
 function explorerApiBaseUrl() {
   const raw = window.NYM_CONFIG?.apiBaseUrl;
-  if (typeof raw !== "string" || !raw.trim()) return "";
-  return raw.trim().replace(/\/$/, "");
+  return typeof raw === "string" ? raw.trim().replace(/\/$/, "") : "";
 }
 
 function normalizeExplorerTicker(value) {
@@ -13,16 +12,14 @@ function normalizeExplorerTicker(value) {
 
 function tradingViewExchange(value) {
   const exchange = String(value ?? "").trim().toUpperCase();
-  if (exchange === "NASDAQ") return "NASDAQ";
-  if (exchange === "NYSE") return "NYSE";
+  if (exchange === "NASDAQ" || exchange === "NYSE" || exchange === "OTC") return exchange;
   if (exchange === "NYSE AMERICAN" || exchange === "AMEX") return "AMEX";
-  if (exchange === "OTC") return "OTC";
   return "NASDAQ";
 }
 
 async function loadOfficialExplorerStock(ticker) {
   const apiBaseUrl = explorerApiBaseUrl();
-  if (!apiBaseUrl) throw new Error("The official SEC service is not configured.");
+  if (!apiBaseUrl) throw new Error("Provider Not Connected");
 
   const response = await fetch(`${apiBaseUrl}/api/sec/company/${encodeURIComponent(ticker)}`, {
     headers: { Accept: "application/json" },
@@ -30,13 +27,13 @@ async function loadOfficialExplorerStock(ticker) {
   });
 
   if (response.status === 404) return null;
-  if (!response.ok) throw new Error("The official SEC company record could not be loaded.");
+  if (!response.ok) throw new Error("Official SEC Evidence unavailable");
 
   const company = await response.json();
   return {
     ticker: company.ticker,
     name: company.companyName,
-    sector: "Official SEC company record",
+    sector: "Official SEC Evidence",
     exchange: tradingViewExchange(company.exchange),
     monsterCheck: false,
     officialSec: true,
@@ -45,16 +42,13 @@ async function loadOfficialExplorerStock(ticker) {
 
 function explorerSymbol(stock) {
   if (stock.proName) return stock.proName;
-  const ticker = String(stock.ticker).toUpperCase();
-  const exchange = String(stock.exchange || "NASDAQ").toUpperCase();
-  return `${exchange}:${ticker}`;
+  return `${String(stock.exchange || "NASDAQ").toUpperCase()}:${String(stock.ticker).toUpperCase()}`;
 }
 
 function tickerFromWidgetSymbol(value) {
   const normalized = String(value ?? "").trim().toUpperCase();
   if (!normalized) return "";
-  const parts = normalized.split(":");
-  return parts[parts.length - 1].replace(/[^A-Z0-9.-]/g, "");
+  return normalized.split(":").pop().replace(/[^A-Z0-9.-]/g, "");
 }
 
 function explorerText(selector, value) {
@@ -62,9 +56,35 @@ function explorerText(selector, value) {
   if (node) node.textContent = value;
 }
 
+function tradingViewUrl(stock) {
+  return `https://www.tradingview.com/symbols/${explorerSymbol(stock).replace(":", "-")}/`;
+}
+
+function showWidgetFallback(frame, stock) {
+  if (!frame || frame.dataset.widgetReady === "true") return;
+  frame.replaceChildren();
+  const message = document.createElement("div");
+  message.className = "explorer-loading";
+
+  const strong = document.createElement("strong");
+  strong.textContent = "PROVIDER NOT CONNECTED";
+
+  const text = document.createElement("p");
+  text.textContent = "The external chart was blocked or did not load. No price or market value was invented.";
+
+  const link = document.createElement("a");
+  link.href = tradingViewUrl(stock);
+  link.rel = "noopener nofollow";
+  link.target = "_blank";
+  link.textContent = `OPEN ${stock.ticker} ON TRADINGVIEW ↗`;
+
+  message.append(strong, text, link);
+  frame.append(message);
+}
+
 function buildTradingViewWidget(frame, stock) {
   const symbol = explorerSymbol(stock);
-  const tradingViewPath = symbol.replace(":", "-");
+  frame.dataset.widgetReady = "false";
   frame.replaceChildren();
 
   const wrapper = document.createElement("div");
@@ -79,18 +99,25 @@ function buildTradingViewWidget(frame, stock) {
 
   const copyright = document.createElement("div");
   copyright.className = "tradingview-widget-copyright";
-
   const sourceLink = document.createElement("a");
-  sourceLink.href = `https://www.tradingview.com/symbols/${tradingViewPath}/`;
+  sourceLink.href = tradingViewUrl(stock);
   sourceLink.rel = "noopener nofollow";
   sourceLink.target = "_blank";
-  sourceLink.textContent = `${stock.name} stock price`;
-  copyright.append(sourceLink, document.createTextNode(" by TradingView"));
+  sourceLink.textContent = `${stock.name} chart by TradingView`;
+  copyright.append(sourceLink);
 
   const script = document.createElement("script");
   script.type = "text/javascript";
   script.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js";
   script.async = true;
+  script.onerror = () => showWidgetFallback(frame, stock);
+  script.onload = () => {
+    window.setTimeout(() => {
+      const rendered = frame.querySelector("iframe");
+      if (rendered) frame.dataset.widgetReady = "true";
+      else showWidgetFallback(frame, stock);
+    }, 8_000);
+  };
   script.textContent = JSON.stringify({
     symbols: [[stock.name, `${symbol}|1D`]],
     chartOnly: false,
@@ -119,6 +146,7 @@ function buildTradingViewWidget(frame, stock) {
 
   wrapper.append(widget, copyright, script);
   frame.append(wrapper);
+  window.setTimeout(() => showWidgetFallback(frame, stock), 10_000);
 }
 
 function populateSelect(select, stocks) {
@@ -144,7 +172,6 @@ function setupExplorer(stocks) {
   const tickerForm = document.querySelector("[data-explorer-ticker-form]");
   const tickerInput = document.querySelector("[data-explorer-ticker-input]");
   const tickerMessage = document.querySelector("[data-explorer-ticker-message]");
-
   if (!leftSelect || !rightSelect || !swapButton || !quickButtons || !leftFrame || !rightFrame) return;
 
   const byTicker = new Map(stocks.map((stock) => [String(stock.ticker).toUpperCase(), stock]));
@@ -152,11 +179,9 @@ function setupExplorer(stocks) {
   populateSelect(rightSelect, stocks);
 
   const params = new URLSearchParams(window.location.search);
-  const widgetTicker = tickerFromWidgetSymbol(params.get("tvwidgetsymbol"));
-  const requestedLeft = String(params.get("left") || widgetTicker || "AAPL").toUpperCase();
-  const requestedRight = String(params.get("right") || "NVDA").toUpperCase();
+  const requestedLeft = normalizeExplorerTicker(params.get("left") || tickerFromWidgetSymbol(params.get("tvwidgetsymbol"))) || "AAPL";
+  const requestedRight = normalizeExplorerTicker(params.get("right")) || "NVDA";
   let currentMode = params.get("mode") === "compare" ? "compare" : "single";
-
   leftSelect.value = byTicker.has(requestedLeft) ? requestedLeft : "AAPL";
   rightSelect.value = byTicker.has(requestedRight) ? requestedRight : "NVDA";
 
@@ -175,25 +200,20 @@ function setupExplorer(stocks) {
     const frame = left ? leftFrame : rightFrame;
     const stock = byTicker.get(String(select.value).toUpperCase());
     if (!stock) return;
-
     const prefix = left ? "left" : "right";
     explorerText(`[data-explorer-${prefix}-ticker]`, stock.ticker);
     explorerText(`[data-explorer-${prefix}-company]`, `${stock.name} · ${stock.sector}`);
 
     const researchLink = document.querySelector(`[data-explorer-${prefix}-monster-link]`);
     if (researchLink) {
-      if (stock.monsterCheck) {
-        researchLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
-        researchLink.textContent = `OPEN ${stock.ticker} MONSTER CHECK™`;
-      } else {
-        researchLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
-        researchLink.textContent = `OPEN ${stock.ticker} SEC CHECK`;
-      }
+      researchLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
+      researchLink.textContent = stock.monsterCheck
+        ? `OPEN ${stock.ticker} MONSTER CHECK™`
+        : `OPEN ${stock.ticker} SEC CHECK`;
     }
 
     const chartLink = document.querySelector(`[data-explorer-${prefix}-chart-link]`);
-    if (chartLink) chartLink.href = `https://www.tradingview.com/symbols/${explorerSymbol(stock).replace(":", "-")}/`;
-
+    if (chartLink) chartLink.href = tradingViewUrl(stock);
     buildTradingViewWidget(frame, stock);
     updateUrl();
   }
@@ -202,15 +222,13 @@ function setupExplorer(stocks) {
     currentMode = mode === "compare" ? "compare" : "single";
     const singleMode = currentMode === "single";
     document.body.classList.toggle("is-single-mode", singleMode);
-
     modeButtons.forEach((button) => {
       const active = button.dataset.explorerMode === currentMode;
       button.classList.toggle("is-active", active);
       button.setAttribute("aria-pressed", String(active));
     });
-
     if (chartCount) chartCount.textContent = singleMode ? "1" : "2";
-    if (status) status.textContent = singleMode ? "EXACT TICKER READY · SINGLE CHART" : "EXACT TICKERS READY · COMPARE TWO";
+    if (status) status.textContent = singleMode ? "SINGLE CHART READY" : "COMPARE TWO READY";
     if (!singleMode && renderComparison) renderSide("right");
     updateUrl();
   }
@@ -218,7 +236,6 @@ function setupExplorer(stocks) {
   leftSelect.addEventListener("change", () => renderSide("left"));
   rightSelect.addEventListener("change", () => renderSide("right"));
   modeButtons.forEach((button) => button.addEventListener("click", () => setMode(button.dataset.explorerMode)));
-
   swapButton.addEventListener("click", () => {
     const leftValue = leftSelect.value;
     leftSelect.value = rightSelect.value;
@@ -245,21 +262,19 @@ function setupExplorer(stocks) {
     tickerForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const ticker = normalizeExplorerTicker(tickerInput.value);
-
       if (!ticker) {
         if (tickerMessage) tickerMessage.textContent = "Enter an exact ticker using letters, numbers, a period, or a hyphen.";
         return;
       }
 
       tickerInput.disabled = true;
-      if (tickerMessage) tickerMessage.textContent = `Checking $${ticker} against the official SEC directory…`;
-
+      if (tickerMessage) tickerMessage.textContent = `Checking $${ticker} for Official SEC Evidence…`;
       try {
         let stock = byTicker.get(ticker);
         if (!stock) {
           stock = await loadOfficialExplorerStock(ticker);
           if (!stock) {
-            if (tickerMessage) tickerMessage.textContent = `No current SEC-listed company match was found for $${ticker}.`;
+            if (tickerMessage) tickerMessage.textContent = `Unresolved SEC Identity: no current SEC-listed company match was found for $${ticker}.`;
             return;
           }
           byTicker.set(ticker, stock);
@@ -270,13 +285,12 @@ function setupExplorer(stocks) {
             select.append(option);
           });
         }
-
         leftSelect.value = ticker;
         renderSide("left");
-        if (tickerMessage) tickerMessage.textContent = `$${ticker} verified through the SEC. The external chart may be delayed.`;
+        if (tickerMessage) tickerMessage.textContent = `$${ticker}: Official SEC Evidence verified. External Market Data · May Be Delayed. Not Yet Rated unless marked as a Demonstration Rating.`;
         leftFrame.scrollIntoView({ behavior: "smooth", block: "center" });
       } catch (_error) {
-        if (tickerMessage) tickerMessage.textContent = "The official company lookup is temporarily unavailable. Please try again shortly.";
+        if (tickerMessage) tickerMessage.textContent = "Provider Not Connected: the official company lookup is temporarily unavailable.";
       } finally {
         tickerInput.disabled = false;
       }
@@ -291,15 +305,13 @@ function setupExplorer(stocks) {
 async function startMarketExplorer() {
   const status = document.querySelector("[data-explorer-status]");
   try {
-    const response = await fetch("data/market-universe.json");
-    if (!response.ok) throw new Error("Unable to load the market universe.");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json");
+    if (!response.ok) throw new Error("Unable to load Market 25");
     const stocks = await response.json();
+    if (!Array.isArray(stocks) || !stocks.length) throw new Error("Empty Market 25");
+
     const params = new URLSearchParams(window.location.search);
-    const requested = [
-      params.get("left"),
-      params.get("right"),
-      tickerFromWidgetSymbol(params.get("tvwidgetsymbol")),
-    ]
+    const requested = [params.get("left"), params.get("right"), tickerFromWidgetSymbol(params.get("tvwidgetsymbol"))]
       .map(normalizeExplorerTicker)
       .filter(Boolean);
     const known = new Set(stocks.map((stock) => String(stock.ticker).toUpperCase()));
@@ -313,19 +325,18 @@ async function startMarketExplorer() {
           known.add(ticker);
         }
       } catch (_error) {
-        // The starter chart list remains usable when the free API is waking or unavailable.
+        // Market 25 remains usable when the SEC provider is waking or unavailable.
       }
     }
 
-    const ordered = [...stocks].sort((left, right) => String(left.ticker).localeCompare(String(right.ticker)));
-    setupExplorer(ordered);
+    setupExplorer([...stocks].sort((left, right) => String(left.ticker).localeCompare(String(right.ticker))));
   } catch (_error) {
-    if (status) status.textContent = "MARKET EXPLORER COULD NOT LOAD THE STOCK LIST";
+    if (status) status.textContent = "PROVIDER NOT CONNECTED";
     document.querySelectorAll(".explorer-chart-frame").forEach((frame) => {
       frame.replaceChildren();
       const message = document.createElement("p");
       message.className = "explorer-loading";
-      message.textContent = "The market chart list did not load. No ticker or price was invented.";
+      message.textContent = "Provider Not Connected: the Market 25 chart list did not load. No ticker or price was invented.";
       frame.append(message);
     });
   }

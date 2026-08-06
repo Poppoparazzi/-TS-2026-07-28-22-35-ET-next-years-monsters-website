@@ -1,11 +1,11 @@
-<!-- TS: 2026-08-02 09:58 ET -->
+<!-- TS: 2026-08-04 07:42 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Start Here | Next Year’s Monsters™</title>
-  <meta name="description" content="A plain-English guide to using the Next Year’s Monsters™ website, including Monster Check™, Top Monsters, Full Charts, Market Pulse, News Radar, and the data-status labels.">
+  <meta name="description" content="A plain-English guide to the Next Year’s Monsters™ 2,000-stock research website, including coverage, Factory Status, Monster Check™, charts, SEC evidence, demonstrations, and data labels.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/monster-check.css">
@@ -13,9 +13,9 @@
     .start-page { background:#ebe4d6; color:#101311; }
     .start-hero { padding:72px clamp(24px,6vw,92px) 52px; background:#0b100f; color:#fffaf0; border-bottom:8px solid var(--editorial-lime,#b8f34a); }
     .start-kicker { margin:0 0 18px; color:var(--editorial-lime,#b8f34a); font-size:12px; font-weight:950; letter-spacing:.08em; }
-    .start-hero h1 { margin:0; max-width:1040px; font-size:clamp(64px,11vw,150px); line-height:.86; letter-spacing:-.07em; }
+    .start-hero h1 { margin:0; max-width:1080px; font-size:clamp(62px,10.5vw,146px); line-height:.86; letter-spacing:-.07em; }
     .start-hero h1 strong { color:var(--editorial-lime,#b8f34a); }
-    .start-hero p { max-width:860px; margin:26px 0 0; color:#e9e1d1; font-size:19px; line-height:1.55; }
+    .start-hero p { max-width:900px; margin:26px 0 0; color:#e9e1d1; font-size:19px; line-height:1.55; }
     .start-main { max-width:1180px; margin:0 auto; padding:48px 24px 80px; }
     .start-card { margin-bottom:24px; padding:28px; border:2px solid #111; background:#fffaf0; box-shadow:10px 10px 0 rgba(17,23,21,.12); }
     .start-card-dark { background:#111715; color:#fffaf0; }
@@ -29,8 +29,18 @@
     .start-action-row a { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 18px; border:2px solid #111; background:#111; color:#fffaf0; font-size:12px; font-weight:950; letter-spacing:.04em; text-decoration:none; }
     .start-action-row a:first-child { background:var(--editorial-lime,#b8f34a); color:#101311; }
     .start-note { padding:18px 20px; border-left:5px solid #e3362d; background:#f5ebdb; font-weight:800; }
+    .start-flow { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px; }
+    .start-flow a { display:block; padding:18px; border:2px solid #111; background:#fffaf0; color:#111; text-decoration:none; }
+    .start-flow strong { display:block; margin-bottom:8px; font-size:22px; }
+    .start-flow span { line-height:1.45; }
+    .start-status-table { width:100%; border-collapse:collapse; margin-top:18px; background:#fffaf0; }
+    .start-status-table th,.start-status-table td { padding:14px; border:2px solid #111; text-align:left; vertical-align:top; line-height:1.45; }
+    .start-status-table th { background:#111715; color:#fffaf0; font-size:12px; letter-spacing:.04em; }
+    .start-status-table td:first-child { width:26%; font-weight:950; }
     .start-script { white-space:pre-wrap; font-family:inherit; }
-    @media(max-width:800px){ .start-grid{grid-template-columns:1fr}.start-hero{padding:50px 24px 36px}.start-card{padding:22px} }
+    @media(max-width:900px){ .start-flow{grid-template-columns:repeat(2,minmax(0,1fr))} }
+    @media(max-width:800px){ .start-grid{grid-template-columns:1fr}.start-hero{padding:50px 24px 36px}.start-card{padding:22px}.start-status-table{display:block;overflow-x:auto} }
+    @media(max-width:560px){ .start-flow{grid-template-columns:1fr} }
   </style>
 </head>
 <body class="start-page">
@@ -44,9 +54,9 @@
     <nav class="nav-links home-nav-links" aria-label="Main navigation">
       <a href="index.html">HOME</a>
       <a class="active" href="start-here.html">START HERE</a>
+      <a href="coverage-universe.html">COVERAGE</a>
       <a href="monster-check.html">MONSTER CHECK</a>
-      <a href="top-monsters.html">TOP MONSTERS</a>
-      <a href="market-explorer.html">FULL CHARTS</a>
+      <a href="factory-status.html">2,000-STOCK FACTORY</a>
     </nav>
     <a class="home-nav-cta" href="monster-check.html">CHECK A TICKER</a>
   </div>
@@ -54,93 +64,129 @@
 
 <main>
   <section class="start-hero">
-    <p class="start-kicker">NEW VISITOR GUIDE · READ THIS FIRST</p>
-    <h1>HOW TO USE<br><strong>THE SITE.</strong></h1>
-    <p>This is the quick guide for book readers, investors, friends, and anyone else who lands here and does not want to decode a website like it was recovered from an ancient trading desk.</p>
+    <p class="start-kicker">NEW VISITOR GUIDE · 2,000-STOCK RESEARCH SITE</p>
+    <h1>HOW TO USE<br><strong>THE FACTORY.</strong></h1>
+    <p>Next Year’s Monsters™ separates official SEC evidence, external market tools, book demonstrations, and future production ratings. This page shows where to go and what every label means, because visitors should not need an archaeology degree to understand a stock website.</p>
   </section>
 
   <section class="start-main">
     <article class="start-card start-card-dark">
-      <h2>THE SIMPLE VERSION</h2>
+      <h2>THE FASTEST ROUTE</h2>
       <ol>
-        <li>Start on the homepage and use the ticker search.</li>
-        <li>Open Monster Check™ to study one company.</li>
-        <li>Use Top Monsters to see the current 15-stock demonstration leaderboard.</li>
-        <li>Use Full Charts to study price action.</li>
-        <li>Use Market Pulse and News Radar for outside context.</li>
-        <li>Read every data label. Some items are live external tools, while Monster Ratings™ are still clearly labeled demonstrations until verified live scoring is fully connected.</li>
+        <li>Use <strong>Coverage</strong> to see which companies are in the searchable universe.</li>
+        <li>Use <strong>Monster Check™</strong> to look up one ticker and read the available evidence.</li>
+        <li>Use <strong>Factory Status</strong> to see the real SEC processing counts for the public 2,000.</li>
+        <li>Use <strong>Full Charts</strong>, <strong>Market Pulse</strong>, and <strong>News Radar</strong> for outside market context.</li>
+        <li>Read the status label before trusting any number. SEC evidence, delayed charts, demonstrations, and future production ratings are not the same thing.</li>
       </ol>
       <div class="start-action-row">
         <a href="monster-check.html">RUN MONSTER CHECK™</a>
-        <a href="index.html">GO HOME</a>
+        <a href="coverage-universe.html">SEE STOCK COVERAGE</a>
+        <a href="factory-status.html">OPEN FACTORY STATUS</a>
+      </div>
+    </article>
+
+    <article class="start-card">
+      <h2>CHOOSE YOUR PATH</h2>
+      <div class="start-flow">
+        <a href="monster-check.html"><strong>Check one stock</strong><span>Enter an exact ticker and see the available official SEC identity, evidence status, and demonstration material.</span></a>
+        <a href="coverage-universe.html"><strong>Browse coverage</strong><span>Search the broader company universe without pretending every company already has a verified rating.</span></a>
+        <a href="factory-status.html"><strong>Watch the factory</strong><span>See exact queued, processing, complete, unresolved, failed, filing, fact, quote, and rating counts.</span></a>
+        <a href="market-explorer.html"><strong>Study the chart</strong><span>Open external charts for price-action context. External data may be delayed.</span></a>
       </div>
     </article>
 
     <div class="start-grid">
       <article class="start-card">
-        <h2>1. HOME</h2>
-        <p>The homepage is the front door. It explains the idea, shows Captain Breakout, and gives you the fastest search box.</p>
-        <p>Use it when you are lost or when you want to restart the site flow.</p>
-        <div class="start-action-row"><a href="index.html">OPEN HOME</a></div>
+        <h2>1. COVERAGE</h2>
+        <p>Coverage is the directory. It answers the first practical question: “Is this ticker in the system?”</p>
+        <p>A company can be searchable before it has a current Monster Rating™. Searchability is not the same as a completed rating.</p>
+        <div class="start-action-row"><a href="coverage-universe.html">OPEN COVERAGE</a></div>
       </article>
 
       <article class="start-card">
         <h2>2. MONSTER CHECK™</h2>
-        <p>This is the most important book-release page. Enter a ticker or click one of the 15 VCL™ quick picks.</p>
-        <p>For the original 15 VCL™ stocks, the page shows the Monster Rating™, tier, explanation, Monster DNA™, Tipping Point™, Market Weather™, Move Driver™, chart link, news/filings link, and educational disclaimer.</p>
+        <p>Enter a ticker to study one company. Official SEC company identity can be shown without inventing a price, news impact, or Monster Rating™.</p>
+        <p>The original 15 VCL™ companies include deeper book-based demonstrations. Other companies may correctly display “not yet rated.”</p>
         <div class="start-action-row"><a href="monster-check.html">OPEN MONSTER CHECK</a></div>
       </article>
 
       <article class="start-card">
-        <h2>3. TOP MONSTERS</h2>
-        <p>This page ranks the 15 book-based demonstration companies. It also shows the live-data readiness board.</p>
-        <p class="start-note">If it says “not live yet,” believe it. That board is honest status tracking, not a failure to read your mind.</p>
+        <h2>3. 2,000-STOCK FACTORY</h2>
+        <p>This is the truth board for the bulk SEC pipeline. It reports exact production counts and company-by-company status.</p>
+        <p class="start-note">“Unresolved” means the SEC identity could not be completed through the current pipeline. It does not mean the company is fraudulent, worthless, or secretly run from a garden shed.</p>
+        <div class="start-action-row"><a href="factory-status.html">OPEN FACTORY STATUS</a></div>
+      </article>
+
+      <article class="start-card">
+        <h2>4. TOP MONSTERS</h2>
+        <p>Top Monsters currently presents the 15 book-based demonstration companies and data-readiness information.</p>
+        <p>It must not be treated as a verified live ranking until licensed market data and the versioned production scoring engine are connected.</p>
         <div class="start-action-row"><a href="top-monsters.html">OPEN TOP MONSTERS</a></div>
       </article>
 
       <article class="start-card">
-        <h2>4. FULL CHARTS</h2>
-        <p>Use Full Charts when you want a larger external chart for one stock or a side-by-side comparison.</p>
-        <p>Charts can be delayed depending on the external data source. They are for research context, not day-trading guarantees.</p>
+        <h2>5. FULL CHARTS</h2>
+        <p>Use Full Charts for a larger external chart or side-by-side comparison. Chart providers can delay data and apply their own exchange rules.</p>
         <div class="start-action-row"><a href="market-explorer.html">OPEN FULL CHARTS</a></div>
       </article>
 
       <article class="start-card">
-        <h2>5. MARKET PULSE</h2>
-        <p>Market Pulse helps you understand the broader market weather around the stock: indexes, sectors, macro context, and market tone.</p>
-        <div class="start-action-row"><a href="market-pulse.html">OPEN MARKET PULSE</a></div>
-      </article>
-
-      <article class="start-card">
-        <h2>6. NEWS RADAR</h2>
-        <p>News Radar is for current-story context and company evidence. It must not invent rating impact when a verified source is not connected.</p>
-        <div class="start-action-row"><a href="news-radar.html">OPEN NEWS RADAR</a></div>
+        <h2>6. MARKET CONTEXT</h2>
+        <p>Market Pulse shows the broader market environment. News Radar helps organize current stories and source context. Verification shows what is actually connected for the original 15 VCL™ companies.</p>
+        <div class="start-action-row">
+          <a href="market-pulse.html">MARKET PULSE</a>
+          <a href="news-radar.html">NEWS RADAR</a>
+          <a href="verification-ledger.html">VERIFICATION</a>
+        </div>
       </article>
     </div>
 
     <article class="start-card">
-      <h2>WHAT IS LIVE VS DEMO?</h2>
-      <ul>
-        <li><strong>External charts and ticker tape:</strong> visible market tools, may be delayed.</li>
-        <li><strong>SEC identity lookup:</strong> official company identity when the secure API is available.</li>
-        <li><strong>15 VCL™ Monster Ratings:</strong> book-release demonstrations, not verified live calculations yet.</li>
-        <li><strong>Live internal ratings:</strong> coming after secure backend, database, refresh jobs, and rating Version 1 are fully connected.</li>
-      </ul>
+      <h2>WHAT EVERY DATA LABEL MEANS</h2>
+      <table class="start-status-table">
+        <thead><tr><th>Label</th><th>Plain-English meaning</th><th>What it does not mean</th></tr></thead>
+        <tbody>
+          <tr><td>Official SEC evidence</td><td>Company identity, filings, or company facts were retrieved from SEC-connected services.</td><td>It is not a stock recommendation or proof that the company will perform well.</td></tr>
+          <tr><td>External market data · may be delayed</td><td>A third-party chart or ticker tool is providing market context under its own timing rules.</td><td>It is not guaranteed real-time execution data.</td></tr>
+          <tr><td>Demonstration rating</td><td>A book-release or Visual Case Library example explains the Monster Rating™ framework.</td><td>It is not a freshly calculated production rating.</td></tr>
+          <tr><td>Not yet rated</td><td>The company is known or searchable, but the production scoring requirements are not complete.</td><td>It is not a zero rating, rejection, or negative opinion.</td></tr>
+          <tr><td>Unresolved SEC identity</td><td>The automated SEC pipeline could not complete the expected identity/evidence record.</td><td>It is not a conclusion about investment quality.</td></tr>
+          <tr><td>Provider not connected</td><td>A licensed quote, news, or other required production data source is not configured.</td><td>It is not permission to substitute made-up data.</td></tr>
+        </tbody>
+      </table>
     </article>
 
     <article class="start-card">
-      <h2>QUICK VIDEO SCRIPT</h2>
-      <p>This can become a YouTube short, Facebook post, blog post, or weekend mini-class.</p>
-      <div class="start-script">Welcome to Next Year’s Monsters™. This site is the companion to the book. Start on the homepage, then run a Monster Check by typing a ticker. For the original 15 Visual Case Library stocks, you will see a demonstration Monster Rating™, the rating tier, the reason behind it, the Monster DNA™, the Tipping Point™, the Market Weather™, and the Move Driver™. Then you can open the full chart or the news and filings page. Top Monsters ranks the current 15 book-based demos, while the live-data board shows what is still being connected. The goal is simple: do not chase hype. Search the market, follow the evidence, and remember that the screen does not find guaranteed winners. It finds evidence.</div>
+      <h2>WHAT IS READY TODAY?</h2>
+      <ul>
+        <li><strong>Search and company coverage:</strong> expanding through the bulk universe pipeline.</li>
+        <li><strong>Official SEC-connected evidence:</strong> available where the pipeline has completed successfully.</li>
+        <li><strong>Factory Status:</strong> reports actual production counts instead of cheerful decorative numbers.</li>
+        <li><strong>External charts and market tools:</strong> available with delay notices.</li>
+        <li><strong>15 VCL™ demonstrations:</strong> available as educational examples.</li>
+        <li><strong>Current production Monster Ratings™:</strong> not released until licensed market data and the versioned scoring engine are connected and verified.</li>
+      </ul>
+      <div class="start-action-row">
+        <a href="live-status.html">OPEN DATA STATUS</a>
+        <a href="verification-ledger.html">OPEN VERIFICATION</a>
+      </div>
+    </article>
+
+    <article class="start-card">
+      <h2>THE RULE THAT RUNS THE SITE</h2>
+      <p class="start-note">The screen does not find guaranteed winners. It finds evidence.</p>
+      <p>Next Year’s Monsters™ is an educational research framework. It organizes evidence, missing evidence, risks, timing, and source status. It does not promise returns or replace professional financial advice.</p>
     </article>
   </section>
 </main>
 
 <footer class="home-footer">
-  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>START WITH THE GUIDE. THEN RUN THE CHECK.</span></div>
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>START WITH THE GUIDE. THEN FOLLOW THE EVIDENCE.</span></div>
   <p><strong>Educational Use Only:</strong> Monster Rating™ is not a recommendation to buy, sell, or hold a security. Investing involves risk, including possible loss of principal.</p>
 </footer>
 
+<script src="assets/runtime-config.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>
 </html>

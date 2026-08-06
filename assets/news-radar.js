@@ -1,4 +1,6 @@
-// TS: 2026-07-30 09:05 ET
+// TS: 2026-08-04 15:36 ET
+
+const NEWS_RADAR_WIDGET_TIMEOUT_MS = 8000;
 
 function newsRadarSymbol(stock) {
   if (stock.proName) return stock.proName;
@@ -10,6 +12,29 @@ function newsRadarSymbol(stock) {
 function newsRadarText(selector, value) {
   const node = document.querySelector(selector);
   if (node) node.textContent = value;
+}
+
+function tradingViewUrl(stock, section = "") {
+  const symbol = newsRadarSymbol(stock).replace(":", "-");
+  return `https://www.tradingview.com/symbols/${symbol}/${section}`;
+}
+
+function createProviderFallback(frame, stock, kind) {
+  frame.replaceChildren();
+  const wrapper = document.createElement("div");
+  wrapper.className = "news-radar-loading";
+
+  const message = document.createElement("p");
+  message.textContent = `Provider Not Connected: the external ${kind} could not be displayed here. No story, timestamp, price, or rating impact was invented.`;
+
+  const link = document.createElement("a");
+  link.href = kind === "news" ? tradingViewUrl(stock, "news/") : tradingViewUrl(stock);
+  link.target = "_blank";
+  link.rel = "noopener nofollow";
+  link.textContent = `Open ${stock.ticker} ${kind} directly at TradingView`;
+
+  wrapper.append(message, link);
+  frame.append(wrapper);
 }
 
 function createTradingViewShell(frame) {
@@ -29,6 +54,12 @@ function createTradingViewShell(frame) {
   return container;
 }
 
+function watchWidget(frame, stock, kind) {
+  window.setTimeout(() => {
+    if (!frame.querySelector("iframe")) createProviderFallback(frame, stock, kind);
+  }, NEWS_RADAR_WIDGET_TIMEOUT_MS);
+}
+
 function mountNewsWidget(frame, stock) {
   const symbol = newsRadarSymbol(stock);
   const container = createTradingViewShell(frame);
@@ -36,7 +67,7 @@ function mountNewsWidget(frame, stock) {
   copyright.className = "tradingview-widget-copyright";
 
   const link = document.createElement("a");
-  link.href = `https://www.tradingview.com/symbols/${symbol.replace(":", "-")}/news/`;
+  link.href = tradingViewUrl(stock, "news/");
   link.rel = "noopener nofollow";
   link.target = "_blank";
   link.textContent = `${stock.name} news`;
@@ -46,6 +77,7 @@ function mountNewsWidget(frame, stock) {
   script.type = "text/javascript";
   script.src = "https://s3.tradingview.com/external-embedding/embed-widget-timeline.js";
   script.async = true;
+  script.onerror = () => createProviderFallback(frame, stock, "news");
   script.textContent = JSON.stringify({
     displayMode: "regular",
     feedMode: "symbol",
@@ -58,6 +90,7 @@ function mountNewsWidget(frame, stock) {
   });
 
   container.append(copyright, script);
+  watchWidget(frame, stock, "news");
 }
 
 function mountReactionChart(frame, stock) {
@@ -67,7 +100,7 @@ function mountReactionChart(frame, stock) {
   copyright.className = "tradingview-widget-copyright";
 
   const link = document.createElement("a");
-  link.href = `https://www.tradingview.com/symbols/${symbol.replace(":", "-")}/`;
+  link.href = tradingViewUrl(stock);
   link.rel = "noopener nofollow";
   link.target = "_blank";
   link.textContent = `${stock.name} stock price`;
@@ -77,6 +110,7 @@ function mountReactionChart(frame, stock) {
   script.type = "text/javascript";
   script.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js";
   script.async = true;
+  script.onerror = () => createProviderFallback(frame, stock, "chart");
   script.textContent = JSON.stringify({
     symbols: [[stock.name, `${symbol}|1D`]],
     chartOnly: false,
@@ -104,6 +138,7 @@ function mountReactionChart(frame, stock) {
   });
 
   container.append(copyright, script);
+  watchWidget(frame, stock, "chart");
 }
 
 function populateNewsRadarSelect(select, stocks) {
@@ -127,35 +162,33 @@ function setupNewsRadar(stocks) {
   populateNewsRadarSelect(select, stocks);
 
   const params = new URLSearchParams(window.location.search);
-  const requestedTicker = String(params.get("ticker") ?? "AAPL").toUpperCase();
-  select.value = byTicker.has(requestedTicker) ? requestedTicker : "AAPL";
+  const requestedTicker = String(params.get("ticker") ?? "AAPL").trim().toUpperCase();
+  const defaultTicker = byTicker.has("AAPL") ? "AAPL" : String(stocks[0].ticker).toUpperCase();
+  select.value = byTicker.has(requestedTicker) ? requestedTicker : defaultTicker;
 
   function render(stock) {
     const ticker = String(stock.ticker).toUpperCase();
-    const symbol = newsRadarSymbol(stock);
 
     select.value = ticker;
     newsRadarText("[data-news-radar-ticker]", `$${ticker}`);
     newsRadarText("[data-news-radar-company]", `${stock.name} · ${stock.sector}`);
-    newsRadarText("[data-news-radar-feed-title]", `${ticker} TOP STORIES`);
-    newsRadarText("[data-news-radar-chart-title]", `${ticker} PRICE REACTION`);
-    newsRadarText("[data-news-radar-status]", "25-STOCK NEWS AND CHART REQUESTED");
+    newsRadarText("[data-news-radar-feed-title]", `${ticker} PROVIDER STORIES`);
+    newsRadarText("[data-news-radar-chart-title]", `${ticker} PROVIDER CHART`);
+    newsRadarText("[data-news-radar-status]", "EXTERNAL PROVIDER REQUESTED");
 
     const researchLink = document.querySelector("[data-news-radar-monster-link]");
     if (researchLink) {
-      if (stock.monsterCheck) {
-        researchLink.href = `monster-check.html?ticker=${encodeURIComponent(ticker)}`;
-        researchLink.textContent = `OPEN ${ticker} MONSTER CHECK™`;
-      } else {
-        researchLink.href = `coverage-universe.html#external-market-coverage`;
-        researchLink.textContent = `${ticker} EXTERNAL COVERAGE ONLY`;
-      }
+      researchLink.href = `monster-check.html?ticker=${encodeURIComponent(ticker)}`;
+      researchLink.textContent = stock.monsterCheck
+        ? `OPEN ${ticker} DEMONSTRATION CHECK™`
+        : `CHECK ${ticker} SEC EVIDENCE`;
     }
 
+    const compareTicker = ticker === "NVDA" ? "AAPL" : "NVDA";
     const compareLink = document.querySelector("[data-news-radar-compare-link]");
     if (compareLink) {
-      compareLink.href = `market-explorer.html?left=${encodeURIComponent(ticker)}&right=NVDA&mode=compare`;
-      compareLink.textContent = `COMPARE ${ticker} WITH NVDA`;
+      compareLink.href = `market-explorer.html?left=${encodeURIComponent(ticker)}&right=${compareTicker}&mode=compare`;
+      compareLink.textContent = `COMPARE ${ticker} WITH ${compareTicker}`;
     }
 
     const url = new URL(window.location.href);
@@ -170,9 +203,6 @@ function setupNewsRadar(stocks) {
 
     mountNewsWidget(newsFrame, stock);
     mountReactionChart(chartFrame, stock);
-
-    const chartSource = document.querySelector("[data-news-radar-chart-source]");
-    if (chartSource) chartSource.href = `https://www.tradingview.com/symbols/${symbol.replace(":", "-")}/`;
   }
 
   buttons.replaceChildren();
@@ -183,7 +213,7 @@ function setupNewsRadar(stocks) {
     button.dataset.newsRadarSymbol = ticker;
     button.setAttribute("aria-pressed", "false");
     button.textContent = ticker;
-    button.title = `Load ${stock.name} news and chart`;
+    button.title = `Load ${stock.name} external news and chart`;
     button.addEventListener("click", () => render(stock));
     buttons.append(button);
   });
@@ -198,18 +228,19 @@ function setupNewsRadar(stocks) {
 
 async function startNewsRadar() {
   try {
-    const response = await fetch("data/market-universe.json");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json");
     if (!response.ok) throw new Error("Unable to load the external market universe.");
     const stocks = await response.json();
+    if (!Array.isArray(stocks) || stocks.length === 0) throw new Error("External market universe is empty.");
     const ordered = [...stocks].sort((left, right) => String(left.ticker).localeCompare(String(right.ticker)));
     setupNewsRadar(ordered);
   } catch (_error) {
-    newsRadarText("[data-news-radar-status]", "NEWS RADAR COULD NOT LOAD");
+    newsRadarText("[data-news-radar-status]", "PROVIDER NOT CONNECTED");
     document.querySelectorAll("[data-news-radar-feed], [data-news-radar-chart]").forEach((frame) => {
       frame.replaceChildren();
       const message = document.createElement("p");
       message.className = "news-radar-loading";
-      message.textContent = "The external news and chart tools could not be requested. No headline, price, or impact label was invented.";
+      message.textContent = "Provider Not Connected: the external Market 25 list could not be loaded. No headline, timestamp, price, or rating impact was invented.";
       frame.append(message);
     });
   }

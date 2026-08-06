@@ -58,7 +58,7 @@ async function startNewsRadarEntryHelp() {
 
   let stocks = [];
   try {
-    const response = await fetch("data/market-universe.json");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json");
     if (!response.ok) throw new Error("Market universe unavailable");
     stocks = await response.json();
   } catch (_error) {

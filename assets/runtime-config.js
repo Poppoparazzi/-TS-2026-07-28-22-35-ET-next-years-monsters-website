@@ -1,9 +1,17 @@
-// TS: 2026-08-02 13:47 ET
+// TS: 2026-08-04 22:18 ET
+
+const NYM_STATIC_DATA_VERSION = "2026-08-04.1";
 
 window.NYM_CONFIG = Object.freeze({
   // Public backend address only. Never place an API key or private credential here.
   apiBaseUrl: "https://next-years-monsters-api.onrender.com",
+  staticDataVersion: NYM_STATIC_DATA_VERSION,
 });
+
+window.NYM_STATIC_URL = (path) => {
+  const separator = String(path).includes("?") ? "&" : "?";
+  return `${path}${separator}v=${encodeURIComponent(NYM_STATIC_DATA_VERSION)}`;
+};
 
 (function loadLiveStatusHealthPanel() {
   const page = (window.location.pathname || "").split("/").filter(Boolean).pop();

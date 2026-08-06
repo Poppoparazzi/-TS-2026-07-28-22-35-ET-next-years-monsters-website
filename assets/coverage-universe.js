@@ -1,8 +1,8 @@
-// TS: 2026-07-30 09:43 ET
+// TS: 2026-08-04 11:44 ET
 
 function coverageText(selector, value) {
   const node = document.querySelector(selector);
-  if (node) node.textContent = value;
+  if (node) node.textContent = String(value);
 }
 
 function createCoverageCard(stock, mode) {
@@ -17,21 +17,16 @@ function createCoverageCard(stock, mode) {
 
   const sector = document.createElement("small");
   sector.textContent = mode === "demo"
-    ? `${stock.sector} · Demonstration Monster Check · Not internally live`
-    : `${stock.sector} · External chart and news coverage · No Monster Rating yet`;
+    ? `${stock.sector} · Demonstration Rating · External Market Data May Be Delayed`
+    : `${stock.sector} · External Market Data May Be Delayed · Not Yet Rated`;
 
   const primaryLink = document.createElement("a");
-  if (mode === "demo") {
-    primaryLink.href = `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`;
-    primaryLink.textContent = "OPEN DEMONSTRATION MONSTER CHECK™ →";
-  } else {
-    primaryLink.href = `market-explorer.html?left=${encodeURIComponent(stock.ticker)}&mode=single`;
-    primaryLink.textContent = "OPEN FULL CHART →";
-  }
+  primaryLink.href = `stock.html?ticker=${encodeURIComponent(stock.ticker)}`;
+  primaryLink.textContent = "OPEN STOCK PAGE →";
 
   const newsLink = document.createElement("a");
   newsLink.href = `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}#current-stories`;
-  newsLink.textContent = "OPEN CURRENT STORIES →";
+  newsLink.textContent = "OPEN EXTERNAL STORIES →";
 
   card.append(ticker, company, sector, primaryLink, newsLink);
   return card;
@@ -46,29 +41,22 @@ function renderCoverageGrid(selector, stocks, mode) {
 
 async function startCoverageUniverse() {
   try {
-    const response = await fetch("data/market-universe.json");
-    if (!response.ok) throw new Error("Unable to load the market universe.");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json");
+    if (!response.ok) throw new Error("Unable to load the Market 25 list.");
 
     const stocks = await response.json();
-    const ordered = [...stocks].sort((left, right) =>
-      String(left.ticker).localeCompare(String(right.ticker)),
-    );
+    const ordered = [...stocks].sort((left, right) => String(left.ticker).localeCompare(String(right.ticker)));
     const demonstrations = ordered.filter((stock) => stock.monsterCheck);
     const externalOnly = ordered.filter((stock) => !stock.monsterCheck);
 
     renderCoverageGrid("[data-coverage-stock-grid]", demonstrations, "demo");
     renderCoverageGrid("[data-coverage-expansion-grid]", externalOnly, "external");
-
-    coverageText("[data-coverage-demo-count]", String(demonstrations.length));
-    coverageText("[data-coverage-market-count]", String(ordered.length));
-    coverageText("[data-coverage-external-count]", String(externalOnly.length));
-    coverageText("[data-coverage-status]", `${ordered.length} EXTERNAL MARKET STOCKS LOADED`);
+    coverageText("[data-coverage-demo-count]", demonstrations.length);
   } catch (_error) {
-    coverageText("[data-coverage-status]", "COVERAGE UNIVERSE COULD NOT LOAD");
     document.querySelectorAll("[data-coverage-stock-grid], [data-coverage-expansion-grid]").forEach((grid) => {
       grid.replaceChildren();
       const message = document.createElement("p");
-      message.textContent = "The coverage list could not be loaded. No stock was invented.";
+      message.textContent = "The external Market 25 list could not be loaded. Production SEC coverage remains a separate service.";
       grid.append(message);
     });
   }

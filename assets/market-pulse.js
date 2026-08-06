@@ -1,35 +1,85 @@
-// TS: 2026-07-30 09:05 ET
+// TS: 2026-08-04 16:34 ET
 
-const MARKET_EXPLORER_URL =
-  "https://poppoparazzi.github.io/-TS-2026-07-28-22-35-ET-next-years-monsters-website/market-explorer.html";
+const WIDGET_TIMEOUT_MS = 8000;
 
 function pulseText(selector, value) {
   const node = document.querySelector(selector);
   if (node) node.textContent = value;
 }
 
-function mountTradingViewWidget(frame, source, configuration) {
+function siteUrl(path) {
+  return new URL(path, window.location.href).href;
+}
+
+function renderProviderFallback(frame, message, sourceUrl) {
   if (!frame) return;
   frame.replaceChildren();
 
-  const container = document.createElement("div");
-  container.className = "tradingview-widget-container";
-  container.style.width = "100%";
-  container.style.height = "100%";
+  const wrapper = document.createElement("div");
+  wrapper.className = "pulse-loading";
 
-  const widget = document.createElement("div");
-  widget.className = "tradingview-widget-container__widget";
-  widget.style.width = "100%";
-  widget.style.height = "100%";
+  const text = document.createElement("p");
+  text.textContent = message;
+  wrapper.append(text);
 
-  const script = document.createElement("script");
-  script.type = "text/javascript";
-  script.src = source;
-  script.async = true;
-  script.textContent = JSON.stringify(configuration);
+  const source = document.createElement("a");
+  source.href = sourceUrl;
+  source.target = "_blank";
+  source.rel = "noopener noreferrer";
+  source.textContent = "OPEN TRADINGVIEW DIRECTLY →";
+  wrapper.append(source);
 
-  container.append(widget, script);
-  frame.append(container);
+  frame.append(wrapper);
+}
+
+function mountTradingViewWidget(frame, source, configuration, fallbackUrl) {
+  if (!frame) return Promise.resolve(false);
+  frame.replaceChildren();
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      renderProviderFallback(
+        frame,
+        "Provider Not Connected. The external widget may be blocked or unavailable. No market value was invented.",
+        fallbackUrl,
+      );
+      resolve(false);
+    };
+
+    const container = document.createElement("div");
+    container.className = "tradingview-widget-container";
+    container.style.width = "100%";
+    container.style.height = "100%";
+
+    const widget = document.createElement("div");
+    widget.className = "tradingview-widget-container__widget";
+    widget.style.width = "100%";
+    widget.style.height = "100%";
+
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = source;
+    script.async = true;
+    script.textContent = JSON.stringify(configuration);
+    script.addEventListener("error", fail, { once: true });
+    script.addEventListener(
+      "load",
+      () => {
+        if (settled) return;
+        settled = true;
+        resolve(true);
+      },
+      { once: true },
+    );
+
+    container.append(widget, script);
+    frame.append(container);
+    window.setTimeout(fail, WIDGET_TIMEOUT_MS);
+  });
 }
 
 function mountMarketOverview(stocks) {
@@ -38,7 +88,7 @@ function mountMarketOverview(stocks) {
     d: stock.name,
   }));
 
-  mountTradingViewWidget(
+  return mountTradingViewWidget(
     document.querySelector("[data-pulse-overview]"),
     "https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js",
     {
@@ -48,7 +98,7 @@ function mountMarketOverview(stocks) {
       locale: "en",
       width: "100%",
       height: "100%",
-      largeChartUrl: MARKET_EXPLORER_URL,
+      largeChartUrl: siteUrl("market-explorer.html"),
       isTransparent: true,
       showSymbolLogo: true,
       showFloatingTooltip: true,
@@ -107,11 +157,12 @@ function mountMarketOverview(stocks) {
         },
       ],
     },
+    "https://www.tradingview.com/markets/stocks-usa/market-movers-large-cap/",
   );
 }
 
 function mountMarketHeatmap() {
-  mountTradingViewWidget(
+  return mountTradingViewWidget(
     document.querySelector("[data-pulse-heatmap]"),
     "https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js",
     {
@@ -121,7 +172,7 @@ function mountMarketHeatmap() {
       blockSize: "market_cap_basic",
       blockColor: "change",
       locale: "en",
-      symbolUrl: MARKET_EXPLORER_URL,
+      symbolUrl: siteUrl("market-explorer.html"),
       colorTheme: "dark",
       hasTopBar: true,
       isDataSetEnabled: true,
@@ -131,26 +182,37 @@ function mountMarketHeatmap() {
       width: "100%",
       height: "100%",
     },
+    "https://www.tradingview.com/heatmap/stock/",
   );
 }
 
 async function startMarketPulse() {
   try {
-    const response = await fetch("data/market-universe.json");
-    if (!response.ok) throw new Error("Unable to load the external market universe.");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("Unable to load the Market 25 list.");
+
     const stocks = await response.json();
-    mountMarketOverview(stocks);
-    mountMarketHeatmap();
-    pulseText("[data-pulse-status]", "25-STOCK DASHBOARD REQUESTED");
+    if (!Array.isArray(stocks) || stocks.length === 0) {
+      throw new Error("The Market 25 list is empty.");
+    }
+
+    const results = await Promise.all([mountMarketOverview(stocks), mountMarketHeatmap()]);
+    pulseText(
+      "[data-pulse-status]",
+      results.every(Boolean) ? "EXTERNAL WIDGETS REQUESTED" : "PROVIDER NOT CONNECTED",
+    );
   } catch (_error) {
-    pulseText("[data-pulse-status]", "WIDGET LOAD FAILED");
-    document.querySelectorAll("[data-pulse-overview], [data-pulse-heatmap]").forEach((frame) => {
-      frame.replaceChildren();
-      const message = document.createElement("p");
-      message.className = "pulse-loading";
-      message.textContent = "The external market widget could not be requested. No market value was invented.";
-      frame.append(message);
-    });
+    pulseText("[data-pulse-status]", "PROVIDER NOT CONNECTED");
+    renderProviderFallback(
+      document.querySelector("[data-pulse-overview]"),
+      "Provider Not Connected. The Market 25 list or external overview could not be loaded. No market value was invented.",
+      "https://www.tradingview.com/markets/stocks-usa/market-movers-large-cap/",
+    );
+    renderProviderFallback(
+      document.querySelector("[data-pulse-heatmap]"),
+      "Provider Not Connected. The external heatmap could not be loaded. No market value was invented.",
+      "https://www.tradingview.com/heatmap/stock/",
+    );
   }
 }
 

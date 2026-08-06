@@ -301,7 +301,7 @@ async function setupLiveStatus() {
   if (!list) return;
 
   try {
-    const response = await fetch("data/stocks.json");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/stocks.json") || "data/stocks.json");
     if (!response.ok) throw new Error("Unable to load the pilot stock list.");
 
     const stocks = await response.json();

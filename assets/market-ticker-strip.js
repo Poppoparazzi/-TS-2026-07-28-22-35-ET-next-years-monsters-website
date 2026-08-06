@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:48 ET
+// TS: 2026-08-04 22:18 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -20,7 +20,7 @@ const NYM_MARKET_FALLBACK = Object.freeze([
 
 async function loadNymMarketUniverse() {
   try {
-    const response = await fetch("data/market-universe.json");
+    const response = await fetch(window.NYM_STATIC_URL?.("data/market-universe.json") || "data/market-universe.json");
     if (!response.ok) throw new Error("Market universe unavailable");
     const stocks = await response.json();
     if (!Array.isArray(stocks) || !stocks.length) throw new Error("Market universe empty");
@@ -74,12 +74,115 @@ function ensureMarketTickerStyles() {
       color: #080c0b !important;
       transform: translateY(-1px);
     }
-    @media (max-width: 1050px) {
+    @media (max-width: 1180px) {
       .nav-links a.nym-start-here-primary,
       .home-nav-links a.nym-start-here-primary {
         min-height: 40px !important;
         padding: 0 14px !important;
         font-size: 11px !important;
+      }
+      .home-nav-shell {
+        grid-template-columns: minmax(0, 1fr) auto auto !important;
+        gap: 12px !important;
+      }
+      .home-nav-links {
+        display: none !important;
+      }
+      .nym-mobile-menu {
+        display: block !important;
+      }
+    }
+    .nym-tools-menu,
+    .nym-mobile-menu {
+      position: relative;
+    }
+    .nym-tools-menu summary,
+    .nym-mobile-menu summary {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 2px solid transparent;
+      color: #080c0b;
+      font-size: 12px;
+      font-weight: 950;
+      cursor: pointer;
+      list-style: none;
+    }
+    .nym-tools-menu summary::-webkit-details-marker,
+    .nym-mobile-menu summary::-webkit-details-marker {
+      display: none;
+    }
+    .nym-tools-menu summary::after,
+    .nym-mobile-menu summary::after {
+      margin-left: 7px;
+      content: "▾";
+      font-size: 10px;
+    }
+    .nym-tools-menu[open] summary,
+    .nym-tools-menu summary:hover,
+    .nym-tools-menu summary:focus-visible,
+    .nym-mobile-menu[open] summary,
+    .nym-mobile-menu summary:hover,
+    .nym-mobile-menu summary:focus-visible {
+      border-bottom-color: var(--editorial-red, #ef3528);
+      outline: 0;
+    }
+    .nym-tools-panel,
+    .nym-mobile-panel {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      z-index: 200;
+      display: grid;
+      width: 270px;
+      border: 2px solid #080c0b;
+      background: #f7f1e5;
+      box-shadow: 8px 8px 0 rgba(8,12,11,.24);
+    }
+    .nym-tools-panel a,
+    .nym-mobile-panel a {
+      min-height: 43px;
+      padding: 13px 16px !important;
+      border: 0 !important;
+      border-bottom: 1px solid rgba(8,12,11,.2) !important;
+      color: #080c0b !important;
+      font-size: 11px !important;
+      font-weight: 900 !important;
+      text-decoration: none;
+    }
+    .nym-tools-panel a:last-child,
+    .nym-mobile-panel a:last-child {
+      border-bottom: 0 !important;
+    }
+    .nym-tools-panel a:hover,
+    .nym-tools-panel a:focus-visible,
+    .nym-mobile-panel a:hover,
+    .nym-mobile-panel a:focus-visible,
+    .nym-tools-panel a.active,
+    .nym-mobile-panel a.active {
+      background: var(--editorial-lime, #a8df34) !important;
+      outline: 0;
+    }
+    .nym-mobile-menu {
+      display: none;
+    }
+    .nym-mobile-menu summary {
+      min-width: 70px;
+      border: 2px solid #080c0b;
+      padding: 0 12px;
+    }
+    .nym-mobile-panel {
+      width: min(320px, calc(100vw - 24px));
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+    @media (max-width: 650px) {
+      .home-nav-cta {
+        display: none !important;
+      }
+      .home-nav-shell {
+        grid-template-columns: minmax(0, 1fr) auto !important;
       }
     }
   `;
@@ -93,74 +196,79 @@ function currentNymPageName() {
     .pop() || "index.html";
 }
 
-function setActiveIfCurrent(link, filename) {
-  if (currentNymPageName() === filename) {
+function setActiveIfCurrent(link, filenames) {
+  const current = currentNymPageName();
+  const accepted = Array.isArray(filenames) ? filenames : [filenames];
+  if (accepted.includes(current)) {
     link.classList.add("active");
     link.setAttribute("aria-current", "page");
   }
 }
 
-function ensureCoreNavigationLinks(navigation) {
-  ensureMarketTickerStyles();
-  const links = [...navigation.querySelectorAll("a")];
+const NYM_PRIMARY_NAV = Object.freeze([
+  { href: "index.html", label: "HOME", title: "Return to the homepage", files: ["index.html"] },
+  { href: "coverage-universe.html", label: "FIND STOCKS", title: "Search the public stock universe", files: ["coverage-universe.html", "stock.html"] },
+  { href: "monster-check.html", label: "MONSTER CHECK", title: "Open Monster Check", files: ["monster-check.html"] },
+  { href: "vcl-library.html", label: "VCL™", title: "Open the Visual Case Library", files: ["vcl-library.html"] },
+  { href: "start-here.html", label: "START HERE", title: "Open the plain-English website guide", files: ["start-here.html"], className: "nym-start-here-primary" },
+]);
 
-  let homeLink = links.find((item) => {
-    const href = item.getAttribute("href") || "";
-    return href === "index.html" || href.endsWith("/index.html") || href === "./";
-  });
-  if (!homeLink) {
-    homeLink = document.createElement("a");
-    homeLink.href = "index.html";
-  }
-  navigation.insertBefore(homeLink, navigation.firstChild);
-  homeLink.classList.add("nym-home-link");
-  homeLink.textContent = "HOME";
-  homeLink.title = "Return to the Next Year’s Monsters homepage";
-  homeLink.setAttribute("aria-label", "Return to the homepage");
-  setActiveIfCurrent(homeLink, "index.html");
+const NYM_TOOL_NAV = Object.freeze([
+  { href: "market-explorer.html", label: "FULL CHARTS", title: "Open full stock charts", files: ["market-explorer.html"] },
+  { href: "market-pulse.html", label: "MARKET PULSE", title: "Open Market Pulse", files: ["market-pulse.html"] },
+  { href: "news-radar.html", label: "NEWS RADAR", title: "Open News Radar", files: ["news-radar.html"] },
+  { href: "top-monsters.html", label: "TOP MONSTERS", title: "Open demonstration leaders", files: ["top-monsters.html"] },
+  { href: "verification-ledger.html", label: "VERIFICATION", title: "Open the 15-stock verification ledger", files: ["verification-ledger.html"] },
+  { href: "live-status.html", label: "DATA STATUS", title: "Open production data status", files: ["live-status.html"] },
+  { href: "factory-status.html", label: "2,000-STOCK FACTORY", title: "Open the public stock factory", files: ["factory-status.html"] },
+  { href: "how-it-works.html", label: "HOW IT WORKS", title: "Open the evidence system", files: ["how-it-works.html"] },
+  { href: "about.html", label: "ABOUT", title: "About Next Year’s Monsters", files: ["about.html"] },
+]);
 
-  let startLink = [...navigation.querySelectorAll("a")].find((item) =>
-    item.getAttribute("href")?.includes("start-here.html"),
-  );
-  if (!startLink) {
-    startLink = document.createElement("a");
-    startLink.href = "start-here.html";
-  }
-  homeLink.insertAdjacentElement("afterend", startLink);
-  startLink.classList.add("nym-start-here-primary");
-  startLink.textContent = "START HERE";
-  startLink.title = "Open the plain-English guide to using this website";
-  startLink.setAttribute("aria-label", "Open the Start Here website guide");
-  setActiveIfCurrent(startLink, "start-here.html");
+function createNymNavLink(item) {
+  const link = document.createElement("a");
+  link.href = item.href;
+  link.textContent = item.label;
+  link.title = item.title;
+  link.setAttribute("aria-label", item.title);
+  if (item.className) link.classList.add(item.className);
+  if (item.href === "index.html") link.classList.add("nym-home-link");
+  setActiveIfCurrent(link, item.files);
+  return link;
 }
 
-function ensureNavLink(navigation, href, label, title, filename) {
-  let link = [...navigation.querySelectorAll("a")].find((item) =>
-    item.getAttribute("href")?.includes(href),
-  );
-  if (!link) {
-    link = document.createElement("a");
-    link.href = href;
-    navigation.append(link);
-  }
-  link.textContent = label;
-  link.title = title;
-  link.setAttribute("aria-label", title);
-  setActiveIfCurrent(link, filename);
-  return link;
+function appendNymMenuLinks(container, items) {
+  items.forEach((item) => container.append(createNymNavLink(item)));
+}
+
+function createNymDetails(className, panelClass, label, items) {
+  const details = document.createElement("details");
+  details.className = className;
+  const summary = document.createElement("summary");
+  summary.textContent = label;
+  const panel = document.createElement("div");
+  panel.className = panelClass;
+  appendNymMenuLinks(panel, items);
+  details.append(summary, panel);
+  panel.addEventListener("click", (event) => {
+    if (event.target.closest("a")) details.open = false;
+  });
+  return details;
 }
 
 function ensureMarketExplorerNavLink() {
   const navigation = document.querySelector("nav.nav-links");
   if (!navigation) return;
 
-  ensureCoreNavigationLinks(navigation);
-  ensureNavLink(navigation, "market-explorer.html", "FULL CHARTS", "Open full stock charts in Market Explorer", "market-explorer.html");
-  ensureNavLink(navigation, "market-pulse.html", "MARKET PULSE", "Open Market Pulse", "market-pulse.html");
-  ensureNavLink(navigation, "news-radar.html", "NEWS RADAR", "Open News Radar", "news-radar.html");
-  ensureNavLink(navigation, "coverage-universe.html", "COVERAGE", "Open the stock coverage universe", "coverage-universe.html");
-  ensureNavLink(navigation, "verification-ledger.html", "VERIFICATION", "Open the 15-stock verification ledger", "verification-ledger.html");
-  ensureNavLink(navigation, "factory-status.html", "500-STOCK FACTORY", "Open the 500-stock factory status", "factory-status.html");
+  ensureMarketTickerStyles();
+  navigation.replaceChildren();
+  appendNymMenuLinks(navigation, NYM_PRIMARY_NAV);
+  navigation.append(createNymDetails("nym-tools-menu", "nym-tools-panel", "TOOLS", NYM_TOOL_NAV));
+
+  const shell = navigation.closest(".home-nav-shell") || navigation.parentElement;
+  if (!shell) return;
+  shell.querySelector(".nym-mobile-menu")?.remove();
+  shell.append(createNymDetails("nym-mobile-menu", "nym-mobile-panel", "MENU", [...NYM_PRIMARY_NAV, ...NYM_TOOL_NAV]));
 }
 
 async function createMarketTickerStrip() {
@@ -222,31 +330,12 @@ async function createMarketTickerStrip() {
 
   tradingViewContainer.append(tradingViewWidget, script);
   widgetShell.append(tradingViewContainer);
-
-  const quickLinks = document.createElement("nav");
-  quickLinks.className = "nym-market-tape-links";
-  quickLinks.setAttribute("aria-label", "Open a market stock in its full single chart");
-
-  stocks.forEach(({ ticker, name }) => {
-    const link = document.createElement("a");
-    link.href = `market-explorer.html?left=${encodeURIComponent(ticker)}&mode=single`;
-    link.textContent = ticker;
-    link.title = `Open ${name} in the full single-chart view`;
-    link.setAttribute("aria-label", `Open ${name} full chart`);
-    quickLinks.append(link);
-  });
-
-  const note = document.createElement("p");
-  note.className = "nym-market-tape-note";
-  note.textContent =
-    `CLICK ANY TICKER BUTTON ABOVE to open that company in the full single-chart view. The ${count}-stock tape uses external market data that may be delayed. Fifteen companies currently have demonstration Monster Checks; the additional ten are chart-and-news coverage only.`;
-
-  section.append(head, widgetShell, quickLinks, note);
+  section.append(head, widgetShell);
   header.insertAdjacentElement("afterend", section);
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", createMarketTickerStrip);
+  document.addEventListener("DOMContentLoaded", () => void createMarketTickerStrip());
 } else {
-  createMarketTickerStrip();
+  void createMarketTickerStrip();
 }
