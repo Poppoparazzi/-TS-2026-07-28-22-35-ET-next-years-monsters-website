@@ -14,15 +14,51 @@
   <link rel="stylesheet" href="assets/home-market-tools.css">
   <link rel="stylesheet" href="assets/home-stock-finder.css">
   <style>
-    /* TS: 2026-08-06 13:55 ET - local screenshot-tuned homepage art placement */
+    /* TS: 2026-08-06 14:12 ET - lock desktop hero pieces to one shared stage */
     @media (min-width: 1051px) {
+      .home-page .home-hero {
+        position: relative !important;
+        height: calc(100vh - 203px) !important;
+        min-height: 720px !important;
+        display: block !important;
+        overflow: hidden !important;
+        isolation: isolate !important;
+      }
+      .home-page .home-hero-copy {
+        position: absolute !important;
+        left: clamp(58px, 4.55vw, 76px) !important;
+        top: 28px !important;
+        width: clamp(560px, 37vw, 620px) !important;
+        padding: 0 !important;
+        z-index: 4 !important;
+        background: transparent !important;
+      }
+      .home-page .home-fingerprint-mark {
+        top: 24px !important;
+        right: -152px !important;
+      }
+      .home-page .home-hero-art {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 1 !important;
+        min-height: 100% !important;
+        display: block !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+      }
       .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
-        inset: auto auto -1% 31% !important;
-        width: 72% !important;
-        height: 98% !important;
+        inset: auto auto -1% 56% !important;
+        width: min(70vw, 1240px) !important;
+        height: auto !important;
         object-position: left bottom !important;
-        transform: translate(-6%, -1%) scale(1.03) !important;
+        transform: translate(-27%, -1%) scale(1.03) !important;
         transform-origin: left bottom !important;
+      }
+    }
+    @media (min-width: 1500px) {
+      .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
+        inset: auto auto -1% 49.5% !important;
+        width: min(73vw, 1240px) !important;
       }
     }
   </style>
