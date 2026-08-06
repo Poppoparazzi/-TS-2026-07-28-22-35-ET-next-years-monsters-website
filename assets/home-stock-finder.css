@@ -1,4 +1,4 @@
-/* TS: 2026-08-06 10:47 ET */
+/* TS: 2026-08-06 13:36 ET */
 
 /*
  * Working homepage reconstruction based on the approved 1672 x 941 Photoshop
@@ -190,19 +190,31 @@
 
 /* ---------- APPROVED HERO ---------- */
 .home-page .home-hero {
+  position: relative !important;
   min-height: calc(100vh - 203px) !important;
   display: grid !important;
-  grid-template-columns: 43% 57% !important;
+  grid-template-columns: minmax(560px, 43%) 1fr !important;
   background: #07100f !important;
   overflow: hidden !important;
+  isolation: isolate;
+}
+
+.home-page .home-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #07100f 0%, rgba(7, 16, 15, .97) 28%, rgba(7, 16, 15, .68) 47%, rgba(7, 16, 15, .16) 63%, transparent 78%),
+    linear-gradient(180deg, rgba(7, 16, 15, .08), transparent 34%, rgba(7, 16, 15, .10) 100%);
 }
 
 .home-page .home-hero-copy {
   position: relative;
   z-index: 4;
   padding: 28px 28px 28px 76px !important;
-  background:
-    linear-gradient(90deg, #0a1211 0%, #0a1211 82%, rgba(10, 18, 17, .92) 100%) !important;
+  background: transparent !important;
 }
 
 .home-page .home-kicker {
@@ -270,7 +282,8 @@
   margin-top: 16px;
   padding: 12px 14px 11px;
   border: 1px solid rgba(255, 255, 255, .30);
-  background: rgba(6, 12, 10, .86);
+  background: rgba(6, 12, 10, .82);
+  backdrop-filter: blur(1px);
 }
 
 .home-page .home-stock-finder label {
@@ -322,14 +335,15 @@
 }
 
 .home-page .home-hero-art {
-  position: relative !important;
-  min-height: calc(100vh - 203px) !important;
-  display: flex !important;
-  align-items: flex-end !important;
-  justify-content: center !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  min-height: 100% !important;
+  display: block !important;
   overflow: hidden !important;
+  pointer-events: none !important;
   background:
-    radial-gradient(circle at 64% 44%, rgba(147, 176, 60, .21), transparent 34%),
+    radial-gradient(circle at 58% 42%, rgba(147, 176, 60, .21), transparent 34%),
     linear-gradient(115deg, #08110f 0%, #0b1712 58%, #102015 100%) !important;
 }
 
@@ -340,14 +354,15 @@
 
 .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
   position: absolute !important;
-  inset: auto auto -2% -22% !important;
-  width: 126% !important;
+  inset: auto auto -3% 30% !important;
+  width: 79% !important;
   max-width: none !important;
-  height: 108% !important;
+  height: 111% !important;
   padding: 0 !important;
   object-fit: contain !important;
-  object-position: center center !important;
-  transform: translateY(-1%) !important;
+  object-position: left bottom !important;
+  transform: translate(-6%, -5%) scale(1.12) !important;
+  transform-origin: left bottom !important;
   filter: brightness(1.01) contrast(1.05) saturate(1.05) !important;
   z-index: 2 !important;
 }
@@ -359,8 +374,8 @@
   z-index: 3;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(7, 16, 15, .36) 0%, rgba(7, 16, 15, .05) 12%, transparent 23%),
-    linear-gradient(0deg, rgba(7, 16, 15, .20), transparent 25%) !important;
+    linear-gradient(90deg, rgba(7, 16, 15, .28) 0%, rgba(7, 16, 15, .05) 12%, transparent 25%),
+    linear-gradient(0deg, rgba(7, 16, 15, .14), transparent 24%) !important;
 }
 
 .home-page .home-hero-art .asset-placeholder[data-captain-placeholder] {
@@ -430,17 +445,25 @@
     grid-template-columns: 1fr !important;
   }
 
+  .home-page .home-hero::before {
+    display: none;
+  }
+
   .home-page .home-hero-copy {
     padding: 54px 44px 48px !important;
+    background: #07100f !important;
   }
 
   .home-page .home-hero-art {
+    position: relative !important;
     min-height: 680px !important;
   }
 
   .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
-    left: -5% !important;
+    inset: auto auto -2% -5% !important;
     width: 110% !important;
+    height: 108% !important;
+    transform: none !important;
   }
 }
 
@@ -532,7 +555,9 @@
   }
 
   .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
-    left: -12% !important;
+    inset: auto auto -2% -12% !important;
     width: 124% !important;
+    height: 108% !important;
+    transform: none !important;
   }
 }
