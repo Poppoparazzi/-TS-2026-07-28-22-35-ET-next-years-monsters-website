@@ -1,11 +1,10 @@
 {
-  "release": "2026-08-06-homepage-coordinate-pass-1355-ET",
+  "release": "2026-08-06-one-stage-homepage-hero-1412-ET",
   "homepage_reference": "approved-homepage-gold-master-2026-08-06",
   "working_homepage": true,
   "sec_connection_strip": true,
   "frontend_sources": ["gh-pages"],
-  "composition_fix": "local-screenshot-tuned-bull-captain-dust-position",
-  "gh_pages_index_commit": "4fc61c5f8ff7b80e1a67328222baf7b2e4cd2ab1",
-  "local_tested_viewports": ["1672x941", "1920x1080"],
-  "updated_at": "2026-08-06T17:55:00Z"
+  "composition_fix": "hero-copy-art-fingerprint-search-share-one-coordinate-stage",
+  "gh_pages_index_commit": "476dc266e64b87c3157502decc1ee9c716127450",
+  "updated_at": "2026-08-06T18:12:00Z"
 }
