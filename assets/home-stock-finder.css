@@ -1,4 +1,4 @@
-/* TS: 2026-08-05 19:18 ET */
+/* TS: 2026-08-06 07:10 ET */
 
 .home-stock-finder {
   max-width: 760px;
@@ -72,8 +72,8 @@
   line-height: 1.5;
 }
 
-/* Use the approved bull image as the full right-side hero artwork.
-   No floating cutout, no right-edge drift, no miniature bull. */
+/* Enlarge the approved bull-rider artwork and pull it toward the copy.
+   This closes the empty center gap without changing the homepage structure. */
 .home-hero-art {
   min-height: 730px !important;
   background: #07100f !important;
@@ -81,22 +81,25 @@
 
 .home-hero-art img[data-captain-image].home-bull-rider-hero {
   position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
+  top: -7% !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: -12% !important;
+  width: 118% !important;
   max-width: none !important;
-  height: 100% !important;
+  height: 114% !important;
   padding: 0 !important;
   object-fit: cover !important;
-  object-position: 60% center !important;
+  object-position: 50% center !important;
   transform: none !important;
-  filter: brightness(.88) contrast(1.06) saturate(1.03) !important;
+  filter: brightness(.9) contrast(1.06) saturate(1.03) !important;
   z-index: 2 !important;
 }
 
 .home-hero-art::after {
   background:
-    linear-gradient(90deg, rgba(8,12,11,.72) 0%, rgba(8,12,11,.24) 16%, transparent 36%),
-    linear-gradient(0deg, rgba(8,12,11,.48), transparent 42%) !important;
+    linear-gradient(90deg, rgba(8,12,11,.58) 0%, rgba(8,12,11,.16) 14%, transparent 31%),
+    linear-gradient(0deg, rgba(8,12,11,.46), transparent 42%) !important;
 }
 
 .home-hero-art .asset-placeholder[data-captain-placeholder] {
@@ -139,6 +142,10 @@
   }
 
   .home-hero-art img[data-captain-image].home-bull-rider-hero {
-    object-position: 58% center !important;
+    top: -4% !important;
+    left: -8% !important;
+    width: 112% !important;
+    height: 108% !important;
+    object-position: 50% center !important;
   }
 }
