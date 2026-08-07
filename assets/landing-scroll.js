@@ -1,4 +1,4 @@
-// TS: 2026-08-07 16:52 ET
+// TS: 2026-08-07 17:52 ET
 
 function restoreLandingAnchor() {
   if (!window.location.hash) return;
@@ -28,8 +28,13 @@ function restoreLandingAnchor() {
 
 function tuneHomepageHero() {
   const hero = document.querySelector('.home-page .home-hero-art img[data-captain-image].home-bull-rider-hero');
-  if (!hero || window.innerWidth < 1051) return;
-  hero.style.setProperty('transform', 'translate(-6%, -6%) scale(1.08) rotate(2deg)', 'important');
+  if (!hero) return;
+
+  hero.src = 'cb with background removed.png';
+
+  if (window.innerWidth >= 1051) {
+    hero.style.setProperty('transform', 'translate(-6%, -6%) scale(1.06) rotate(3deg)', 'important');
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
