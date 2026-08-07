@@ -1,4 +1,4 @@
-// TS: 2026-08-07 17:52 ET
+// TS: 2026-08-07 17:55 ET
 
 function restoreLandingAnchor() {
   if (!window.location.hash) return;
@@ -33,7 +33,7 @@ function tuneHomepageHero() {
   hero.src = 'cb with background removed.png';
 
   if (window.innerWidth >= 1051) {
-    hero.style.setProperty('transform', 'translate(-6%, -6%) scale(1.06) rotate(3deg)', 'important');
+    hero.style.setProperty('transform', 'translate(-6%, -6%) scale(1.06) rotate(6deg)', 'important');
   }
 }
 
