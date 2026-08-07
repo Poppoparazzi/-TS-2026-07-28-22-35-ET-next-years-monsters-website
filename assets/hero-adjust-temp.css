@@ -1,0 +1,6 @@
+/* TS: 2026-08-07 16:51 ET */
+@media (min-width: 1051px) {
+  .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
+    transform: translate(-6%, -6%) scale(1.08) rotate(2deg) !important;
+  }
+}
