@@ -1,4 +1,4 @@
-/* TS: 2026-08-07 15:45 ET */
+/* TS: 2026-08-07 15:58 ET */
 
 /*
  * Working homepage reconstruction based on the approved 1672 x 941 Photoshop
@@ -212,15 +212,15 @@
 .home-page .home-hero-copy {
   position: relative;
   z-index: 4;
-  padding: 28px 28px 28px 76px !important;
+  padding: 18px 28px 14px 70px !important;
   background: transparent !important;
 }
 
 .home-page .home-kicker {
-  margin: 0 0 24px !important;
+  margin: 0 0 14px !important;
   color: #a8df34 !important;
-  font-size: 14px !important;
-  line-height: 1.1 !important;
+  font-size: 13px !important;
+  line-height: 1.05 !important;
   letter-spacing: .045em !important;
 }
 
@@ -234,9 +234,9 @@
   margin: 0 !important;
   color: #f3efe3 !important;
   font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif !important;
-  font-size: clamp(88px, 6.95vw, 118px) !important;
+  font-size: clamp(80px, 6.1vw, 102px) !important;
   font-weight: 900 !important;
-  line-height: .82 !important;
+  line-height: .80 !important;
   letter-spacing: -.012em !important;
   text-align: left !important;
 }
@@ -250,12 +250,12 @@
 
 .home-page .home-hero-line {
   max-width: 620px !important;
-  margin: 22px 0 10px !important;
-  padding-left: 15px !important;
-  border-left-width: 5px !important;
+  margin: 14px 0 8px !important;
+  padding-left: 13px !important;
+  border-left-width: 4px !important;
   color: #f7f2e7 !important;
-  font-size: clamp(22px, 1.42vw, 26px) !important;
-  line-height: 1.08 !important;
+  font-size: clamp(18px, 1.2vw, 22px) !important;
+  line-height: 1.05 !important;
   letter-spacing: .01em !important;
 }
 
@@ -263,14 +263,14 @@
   max-width: 520px !important;
   margin: 0 !important;
   color: #e5e1d7 !important;
-  font-size: 16px !important;
-  line-height: 1.42 !important;
+  font-size: 15px !important;
+  line-height: 1.30 !important;
 }
 
 .home-page .home-fingerprint-mark {
-  top: 24px !important;
-  right: -18px !important;
-  width: clamp(142px, 9.8vw, 166px) !important;
+  top: 18px !important;
+  right: -10px !important;
+  width: clamp(132px, 9vw, 154px) !important;
   opacity: .58 !important;
   transform: rotate(7deg) !important;
 }
@@ -278,8 +278,8 @@
 .home-page .home-stock-finder {
   width: min(100%, 606px);
   max-width: 606px;
-  margin-top: 16px;
-  padding: 12px 14px 11px;
+  margin-top: 12px;
+  padding: 9px 12px 8px;
   border: 1px solid rgba(255, 255, 255, .30);
   background: rgba(6, 12, 10, .82);
   backdrop-filter: blur(1px);
@@ -287,9 +287,9 @@
 
 .home-page .home-stock-finder label {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 5px;
   color: #a8df34 !important;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 950;
   letter-spacing: .045em;
 }
@@ -302,33 +302,33 @@
 
 .home-page .home-stock-finder input {
   width: 100%;
-  min-height: 48px;
+  min-height: 42px;
   padding: 0 14px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .home-page .home-stock-finder button {
   min-width: 145px;
-  min-height: 48px;
+  min-height: 42px;
   padding: 0 16px;
   font-size: 11px;
 }
 
 .home-page .home-stock-finder small {
   display: block;
-  margin-top: 6px;
+  margin-top: 4px;
   color: #e5e1d7 !important;
-  font-size: 9px;
-  line-height: 1.35;
+  font-size: 8px;
+  line-height: 1.25;
 }
 
 .home-page .home-hero-actions {
-  margin-top: 16px;
+  margin-top: 12px;
   gap: 12px;
 }
 
 .home-page .home-btn {
-  min-height: 48px;
+  min-height: 44px;
   padding: 0 18px;
   font-size: 12px;
 }
@@ -360,10 +360,11 @@
   padding: 0 !important;
   object-fit: contain !important;
   object-position: left bottom !important;
-  transform: translate(-6%, -6%) scale(1.12) rotate(-1deg) !important;
+  transform: translate(-6%, -5%) scale(1.12) !important;
   transform-origin: left bottom !important;
   filter: brightness(1.01) contrast(1.05) saturate(1.05) !important;
   z-index: 2 !important;
+  visibility: hidden !important;
 }
 
 .home-page .home-hero-art::after {
@@ -401,7 +402,7 @@
   }
 
   .home-page .home-hero h1 {
-    font-size: clamp(88px, 7.4vw, 112px) !important;
+    font-size: clamp(80px, 6.6vw, 100px) !important;
   }
 }
 
@@ -463,6 +464,7 @@
     width: 110% !important;
     height: 108% !important;
     transform: none !important;
+    visibility: visible !important;
   }
 }
 
@@ -558,5 +560,6 @@
     width: 124% !important;
     height: 108% !important;
     transform: none !important;
+    visibility: visible !important;
   }
 }
