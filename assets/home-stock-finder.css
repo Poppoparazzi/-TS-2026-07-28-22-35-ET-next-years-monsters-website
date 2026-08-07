@@ -1,4 +1,4 @@
-/* TS: 2026-08-06 13:36 ET */
+/* TS: 2026-08-07 10:30 ET */
 
 /*
  * Working homepage reconstruction based on the approved 1672 x 941 Photoshop
@@ -361,7 +361,7 @@
   padding: 0 !important;
   object-fit: contain !important;
   object-position: left bottom !important;
-  transform: translate(-6%, -5%) scale(1.12) !important;
+  transform: translate(-6%, -6%) scale(1.12) rotate(-5deg) !important;
   transform-origin: left bottom !important;
   filter: brightness(1.01) contrast(1.05) saturate(1.05) !important;
   z-index: 2 !important;
