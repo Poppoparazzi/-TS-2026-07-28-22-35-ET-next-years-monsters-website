@@ -84,6 +84,22 @@
         overflow: hidden !important;
         pointer-events: none !important;
       }
+      /* TS: 2026-08-07 09:31 ET - warm gold dust behind real Captain/bull */
+      .home-page .home-hero-art::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse at 88% 91%, rgba(244, 179, 78, .70) 0%, rgba(196, 117, 45, .52) 13%, rgba(129, 73, 32, .28) 30%, transparent 54%),
+          radial-gradient(ellipse at 70% 86%, rgba(227, 149, 60, .48) 0%, rgba(153, 87, 39, .30) 24%, transparent 52%),
+          radial-gradient(ellipse at 48% 80%, rgba(198, 121, 51, .28) 0%, rgba(126, 71, 35, .16) 28%, transparent 58%),
+          linear-gradient(180deg, transparent 54%, rgba(175, 96, 38, .08) 72%, rgba(205, 128, 48, .20) 100%);
+        filter: blur(10px) saturate(1.25);
+        transform: scale(1.06);
+        transform-origin: right bottom;
+      }
       .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
         inset: auto auto 0 57% !important;
         width: min(56vw, 965px) !important;
