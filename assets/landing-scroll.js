@@ -1,4 +1,4 @@
-// TS: 2026-08-07 18:10 ET
+// TS: 2026-08-07 18:22 ET
 
 function restoreLandingAnchor() {
   if (!window.location.hash) return;
@@ -30,7 +30,11 @@ function tuneHomepageHero() {
   const hero = document.querySelector('.home-page .home-hero-art img[data-captain-image].home-bull-rider-hero');
   if (!hero) return;
 
-  hero.src = 'cb with background removed.png';
+  hero.src = '/cb%20with%20background%20removed.png';
+  hero.style.setProperty('z-index', '4', 'important');
+  hero.style.setProperty('opacity', '1', 'important');
+  hero.style.setProperty('visibility', 'visible', 'important');
+  hero.style.setProperty('display', 'block', 'important');
 
   if (window.innerWidth >= 1051) {
     hero.style.setProperty('transform', 'translate(-6%, -6%) scale(1.06) rotate(6deg)', 'important');
@@ -38,38 +42,35 @@ function tuneHomepageHero() {
 }
 
 function addHomepageGoldDust() {
-  if (document.getElementById('homepage-gold-dust-live')) return;
+  const art = document.querySelector('.home-page .home-hero-art');
+  if (!art || document.getElementById('homepage-gold-dust-layer')) return;
 
-  const style = document.createElement('style');
-  style.id = 'homepage-gold-dust-live';
-  style.textContent = `
-    @media (min-width: 1051px) {
-      .home-page .home-hero-art::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 36%;
-        z-index: 1;
-        pointer-events: none;
-        opacity: .98;
-        background:
-          radial-gradient(ellipse at 88% 82%, rgba(255, 198, 72, .58) 0%, rgba(206, 137, 35, .46) 19%, rgba(129, 78, 20, .25) 41%, transparent 67%),
-          radial-gradient(ellipse at 72% 68%, rgba(255, 214, 105, .46) 0%, rgba(197, 128, 28, .34) 24%, transparent 57%),
-          radial-gradient(ellipse at 84% 43%, rgba(241, 185, 62, .31) 0%, rgba(159, 100, 22, .18) 28%, transparent 54%),
-          radial-gradient(circle at 12% 28%, rgba(255, 218, 124, .62) 0 1.2px, transparent 1.8px) 0 0 / 29px 29px,
-          radial-gradient(circle at 62% 56%, rgba(244, 173, 53, .48) 0 1.4px, transparent 2px) 8px 14px / 41px 41px,
-          radial-gradient(circle at 84% 76%, rgba(255, 224, 139, .42) 0 1px, transparent 1.7px) 17px 5px / 23px 23px;
-      }
-    }
-  `;
-  document.head.appendChild(style);
+  const dust = document.createElement('div');
+  dust.id = 'homepage-gold-dust-layer';
+  dust.setAttribute('aria-hidden', 'true');
+  dust.style.cssText = [
+    'position:absolute',
+    'top:0',
+    'right:0',
+    'bottom:0',
+    'left:38%',
+    'z-index:1',
+    'pointer-events:none',
+    'opacity:.78',
+    'background:radial-gradient(ellipse at 92% 88%, rgba(255,198,72,.52) 0%, rgba(206,137,35,.36) 22%, rgba(129,78,20,.18) 44%, transparent 68%), radial-gradient(ellipse at 73% 73%, rgba(255,214,105,.34) 0%, rgba(197,128,28,.24) 26%, transparent 58%), radial-gradient(ellipse at 86% 48%, rgba(241,185,62,.22) 0%, rgba(159,100,22,.12) 30%, transparent 56%), radial-gradient(circle at 15% 30%, rgba(255,218,124,.48) 0 1.1px, transparent 1.7px) 0 0 / 31px 31px, radial-gradient(circle at 64% 58%, rgba(244,173,53,.38) 0 1.3px, transparent 1.9px) 7px 13px / 43px 43px, radial-gradient(circle at 86% 78%, rgba(255,224,139,.34) 0 1px, transparent 1.6px) 15px 5px / 25px 25px'
+  ].join(';');
+
+  const hero = art.querySelector('img[data-captain-image].home-bull-rider-hero');
+  if (hero) {
+    art.insertBefore(dust, hero);
+  } else {
+    art.appendChild(dust);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   restoreLandingAnchor();
-  tuneHomepageHero();
   addHomepageGoldDust();
+  tuneHomepageHero();
 });
 window.addEventListener("hashchange", restoreLandingAnchor);
