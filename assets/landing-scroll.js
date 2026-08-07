@@ -1,4 +1,4 @@
-// TS: 2026-07-29 11:15 ET
+// TS: 2026-08-07 16:52 ET
 
 function restoreLandingAnchor() {
   if (!window.location.hash) return;
@@ -26,5 +26,14 @@ function restoreLandingAnchor() {
   window.requestAnimationFrame(settleAndScroll);
 }
 
-document.addEventListener("DOMContentLoaded", restoreLandingAnchor);
+function tuneHomepageHero() {
+  const hero = document.querySelector('.home-page .home-hero-art img[data-captain-image].home-bull-rider-hero');
+  if (!hero || window.innerWidth < 1051) return;
+  hero.style.setProperty('transform', 'translate(-6%, -6%) scale(1.08) rotate(2deg)', 'important');
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  restoreLandingAnchor();
+  tuneHomepageHero();
+});
 window.addEventListener("hashchange", restoreLandingAnchor);
