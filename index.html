@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-06 22:50 ET -->
+<!-- TS: 2026-08-06 23:01 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="assets/home-market-tools.css">
   <link rel="stylesheet" href="assets/home-stock-finder.css">
   <style>
-    /* TS: 2026-08-06 22:50 ET - Captain/bull only: preserve live hero; move approved artwork upward */
+    /* TS: 2026-08-06 23:01 ET - Captain/bull image only: match approved 1672x941 artwork scale and overlap */
     @media (min-width: 1051px) {
       .home-page .home-hero {
         position: relative !important;
@@ -85,18 +85,24 @@
         pointer-events: none !important;
       }
       .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
-        inset: auto auto 2% 57% !important;
-        width: min(56vw, 965px) !important;
-        height: auto !important;
+        position: absolute !important;
+        inset: auto auto -3% 30% !important;
+        width: 79% !important;
+        max-width: none !important;
+        height: 111% !important;
+        padding: 0 !important;
+        object-fit: contain !important;
         object-position: left bottom !important;
-        transform: translate(-24%, -3%) scale(1) !important;
+        transform: translate(-6%, -5%) scale(1.12) !important;
         transform-origin: left bottom !important;
+        filter: brightness(1.01) contrast(1.05) saturate(1.05) !important;
+        z-index: 2 !important;
       }
     }
     @media (min-width: 1500px) {
       .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
-        inset: auto auto 2% 53% !important;
-        width: min(58vw, 995px) !important;
+        inset: auto auto -3% 30% !important;
+        width: 79% !important;
       }
     }
   </style>
