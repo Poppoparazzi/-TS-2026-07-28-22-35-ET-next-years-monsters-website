@@ -1,10 +1,10 @@
 {
-  "release": "2026-08-06-homepage-bull-shrink-lower-1436-ET",
+  "release": "2026-08-06-homepage-art-fit-pass-1447-ET",
   "homepage_reference": "approved-homepage-gold-master-2026-08-06",
   "working_homepage": true,
   "sec_connection_strip": true,
   "frontend_sources": ["gh-pages"],
-  "composition_fix": "bull-captain-art-shrunk-and-lowered-after-fit-pass",
-  "gh_pages_index_commit": "dc819735d6b5dab4896dac049fab41ea186c1be2",
-  "updated_at": "2026-08-06T18:36:00Z"
+  "composition_fix": "captain-bull-art-shrunk-and-lowered-clear-of-status-strip",
+  "gh_pages_index_commit": "55d8c508adf1c992a10587e91de1e3dc21c96a26",
+  "updated_at": "2026-08-06T18:47:00Z"
 }
