@@ -1,4 +1,4 @@
-/* TS: 2026-08-08 06:52 ET */
+/* TS: 2026-08-08 08:05 ET */
 
 .tier-preview-page {
   margin: 0;
@@ -166,12 +166,9 @@
 
 .tier-score strong {
   display: block;
-  font-size: 17px;
-  line-height: 1.2;
-}
-
-.tier-score .pending {
-  color: #8a6411;
+  color: #416d0e;
+  font-size: 30px;
+  line-height: 1;
 }
 
 .tier-copy strong {
@@ -246,6 +243,19 @@
   font-size: 12px;
 }
 
+.tier-card-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.tier-card-score {
+  color: #416d0e;
+  font-size: 28px !important;
+  line-height: 1;
+}
+
 .tier-card-status {
   padding: 6px 8px;
   background: #141a16;
@@ -287,8 +297,8 @@
 }
 
 .tier-method-note {
-  margin-top: 76px;
-  margin-bottom: 84px;
+  margin-top: 42px;
+  margin-bottom: 42px;
   padding: 28px 30px;
   border-left: 7px solid var(--editorial-lime, #9eea32);
   background: #101612;
