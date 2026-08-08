@@ -1,4 +1,4 @@
-// TS: 2026-08-08 09:33 ET
+// TS: 2026-08-08 19:14 ET
 
 function tierEscape(value) {
   return String(value ?? "")
@@ -52,9 +52,22 @@ function renderTier(list, items, tier) {
   list.innerHTML = tier === "top15" ? items.map(topRow).join("") : items.map(item => tierCard(item, tier)).join("");
 }
 
+function updateBoardStatusCopy(data) {
+  const snapshotStatus = document.querySelector(".tier-snapshot-bar strong");
+  if (snapshotStatus) snapshotStatus.textContent = "SCORED RESEARCH BOARD · * = PENDING COMPONENT · NOT INVESTMENT ADVICE";
+
+  const notes = document.querySelectorAll(".tier-method-note p");
+  if (notes.length > 1) {
+    const pending = [...(data.top15 || []), ...(data.rising || []), ...(data.watchlist || [])]
+      .filter(item => String(item.score_status || "").includes("*"))
+      .map(item => item.ticker);
+    notes[1].innerHTML = `<strong>MARKET / RELATIVE-STRENGTH PASS:</strong> The standardized review is complete for the published scored names except ${pending.length ? tierEscape(pending.join(", ")) : "none"}. An asterisk marks only a required component that is still pending. Completed scores remain research rankings and can change when new evidence changes.`;
+  }
+}
+
 async function setupTierPreview() {
   try {
-    const response = await fetch("data/monster-tier-board-preview.json");
+    const response = await fetch("data/monster-tier-board-preview.json", { cache: "no-store" });
     if (!response.ok) throw new Error("Unable to load tier preview data.");
     const data = await response.json();
 
@@ -67,6 +80,7 @@ async function setupTierPreview() {
       if (count) count.textContent = items.length;
       renderTier(document.querySelector(`[data-tier-list="${tier}"]`), items, tier);
     });
+    updateBoardStatusCopy(data);
   } catch (error) {
     document.querySelectorAll("[data-tier-list]").forEach(list => {
       list.innerHTML = `<div class="tier-empty">The research board data did not load. No rankings were fabricated.</div>`;
