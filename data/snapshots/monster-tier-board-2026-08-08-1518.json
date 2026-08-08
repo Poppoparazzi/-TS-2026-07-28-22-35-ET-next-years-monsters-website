@@ -1,0 +1,19 @@
+{
+  "ts": "2026-08-08 15:18 ET",
+  "source_commit_main": "4c85da6d71649661ca6b8e65e4eeba38623d0bdf",
+  "publish_commit_gh_pages": "386c0c03741a930ee7724d5efe6d754ce1e9ebf3",
+  "status": "PROVISIONAL SCORED PREVIEW v0.4",
+  "top15": [
+    ["CRDO",94.0],["ALAB",94.0],["RDDT",88.0],["IOT",86.0],["NTRA",86.0],["CLS",85.5],["RBRK",84.5],["NU",81.0],["TOST",79.0],["SOFI",78.0],["SN",78.0],["LITE",77.0],["HOOD",76.5],["NBIS",76.5],["CAVA",76.0]
+  ],
+  "rising": [
+    ["DAVE",74.0],["NXT",73.5],["ELF",73.0],["BROS",73.0],["RKLB",70.5],["AFRM",69.5],["COHR",69.0],["TEM",68.0],["IREN",68.0],["CRWV",67.0]
+  ],
+  "movement": {
+    "entered_top15": ["NBIS"],
+    "moved_out_of_top15": ["NXT"],
+    "largest_completed_rising_market_score": ["DAVE",10.0],
+    "remaining_incomplete_market_component": ["ELF"]
+  },
+  "note": "Snapshot preserves the first rerank after applying the standardized market/relative-strength overlay to the completed comparable set. ELF remains intentionally unscored on the market component because the indexed multi-horizon table available during this run predates its Aug. 5 earnings gap."
+}
