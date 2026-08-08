@@ -1,4 +1,4 @@
-// TS: 2026-08-08 06:52 ET
+// TS: 2026-08-08 08:05 ET
 
 function tierEscape(value) {
   return String(value ?? "")
@@ -19,7 +19,7 @@ function topRow(stock, index) {
     <article class="tier-row">
       <div class="tier-rank">${rank}</div>
       <div class="tier-company"><strong>$${tierEscape(stock.ticker)}</strong><span>${tierEscape(stock.name)}</span></div>
-      <div class="tier-score"><strong class="pending">${tierEscape(stock.score_status)}</strong><span>${tierEscape(stock.status)}</span></div>
+      <div class="tier-score"><strong>${tierEscape(stock.score_status ?? stock.score ?? "SCORING")}</strong><span>${tierEscape(stock.status)}</span></div>
       <div class="tier-copy"><strong>WHY IT'S HERE</strong><p>${tierEscape(stock.why)}</p></div>
       <div class="tier-copy tier-copy-risk"><strong>BIGGEST CONCERN / WHAT COULD PROVE US WRONG</strong><p>${tierEscape(stock.risk)}</p></div>
       <a class="tier-case-link" href="${caseLink(stock.ticker)}">OPEN CASE FILE →</a>
@@ -29,11 +29,12 @@ function topRow(stock, index) {
 function tierCard(stock, tier) {
   const nextLabel = tier === "rising" ? "WHAT COULD EARN A PROMOTION" : tier === "watchlist" ? "WHAT WE NEED TO SEE" : "WHAT CHANGED";
   const nextText = tier === "dropped" ? stock.drop_reason : stock.next;
+  const score = stock.score_status ?? stock.score;
   return `
     <article class="tier-card">
       <div class="tier-card-head">
         <div><strong>$${tierEscape(stock.ticker)}</strong><span>${tierEscape(stock.name)}</span></div>
-        <span class="tier-card-status">${tierEscape(stock.status)}</span>
+        <div class="tier-card-badges">${score != null ? `<strong class="tier-card-score">${tierEscape(score)}</strong>` : ""}<span class="tier-card-status">${tierEscape(stock.status)}</span></div>
       </div>
       <p><strong>WHY WE'RE WATCHING:</strong> ${tierEscape(stock.why)}</p>
       <p class="tier-card-risk"><strong>CONCERN:</strong> ${tierEscape(stock.risk)}</p>
@@ -58,6 +59,8 @@ async function setupTierPreview() {
     const data = await response.json();
 
     document.querySelector("[data-snapshot-date]").textContent = `Research Snapshot: ${data.snapshot_label}`;
+    const method = document.querySelector("[data-score-method]");
+    if (method && data.score_method) method.textContent = data.score_method;
     ["top15", "rising", "watchlist", "dropped"].forEach(tier => {
       const items = data[tier] || [];
       const count = document.querySelector(`[data-count="${tier}"]`);
