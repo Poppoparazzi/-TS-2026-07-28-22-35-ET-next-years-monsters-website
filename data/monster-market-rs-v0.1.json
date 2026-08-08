@@ -1,5 +1,5 @@
 {
-  "ts": "2026-08-08 13:58 ET",
+  "ts": "2026-08-08 15:14 ET",
   "status": "PROVISIONAL MARKET/RELATIVE-STRENGTH OVERLAY v0.1",
   "purpose": "Replace the neutral 5/10 market placeholder only when all required horizons are available. This file does not by itself publish a final Monster Rating.",
   "rule": {
@@ -21,13 +21,13 @@
     "SOFI": {"market_score": 2.0, "base_total_with_neutral_5": 81, "mechanical_total_if_applied": 78.0},
     "TOST": {"market_score": 4.0, "base_total_with_neutral_5": 80, "mechanical_total_if_applied": 79.0},
     "CAVA": {"market_score": 2.0, "base_total_with_neutral_5": 79, "mechanical_total_if_applied": 76.0},
-    "HOOD": {"market_score": null, "base_total_with_neutral_5": 78, "mechanical_total_if_applied": null, "status": "INCOMPLETE", "note": "Fresh indexed 3M/52W data available, but comparable current 6M horizon was not returned in this pass."},
+    "HOOD": {"market_score": 3.5, "base_total_with_neutral_5": 78, "mechanical_total_if_applied": 76.5, "note": "Comparable indexed Barchart snapshot: 3M +13.94%, 6M -9.11%, 52W -8.77%, about 20% below the relevant 3M high."},
     "LITE": {"market_score": 5.0, "base_total_with_neutral_5": 77, "mechanical_total_if_applied": 77.0, "note": "Very strong 6M/52W history offset by damaged 3M trend and >30% drawdown from the relevant high."},
     "NXT": {"market_score": 2.5, "base_total_with_neutral_5": 76, "mechanical_total_if_applied": 73.5},
     "SN": {"market_score": 8.0, "base_total_with_neutral_5": 75, "mechanical_total_if_applied": 78.0},
     "RKLB": {"market_score": 1.5, "base_total_with_neutral_5": 74, "mechanical_total_if_applied": 70.5},
     "TEM": {"market_score": 0.0, "base_total_with_neutral_5": 73, "mechanical_total_if_applied": 68.0},
-    "ELF": {"market_score": null, "base_total_with_neutral_5": 73, "mechanical_total_if_applied": null, "status": "INCOMPLETE"},
+    "ELF": {"market_score": null, "base_total_with_neutral_5": 73, "mechanical_total_if_applied": null, "status": "INCOMPLETE", "note": "The indexed multi-horizon table predates the Aug. 5 earnings gap. Current close and raised guidance materially changed the setup, so the technical component remains intentionally unscored until a comparable post-earnings 3M/6M/52W table refreshes."},
     "CRWV": {"market_score": 0.0, "base_total_with_neutral_5": 72, "mechanical_total_if_applied": 67.0},
     "NBIS": {"market_score": 9.5, "base_total_with_neutral_5": 72, "mechanical_total_if_applied": 76.5, "note": "Exceptional 3M/6M/52W confirmation, but high-risk financing/capex overlay remains unchanged."},
     "IREN": {"market_score": 2.0, "base_total_with_neutral_5": 71, "mechanical_total_if_applied": 68.0},
@@ -37,13 +37,13 @@
     "AFRM": {"market_score": 5.5, "base_total_with_neutral_5": 69, "mechanical_total_if_applied": 69.5}
   },
   "mechanical_cutline_read": {
-    "likely_promote_if_remaining_data_do_not_reverse": ["NBIS"],
-    "likely_demote_if_remaining_data_do_not_reverse": ["NXT"],
+    "promote_on_completed_cutline": ["NBIS"],
+    "demote_on_completed_cutline": ["NXT"],
     "strongest_rising_technical_challenger_after_NBIS": "DAVE",
-    "warning": "This is a mechanical consequence of replacing the neutral 5/10 market placeholder. Final tier publication still requires the incomplete HOOD and ELF market components plus a final risk/earnings challenge pass."
+    "warning": "HOOD is now complete. ELF remains deliberately incomplete because its available indexed multi-horizon table predates the Aug. 5 earnings gap. NBIS still clears NXT on the completed comparable scoring set even after HOOD is rescored."
   },
   "sources": {
-    "provider": "Barchart indexed performance tables, freshest accessible snapshots during the 2026-08-08 research passes",
+    "provider": "Barchart indexed performance tables, freshest comparable accessible snapshots during the 2026-08-08 research passes",
     "research_log": "GitHub issue #69 contains the exact per-ticker observations and source links."
   }
 }
