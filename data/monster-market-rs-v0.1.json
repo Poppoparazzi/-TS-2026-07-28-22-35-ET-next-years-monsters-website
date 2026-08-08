@@ -1,0 +1,49 @@
+{
+  "ts": "2026-08-08 13:58 ET",
+  "status": "PROVISIONAL MARKET/RELATIVE-STRENGTH OVERLAY v0.1",
+  "purpose": "Replace the neutral 5/10 market placeholder only when all required horizons are available. This file does not by itself publish a final Monster Rating.",
+  "rule": {
+    "three_month": ">=40%=4; 15-<40%=3; 0-<15%=2; -15-<0%=1; <-15%=0",
+    "six_month": ">=60%=3; 20-<60%=2.5; 0-<20%=2; -20-<0%=1; <-20%=0",
+    "fifty_two_week": ">=80%=2; 20-<80%=1.5; 0-<20%=1; <0%=0",
+    "distance_from_three_month_high": "within 15%=1; 15-30% below=0.5; >30% below=0",
+    "missing_data": "Do not substitute neutral points. Mark incomplete."
+  },
+  "scores": {
+    "ALAB": {"market_score": 9.0, "base_total_with_neutral_5": 90, "mechanical_total_if_applied": 94.0, "note": "Strong multi-month leadership but more than 30% below the relevant high in the freshest indexed snapshot."},
+    "CRDO": {"market_score": 8.0, "base_total_with_neutral_5": 91, "mechanical_total_if_applied": 94.0},
+    "RDDT": {"market_score": 5.0, "base_total_with_neutral_5": 88, "mechanical_total_if_applied": 88.0},
+    "CLS": {"market_score": 4.5, "base_total_with_neutral_5": 86, "mechanical_total_if_applied": 85.5},
+    "IOT": {"market_score": 6.0, "base_total_with_neutral_5": 85, "mechanical_total_if_applied": 86.0},
+    "RBRK": {"market_score": 5.5, "base_total_with_neutral_5": 84, "mechanical_total_if_applied": 84.5},
+    "NTRA": {"market_score": 8.0, "base_total_with_neutral_5": 83, "mechanical_total_if_applied": 86.0},
+    "NU": {"market_score": 4.0, "base_total_with_neutral_5": 82, "mechanical_total_if_applied": 81.0},
+    "SOFI": {"market_score": 2.0, "base_total_with_neutral_5": 81, "mechanical_total_if_applied": 78.0},
+    "TOST": {"market_score": 4.0, "base_total_with_neutral_5": 80, "mechanical_total_if_applied": 79.0},
+    "CAVA": {"market_score": 2.0, "base_total_with_neutral_5": 79, "mechanical_total_if_applied": 76.0},
+    "HOOD": {"market_score": null, "base_total_with_neutral_5": 78, "mechanical_total_if_applied": null, "status": "INCOMPLETE", "note": "Fresh indexed 3M/52W data available, but comparable current 6M horizon was not returned in this pass."},
+    "LITE": {"market_score": 5.0, "base_total_with_neutral_5": 77, "mechanical_total_if_applied": 77.0, "note": "Very strong 6M/52W history offset by damaged 3M trend and >30% drawdown from the relevant high."},
+    "NXT": {"market_score": 2.5, "base_total_with_neutral_5": 76, "mechanical_total_if_applied": 73.5},
+    "SN": {"market_score": 8.0, "base_total_with_neutral_5": 75, "mechanical_total_if_applied": 78.0},
+    "RKLB": {"market_score": 1.5, "base_total_with_neutral_5": 74, "mechanical_total_if_applied": 70.5},
+    "TEM": {"market_score": 0.0, "base_total_with_neutral_5": 73, "mechanical_total_if_applied": 68.0},
+    "ELF": {"market_score": null, "base_total_with_neutral_5": 73, "mechanical_total_if_applied": null, "status": "INCOMPLETE"},
+    "CRWV": {"market_score": 0.0, "base_total_with_neutral_5": 72, "mechanical_total_if_applied": 67.0},
+    "NBIS": {"market_score": 9.5, "base_total_with_neutral_5": 72, "mechanical_total_if_applied": 76.5, "note": "Exceptional 3M/6M/52W confirmation, but high-risk financing/capex overlay remains unchanged."},
+    "IREN": {"market_score": 2.0, "base_total_with_neutral_5": 71, "mechanical_total_if_applied": 68.0},
+    "BROS": {"market_score": 7.0, "base_total_with_neutral_5": 71, "mechanical_total_if_applied": 73.0},
+    "COHR": {"market_score": 4.0, "base_total_with_neutral_5": 70, "mechanical_total_if_applied": 69.0},
+    "DAVE": {"market_score": 10.0, "base_total_with_neutral_5": 69, "mechanical_total_if_applied": 74.0, "note": "Perfect technical component under v0.1; regulatory/litigation risk overlay remains unchanged."},
+    "AFRM": {"market_score": 5.5, "base_total_with_neutral_5": 69, "mechanical_total_if_applied": 69.5}
+  },
+  "mechanical_cutline_read": {
+    "likely_promote_if_remaining_data_do_not_reverse": ["NBIS"],
+    "likely_demote_if_remaining_data_do_not_reverse": ["NXT"],
+    "strongest_rising_technical_challenger_after_NBIS": "DAVE",
+    "warning": "This is a mechanical consequence of replacing the neutral 5/10 market placeholder. Final tier publication still requires the incomplete HOOD and ELF market components plus a final risk/earnings challenge pass."
+  },
+  "sources": {
+    "provider": "Barchart indexed performance tables, freshest accessible snapshots during the 2026-08-08 research passes",
+    "research_log": "GitHub issue #69 contains the exact per-ticker observations and source links."
+  }
+}
