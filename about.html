@@ -1,62 +1,157 @@
-<!-- TS: 2026-07-29 22:41 ET -->
+<!-- TS: 2026-08-04 19:42 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>About | Next Year’s Monsters</title>
-  <meta name="description" content="Next Year’s Monsters™ educational stock evidence website prototype.">
+  <title>About | Next Year’s Monsters™</title>
+  <meta name="description" content="Meet author David A. Snively, Sr., Captain Breakout™, and the evidence-first book companion behind Next Year’s Monsters™.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
+  <link rel="stylesheet" href="assets/about.css">
 </head>
-<body>
+<body class="about-page">
 
-<header class="site-header">
-  <div class="wrap nav">
-    <a class="brand" href="index.html">
-      <span class="brand-mark">M</span>
-      <span>Next Year’s Monsters™</span>
+<header class="site-header home-header">
+  <div class="home-nav-shell">
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
+      <span class="home-brand-arrow">↗</span>
+      <span>NEXT YEAR’S MONSTERS™</span>
     </a>
-    <nav class="nav-links" aria-label="Main navigation">
-      <a href="index.html">Home</a>
-      <a href="monster-check.html">Monster Check™</a>
-      <a href="how-it-works.html">How It Works</a>
-      <a href="vcl-library.html">VCL™ Library</a>
-      <a href="about.html" class="active">About</a>
+    <nav class="nav-links home-nav-links" aria-label="Main navigation">
+      <a href="index.html">HOME</a>
+      <a href="start-here.html">START HERE</a>
+      <a href="how-it-works.html">HOW IT WORKS</a>
+      <a href="vcl-library.html">VCL™</a>
+      <a class="active" href="about.html">ABOUT</a>
     </nav>
+    <a class="home-nav-cta" href="coverage-universe.html">FIND A STOCK</a>
   </div>
 </header>
 
 <main>
+  <section class="about-hero" aria-labelledby="about-title">
+    <div class="about-hero-art" aria-hidden="true">
+      <img src="captain_breakout.png" alt="">
+    </div>
+    <div class="about-hero-copy">
+      <p class="about-kicker"><span></span> THE BOOK COMPANION</p>
+      <h1 id="about-title">BUILT TO<br><strong>NOTICE BETTER.</strong></h1>
+      <p class="about-hero-line">WHAT DO TOMORROW’S GREATEST STOCKS LOOK LIKE TODAY?</p>
+      <p class="about-hero-text">Next Year’s Monsters™ turns the first-edition field guide into a working research site: search companies, inspect official SEC evidence, study external market context, and open the 15 historical VCL™ demonstrations.</p>
+      <div class="about-actions">
+        <a class="about-button about-button-lime" href="start-here.html">START HERE</a>
+        <a class="about-button about-button-outline" href="how-it-works.html">SEE THE SYSTEM</a>
+      </div>
+    </div>
+  </section>
 
-<section class="page-hero"><div class="wrap">
-  <span class="eyebrow">About the project</span><h1>Built for Monster Hunters.</h1>
-  <p class="lead">Next Year’s Monsters™ is an educational research system designed to help investors recognize evidence before a company’s leadership becomes obvious.</p>
-</div></section>
-<section class="section"><div class="wrap">
-  <div class="cards">
-    <article class="card"><h3>Website first</h3><p>The public website introduces the method, offers a limited Monster Check™, and organizes the VCL™ cases.</p></article>
-    <article class="card"><h3>App second</h3><p>Accounts, watchlists, score histories, alerts, Top 100 Monsters™, and deeper evidence screens belong in the application phase.</p></article>
-    <article class="card"><h3>Evidence always</h3><p>No guaranteed-winner language. No unexplained score. No pretending a demo rating is live data.</p></article>
-  </div>
-  <div class="stat-strip">
-    <div class="stat"><strong>15</strong>VCL companies</div>
-    <div class="stat"><strong>5</strong>rebuilt pages</div>
-    <div class="stat"><strong>1</strong>approved bull sound</div>
-    <div class="stat"><strong>0</strong>cropped Captain heads</div>
-  </div>
-</div></section>
+  <section class="about-truth-band" aria-label="Project facts">
+    <div><span>BOOK</span><strong>FIRST EDITION · 2026</strong></div>
+    <div><span>AUTHOR</span><strong>DAVID A. SNIVELY, SR.</strong></div>
+    <div><span>VCL™</span><strong>15 DEMONSTRATION CASES</strong></div>
+    <div><span>PRODUCTION RATINGS</span><strong>0 VERIFIED</strong></div>
+  </section>
 
+  <section class="about-mission" aria-labelledby="mission-title">
+    <div class="about-section-head">
+      <p>01 / WHY IT EXISTS</p>
+      <h2 id="mission-title">FROM BOOK<br>TO EVIDENCE.</h2>
+      <div>
+        <p>The great winners of the past rarely became great in one instant. Before the headlines, companies often left evidence in growth, execution, market position, catalysts, and price behavior.</p>
+        <p>This project helps readers practice recognizing those footprints without confusing pattern recognition with prediction. The screen does not find guaranteed winners. It finds evidence.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-working" aria-labelledby="working-title">
+    <div class="about-section-head about-section-head-dark">
+      <p>02 / WHAT WORKS TODAY</p>
+      <h2 id="working-title">FOUR DOORS<br>INTO THE HUNT.</h2>
+      <p>Each door is labeled by source and status. Missing data remains missing; a blocked provider does not become a made-up result.</p>
+    </div>
+    <div class="about-working-grid">
+      <article>
+        <span>01</span>
+        <h3>FIND A COMPANY</h3>
+        <p>Search the public company universe by ticker or name and open the evidence path available for that company.</p>
+        <a href="coverage-universe.html">OPEN FIND STOCKS →</a>
+      </article>
+      <article>
+        <span>02</span>
+        <h3>VERIFY SEC EVIDENCE</h3>
+        <p>Confirm company identity and inspect official filing and company-fact evidence through the SEC-first backend.</p>
+        <a href="verification-ledger.html">OPEN THE LEDGER →</a>
+      </article>
+      <article>
+        <span>03</span>
+        <h3>STUDY MARKET CONTEXT</h3>
+        <p>Use external charts, market tools, and stories with clear notice that provider information may be delayed.</p>
+        <a href="market-explorer.html">OPEN FULL CHARTS →</a>
+      </article>
+      <article>
+        <span>04</span>
+        <h3>OPEN THE VCL™</h3>
+        <p>Compare the 15 approved book cases as historical Demonstration Ratings, not current recommendations.</p>
+        <a href="vcl-library.html">OPEN THE 15 CASES →</a>
+      </article>
+    </div>
+  </section>
+
+  <section class="about-author" aria-labelledby="author-title">
+    <div class="about-author-name">
+      <p>03 / THE AUTHOR</p>
+      <h2 id="author-title">DAVID A.<br>SNIVELY, SR.</h2>
+    </div>
+    <div class="about-author-copy">
+      <p>David A. Snively, Sr. is the author and independent publisher of <em>Next Year’s Monsters™: What Tomorrow’s Monsters Look Like Today</em>.</p>
+      <p>The book is a field guide to historical pattern recognition, research discipline, and risk. It asks readers to investigate what improved, what weakened, what deserves more study, and what no longer belongs on the watchlist.</p>
+      <blockquote>“The goal is not perfect prediction. It is earlier recognition supported by evidence.”</blockquote>
+    </div>
+  </section>
+
+  <section class="about-captain" aria-labelledby="captain-title">
+    <div class="about-captain-art">
+      <img src="captain_breakout.png" alt="Captain Breakout, the green Next Year's Monsters field-guide mascot">
+    </div>
+    <div class="about-captain-copy">
+      <p>04 / THE FIELD-GUIDE MASCOT</p>
+      <h2 id="captain-title">MEET CAPTAIN<br>BREAKOUT™.</h2>
+      <p>Captain Breakout™ represents disciplined preparation, visual evidence, and the willingness to examine a setup before the crowd makes the story feel obvious.</p>
+      <p>He is a guide to the framework, not a prediction machine. Evidence, source labels, risk, and independent judgment still do the real work.</p>
+      <a class="about-button about-button-black" href="how-it-works.html">FOLLOW THE EVIDENCE</a>
+    </div>
+  </section>
+
+  <section class="about-standard" aria-labelledby="standard-title">
+    <div>
+      <p>05 / THE PUBLIC STANDARD</p>
+      <h2 id="standard-title">SAY WHAT<br>THE DATA IS.</h2>
+    </div>
+    <div class="about-label-list">
+      <div><strong>Official SEC Evidence</strong><span>Company identity, filings, and standardized company facts.</span></div>
+      <div><strong>External Market Data · May Be Delayed</strong><span>Charts, market context, and stories supplied by outside tools.</span></div>
+      <div><strong>Demonstration Rating</strong><span>An educational score from the approved 15-company book set.</span></div>
+      <div><strong>Not Yet Rated</strong><span>No verified production Monster Rating™ has been calculated.</span></div>
+    </div>
+  </section>
+
+  <section class="about-next" aria-labelledby="next-title">
+    <p>READ THE METHOD. CHECK THE SOURCE. FOLLOW THE RECEIPTS.</p>
+    <h2 id="next-title">START WITH<br>WHAT IS REAL.</h2>
+    <div class="about-actions">
+      <a class="about-button about-button-lime" href="start-here.html">OPEN START HERE</a>
+      <a class="about-button about-button-outline" href="live-status.html">CHECK DATA STATUS</a>
+      <a class="about-button about-button-outline" href="verification-ledger.html">OPEN THE LEDGER</a>
+    </div>
+  </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <strong>Educational disclaimer:</strong> Monster Rating™ measures evidence strength. It is not a buy, sell, or hold recommendation and is not financial advice. Investing involves risk, including loss of principal. The screen does not find guaranteed winners. It finds evidence.
-    <br><br>© 2026 Next Year’s Monsters™. Captain Breakout™, Monster Check™, Monster Rating™, Monster DNA™, Monster Climb™, Market Weather™, Tipping Point™, Move Driver™, and VCL™ are project brands.
-  </div>
+<footer class="home-footer">
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>WHAT TOMORROW’S MONSTERS LOOK LIKE TODAY.</span></div>
+  <p><strong>Educational Use Only:</strong> Monster Rating™ is not a recommendation to buy, sell, or hold a security. Investing involves risk, including possible loss of principal.</p>
 </footer>
 
-<script src="assets/app.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>
 </html>
