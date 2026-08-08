@@ -72,8 +72,8 @@
   {
     "ticker": "COST",
     "name": "Costco",
-    "score": 84,
-    "tier": "Gold Monster",
+    "score": 90,
+    "tier": "Platinum Monster",
     "sector": "Retail",
     "why": "Membership economics, customer loyalty, steady comps, and durable operating discipline.",
     "warning": "Premium valuation can reduce future returns even when the business performs well.",
@@ -150,3 +150,4 @@
     "dna": ["Cloud", "Enterprise moat", "Recurring revenue", "AI integration"]
   }
 ]
+
