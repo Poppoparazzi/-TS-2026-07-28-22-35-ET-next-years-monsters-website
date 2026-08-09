@@ -1,4 +1,4 @@
-// TS: 2026-08-09 08:10 ET
+// TS: 2026-08-09 08:17 ET
 
 function installHomeCheckDetective() {
   const heading = document.querySelector(".home-check-heading");
@@ -27,6 +27,110 @@ function installHomeCheckDetective() {
     <img src="assets/detective-break-actual.svg" alt="Detective Break, the tall green financial investigator, examining stock evidence">
   `;
   heading.appendChild(figure);
+}
+
+function installHomeCheckReadability() {
+  if (document.getElementById("home-check-readability-styles")) return;
+
+  const style = document.createElement("style");
+  style.id = "home-check-readability-styles";
+  style.textContent = `
+    .home-page .monster-rating-trio-card strong{
+      font-size:clamp(21px,1.65vw,28px)!important;
+      line-height:.98!important;
+      word-break:normal!important;
+      overflow-wrap:normal!important;
+      hyphens:none!important;
+    }
+    .home-page .monster-rating-trio-card:nth-child(3) strong{
+      font-size:clamp(20px,1.5vw,26px)!important;
+    }
+    .home-page .home-suggestions{
+      display:grid!important;
+      grid-template-columns:repeat(8,minmax(0,1fr));
+      gap:8px!important;
+      align-items:stretch;
+    }
+    .home-page .home-suggestions .chip{
+      width:100%;
+      min-width:0;
+      margin:0!important;
+      text-align:center;
+    }
+    .home-page .home-quick-pick-note{
+      grid-column:1/-1;
+      color:#9da69f;
+      font-size:9px;
+      font-weight:900;
+      letter-spacing:.04em;
+      padding-top:2px;
+    }
+    @media(max-width:1250px){
+      .home-page .home-suggestions{grid-template-columns:repeat(6,minmax(0,1fr))}
+    }
+    @media(max-width:850px){
+      .home-page .home-suggestions{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .home-page .monster-rating-trio-card strong{font-size:28px!important}
+    }
+    @media(max-width:520px){
+      .home-page .home-suggestions{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function expandHomeQuickPicks() {
+  const suggestions = document.querySelector(".home-suggestions[data-suggestions]");
+  const input = document.querySelector("[data-ticker-input]");
+  const button = document.querySelector("[data-rate-button]");
+  if (!suggestions || !input || !button) return;
+
+  const tickers = [
+    "AAPL", "CRDO", "NVDA", "TSLA", "AMZN", "MSFT", "META", "AMD",
+    "COST", "NFLX", "MNST", "VRT", "AXON", "DECK", "WING", "APP"
+  ];
+
+  const build = () => {
+    if (suggestions.dataset.expandedQuickPicks === "true") return true;
+    if (!suggestions.querySelector(".chip")) return false;
+
+    suggestions.dataset.expandedQuickPicks = "true";
+    suggestions.innerHTML = "";
+
+    tickers.forEach((ticker) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.textContent = ticker;
+      chip.addEventListener("click", () => {
+        input.value = ticker;
+        button.click();
+      });
+      suggestions.appendChild(chip);
+    });
+
+    const note = document.createElement("span");
+    note.className = "home-quick-pick-note";
+    note.textContent = "QUICK PICKS ONLY · ENTER ANY COVERED U.S. TICKER ABOVE";
+    suggestions.appendChild(note);
+    return true;
+  };
+
+  if (build()) return;
+
+  const observer = new MutationObserver(() => {
+    if (build()) observer.disconnect();
+  });
+  observer.observe(suggestions, { childList: true, subtree: true });
+
+  let attempts = 0;
+  const timer = window.setInterval(() => {
+    attempts += 1;
+    if (build() || attempts >= 100) {
+      window.clearInterval(timer);
+      observer.disconnect();
+    }
+  }, 100);
 }
 
 function restoreHomeMonsterCheckData() {
@@ -77,6 +181,8 @@ function restoreHomeMonsterCheckData() {
 
 function startHomeStockFinder() {
   installHomeCheckDetective();
+  installHomeCheckReadability();
+  expandHomeQuickPicks();
   restoreHomeMonsterCheckData();
 
   const form = document.querySelector("[data-home-stock-finder]");
