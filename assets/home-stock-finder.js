@@ -1,17 +1,22 @@
-// TS: 2026-08-08 23:52 ET
+// TS: 2026-08-09 00:05 ET
 
 function installHomeCheckDetective() {
   const heading = document.querySelector(".home-check-heading");
-  if (!heading || heading.querySelector(".home-check-captain-direct") || heading.querySelector(".home-check-detective")) return;
+  if (!heading) return;
+
+  // The direct HTML fallback may still contain the older Captain Breakout block.
+  // Remove that stale mascot before installing the current approved Detective Break artwork.
+  heading.querySelectorAll(".home-check-captain-direct").forEach((node) => node.remove());
+  if (heading.querySelector(".home-check-detective")) return;
 
   const style = document.createElement("style");
   style.id = "home-check-detective-styles";
   style.textContent = `
     .home-check-heading{position:relative;overflow:hidden}
-    .home-check-detective{margin:26px 0 0;display:flex;align-items:flex-end;justify-content:center;min-height:630px}
-    .home-check-detective img{display:block;width:min(430px,96%);height:630px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 24px 36px rgba(0,0,0,.52))}
-    @media(max-width:1050px){.home-check-detective{min-height:460px}.home-check-detective img{width:min(330px,82%);height:460px}}
-    @media(max-width:650px){.home-check-detective{margin-top:20px;min-height:360px}.home-check-detective img{width:min(270px,78%);height:360px}}
+    .home-check-detective{margin:20px 0 0;display:flex;align-items:flex-end;justify-content:center;min-height:690px}
+    .home-check-detective img{display:block;width:min(470px,100%);height:690px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 24px 36px rgba(0,0,0,.52))}
+    @media(max-width:1050px){.home-check-detective{min-height:500px}.home-check-detective img{width:min(360px,86%);height:500px}}
+    @media(max-width:650px){.home-check-detective{margin-top:18px;min-height:390px}.home-check-detective img{width:min(290px,82%);height:390px}}
   `;
   document.head.appendChild(style);
 
