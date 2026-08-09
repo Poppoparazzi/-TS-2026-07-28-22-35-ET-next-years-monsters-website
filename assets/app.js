@@ -1,4 +1,4 @@
-// TS: 2026-08-01 15:25 ET
+// TS: 2026-08-09 07:00 ET
 const DEMO_NOTICE = "Illustrative demonstration only. This is not live market data, current news, investment advice, or a recommendation.";
 const EDUCATIONAL_DISCLAIMER = "Monster Rating™ is an educational framework for organizing evidence. It is not a buy, sell, or hold recommendation, does not predict future performance, and may become outdated as company results, prices, market conditions, and verified news change. Investing involves risk, including possible loss of principal.";
 
@@ -403,7 +403,7 @@ async function setupMonsterCheck() {
   });
 
   if (suggestions) {
-    ["AAPL", "NVDA", "MNST", "AMZN", "VRT", "AXON"].forEach(ticker => {
+    ["AAPL", "CRDO", "NVDA", "VRT", "AXON", "MSFT"].forEach(ticker => {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "chip";
@@ -416,8 +416,9 @@ async function setupMonsterCheck() {
     });
   }
 
-  input.value = "NVDA";
-  render(byTicker.get("NVDA"), "NVDA");
+  input.value = "";
+  result.style.display = "none";
+  result.innerHTML = "";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
