@@ -1,4 +1,4 @@
-// TS: 2026-08-09 07:40 ET
+// TS: 2026-08-09 07:44 ET
 
 function installHomeCheckDetective() {
   const heading = document.querySelector(".home-check-heading");
@@ -31,13 +31,41 @@ function installHomeCheckDetective() {
 
 function restoreHomeMonsterCheckData() {
   const result = document.querySelector(".home-result-card[data-result]");
-  const chips = Array.from(document.querySelectorAll(".home-suggestions .chip"));
-  if (!result || !chips.length) return;
+  const suggestions = document.querySelector(".home-suggestions[data-suggestions]");
+  if (!result || !suggestions) return;
 
-  // Preserve the familiar default NVIDIA demonstration card beside Detective Break.
-  // The regular ticker buttons/search still replace it when the visitor runs another check.
-  const nvda = chips.find((chip) => chip.textContent.trim().toUpperCase() === "NVDA");
-  if (nvda && result.style.display === "none") nvda.click();
+  let restored = false;
+  const restore = () => {
+    if (restored) return true;
+    if (result.style.display && result.style.display !== "none" && result.innerHTML.trim()) {
+      restored = true;
+      return true;
+    }
+
+    const nvda = Array.from(suggestions.querySelectorAll(".chip"))
+      .find((chip) => chip.textContent.trim().toUpperCase() === "NVDA");
+    if (!nvda) return false;
+
+    restored = true;
+    nvda.click();
+    return true;
+  };
+
+  if (restore()) return;
+
+  const observer = new MutationObserver(() => {
+    if (restore()) observer.disconnect();
+  });
+  observer.observe(suggestions, { childList: true, subtree: true });
+
+  let attempts = 0;
+  const timer = window.setInterval(() => {
+    attempts += 1;
+    if (restore() || attempts >= 50) {
+      window.clearInterval(timer);
+      observer.disconnect();
+    }
+  }, 100);
 }
 
 function startHomeStockFinder() {
