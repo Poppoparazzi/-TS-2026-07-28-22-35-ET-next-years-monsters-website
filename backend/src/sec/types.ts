@@ -47,7 +47,7 @@ export interface SecCompanyFactsSummary {
   readonly companyName: string;
   readonly retrievedAt: string;
   readonly facts: Readonly<Record<string, SecFactSnapshot>>;
-  readonly factHistory: Readonly<Record<string, readonly SecFactSnapshot[]>>;
+  readonly factHistory?: Readonly<Record<string, readonly SecFactSnapshot[]>>;
   readonly sourceUrl: string;
   readonly disclosure: string;
 }
