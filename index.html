@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-02 08:04 ET -->
+<!-- TS: 2026-08-08 23:47 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -59,6 +59,22 @@
       .home-page .home-stock-finder small { margin-top: 4px !important; font-size: 8px !important; }
       .home-page .home-hero-actions { margin-top: 10px !important; }
       .home-page .home-btn { min-height: 42px !important; padding: 0 16px !important; }
+    }
+
+    /* TS: 2026-08-08 23:47 ET - direct Captain Breakout placement in Monster Check */
+    .home-check-heading { position: relative; overflow: hidden; }
+    .home-check-captain-direct { margin: 30px 0 0; min-height: 360px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; }
+    .home-check-captain-direct img { display: block; width: min(315px, 86%); max-height: 410px; object-fit: contain; object-position: left bottom; filter: drop-shadow(0 20px 30px rgba(0,0,0,.48)); }
+    .home-check-captain-direct figcaption { margin: 8px 0 0; color: var(--editorial-lime); font-size: 10px; font-weight: 950; letter-spacing: .055em; line-height: 1.45; }
+    @media (max-width: 1050px) {
+      .home-check-captain-direct { min-height: 0; align-items: center; }
+      .home-check-captain-direct img { width: min(260px,72%); object-position: center bottom; }
+      .home-check-captain-direct figcaption { text-align: center; }
+    }
+    @media (max-width: 650px) {
+      .home-check-captain-direct { margin-top: 24px; }
+      .home-check-captain-direct img { width: min(210px,70%); }
+      .home-check-captain-direct figcaption { font-size: 9px; }
     }
   </style>
 </head>
@@ -141,6 +157,10 @@
       <span class="home-section-number">00 / MONSTER CHECK</span>
       <h2 id="check-title">RUN A CHECK.<br>READ THE EVIDENCE.</h2>
       <p>Enter one of the 15 Visual Case Library tickers. Ratings shown here are clearly labeled educational demonstrations, not internally verified live recommendations.</p>
+      <figure class="home-check-captain-direct" aria-label="Captain Breakout beside the Monster Check instructions">
+        <img src="captain_breakout.png" alt="Captain Breakout beside the Monster Check evidence panel">
+        <figcaption>CAPTAIN BREAKOUT™ · CHECK THE STOCK. READ THE EVIDENCE.</figcaption>
+      </figure>
     </div>
     <div class="home-check-panel">
       <div class="home-search-label">MONSTER CHECK™</div>
