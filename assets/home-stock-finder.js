@@ -1,8 +1,8 @@
-// TS: 2026-08-08 23:48 ET
+// TS: 2026-08-08 23:52 ET
 
 function installHomeCheckDetective() {
   const heading = document.querySelector(".home-check-heading");
-  if (!heading || heading.querySelector(".home-check-detective")) return;
+  if (!heading || heading.querySelector(".home-check-captain-direct") || heading.querySelector(".home-check-detective")) return;
 
   const style = document.createElement("style");
   style.id = "home-check-detective-styles";
