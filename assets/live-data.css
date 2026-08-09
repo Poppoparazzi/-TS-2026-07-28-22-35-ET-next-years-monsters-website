@@ -1,4 +1,4 @@
-/* TS: 2026-08-02 13:26 ET */
+/* TS: 2026-08-09 08:21 ET */
 
 .monster-live-strip {
   display: grid;
@@ -40,23 +40,30 @@
 .monster-live-metric strong {
   display: block;
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
-  font-size: clamp(20px, 1.55vw, 30px);
+  font-size: clamp(20px, 1.4vw, 27px);
   font-weight: 800;
   letter-spacing: -.018em;
   line-height: 1.1;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
 }
 
+/* Keep ticker symbols and individual status words intact. */
 .monster-live-label strong {
-  font-size: clamp(31px, 2.55vw, 46px);
+  font-size: clamp(29px, 2.15vw, 40px);
   line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -.03em;
+}
+
+.monster-live-metric strong {
+  word-break: keep-all;
 }
 
 .monster-live-filing strong {
   max-width: 100%;
-  font-size: clamp(18px, 1.35vw, 27px);
+  font-size: clamp(18px, 1.25vw, 25px);
   line-height: 1.12;
   letter-spacing: -.012em;
 }
