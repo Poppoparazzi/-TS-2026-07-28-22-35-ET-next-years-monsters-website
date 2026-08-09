@@ -1,4 +1,4 @@
-// TS: 2026-08-08 19:08 ET
+// TS: 2026-08-08 20:06 ET
 
 (function installMonsterCheckRatingTrio() {
   "use strict";
@@ -66,6 +66,57 @@
     return normalizeTicker(match?.[1]);
   }
 
+  function replaceText(node, next) {
+    if (node && node.textContent !== next) node.textContent = next;
+  }
+
+  function reframeLegacyResult(result, ticker, established, found) {
+    const identity = result.querySelector(".monster-result-identity");
+    const flag = identity?.querySelector(".monster-demo-flag");
+    const sector = identity?.querySelector(".monster-result-sector");
+    const scoreCard = result.querySelector(".monster-score-card");
+    const scoreLabel = scoreCard?.querySelector("span");
+    const scoreTier = scoreCard?.querySelector("em");
+
+    if (flag?.textContent.includes("DEMONSTRATION RATING")) {
+      replaceText(flag, "HISTORICAL VCL™ CASE STUDY · NOT A CURRENT STOCK RATING");
+      if (sector?.textContent.includes("15-STOCK VISUAL CASE LIBRARY DEMO")) {
+        sector.textContent = sector.textContent.replace("15-STOCK VISUAL CASE LIBRARY DEMO", "HISTORICAL VISUAL CASE LIBRARY™ STUDY");
+      }
+      replaceText(scoreLabel, "HISTORICAL CASE STUDY SCORE");
+      if (scoreCard) scoreCard.setAttribute("aria-label", `Historical VCL case-study score for ${ticker}; not a current stock rating`);
+      if (scoreTier && established) scoreTier.textContent = `${scoreTier.textContent} · HISTORICAL`;
+
+      const evidenceHeading = result.querySelector(".monster-result-panel h3");
+      replaceText(evidenceHeading, "WHY THIS HISTORICAL CASE SCORED THERE");
+
+      const newsLabel = result.querySelector(".monster-news-copy .monster-section-label");
+      replaceText(newsLabel, "04 / HISTORICAL CASE CONTEXT");
+
+      const triggerHeadings = result.querySelectorAll(".monster-trigger h3");
+      replaceText(triggerHeadings[0], "WHAT WOULD HAVE STRENGTHENED THE HISTORICAL CASE");
+      replaceText(triggerHeadings[1], "WHAT WOULD HAVE WEAKENED THE HISTORICAL CASE");
+      replaceText(triggerHeadings[2], "WHAT THE CASE TEACHES US TO WATCH");
+    }
+
+    if (flag?.textContent.includes("OFFICIAL SEC COMPANY RECORD")) {
+      replaceText(scoreLabel, "CURRENT STOCK RATING™");
+      if (scoreCard) scoreCard.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}`);
+    }
+
+    if (found && flag?.textContent.includes("HISTORICAL VCL")) {
+      const note = document.createElement("p");
+      note.className = "monster-rating-trio-note";
+      note.textContent = "This ticker is also an active Monster Hunt case. The historical VCL score below remains a case-study artifact; the live Future Monster Fingerprint Rating is shown in the three-answer panel above.";
+      const content = result.querySelector(":scope > .monster-investigator-result-content") || result;
+      if (!content.querySelector("[data-active-hunt-vcl-note]")) {
+        note.dataset.activeHuntVclNote = "true";
+        const trio = content.querySelector(":scope > .monster-rating-trio");
+        trio?.insertAdjacentElement("afterend", note);
+      }
+    }
+  }
+
   function injectStyles() {
     if (document.getElementById("monster-rating-trio-styles")) return;
     const style = document.createElement("style");
@@ -89,8 +140,6 @@
     if (!result || !result.firstElementChild || getComputedStyle(result).display === "none") return;
 
     const content = result.querySelector(":scope > .monster-investigator-result-content") || result;
-    if (content.querySelector(":scope > .monster-rating-trio")) return;
-
     const ticker = extractTicker(result);
     if (!ticker) return;
 
@@ -98,49 +147,53 @@
     const found = findBoardEntry(data, ticker);
     const established = VCL_ESTABLISHED.has(ticker) && !found;
 
-    let futureValue = "—";
-    let futureStatus = "NOT YET EVALUATED";
-    let huntValue = "NOT YET EVALUATED";
-    let huntDetail = "This ticker is not currently on the published Monster Hunt board.";
+    let trio = content.querySelector(":scope > .monster-rating-trio");
+    if (!trio) {
+      let futureValue = "—";
+      let futureStatus = "NOT YET EVALUATED";
+      let huntValue = "NOT YET EVALUATED";
+      let huntDetail = "This ticker is not currently on the published Monster Hunt board.";
 
-    if (found) {
-      futureValue = safe(found.item.score_status ?? found.item.score ?? "SCORING");
-      futureStatus = "FINGERPRINT SCORE";
-      huntValue = found.rank ? `#${found.rank} TOP 15` : found.label;
-      huntDetail = found.item.status ? safe(found.item.status) : "Active Monster Hunt case.";
-    } else if (established) {
-      futureValue = "N/A";
-      futureStatus = "ESTABLISHED LEADER";
-      huntValue = "NOT A NEW-MONSTER CANDIDATE";
-      huntDetail = "Historical VCL™ leader. Studied for fingerprints, not ranked as an emerging Monster merely because it became a great company.";
+      if (found) {
+        futureValue = safe(found.item.score_status ?? found.item.score ?? "SCORING");
+        futureStatus = "FINGERPRINT SCORE";
+        huntValue = found.rank ? `#${found.rank} TOP 15` : found.label;
+        huntDetail = found.item.status ? safe(found.item.status) : "Active Monster Hunt case.";
+      } else if (established) {
+        futureValue = "N/A";
+        futureStatus = "ESTABLISHED LEADER";
+        huntValue = "NOT A NEW-MONSTER CANDIDATE";
+        huntDetail = "Historical VCL™ leader. Studied for fingerprints, not ranked as an emerging Monster merely because it became a great company.";
+      }
+
+      trio = document.createElement("section");
+      trio.className = "monster-rating-trio";
+      trio.setAttribute("aria-label", `Current stock, Future Monster fingerprint, and Monster Hunt status for ${ticker}`);
+      trio.innerHTML = `
+        <article class="monster-rating-trio-card">
+          <span>01 / THEIR STOCK</span>
+          <strong>DATA INCOMPLETE</strong>
+          <em>CURRENT STOCK RATING™ · NOT YET RATED</em>
+          <p>No current score is manufactured until the required verified business, financial, market, risk, and freshness inputs are complete.</p>
+        </article>
+        <article class="monster-rating-trio-card">
+          <span>02 / FUTURE MONSTER</span>
+          <strong>${futureValue}</strong>
+          <em>${futureStatus}</em>
+          <p>${found ? "Research-board score measuring similarity to historical pre-breakout Monster fingerprints. It is not the same as a current-stock quality rating." : established ? "This mature VCL™ leader is a historical comparison case, so an emerging-Monster fingerprint score is not assigned here." : "No published Future Monster fingerprint score is assigned to this ticker yet."}</p>
+        </article>
+        <article class="monster-rating-trio-card">
+          <span>03 / THE HUNT</span>
+          <strong>${huntValue}</strong>
+          <em>MONSTER HUNT STATUS</em>
+          <p>${huntDetail}</p>
+        </article>
+        <p class="monster-rating-trio-note"><strong>Three different questions:</strong> how the stock rates today, whether it resembles a pre-breakout historical Monster, and where it sits in the active Hunt. Missing evidence stays missing rather than becoming a decorative number.</p>
+      `;
+      content.prepend(trio);
     }
 
-    const trio = document.createElement("section");
-    trio.className = "monster-rating-trio";
-    trio.setAttribute("aria-label", `Current stock, Future Monster fingerprint, and Monster Hunt status for ${ticker}`);
-    trio.innerHTML = `
-      <article class="monster-rating-trio-card">
-        <span>01 / THEIR STOCK</span>
-        <strong>DATA INCOMPLETE</strong>
-        <em>CURRENT STOCK RATING™ · NOT YET RATED</em>
-        <p>No current score is manufactured until the required verified business, financial, market, risk, and freshness inputs are complete.</p>
-      </article>
-      <article class="monster-rating-trio-card">
-        <span>02 / FUTURE MONSTER</span>
-        <strong>${futureValue}</strong>
-        <em>${futureStatus}</em>
-        <p>${found ? "Research-board score measuring similarity to historical pre-breakout Monster fingerprints. It is not the same as a current-stock quality rating." : established ? "This mature VCL™ leader is a historical comparison case, so an emerging-Monster fingerprint score is not assigned here." : "No published Future Monster fingerprint score is assigned to this ticker yet."}</p>
-      </article>
-      <article class="monster-rating-trio-card">
-        <span>03 / THE HUNT</span>
-        <strong>${huntValue}</strong>
-        <em>MONSTER HUNT STATUS</em>
-        <p>${huntDetail}</p>
-      </article>
-      <p class="monster-rating-trio-note"><strong>Three different questions:</strong> how the stock rates today, whether it resembles a pre-breakout historical Monster, and where it sits in the active Hunt. Missing evidence stays missing rather than becoming a decorative number.</p>
-    `;
-
-    content.prepend(trio);
+    reframeLegacyResult(result, ticker, established, found);
   }
 
   function start() {
