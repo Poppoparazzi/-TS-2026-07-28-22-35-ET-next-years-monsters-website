@@ -15,6 +15,7 @@
 
   const ratingResults = new Map();
   const ratingRequests = new Map();
+  let clientPromise = null;
 
   function text(node) {
     return String(node?.textContent ?? "").trim();
@@ -35,6 +36,30 @@
       "SEC CONNECTION UNAVAILABLE",
       "NO RECENT FILING RETURNED",
     ].some((token) => normalized.includes(token));
+  }
+
+  function ensureClient() {
+    if (window.NYM_PRODUCTION_RATING?.fetchRating) return Promise.resolve(window.NYM_PRODUCTION_RATING);
+    if (clientPromise) return clientPromise;
+
+    clientPromise = new Promise((resolve) => {
+      const existing = document.querySelector('script[data-production-rating-client]');
+      if (existing) {
+        existing.addEventListener("load", () => resolve(window.NYM_PRODUCTION_RATING ?? null), { once: true });
+        existing.addEventListener("error", () => resolve(null), { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "assets/production-rating-client.js";
+      script.async = true;
+      script.dataset.productionRatingClient = "";
+      script.addEventListener("load", () => resolve(window.NYM_PRODUCTION_RATING ?? null), { once: true });
+      script.addEventListener("error", () => resolve(null), { once: true });
+      document.head.appendChild(script);
+    });
+
+    return clientPromise;
   }
 
   function machineEvidence(payload) {
@@ -96,10 +121,9 @@
 
   function requestProductionRating(ticker, result) {
     if (ratingResults.has(ticker) || ratingRequests.has(ticker)) return;
-    const client = window.NYM_PRODUCTION_RATING;
-    if (!client?.fetchRating) return;
 
-    const pending = client.fetchRating(ticker)
+    const pending = ensureClient()
+      .then((client) => client?.fetchRating ? client.fetchRating(ticker) : { status: "unavailable", symbol: ticker, data: null })
       .then((response) => {
         ratingResults.set(ticker, response);
         ratingRequests.delete(ticker);
@@ -112,6 +136,37 @@
       });
 
     ratingRequests.set(ticker, pending);
+  }
+
+  function syncCurrentRatingCard(result, ticker) {
+    const card = result.querySelector(".monster-rating-trio-card:first-child");
+    const response = ratingResults.get(ticker);
+    if (!card || response?.status !== "ok" || !response.data) return;
+
+    const rating = response.data;
+    const value = card.querySelector("strong");
+    const status = card.querySelector("em");
+    const copy = card.querySelector("p");
+    if (!value || !status || !copy) return;
+
+    if (rating.eligible === true && Number.isFinite(Number(rating.score))) {
+      const score = Math.round(Number(rating.score));
+      value.textContent = String(score);
+      status.textContent = `${String(rating.tier ?? "VERIFIED").toUpperCase()} · CURRENT STOCK RATING™`;
+      copy.textContent = String(rating.summary || `Verified production rating calculated with ${rating.engineVersion}.`);
+      card.dataset.productionRatingStatus = "eligible";
+      card.dataset.productionRatingEngine = String(rating.engineVersion);
+      card.setAttribute("aria-label", `Verified Current Stock Rating for ${ticker}: ${score}`);
+      return;
+    }
+
+    value.textContent = "DATA INCOMPLETE";
+    status.textContent = `CURRENT STOCK RATING™ · ${String(rating.summary || "NOT YET RATED").toUpperCase()}`;
+    const firstReason = Array.isArray(rating.reasons) ? rating.reasons[0]?.message : "";
+    copy.textContent = String(firstReason || "The production engine returned an explicit ineligible result, so no numeric Current Stock Rating™ is published.");
+    card.dataset.productionRatingStatus = "ineligible";
+    card.dataset.productionRatingEngine = String(rating.engineVersion ?? "");
+    card.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}`);
   }
 
   function injectStyles() {
@@ -143,6 +198,7 @@
     if (!ticker) return;
 
     requestProductionRating(ticker, result);
+    syncCurrentRatingCard(result, ticker);
 
     const state = inspect(result, ticker);
     const completeCount = REQUIRED_INPUTS.filter((item) => state[item.key]).length;
@@ -167,7 +223,7 @@
       <div class="current-stock-readiness-head">
         <div>
           <span class="current-stock-readiness-kicker">CURRENT STOCK RATING™ / REQUIRED EVIDENCE</span>
-          <h3>${ready ? "READY TO PUBLISH VERIFIED RATING" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
+          <h3>${ready ? "VERIFIED RATING INPUTS COMPLETE" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
         </div>
         <strong class="current-stock-readiness-summary">${completeCount} / ${REQUIRED_INPUTS.length} VERIFIED INPUTS PRESENT</strong>
       </div>
