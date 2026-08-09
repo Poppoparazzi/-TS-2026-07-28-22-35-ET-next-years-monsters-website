@@ -1,4 +1,4 @@
-// TS: 2026-08-09 09:04 ET
+// TS: 2026-08-09 09:11 ET
 
 (() => {
   "use strict";
@@ -54,8 +54,8 @@
       filing,
       quote,
       freshness,
-      // These are deliberately false until the verified production engine exposes
-      // explicit machine-readable evidence for them. DOM appearance alone is not proof.
+      // These stay false until production exposes explicit machine-readable proof.
+      // A plausible-looking page is not enough evidence to publish a score.
       financials: false,
       risk: false,
       calculation: false,
@@ -93,18 +93,20 @@
     const state = inspect(result);
     const completeCount = REQUIRED_INPUTS.filter((item) => state[item.key]).length;
     const ready = completeCount === REQUIRED_INPUTS.length;
+    const signature = `${ticker}|${REQUIRED_INPUTS.map((item) => state[item.key] ? "1" : "0").join("")}`;
 
     let panel = result.querySelector(":scope .current-stock-readiness");
     if (!panel) {
       panel = document.createElement("section");
       panel.className = "current-stock-readiness";
-      panel.setAttribute("aria-label", `Current Stock Rating readiness for ${ticker}`);
-
       const trio = result.querySelector(".monster-rating-trio");
       if (trio) trio.insertAdjacentElement("afterend", panel);
       else result.prepend(panel);
     }
 
+    if (panel.dataset.readinessSignature === signature) return;
+    panel.dataset.readinessSignature = signature;
+    panel.setAttribute("aria-label", `Current Stock Rating readiness for ${ticker}`);
     panel.innerHTML = `
       <div class="current-stock-readiness-head">
         <div>
