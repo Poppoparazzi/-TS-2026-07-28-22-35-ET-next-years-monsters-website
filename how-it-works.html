@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-08 22:18 ET -->
+<!-- TS: 2026-08-09 09:30 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,6 +8,12 @@
   <meta name="description" content="How Next Year’s Monsters™ separates Current Stock Rating™, Future Monster Fingerprint Rating™, Monster Hunt™ status, and historical VCL™ evidence.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
+  <style>
+    .system-brand-panel{position:relative;overflow:hidden;padding-right:clamp(150px,18vw,220px)}
+    .system-detective{position:absolute;right:clamp(12px,2vw,28px);bottom:-30px;width:clamp(130px,14vw,185px);height:210px;margin:0;overflow:hidden;pointer-events:none;opacity:.95}
+    .system-detective img{display:block;width:100%;height:auto;transform:scaleX(-1);filter:drop-shadow(0 14px 22px rgba(0,0,0,.28))}
+    @media(max-width:720px){.system-brand-panel{padding-right:20px;padding-bottom:140px}.system-detective{right:10px;bottom:-42px;width:120px;height:170px;opacity:.82}}
+  </style>
 </head>
 <body>
 <header class="site-header home-header">
@@ -44,10 +50,13 @@
   </div>
 </div></section>
 <section class="section"><div class="wrap">
-  <div class="feature-panel">
+  <div class="feature-panel system-brand-panel">
     <span class="eyebrow">Scoring discipline</span>
     <h2>No decorative numbers.</h2>
     <p class="copy">A rating only deserves to appear when the inputs required by that rating are verified and sufficiently fresh. SEC identity alone does not create a Current Stock Rating™. A historical case-study score does not become a live score because the ticker is famous. And a strong Future Monster Fingerprint Rating™ does not mean a stock is guaranteed to rise.</p>
+    <figure class="system-detective" aria-label="Detective Break checking the evidence">
+      <img src="assets/detective-break-actual.svg" alt="Detective Break checking the evidence">
+    </figure>
   </div>
 </div></section>
 </main>
