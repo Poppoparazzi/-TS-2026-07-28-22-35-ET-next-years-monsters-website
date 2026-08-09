@@ -1,4 +1,4 @@
-// TS: 2026-08-08 20:06 ET
+// TS: 2026-08-09 05:01 ET
 
 (function installMonsterCheckRatingTrio() {
   "use strict";
@@ -72,7 +72,7 @@
 
   function reframeLegacyResult(result, ticker, established, found) {
     const identity = result.querySelector(".monster-result-identity");
-    const flag = identity?.querySelector(".monster-demo-flag");
+    const flag = identity?.querySelector(".monster-demo-flag") || result.querySelector(".monster-demo-flag");
     const sector = identity?.querySelector(".monster-result-sector");
     const scoreCard = result.querySelector(".monster-score-card");
     const scoreLabel = scoreCard?.querySelector("span");
@@ -102,6 +102,15 @@
     if (flag?.textContent.includes("OFFICIAL SEC COMPANY RECORD")) {
       replaceText(scoreLabel, "CURRENT STOCK RATING™");
       if (scoreCard) scoreCard.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}`);
+    }
+
+    if (found && flag?.textContent.includes("NO SEC COMPANY MATCH FOUND")) {
+      replaceText(flag, "MONSTER HUNT CASE · SEC PROFILE NOT CURRENTLY RETURNED");
+      const emptyCopy = result.querySelector(".monster-empty-state > p:not(.monster-demo-flag)");
+      replaceText(
+        emptyCopy,
+        "This ticker is on the published Monster Hunt research board, but the official SEC company profile did not return from the current service lookup. The Hunt score remains research-board evidence, not a Current Stock Rating™."
+      );
     }
 
     if (found && flag?.textContent.includes("HISTORICAL VCL")) {
@@ -139,11 +148,13 @@
     const result = document.querySelector("[data-result]");
     if (!result || !result.firstElementChild || getComputedStyle(result).display === "none") return;
 
-    const content = result.querySelector(":scope > .monster-investigator-result-content") || result;
     const ticker = extractTicker(result);
     if (!ticker) return;
 
     const data = await loadBoard();
+    if (extractTicker(result) !== ticker) return;
+
+    const content = result.querySelector(":scope > .monster-investigator-result-content") || result;
     const found = findBoardEntry(data, ticker);
     const established = VCL_ESTABLISHED.has(ticker) && !found;
 
