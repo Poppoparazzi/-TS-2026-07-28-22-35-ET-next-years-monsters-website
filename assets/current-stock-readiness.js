@@ -1,4 +1,4 @@
-// TS: 2026-08-09 09:11 ET
+// TS: 2026-08-09 10:02 ET
 
 (() => {
   "use strict";
@@ -12,6 +12,9 @@
     { key: "risk", label: "Verified current risk evidence" },
     { key: "calculation", label: "Versioned Current Stock Rating™ calculation" },
   ];
+
+  const ratingResults = new Map();
+  const ratingRequests = new Map();
 
   function text(node) {
     return String(node?.textContent ?? "").trim();
@@ -34,7 +37,36 @@
     ].some((token) => normalized.includes(token));
   }
 
-  function inspect(result) {
+  function machineEvidence(payload) {
+    if (!payload || typeof payload !== "object") {
+      return { filing: false, quote: false, freshness: false, financials: false, risk: false, calculation: false };
+    }
+
+    const inputs = Array.isArray(payload.evidenceInputs) ? payload.evidenceInputs : [];
+    const components = Array.isArray(payload.components) ? payload.components : [];
+    const marketEvidence = inputs.filter((item) => item?.sourceType === "market-data" && item?.value !== null && item?.value !== undefined);
+    const filingEvidence = inputs.filter((item) => item?.sourceType === "sec-filing" && item?.value !== null && item?.value !== undefined);
+    const financialEvidence = inputs.filter((item) => ["sec-filing", "company-fact"].includes(item?.sourceType) && item?.value !== null && item?.value !== undefined);
+    const riskComponent = components.find((item) => item?.key === "risk_deterioration");
+
+    const calculation = Boolean(
+      String(payload.engineVersion ?? "").trim() &&
+      String(payload.calculatedAt ?? "").trim() &&
+      typeof payload.eligible === "boolean" &&
+      (payload.eligible ? Number.isFinite(Number(payload.score)) : payload.score === null && String(payload.eligibilityCode ?? "").trim())
+    );
+
+    return {
+      filing: filingEvidence.some((item) => String(item?.sourceUrl ?? "").trim()),
+      quote: marketEvidence.some((item) => Number.isFinite(Number(item?.value))),
+      freshness: marketEvidence.some((item) => String(item?.sourceTimestamp ?? "").trim()),
+      financials: financialEvidence.length > 0,
+      risk: Boolean(riskComponent && riskComponent.direction !== "unavailable"),
+      calculation,
+    };
+  }
+
+  function inspect(result, ticker) {
     const flag = text(result.querySelector(".monster-demo-flag"));
     const officialIdentity = flag.includes("OFFICIAL SEC COMPANY RECORD");
 
@@ -49,17 +81,37 @@
     const timeText = text(result.querySelector("[data-live-time]"));
     const freshness = quote && !isUnavailable(freshnessText) && !isUnavailable(timeText);
 
+    const machine = machineEvidence(ratingResults.get(ticker)?.data);
+
     return {
       identity: officialIdentity,
-      filing,
-      quote,
-      freshness,
-      // These stay false until production exposes explicit machine-readable proof.
-      // A plausible-looking page is not enough evidence to publish a score.
-      financials: false,
-      risk: false,
-      calculation: false,
+      filing: filing || machine.filing,
+      quote: quote || machine.quote,
+      freshness: freshness || machine.freshness,
+      financials: machine.financials,
+      risk: machine.risk,
+      calculation: machine.calculation,
     };
+  }
+
+  function requestProductionRating(ticker, result) {
+    if (ratingResults.has(ticker) || ratingRequests.has(ticker)) return;
+    const client = window.NYM_PRODUCTION_RATING;
+    if (!client?.fetchRating) return;
+
+    const pending = client.fetchRating(ticker)
+      .then((response) => {
+        ratingResults.set(ticker, response);
+        ratingRequests.delete(ticker);
+        render(result);
+      })
+      .catch(() => {
+        ratingResults.set(ticker, { status: "unavailable", symbol: ticker, data: null });
+        ratingRequests.delete(ticker);
+        render(result);
+      });
+
+    ratingRequests.set(ticker, pending);
   }
 
   function injectStyles() {
@@ -90,10 +142,14 @@
     const ticker = text(tickerNode).replace(/^\$/,"" );
     if (!ticker) return;
 
-    const state = inspect(result);
+    requestProductionRating(ticker, result);
+
+    const state = inspect(result, ticker);
     const completeCount = REQUIRED_INPUTS.filter((item) => state[item.key]).length;
     const ready = completeCount === REQUIRED_INPUTS.length;
-    const signature = `${ticker}|${REQUIRED_INPUTS.map((item) => state[item.key] ? "1" : "0").join("")}`;
+    const ratingState = ratingResults.get(ticker);
+    const machineStatus = ratingState?.status ?? (ratingRequests.has(ticker) ? "loading" : "idle");
+    const signature = `${ticker}|${REQUIRED_INPUTS.map((item) => state[item.key] ? "1" : "0").join("")}|${machineStatus}`;
 
     let panel = result.querySelector(":scope .current-stock-readiness");
     if (!panel) {
@@ -111,7 +167,7 @@
       <div class="current-stock-readiness-head">
         <div>
           <span class="current-stock-readiness-kicker">CURRENT STOCK RATING™ / REQUIRED EVIDENCE</span>
-          <h3>${ready ? "READY TO CALCULATE" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
+          <h3>${ready ? "READY TO PUBLISH VERIFIED RATING" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
         </div>
         <strong class="current-stock-readiness-summary">${completeCount} / ${REQUIRED_INPUTS.length} VERIFIED INPUTS PRESENT</strong>
       </div>
@@ -121,7 +177,7 @@
           return `<li class="${present ? "is-ready" : "is-missing"}"><b>${present ? "✓" : "!"}</b><span>${item.label}<br><small>${present ? "VERIFIED IN THIS RESULT" : "REQUIRED BEFORE A CURRENT SCORE CAN BE PUBLISHED"}</small></span></li>`;
         }).join("")}
       </ul>
-      <p class="current-stock-readiness-note">This checklist is intentionally strict. SEC identity, a filing, or a quote can be present without creating a Current Stock Rating™. Financial evidence, risk evidence, quote freshness, and the versioned calculation must all be explicitly verified before a score is allowed to appear.</p>
+      <p class="current-stock-readiness-note">This checklist now accepts machine-readable evidence from the production rating API when that API returns a validated stored calculation. SEC identity, a filing, or a quote alone still cannot create a Current Stock Rating™. If the production endpoint has no stored result or is unavailable, the score remains unpublished.</p>
     `;
   }
 
