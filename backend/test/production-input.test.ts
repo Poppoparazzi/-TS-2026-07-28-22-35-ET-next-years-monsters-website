@@ -1,8 +1,18 @@
-// TS: 2026-08-09 16:58 ET
+// TS: 2026-08-09 17:03 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { SecCompanyFactsSummary } from "../src/sec/types.js";
 import { assembleProductionRatingInput } from "../src/ratings/production-input.js";
+
+const secFacts: SecCompanyFactsSummary = {
+  cik: "0000320193",
+  companyName: "Apple Inc.",
+  retrievedAt: "2026-08-09T20:55:00Z",
+  facts: {},
+  sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  disclosure: "SEC company facts",
+};
 
 const incompleteSource = {
   symbol: "AAPL",
@@ -11,7 +21,7 @@ const incompleteSource = {
   securityType: "Common Stock",
   secIdentityResolved: true,
   secCik: "0000320193",
-  secFacts: { cik: "0000320193", entityName: "Apple Inc.", facts: {}, factHistory: undefined },
+  secFacts,
   companyMarket: {
     providerName: null,
     providerConfigured: false,
