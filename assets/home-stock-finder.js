@@ -1,4 +1,4 @@
-// TS: 2026-08-09 07:44 ET
+// TS: 2026-08-09 08:10 ET
 
 function installHomeCheckDetective() {
   const heading = document.querySelector(".home-check-heading");
@@ -34,34 +34,41 @@ function restoreHomeMonsterCheckData() {
   const suggestions = document.querySelector(".home-suggestions[data-suggestions]");
   if (!result || !suggestions) return;
 
-  let restored = false;
-  const restore = () => {
-    if (restored) return true;
-    if (result.style.display && result.style.display !== "none" && result.innerHTML.trim()) {
-      restored = true;
-      return true;
-    }
+  const hasVisibleResult = () =>
+    result.style.display !== "none" && result.innerHTML.trim().length > 0;
+
+  const clickNvdaIfReady = () => {
+    if (hasVisibleResult()) return true;
 
     const nvda = Array.from(suggestions.querySelectorAll(".chip"))
       .find((chip) => chip.textContent.trim().toUpperCase() === "NVDA");
     if (!nvda) return false;
 
-    restored = true;
+    // Do not mark restoration complete just because the click fired.
+    // app.js can still clear the result later in the same setup cycle.
+    // Keep checking until the NVIDIA card is actually visible and populated.
     nvda.click();
-    return true;
+    return false;
   };
 
-  if (restore()) return;
-
   const observer = new MutationObserver(() => {
-    if (restore()) observer.disconnect();
+    clickNvdaIfReady();
   });
   observer.observe(suggestions, { childList: true, subtree: true });
 
   let attempts = 0;
   const timer = window.setInterval(() => {
     attempts += 1;
-    if (restore() || attempts >= 50) {
+
+    if (hasVisibleResult()) {
+      window.clearInterval(timer);
+      observer.disconnect();
+      return;
+    }
+
+    clickNvdaIfReady();
+
+    if (attempts >= 100) {
       window.clearInterval(timer);
       observer.disconnect();
     }
