@@ -1,11 +1,11 @@
-<!-- TS: 2026-08-02 13:31 ET -->
+<!-- TS: 2026-08-04 20:02 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>15-Stock Verification Ledger | Next Year’s Monsters™</title>
-  <meta name="description" content="A transparent verification ledger showing the current SEC, stored filing, quote, and production-rating status of the original 15-stock Next Year’s Monsters VCL demonstration set.">
+  <meta name="description" content="Check the current Official SEC Evidence, stored external market-data status, and production-rating status of the 15 approved Next Year’s Monsters™ VCL demonstrations.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/verification-ledger.css">
@@ -32,7 +32,7 @@
   <section class="verification-hero">
     <p class="home-kicker"><span></span> EVIDENCE STATUS · NO DECORATIVE CLAIMS</p>
     <h1>15-STOCK<br>VERIFICATION<br>LEDGER.</h1>
-    <p>This page checks the original Visual Case Library™ pilot set against the public SEC service and the production snapshot database. A historical demonstration score is not treated as a current verified Monster Rating™.</p>
+    <p>This page checks the 15 approved Visual Case Library™ demonstrations against the connected Official SEC Evidence service and production snapshot database. Demonstration Ratings are historical book examples, never current production Monster Ratings™.</p>
     <div class="verification-controls">
       <button class="verification-run" type="button" data-run-verification>RUN 15-STOCK VERIFICATION</button>
       <span class="verification-timestamp" data-verification-timestamp>NOT CHECKED IN THIS SESSION</span>
@@ -40,14 +40,14 @@
   </section>
 
   <section class="verification-summary" aria-label="Verification totals">
-    <article><span>SEC IDENTITIES VERIFIED</span><strong data-sec-count>0</strong><em>Official company and CIK matches returned by the public SEC service.</em></article>
-    <article><span>STORED PILOT RECORDS</span><strong data-stored-count>0</strong><em>Companies with a persistent production snapshot in the database.</em></article>
-    <article><span>QUOTE SNAPSHOTS STORED</span><strong data-quote-count>0</strong><em>Companies whose stored record includes a market quote and source label.</em></article>
-    <article><span>PRODUCTION RATINGS STORED</span><strong data-rating-count>0</strong><em>Verified rating-history records, not historical VCL demonstrations.</em></article>
+    <article><span>OFFICIAL SEC IDENTITIES</span><strong data-sec-count>—</strong><em>Official SEC Evidence company and CIK matches confirmed in this run.</em></article>
+    <article><span>STORED EVIDENCE RECORDS</span><strong data-stored-count>—</strong><em>Companies with a persistent production snapshot in the connected database.</em></article>
+    <article><span>EXTERNAL MARKET DATA STORED</span><strong data-quote-count>—</strong><em>Stored provider snapshots. External Market Data · May Be Delayed.</em></article>
+    <article><span>PRODUCTION RATINGS STORED</span><strong data-rating-count>—</strong><em>Verified stored rating-history records. Demonstration Ratings are excluded.</em></article>
   </section>
 
   <section class="verification-ledger-shell">
-    <p class="verification-note"><strong>Reading the ledger:</strong> green means the checked evidence exists, gold means pending or not yet refreshed, red means unavailable or missing, and pale gray means the value is still a historical demonstration rather than a production rating.</p>
+    <p class="verification-note"><strong>Reading the ledger:</strong> Official SEC Evidence is checked separately from External Market Data · May Be Delayed. Demonstration Rating means a historical book example. Not Yet Rated means no production rating was confirmed. Unresolved SEC Identity means no official ticker mapping was returned. Provider Not Connected means the required service could not provide a trustworthy result.</p>
     <div class="verification-table-wrap">
       <table class="verification-table">
         <thead>
@@ -55,7 +55,7 @@
             <th>Company</th>
             <th>SEC identity</th>
             <th>Stored filings / facts</th>
-            <th>Stored quote</th>
+            <th>External market data</th>
             <th>Rating data</th>
             <th>Last stored check</th>
             <th>Evidence gap</th>
@@ -64,13 +64,13 @@
         <tbody data-verification-body></tbody>
       </table>
     </div>
-    <p class="verification-footer-note"><strong>Boundary:</strong> This ledger verifies whether evidence is present in the connected services. It does not declare a stock attractive, safe, or guaranteed to rise. The screen does not find guaranteed winners. It finds evidence.</p>
+    <p class="verification-footer-note"><strong>Boundary:</strong> This ledger verifies whether evidence is present in connected services. It does not declare a stock attractive, safe, or guaranteed to rise. The screen does not find guaranteed winners. It finds evidence.</p>
   </section>
 </main>
 
 <footer class="home-footer">
   <div><strong>NEXT YEAR’S MONSTERS™</strong><span>VERIFY THE DATA BEFORE TRUSTING THE RATING.</span></div>
-  <p><strong>Educational Use Only:</strong> Monster Rating™ is not a recommendation to buy, sell, or hold any security and does not guarantee future performance. Investing involves risk, including possible loss of principal.</p>
+  <p><strong>Educational Use Only:</strong> Demonstration Ratings and Monster Rating™ are not recommendations to buy, sell, or hold any security and do not guarantee future performance. Investing involves risk, including possible loss of principal.</p>
 </footer>
 
 <script src="assets/runtime-config.js"></script>
