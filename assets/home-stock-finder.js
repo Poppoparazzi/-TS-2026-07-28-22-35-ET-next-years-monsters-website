@@ -1,4 +1,4 @@
-// TS: 2026-08-09 00:05 ET
+// TS: 2026-08-09 07:40 ET
 
 function installHomeCheckDetective() {
   const heading = document.querySelector(".home-check-heading");
@@ -29,8 +29,20 @@ function installHomeCheckDetective() {
   heading.appendChild(figure);
 }
 
+function restoreHomeMonsterCheckData() {
+  const result = document.querySelector(".home-result-card[data-result]");
+  const chips = Array.from(document.querySelectorAll(".home-suggestions .chip"));
+  if (!result || !chips.length) return;
+
+  // Preserve the familiar default NVIDIA demonstration card beside Detective Break.
+  // The regular ticker buttons/search still replace it when the visitor runs another check.
+  const nvda = chips.find((chip) => chip.textContent.trim().toUpperCase() === "NVDA");
+  if (nvda && result.style.display === "none") nvda.click();
+}
+
 function startHomeStockFinder() {
   installHomeCheckDetective();
+  restoreHomeMonsterCheckData();
 
   const form = document.querySelector("[data-home-stock-finder]");
   const input = document.querySelector("[data-home-stock-finder-input]");
