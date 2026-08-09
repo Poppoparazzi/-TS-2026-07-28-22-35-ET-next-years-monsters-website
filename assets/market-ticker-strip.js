@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:48 ET
+// TS: 2026-08-08 20:24 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -239,7 +239,7 @@ async function createMarketTickerStrip() {
   const note = document.createElement("p");
   note.className = "nym-market-tape-note";
   note.textContent =
-    `CLICK ANY TICKER BUTTON ABOVE to open that company in the full single-chart view. The ${count}-stock tape uses external market data that may be delayed. Fifteen companies currently have demonstration Monster Checks; the additional ten are chart-and-news coverage only.`;
+    `CLICK ANY TICKER BUTTON ABOVE to open that company in the full single-chart view. The ${count}-stock tape uses external market data that may be delayed. The original fifteen VCL™ names are historical case studies; use Monster Check™ for separate present-day Current Stock Rating™, Future Monster Fingerprint, and Hunt-status information.`;
 
   section.append(head, widgetShell, quickLinks, note);
   header.insertAdjacentElement("afterend", section);
