@@ -1,4 +1,4 @@
-// TS: 2026-08-09 05:01 ET
+// TS: 2026-08-10 16:01 ET
 
 (function installMonsterCheckRatingTrio() {
   "use strict";
@@ -126,6 +126,18 @@
     }
   }
 
+  function recoverSearchControls(result) {
+    const button = document.querySelector("[data-rate-button]");
+    if (!button || !button.disabled) return;
+
+    const flag = result.querySelector(".monster-demo-flag");
+    const stillLoading = flag?.textContent.includes("CHECKING OFFICIAL SEC RECORDS");
+    if (stillLoading) return;
+
+    button.disabled = false;
+    button.textContent = "RUN THE CHECK";
+  }
+
   function injectStyles() {
     if (document.getElementById("monster-rating-trio-styles")) return;
     const style = document.createElement("style");
@@ -214,7 +226,10 @@
     let frame = 0;
     const rerun = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(decorateResult);
+      frame = requestAnimationFrame(() => {
+        recoverSearchControls(result);
+        void decorateResult();
+      });
     };
     new MutationObserver(rerun).observe(result, { childList: true, subtree: true });
     rerun();
