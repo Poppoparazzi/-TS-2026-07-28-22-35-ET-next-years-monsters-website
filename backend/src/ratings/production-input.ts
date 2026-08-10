@@ -1,9 +1,15 @@
-// TS: 2026-08-09 16:58 ET
+// TS: 2026-08-10 03:13 UTC
 
 import type { SecCompanyFactsSummary } from "../sec/types.js";
 import { buildAnnualFinancialPeriods } from "./financial-periods.js";
 import { verifyMarketEvidence, type MarketEvidenceSource } from "./market-evidence.js";
+import {
+  MAXIMUM_MARKET_DATA_AGE_DAYS,
+  MAXIMUM_RISK_EVIDENCE_AGE_DAYS,
+} from "./spec-v1.js";
 import type { ProductionRatingInput } from "./types.js";
+
+const DAY_MS = 86_400_000;
 
 export interface VerifiedRiskEvidence {
   readonly verified: boolean;
@@ -42,8 +48,32 @@ export type ProductionRatingAssemblyResult =
   | ProductionRatingAssemblyFailure
   | ProductionRatingAssemblySuccess;
 
+function timestamp(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function validTimestamp(value: string | null): boolean {
-  return Boolean(value && Number.isFinite(Date.parse(value)));
+  return timestamp(value) !== null;
+}
+
+function isFreshAt(
+  observedAt: string | null,
+  calculatedAt: string,
+  maximumAgeDays: number,
+): boolean {
+  const observedTime = timestamp(observedAt);
+  const calculationTime = timestamp(calculatedAt);
+  if (observedTime === null || calculationTime === null) return false;
+  const ageDays = (calculationTime - observedTime) / DAY_MS;
+  return ageDays >= -1 && ageDays <= maximumAgeDays;
+}
+
+function fetchTimestampCoversObservation(fetchedAt: string, observationDate: string): boolean {
+  const fetchedTime = timestamp(fetchedAt);
+  const observationTime = timestamp(observationDate);
+  return fetchedTime !== null && observationTime !== null && fetchedTime >= observationTime;
 }
 
 export function assembleProductionRatingInput(
@@ -65,15 +95,55 @@ export function assembleProductionRatingInput(
   const companyMarket = verifyMarketEvidence(source.companyMarket);
   if (!companyMarket.verified) {
     for (const item of companyMarket.missingEvidence) missing.add(item);
-  } else if (companyMarket.evidence.symbol !== symbol) {
-    missing.add("company market-data symbol match");
+  } else {
+    if (companyMarket.evidence.symbol !== symbol) {
+      missing.add("company market-data symbol match");
+    }
+    if (
+      !isFreshAt(
+        companyMarket.evidence.latestObservationDate,
+        source.calculatedAt,
+        MAXIMUM_MARKET_DATA_AGE_DAYS,
+      ) ||
+      !isFreshAt(
+        companyMarket.evidence.fetchedAt,
+        source.calculatedAt,
+        MAXIMUM_MARKET_DATA_AGE_DAYS,
+      ) ||
+      !fetchTimestampCoversObservation(
+        companyMarket.evidence.fetchedAt,
+        companyMarket.evidence.latestObservationDate,
+      )
+    ) {
+      missing.add("fresh company market evidence");
+    }
   }
 
   const benchmarkMarket = verifyMarketEvidence(source.benchmarkMarket);
   if (!benchmarkMarket.verified) {
     for (const item of benchmarkMarket.missingEvidence) missing.add(`benchmark ${item}`);
-  } else if (!benchmarkSymbol || benchmarkMarket.evidence.symbol !== benchmarkSymbol) {
-    missing.add("benchmark market-data symbol match");
+  } else {
+    if (!benchmarkSymbol || benchmarkMarket.evidence.symbol !== benchmarkSymbol) {
+      missing.add("benchmark market-data symbol match");
+    }
+    if (
+      !isFreshAt(
+        benchmarkMarket.evidence.latestObservationDate,
+        source.calculatedAt,
+        MAXIMUM_MARKET_DATA_AGE_DAYS,
+      ) ||
+      !isFreshAt(
+        benchmarkMarket.evidence.fetchedAt,
+        source.calculatedAt,
+        MAXIMUM_MARKET_DATA_AGE_DAYS,
+      ) ||
+      !fetchTimestampCoversObservation(
+        benchmarkMarket.evidence.fetchedAt,
+        benchmarkMarket.evidence.latestObservationDate,
+      )
+    ) {
+      missing.add("fresh benchmark market evidence");
+    }
   }
 
   if (
@@ -82,6 +152,14 @@ export function assembleProductionRatingInput(
     !source.riskEvidence.source?.trim()
   ) {
     missing.add("verified current risk evidence");
+  } else if (
+    !isFreshAt(
+      source.riskEvidence.checkedAt,
+      source.calculatedAt,
+      MAXIMUM_RISK_EVIDENCE_AGE_DAYS,
+    )
+  ) {
+    missing.add("fresh verified risk evidence");
   }
 
   if (missing.size) {
