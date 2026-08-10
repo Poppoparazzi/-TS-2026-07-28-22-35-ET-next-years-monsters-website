@@ -1,4 +1,4 @@
-// TS: 2026-08-10 05:03 ET
+// TS: 2026-08-10 06:03 ET
 
 (function installCurrentRatingReadiness() {
   "use strict";
@@ -7,15 +7,7 @@
   if (page && page !== "monster-check.html") return;
 
   const MAX_QUOTE_AGE_MS = 36 * 60 * 60 * 1000;
-  const FIELD_SETS = Object.freeze({
-    symbol: ["symbol", "ticker"],
-    price: ["price", "currentPrice", "lastPrice", "last", "regularMarketPrice", "close"],
-    freshness: ["priceChangeTime", "currentTradeTime", "timestamp", "asOf", "as_of", "lastUpdated", "updatedAt", "retrievedAt"],
-    financial: ["revenue", "revenueGrowth", "grossMargin", "operatingMargin", "operatingIncome", "netIncome", "eps", "freeCashFlow", "financials", "metrics"],
-    risk: ["risk", "risks", "riskFactors", "riskSignals", "warning", "warnings", "bearCase", "downside", "volatility", "drawdown"],
-    score: ["monsterRating", "monster_rating", "rating", "score"],
-    version: ["calculationVersion", "calculation_version", "modelVersion", "model_version", "ratingVersion", "rating_version", "engineVersion", "engine_version"]
-  });
+  const MAX_SEC_FACT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
   function safe(value) {
     return String(value ?? "")
@@ -39,72 +31,68 @@
     }
   }
 
-  function findExplicitValue(value, keys, depth = 0) {
-    if (depth > 5 || value == null) return undefined;
-    if (Array.isArray(value)) {
-      for (const item of value.slice(0, 30)) {
-        const found = findExplicitValue(item, keys, depth + 1);
-        if (found !== undefined) return found;
-      }
-      return undefined;
+  function normalized(value) {
+    return typeof value === "string" ? value.trim().toUpperCase() : "";
+  }
+
+  function positiveFinite(value) {
+    return typeof value === "number" && Number.isFinite(value) && value > 0;
+  }
+
+  function parseIso(value) {
+    if (typeof value !== "string" || !value.trim()) return null;
+    const ms = Date.parse(value);
+    return Number.isFinite(ms) ? { iso: new Date(ms).toISOString(), ms } : null;
+  }
+
+  function freshness(timestamp, maximumAgeMs) {
+    const parsed = parseIso(timestamp);
+    if (!parsed) return { ready: false, parsed: null, ageMs: null };
+    const ageMs = Date.now() - parsed.ms;
+    if (ageMs < -5 * 60 * 1000) return { ready: false, parsed, ageMs };
+    return { ready: ageMs <= maximumAgeMs, parsed, ageMs };
+  }
+
+  function quoteContract(data, ticker) {
+    if (!data || typeof data !== "object") return { ready: false, reason: "Missing quote payload." };
+    if (normalized(data.symbol) !== ticker) return { ready: false, reason: "Quote symbol does not match the requested ticker." };
+    if (!positiveFinite(data.price)) return { ready: false, reason: "Quote does not contain a positive numeric price." };
+    if (typeof data.provider !== "string" || !data.provider.trim()) return { ready: false, reason: "Quote provider provenance is missing." };
+    if (typeof data.freshness !== "string" || !data.freshness.trim() || data.freshness === "unavailable") {
+      return { ready: false, reason: "Quote freshness classification is unavailable." };
     }
-    if (typeof value !== "object") return undefined;
-    for (const key of keys) {
-      if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
-      const candidate = value[key];
-      if (candidate !== null && candidate !== "" && candidate !== undefined) return candidate;
+    const observed = freshness(data.providerTimestamp, MAX_QUOTE_AGE_MS);
+    const retrieved = freshness(data.retrievedAt, MAX_QUOTE_AGE_MS);
+    if (!observed.ready || !retrieved.ready) return { ready: false, reason: "Quote observation or retrieval timestamp is stale, invalid, or future-dated.", observed, retrieved };
+    if (observed.parsed.ms > retrieved.parsed.ms + 5 * 60 * 1000) {
+      return { ready: false, reason: "Quote observation timestamp occurs after its retrieval timestamp.", observed, retrieved };
     }
-    for (const child of Object.values(value)) {
-      const found = findExplicitValue(child, keys, depth + 1);
-      if (found !== undefined) return found;
+    return { ready: true, data, observed, retrieved };
+  }
+
+  function secIdentityContract(data, ticker) {
+    if (!data || typeof data !== "object") return { ready: false, reason: "Missing SEC company payload." };
+    if (normalized(data.ticker) !== ticker) return { ready: false, reason: "SEC company ticker does not match the requested ticker." };
+    if (!Number.isInteger(data.cik) || data.cik <= 0) return { ready: false, reason: "Verified SEC CIK is missing." };
+    if (typeof data.sourceUrl !== "string" || !data.sourceUrl.startsWith("https://www.sec.gov/")) {
+      return { ready: false, reason: "SEC company source provenance is missing or unsupported." };
     }
-    return undefined;
+    return { ready: true, data };
   }
 
-  function isFiniteNumber(value) {
-    return Number.isFinite(Number(value));
-  }
-
-  function hasSubstantiveValue(value) {
-    if (value == null) return false;
-    if (typeof value === "string") return value.trim().length > 0;
-    if (typeof value === "number") return Number.isFinite(value);
-    if (typeof value === "boolean") return true;
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === "object") return Object.keys(value).length > 0;
-    return false;
-  }
-
-  function normalizedSymbol(data) {
-    const raw = findExplicitValue(data, FIELD_SETS.symbol);
-    return typeof raw === "string" ? raw.trim().toUpperCase() : null;
-  }
-
-  function symbolMatches(data, ticker) {
-    const symbol = normalizedSymbol(data);
-    return Boolean(symbol) && symbol === ticker;
-  }
-
-  function parseTimestamp(data) {
-    const value = findExplicitValue(data, FIELD_SETS.freshness);
-    if (!hasSubstantiveValue(value)) return null;
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return null;
-    return { iso: parsed.toISOString(), ms: parsed.getTime() };
-  }
-
-  function validQuoteFreshness(data) {
-    const timestamp = parseTimestamp(data);
-    if (!timestamp) return { ready: false, timestamp: null, ageMs: null };
-    const ageMs = Date.now() - timestamp.ms;
-    if (ageMs < -5 * 60 * 1000) return { ready: false, timestamp, ageMs };
-    return { ready: ageMs <= MAX_QUOTE_AGE_MS, timestamp, ageMs };
-  }
-
-  function validScore(value) {
-    if (!isFiniteNumber(value)) return false;
-    const score = Number(value);
-    return score >= 0 && score <= 100;
+  function secFactsContract(data, ticker) {
+    if (!data || typeof data !== "object") return { ready: false, reason: "Missing SEC company-facts payload." };
+    if (normalized(data.ticker) !== ticker) return { ready: false, reason: "SEC facts ticker does not match the requested ticker." };
+    if (!Number.isInteger(data.cik) || data.cik <= 0) return { ready: false, reason: "SEC facts CIK is missing." };
+    if (typeof data.sourceUrl !== "string" || !data.sourceUrl.startsWith("https://data.sec.gov/")) {
+      return { ready: false, reason: "SEC facts source provenance is missing or unsupported." };
+    }
+    if (!data.facts || typeof data.facts !== "object" || Array.isArray(data.facts) || Object.keys(data.facts).length === 0) {
+      return { ready: false, reason: "No machine-readable SEC financial facts were returned." };
+    }
+    const retrieved = freshness(data.retrievedAt, MAX_SEC_FACT_AGE_MS);
+    if (!retrieved.ready) return { ready: false, reason: "SEC financial evidence is stale, invalid, or future-dated.", retrieved };
+    return { ready: true, data, retrieved };
   }
 
   async function getJson(url, timeoutMs = 18_000) {
@@ -144,7 +132,6 @@
         .monster-current-readiness h3{margin:0;font-size:clamp(24px,3vw,40px);line-height:1}
         .monster-current-readiness-summary{margin:10px 0 0;max-width:820px;color:#cbd1cb;font-size:13px;line-height:1.55}
         .monster-current-readiness-state{min-width:190px;padding:12px 15px;border:1px solid #e44b38;background:#201412;color:#fff;text-align:center;font-size:12px;font-weight:950;line-height:1.3}
-        .monster-current-readiness-state.ready{border-color:var(--editorial-lime,#b8f34a);background:#152011;color:var(--editorial-lime,#b8f34a)}
         .monster-current-readiness-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
         .monster-current-readiness-item{min-height:112px;padding:14px;border:1px solid rgba(255,255,255,.14);background:#171d1b}
         .monster-current-readiness-item strong{display:block;margin-bottom:8px;font-size:12px}
@@ -162,7 +149,7 @@
   }
 
   function renderLoading(panel, ticker) {
-    panel.innerHTML = `<div class="monster-current-readiness-head"><div><p class="monster-current-readiness-kicker">CURRENT STOCK RATING™ READINESS · $${safe(ticker)}</p><h3>VERIFYING REQUIRED EVIDENCE</h3><p class="monster-current-readiness-summary">Checking identity, market quote, freshness, financial, risk, and versioned-calculation paths. No missing component will be guessed or filled with demonstration data.</p></div><div class="monster-current-readiness-state">CHECKING…</div></div>`;
+    panel.innerHTML = `<div class="monster-current-readiness-head"><div><p class="monster-current-readiness-kicker">CURRENT STOCK RATING™ READINESS · $${safe(ticker)}</p><h3>VERIFYING REQUIRED EVIDENCE</h3><p class="monster-current-readiness-summary">Checking the exact public API contracts for SEC identity, current quote, quote freshness, and SEC financial evidence. Risk evidence and a versioned Current Stock Rating™ calculation must also exist before any numeric rating can be shown.</p></div><div class="monster-current-readiness-state">CHECKING…</div></div>`;
   }
 
   function evidenceItem(label, ready, detail) {
@@ -179,54 +166,57 @@
     }
 
     const encoded = encodeURIComponent(ticker);
-    const [quote, fundamentals, analysis, sec] = await Promise.all([
-      getJson(`${base}/api/stock-quote?symbol=${encoded}`),
-      getJson(`${base}/api/fundamentals?symbol=${encoded}`),
-      getJson(`${base}/api/stock-analysis?symbol=${encoded}`),
-      getJson(`${base}/api/sec/company/${encoded}`, 65_000)
+    const [quoteResponse, secResponse, factsResponse, providerResponse] = await Promise.all([
+      getJson(`${base}/api/quotes/${encoded}`),
+      getJson(`${base}/api/sec/company/${encoded}`, 65_000),
+      getJson(`${base}/api/sec/facts/${encoded}`, 65_000),
+      getJson(`${base}/api/provider-status`)
     ]);
     if (generation !== state.generation) return;
 
-    const price = findExplicitValue(quote.data, FIELD_SETS.price);
-    const freshness = validQuoteFreshness(quote.data);
-    const financial = findExplicitValue(fundamentals.data, FIELD_SETS.financial);
-    const risk = findExplicitValue(analysis.data, FIELD_SETS.risk);
-    const score = findExplicitValue(analysis.data, FIELD_SETS.score);
-    const version = findExplicitValue(analysis.data, FIELD_SETS.version);
+    const quote = quoteResponse.ok ? quoteContract(quoteResponse.data, ticker) : { ready: false, reason: `Quote endpoint returned HTTP ${quoteResponse.status || "offline"}.` };
+    const sec = secResponse.ok ? secIdentityContract(secResponse.data, ticker) : { ready: false, reason: `SEC company endpoint returned HTTP ${secResponse.status || "offline"}.` };
+    const facts = factsResponse.ok ? secFactsContract(factsResponse.data, ticker) : { ready: false, reason: `SEC facts endpoint returned HTTP ${factsResponse.status || "offline"}.` };
+    const marketProviderConfigured = Boolean(providerResponse.ok && providerResponse.data?.marketData?.configured === true);
 
     const checks = {
-      sec: sec.ok && hasSubstantiveValue(sec.data) && symbolMatches(sec.data, ticker),
-      quote: quote.ok && isFiniteNumber(price) && Number(price) > 0 && symbolMatches(quote.data, ticker),
-      freshness: quote.ok && freshness.ready,
-      financial: fundamentals.ok && hasSubstantiveValue(financial) && symbolMatches(fundamentals.data, ticker),
-      risk: analysis.ok && hasSubstantiveValue(risk) && symbolMatches(analysis.data, ticker),
-      versioned: analysis.ok && validScore(score) && hasSubstantiveValue(version) && symbolMatches(analysis.data, ticker)
+      sec: sec.ready,
+      quote: quote.ready && marketProviderConfigured,
+      freshness: quote.ready,
+      financial: facts.ready,
+      risk: false,
+      versioned: false
     };
 
     const requiredReady = Object.values(checks).every(Boolean);
-    const displayedScore = requiredReady ? Number(score) : null;
-    const freshnessDetail = freshness.timestamp
-      ? `${freshness.timestamp.iso}${freshness.ready ? " · within allowed freshness window" : " · stale or future-dated"}`
-      : "Missing parseable quote/trade timestamp.";
+    const quoteDetail = quote.ready
+      ? `${quote.data.provider} · ${quote.data.price} ${quote.data.currency || ""} · ${quote.data.freshness}`.trim()
+      : quote.reason;
+    const freshnessDetail = quote.ready
+      ? `Observed ${quote.observed.parsed.iso} · retrieved ${quote.retrieved.parsed.iso}`
+      : quote.reason;
+    const factsDetail = facts.ready
+      ? `${Object.keys(facts.data.facts).length} SEC fact series · retrieved ${facts.retrieved.parsed.iso}`
+      : facts.reason;
 
     panel.innerHTML = `
       <div class="monster-current-readiness-head">
         <div>
           <p class="monster-current-readiness-kicker">CURRENT STOCK RATING™ READINESS · $${safe(ticker)}</p>
-          <h3>${requiredReady ? `VERIFIED CURRENT RATING ${safe(displayedScore)}` : "DATA INCOMPLETE / NOT YET RATED"}</h3>
-          <p class="monster-current-readiness-summary">${requiredReady ? `Every required evidence gate matches $${safe(ticker)} and passed fail-closed validation. Calculation version: ${safe(version)}.` : "A current numeric rating is deliberately withheld until every required evidence gate is present, ticker-matched, and fresh enough. Historical VCL™ demonstration scores never substitute for missing current evidence."}</p>
+          <h3>${requiredReady ? "VERIFIED CURRENT RATING" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
+          <p class="monster-current-readiness-summary">${requiredReady ? "Every required evidence gate passed the exact backend contract." : "The public API can now be checked against its exact supported fields. A numeric Current Stock Rating™ remains deliberately withheld until verified risk evidence and the versioned calculation endpoint are actually connected."}</p>
         </div>
-        <div class="monster-current-readiness-state ${requiredReady ? "ready" : ""}">${requiredReady ? `RATING ${safe(displayedScore)}` : "NOT YET RATED"}</div>
+        <div class="monster-current-readiness-state">${requiredReady ? "READY" : "NOT YET RATED"}</div>
       </div>
       <div class="monster-current-readiness-grid">
-        ${evidenceItem("SEC IDENTITY", checks.sec, checks.sec ? `SEC response explicitly matches $${ticker}.` : `SEC identity missing or symbol mismatch (HTTP ${sec.status || "offline"}).`)}
-        ${evidenceItem("MARKET QUOTE", checks.quote, checks.quote ? `Ticker-matched explicit price: ${price}` : `Missing positive ticker-matched price (HTTP ${quote.status || "offline"}).`)}
+        ${evidenceItem("SEC IDENTITY", checks.sec, checks.sec ? `SEC CIK ${sec.data.cik} explicitly matches $${ticker}.` : sec.reason)}
+        ${evidenceItem("MARKET QUOTE", checks.quote, marketProviderConfigured ? quoteDetail : "Market-data provider is not configured on the public API.")}
         ${evidenceItem("QUOTE FRESHNESS", checks.freshness, freshnessDetail)}
-        ${evidenceItem("FINANCIAL EVIDENCE", checks.financial, checks.financial ? "Ticker-matched current financial field(s) received." : `Required ticker-matched financial evidence missing (HTTP ${fundamentals.status || "offline"}).`)}
-        ${evidenceItem("RISK EVIDENCE", checks.risk, checks.risk ? "Ticker-matched risk field(s) received." : `Required ticker-matched risk evidence missing (HTTP ${analysis.status || "offline"}).`)}
-        ${evidenceItem("VERSIONED CALCULATION", checks.versioned, checks.versioned ? `Score ${score} · version ${version}` : "No 0–100 score is accepted without an explicit version and ticker match.")}
+        ${evidenceItem("FINANCIAL EVIDENCE", checks.financial, factsDetail)}
+        ${evidenceItem("RISK EVIDENCE", false, "No supported public machine-readable risk-evidence endpoint exists yet. This gate fails closed.")}
+        ${evidenceItem("VERSIONED CALCULATION", false, "No supported public versioned Current Stock Rating™ endpoint exists yet. No score is manufactured from demo data.")}
       </div>
-      <p class="monster-current-readiness-source">Required gates: SEC identity + positive current quote + fresh quote timestamp + current financial evidence + current risk evidence + versioned 0–100 calculation. Quote freshness is capped at 36 hours to survive weekends without accepting indefinitely stale data. Fail-closed means no manufactured number.</p>`;
+      <p class="monster-current-readiness-source">Exact live routes checked: /api/quotes/:symbol, /api/sec/company/:symbol, /api/sec/facts/:symbol, and /api/provider-status. The earlier guessed /api/stock-quote, /api/fundamentals, and /api/stock-analysis paths are no longer used.</p>`;
   }
 
   const state = { generation: 0, timer: null };
