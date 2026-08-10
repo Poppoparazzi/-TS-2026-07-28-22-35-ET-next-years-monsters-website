@@ -1,4 +1,4 @@
-// TS: 2026-08-10 03:13 UTC
+// TS: 2026-08-10 08:12 UTC
 
 import type { SecCompanyFactsSummary } from "../sec/types.js";
 import { buildAnnualFinancialPeriods } from "./financial-periods.js";
@@ -6,6 +6,7 @@ import { verifyMarketEvidence, type MarketEvidenceSource } from "./market-eviden
 import {
   MAXIMUM_MARKET_DATA_AGE_DAYS,
   MAXIMUM_RISK_EVIDENCE_AGE_DAYS,
+  MAXIMUM_SEC_EVIDENCE_AGE_DAYS,
 } from "./spec-v1.js";
 import type { ProductionRatingInput } from "./types.js";
 
@@ -86,6 +87,20 @@ export function assembleProductionRatingInput(
   if (!symbol) missing.add("company symbol identity");
   if (!source.secIdentityResolved || !source.secCik?.trim()) missing.add("verified SEC company identity");
   if (!validTimestamp(source.calculatedAt)) missing.add("versioned calculation timestamp");
+
+  const secSourceUrl = source.secFacts.sourceUrl?.trim() ?? "";
+  if (!secSourceUrl || !/^https:\/\/data\.sec\.gov\//i.test(secSourceUrl)) {
+    missing.add("verified SEC financial source provenance");
+  }
+  if (
+    !isFreshAt(
+      source.secFacts.retrievedAt ?? null,
+      source.calculatedAt,
+      MAXIMUM_SEC_EVIDENCE_AGE_DAYS,
+    )
+  ) {
+    missing.add("fresh verified SEC financial evidence");
+  }
 
   const financial = buildAnnualFinancialPeriods(source.secFacts);
   if (!financial.historyAvailable || financial.periods.length < 3) {
