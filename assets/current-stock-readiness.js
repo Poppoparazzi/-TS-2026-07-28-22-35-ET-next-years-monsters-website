@@ -1,7 +1,11 @@
-// TS: 2026-08-09 10:02 ET
+// TS: 2026-08-10 11:14 ET
 
 (() => {
   "use strict";
+
+  const MAX_QUOTE_AGE_MS = 36 * 60 * 60 * 1000;
+  const MAX_SEC_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
   const REQUIRED_INPUTS = [
     { key: "identity", label: "Official SEC company identity" },
@@ -21,6 +25,23 @@
     return String(node?.textContent ?? "").trim();
   }
 
+  function normalizeTicker(value) {
+    return String(value ?? "").trim().toUpperCase().replace(/^\$/, "");
+  }
+
+  function parseTimestamp(value) {
+    if (typeof value !== "string" || !value.trim()) return null;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function timestampIsCurrent(value, maxAgeMs) {
+    const parsed = parseTimestamp(value);
+    if (parsed === null) return false;
+    const ageMs = Date.now() - parsed;
+    return ageMs >= -FUTURE_TOLERANCE_MS && ageMs <= maxAgeMs;
+  }
+
   function isUnavailable(value) {
     const normalized = String(value ?? "").trim().toUpperCase();
     return !normalized || [
@@ -35,6 +56,7 @@
       "CHECKING EDGAR...",
       "SEC CONNECTION UNAVAILABLE",
       "NO RECENT FILING RETURNED",
+      "STALE",
     ].some((token) => normalized.includes(token));
   }
 
@@ -62,8 +84,13 @@
     return clientPromise;
   }
 
-  function machineEvidence(payload) {
+  function machineEvidence(payload, ticker) {
     if (!payload || typeof payload !== "object") {
+      return { filing: false, quote: false, freshness: false, financials: false, risk: false, calculation: false };
+    }
+
+    const expectedTicker = normalizeTicker(ticker);
+    if (normalizeTicker(payload.symbol) !== expectedTicker) {
       return { filing: false, quote: false, freshness: false, financials: false, risk: false, calculation: false };
     }
 
@@ -74,21 +101,38 @@
     const financialEvidence = inputs.filter((item) => ["sec-filing", "company-fact"].includes(item?.sourceType) && item?.value !== null && item?.value !== undefined);
     const riskComponent = components.find((item) => item?.key === "risk_deterioration");
 
-    const calculation = Boolean(
-      String(payload.engineVersion ?? "").trim() &&
-      String(payload.calculatedAt ?? "").trim() &&
-      typeof payload.eligible === "boolean" &&
-      (payload.eligible ? Number.isFinite(Number(payload.score)) : payload.score === null && String(payload.eligibilityCode ?? "").trim())
+    const filing = filingEvidence.some((item) =>
+      String(item?.sourceUrl ?? "").startsWith("https://www.sec.gov/") &&
+      (!item?.sourceTimestamp || timestampIsCurrent(item.sourceTimestamp, MAX_SEC_AGE_MS))
     );
 
-    return {
-      filing: filingEvidence.some((item) => String(item?.sourceUrl ?? "").trim()),
-      quote: marketEvidence.some((item) => Number.isFinite(Number(item?.value))),
-      freshness: marketEvidence.some((item) => String(item?.sourceTimestamp ?? "").trim()),
-      financials: financialEvidence.length > 0,
-      risk: Boolean(riskComponent && riskComponent.direction !== "unavailable"),
-      calculation,
-    };
+    const quote = marketEvidence.some((item) =>
+      Number.isFinite(Number(item?.value)) && Number(item.value) > 0 && String(item?.provider ?? item?.source ?? "").trim()
+    );
+
+    const freshness = marketEvidence.some((item) => timestampIsCurrent(item?.sourceTimestamp, MAX_QUOTE_AGE_MS));
+
+    const financials = financialEvidence.some((item) =>
+      String(item?.sourceUrl ?? "").startsWith("https://") &&
+      (!item?.sourceTimestamp || timestampIsCurrent(item.sourceTimestamp, MAX_SEC_AGE_MS))
+    );
+
+    const risk = Boolean(
+      riskComponent &&
+      riskComponent.direction !== "unavailable" &&
+      Number.isFinite(Number(riskComponent.score))
+    );
+
+    const calculation = Boolean(
+      String(payload.engineVersion ?? "").trim() &&
+      timestampIsCurrent(payload.calculatedAt, MAX_QUOTE_AGE_MS) &&
+      typeof payload.eligible === "boolean" &&
+      (payload.eligible
+        ? Number.isFinite(Number(payload.score)) && Number(payload.score) >= 0 && Number(payload.score) <= 100
+        : payload.score === null && String(payload.eligibilityCode ?? "").trim())
+    );
+
+    return { filing, quote, freshness, financials, risk, calculation };
   }
 
   function inspect(result, ticker) {
@@ -106,7 +150,7 @@
     const timeText = text(result.querySelector("[data-live-time]"));
     const freshness = quote && !isUnavailable(freshnessText) && !isUnavailable(timeText);
 
-    const machine = machineEvidence(ratingResults.get(ticker)?.data);
+    const machine = machineEvidence(ratingResults.get(ticker)?.data, ticker);
 
     return {
       identity: officialIdentity,
@@ -144,12 +188,14 @@
     if (!card || response?.status !== "ok" || !response.data) return;
 
     const rating = response.data;
+    const machine = machineEvidence(rating, ticker);
+    const machineComplete = [machine.filing, machine.quote, machine.freshness, machine.financials, machine.risk, machine.calculation].every(Boolean);
     const value = card.querySelector("strong");
     const status = card.querySelector("em");
     const copy = card.querySelector("p");
     if (!value || !status || !copy) return;
 
-    if (rating.eligible === true && Number.isFinite(Number(rating.score))) {
+    if (rating.eligible === true && Number.isFinite(Number(rating.score)) && machineComplete) {
       const score = Math.round(Number(rating.score));
       value.textContent = String(score);
       status.textContent = `${String(rating.tier ?? "VERIFIED").toUpperCase()} · CURRENT STOCK RATING™`;
@@ -161,9 +207,14 @@
     }
 
     value.textContent = "DATA INCOMPLETE";
-    status.textContent = `CURRENT STOCK RATING™ · ${String(rating.summary || "NOT YET RATED").toUpperCase()}`;
+    status.textContent = "CURRENT STOCK RATING™ · NOT YET RATED";
     const firstReason = Array.isArray(rating.reasons) ? rating.reasons[0]?.message : "";
-    copy.textContent = String(firstReason || "The production engine returned an explicit ineligible result, so no numeric Current Stock Rating™ is published.");
+    copy.textContent = String(
+      firstReason ||
+      (rating.eligible === true
+        ? "A numeric production result was withheld because one or more required machine-readable evidence gates could not be independently verified in the returned payload."
+        : "The production engine returned an explicit ineligible result, so no numeric Current Stock Rating™ is published.")
+    );
     card.dataset.productionRatingStatus = "ineligible";
     card.dataset.productionRatingEngine = String(rating.engineVersion ?? "");
     card.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}`);
@@ -194,8 +245,8 @@
     if (!result?.firstElementChild || getComputedStyle(result).display === "none") return;
 
     const tickerNode = result.querySelector(".monster-result-identity h2 span, .monster-launch-summary h2 span");
-    const ticker = text(tickerNode).replace(/^\$/,"" );
-    if (!ticker) return;
+    const ticker = normalizeTicker(text(tickerNode));
+    if (!ticker || !/^[A-Z0-9.-]{1,15}$/.test(ticker)) return;
 
     requestProductionRating(ticker, result);
     syncCurrentRatingCard(result, ticker);
@@ -233,7 +284,7 @@
           return `<li class="${present ? "is-ready" : "is-missing"}"><b>${present ? "✓" : "!"}</b><span>${item.label}<br><small>${present ? "VERIFIED IN THIS RESULT" : "REQUIRED BEFORE A CURRENT SCORE CAN BE PUBLISHED"}</small></span></li>`;
         }).join("")}
       </ul>
-      <p class="current-stock-readiness-note">This checklist now accepts machine-readable evidence from the production rating API when that API returns a validated stored calculation. SEC identity, a filing, or a quote alone still cannot create a Current Stock Rating™. If the production endpoint has no stored result or is unavailable, the score remains unpublished.</p>
+      <p class="current-stock-readiness-note">A numeric Current Stock Rating™ is shown only when the production payload itself independently proves the required filing, market, freshness, financial, risk, and versioned-calculation evidence. SEC identity, a filing, a quote, or an optimistic payload flag alone cannot create a score.</p>
     `;
   }
 
