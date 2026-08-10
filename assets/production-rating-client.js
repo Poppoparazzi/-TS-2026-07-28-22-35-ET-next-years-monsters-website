@@ -1,4 +1,4 @@
-// TS: 2026-08-09 10:02 ET
+// TS: 2026-08-10 14:08 ET
 
 (() => {
   "use strict";
@@ -14,14 +14,23 @@
     return String(window.NYM_CONFIG?.apiBaseUrl ?? "").replace(/\/$/, "");
   }
 
-  function isProductionRating(value) {
+  function isProductionRating(value, expectedSymbol) {
     if (!value || typeof value !== "object") return false;
-    if (typeof value.symbol !== "string") return false;
+
+    const symbol = normalizeSymbol(value.symbol);
+    if (!symbol || symbol !== expectedSymbol) return false;
     if (typeof value.engineVersion !== "string" || !value.engineVersion.trim()) return false;
     if (typeof value.calculatedAt !== "string" || !value.calculatedAt.trim()) return false;
     if (typeof value.eligible !== "boolean") return false;
-    if (value.eligible) return Number.isFinite(Number(value.score));
-    return value.score === null && typeof value.eligibilityCode === "string";
+
+    if (value.eligible) {
+      const score = Number(value.score);
+      return Number.isFinite(score) && score >= 0 && score <= 100;
+    }
+
+    return value.score === null &&
+      typeof value.eligibilityCode === "string" &&
+      Boolean(value.eligibilityCode.trim());
   }
 
   async function fetchRating(symbolValue) {
@@ -47,7 +56,7 @@
         }
 
         const data = await response.json();
-        if (!isProductionRating(data)) {
+        if (!isProductionRating(data, symbol)) {
           return { status: "invalid_payload", symbol, data: null };
         }
         return { status: "ok", symbol, data };
