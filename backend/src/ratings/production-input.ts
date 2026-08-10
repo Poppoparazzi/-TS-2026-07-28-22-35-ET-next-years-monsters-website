@@ -1,8 +1,13 @@
-// TS: 2026-08-10 08:12 UTC
+// TS: 2026-08-10 15:12 UTC
 
 import type { SecCompanyFactsSummary } from "../sec/types.js";
 import { buildAnnualFinancialPeriods } from "./financial-periods.js";
-import { verifyMarketEvidence, type MarketEvidenceSource } from "./market-evidence.js";
+import {
+  verifyCurrentQuoteEvidence,
+  verifyMarketEvidence,
+  type MarketEvidenceSource,
+  type RawCurrentQuote,
+} from "./market-evidence.js";
 import {
   MAXIMUM_MARKET_DATA_AGE_DAYS,
   MAXIMUM_RISK_EVIDENCE_AGE_DAYS,
@@ -28,6 +33,7 @@ export interface ProductionRatingAssemblySource {
   readonly secCik: string | null;
   readonly secFacts: SecCompanyFactsSummary;
   readonly companyMarket: MarketEvidenceSource;
+  readonly companyQuote: RawCurrentQuote;
   readonly benchmarkMarket: MarketEvidenceSource;
   readonly benchmarkSymbol: string;
   readonly riskEvidence: VerifiedRiskEvidence;
@@ -134,6 +140,13 @@ export function assembleProductionRatingInput(
     }
   }
 
+  const companyQuote = verifyCurrentQuoteEvidence(source.companyQuote, source.calculatedAt);
+  if (!companyQuote.verified) {
+    for (const item of companyQuote.missingEvidence) missing.add(item);
+  } else if (companyQuote.evidence.symbol !== symbol) {
+    missing.add("current-quote symbol match");
+  }
+
   const benchmarkMarket = verifyMarketEvidence(source.benchmarkMarket);
   if (!benchmarkMarket.verified) {
     for (const item of benchmarkMarket.missingEvidence) missing.add(`benchmark ${item}`);
@@ -185,7 +198,7 @@ export function assembleProductionRatingInput(
     });
   }
 
-  if (!companyMarket.verified || !benchmarkMarket.verified) {
+  if (!companyMarket.verified || !companyQuote.verified || !benchmarkMarket.verified) {
     throw new Error("Invariant violation: verified market evidence disappeared after readiness checks.");
   }
 
