@@ -1,4 +1,4 @@
-// TS: 2026-08-10 11:14 ET
+// TS: 2026-08-10 15:09 ET
 
 (() => {
   "use strict";
@@ -40,24 +40,6 @@
     if (parsed === null) return false;
     const ageMs = Date.now() - parsed;
     return ageMs >= -FUTURE_TOLERANCE_MS && ageMs <= maxAgeMs;
-  }
-
-  function isUnavailable(value) {
-    const normalized = String(value ?? "").trim().toUpperCase();
-    return !normalized || [
-      "CONNECTING…",
-      "CONNECTING...",
-      "UNAVAILABLE",
-      "NOT CONNECTED",
-      "MARKET DATA NOT CONNECTED",
-      "CHECKING PROVIDER…",
-      "CHECKING PROVIDER...",
-      "CHECKING EDGAR…",
-      "CHECKING EDGAR...",
-      "SEC CONNECTION UNAVAILABLE",
-      "NO RECENT FILING RETURNED",
-      "STALE",
-    ].some((token) => normalized.includes(token));
   }
 
   function ensureClient() {
@@ -138,25 +120,13 @@
   function inspect(result, ticker) {
     const flag = text(result.querySelector(".monster-demo-flag"));
     const officialIdentity = flag.includes("OFFICIAL SEC COMPANY RECORD");
-
-    const filingForm = text(result.querySelector("[data-live-filing-form]"));
-    const filingLink = result.querySelector("[data-live-filing-link][href]");
-    const filing = Boolean(filingLink) && !isUnavailable(filingForm);
-
-    const quoteText = text(result.querySelector("[data-live-price]"));
-    const quote = !isUnavailable(quoteText) && /\d/.test(quoteText);
-
-    const freshnessText = text(result.querySelector("[data-live-freshness]"));
-    const timeText = text(result.querySelector("[data-live-time]"));
-    const freshness = quote && !isUnavailable(freshnessText) && !isUnavailable(timeText);
-
     const machine = machineEvidence(ratingResults.get(ticker)?.data, ticker);
 
     return {
       identity: officialIdentity,
-      filing: filing || machine.filing,
-      quote: quote || machine.quote,
-      freshness: freshness || machine.freshness,
+      filing: machine.filing,
+      quote: machine.quote,
+      freshness: machine.freshness,
       financials: machine.financials,
       risk: machine.risk,
       calculation: machine.calculation,
@@ -281,10 +251,10 @@
       <ul class="current-stock-readiness-grid">
         ${REQUIRED_INPUTS.map((item) => {
           const present = Boolean(state[item.key]);
-          return `<li class="${present ? "is-ready" : "is-missing"}"><b>${present ? "✓" : "!"}</b><span>${item.label}<br><small>${present ? "VERIFIED IN THIS RESULT" : "REQUIRED BEFORE A CURRENT SCORE CAN BE PUBLISHED"}</small></span></li>`;
+          return `<li class="${present ? "is-ready" : "is-missing"}"><b>${present ? "✓" : "!"}</b><span>${item.label}<br><small>${present ? "VERIFIED IN PRODUCTION PAYLOAD" : "REQUIRED BEFORE A CURRENT SCORE CAN BE PUBLISHED"}</small></span></li>`;
         }).join("")}
       </ul>
-      <p class="current-stock-readiness-note">A numeric Current Stock Rating™ is shown only when the production payload itself independently proves the required filing, market, freshness, financial, risk, and versioned-calculation evidence. SEC identity, a filing, a quote, or an optimistic payload flag alone cannot create a score.</p>
+      <p class="current-stock-readiness-note">A numeric Current Stock Rating™ is shown only when the production payload itself independently proves the required filing, market, freshness, financial, risk, and versioned-calculation evidence. Visible page text can explain evidence, but it cannot satisfy a machine-verification gate or create a score.</p>
     `;
   }
 
