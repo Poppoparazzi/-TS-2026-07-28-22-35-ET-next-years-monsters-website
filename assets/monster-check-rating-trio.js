@@ -1,4 +1,4 @@
-// TS: 2026-08-10 13:04 ET
+// TS: 2026-08-10 16:01 ET
 
 (function installMonsterCheckRatingTrio() {
   "use strict";
@@ -107,8 +107,35 @@
     if (found && flag?.textContent.includes("NO SEC COMPANY MATCH FOUND")) {
       replaceText(flag, "MONSTER HUNT CASE · SEC PROFILE NOT CURRENTLY RETURNED");
       const emptyCopy = result.querySelector(".monster-empty-state > p:not(.monster-demo-flag)");
-      replaceText(emptyCopy, "This ticker is on the published Monster Hunt research board, but the official SEC company profile did not return from the current service lookup. The Hunt score remains research-board evidence, not a Current Stock Rating™.");
+      replaceText(
+        emptyCopy,
+        "This ticker is on the published Monster Hunt research board, but the official SEC company profile did not return from the current service lookup. The Hunt score remains research-board evidence, not a Current Stock Rating™."
+      );
     }
+
+    if (found && flag?.textContent.includes("HISTORICAL VCL")) {
+      const note = document.createElement("p");
+      note.className = "monster-rating-trio-note";
+      note.textContent = "This ticker is also an active Monster Hunt case. The historical VCL score below remains a case-study artifact; the live Future Monster Fingerprint Rating is shown in the three-answer panel above.";
+      const content = result.querySelector(":scope > .monster-investigator-result-content") || result;
+      if (!content.querySelector("[data-active-hunt-vcl-note]")) {
+        note.dataset.activeHuntVclNote = "true";
+        const trio = content.querySelector(":scope > .monster-rating-trio");
+        trio?.insertAdjacentElement("afterend", note);
+      }
+    }
+  }
+
+  function recoverSearchControls(result) {
+    const button = document.querySelector("[data-rate-button]");
+    if (!button || !button.disabled) return;
+
+    const flag = result.querySelector(".monster-demo-flag");
+    const stillLoading = flag?.textContent.includes("CHECKING OFFICIAL SEC RECORDS");
+    if (stillLoading) return;
+
+    button.disabled = false;
+    button.textContent = "RUN THE CHECK";
   }
 
   function injectStyles() {
@@ -199,7 +226,10 @@
     let frame = 0;
     const rerun = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(decorateResult);
+      frame = requestAnimationFrame(() => {
+        recoverSearchControls(result);
+        void decorateResult();
+      });
     };
     new MutationObserver(rerun).observe(result, { childList: true, subtree: true });
     rerun();
