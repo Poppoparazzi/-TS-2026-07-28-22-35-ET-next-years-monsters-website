@@ -1,4 +1,4 @@
-// TS: 2026-08-09 17:03 ET
+// TS: 2026-08-10 03:14 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -65,4 +65,76 @@ test("risk provenance cannot be replaced by an unverified boolean claim", () => 
   assert.equal(result.ready, false);
   if (result.ready) return;
   assert.ok(result.missingEvidence.includes("verified current risk evidence"));
+});
+
+test("stale company and benchmark market evidence fail closed before calculation", () => {
+  const result = assembleProductionRatingInput({
+    ...incompleteSource,
+    companyMarket: {
+      providerName: "licensed-test-provider",
+      providerConfigured: true,
+      fetchedAt: "2026-07-20T21:00:00Z",
+      symbol: "AAPL",
+      bars: [{ date: "2026-07-20", close: 200, volume: 1_000_000 }],
+    },
+    benchmarkMarket: {
+      providerName: "licensed-test-provider",
+      providerConfigured: true,
+      fetchedAt: "2026-07-20T21:00:00Z",
+      symbol: "SPY",
+      bars: [{ date: "2026-07-20", close: 600, volume: 10_000_000 }],
+    },
+    riskEvidence: {
+      verified: true,
+      checkedAt: "2026-08-09T20:57:00Z",
+      source: "verified-test-risk-source",
+      flags: [],
+    },
+  });
+
+  assert.equal(result.ready, false);
+  if (result.ready) return;
+  assert.ok(result.missingEvidence.includes("fresh company market evidence"));
+  assert.ok(result.missingEvidence.includes("fresh benchmark market evidence"));
+});
+
+test("stale risk evidence fails closed even when provenance is present", () => {
+  const result = assembleProductionRatingInput({
+    ...incompleteSource,
+    riskEvidence: {
+      verified: true,
+      checkedAt: "2026-07-20T20:57:00Z",
+      source: "verified-test-risk-source",
+      flags: ["example-source-flag"],
+    },
+  });
+
+  assert.equal(result.ready, false);
+  if (result.ready) return;
+  assert.ok(result.missingEvidence.includes("fresh verified risk evidence"));
+});
+
+test("market fetch timestamps cannot predate the observations they claim to contain", () => {
+  const result = assembleProductionRatingInput({
+    ...incompleteSource,
+    companyMarket: {
+      providerName: "licensed-test-provider",
+      providerConfigured: true,
+      fetchedAt: "2026-08-08T20:00:00Z",
+      symbol: "AAPL",
+      bars: [{ date: "2026-08-09", close: 200, volume: 1_000_000 }],
+    },
+    benchmarkMarket: {
+      providerName: "licensed-test-provider",
+      providerConfigured: true,
+      fetchedAt: "2026-08-08T20:00:00Z",
+      symbol: "SPY",
+      bars: [{ date: "2026-08-09", close: 600, volume: 10_000_000 }],
+    },
+  });
+
+  assert.equal(result.ready, false);
+  if (result.ready) return;
+  assert.ok(result.missingEvidence.includes("fresh company market evidence"));
+  assert.ok(result.missingEvidence.includes("fresh benchmark market evidence"));
 });
