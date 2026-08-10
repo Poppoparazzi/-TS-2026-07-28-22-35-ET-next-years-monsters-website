@@ -1,21 +1,23 @@
-<!-- TS: 2026-08-02 09:58 ET -->
+<!-- TS: 2026-08-10 18:04 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Start Here | Next Year’s Monsters™</title>
-  <meta name="description" content="A plain-English guide to using the Next Year’s Monsters™ website, including Monster Check™, Top Monsters, Full Charts, Market Pulse, News Radar, and the data-status labels.">
+  <meta name="description" content="A plain-English guide to using Next Year’s Monsters™: check your stock, read its current-rating status, compare its Future Monster fingerprint, and see where it sits in the Monster Hunt™.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/monster-check.css">
   <style>
     .start-page { background:#ebe4d6; color:#101311; }
-    .start-hero { padding:72px clamp(24px,6vw,92px) 52px; background:#0b100f; color:#fffaf0; border-bottom:8px solid var(--editorial-lime,#b8f34a); }
+    .start-hero { position:relative; overflow:hidden; padding:72px clamp(24px,6vw,92px) 52px; background:#0b100f; color:#fffaf0; border-bottom:8px solid var(--editorial-lime,#b8f34a); }
     .start-kicker { margin:0 0 18px; color:var(--editorial-lime,#b8f34a); font-size:12px; font-weight:950; letter-spacing:.08em; }
-    .start-hero h1 { margin:0; max-width:1040px; font-size:clamp(64px,11vw,150px); line-height:.86; letter-spacing:-.07em; }
+    .start-hero h1 { position:relative; z-index:2; margin:0; max-width:1040px; font-size:clamp(64px,11vw,150px); line-height:.86; letter-spacing:-.07em; }
     .start-hero h1 strong { color:var(--editorial-lime,#b8f34a); }
-    .start-hero p { max-width:860px; margin:26px 0 0; color:#e9e1d1; font-size:19px; line-height:1.55; }
+    .start-hero p { position:relative; z-index:2; max-width:860px; margin:26px 0 0; color:#e9e1d1; font-size:19px; line-height:1.55; }
+    .start-hero-mascot { position:absolute; right:clamp(18px,3vw,48px); bottom:-12px; z-index:1; width:clamp(110px,14vw,190px); margin:0; pointer-events:none; opacity:.96; }
+    .start-hero-mascot img { display:block; width:100%; height:auto; transform:scaleX(-1); filter:drop-shadow(0 16px 24px rgba(0,0,0,.38)); }
     .start-main { max-width:1180px; margin:0 auto; padding:48px 24px 80px; }
     .start-card { margin-bottom:24px; padding:28px; border:2px solid #111; background:#fffaf0; box-shadow:10px 10px 0 rgba(17,23,21,.12); }
     .start-card-dark { background:#111715; color:#fffaf0; }
@@ -30,11 +32,15 @@
     .start-action-row a:first-child { background:var(--editorial-lime,#b8f34a); color:#101311; }
     .start-note { padding:18px 20px; border-left:5px solid #e3362d; background:#f5ebdb; font-weight:800; }
     .start-script { white-space:pre-wrap; font-family:inherit; }
-    @media(max-width:800px){ .start-grid{grid-template-columns:1fr}.start-hero{padding:50px 24px 36px}.start-card{padding:22px} }
+    .start-three { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:18px; }
+    .start-three div { padding:18px; border:1px solid rgba(255,255,255,.18); background:#0c110f; }
+    .start-three span { display:block; color:#b8f34a; font-size:11px; font-weight:950; letter-spacing:.04em; }
+    .start-three strong { display:block; margin:8px 0; color:#fffaf0; font-size:20px; }
+    .start-three p { margin:0; color:#d2d8d2; font-size:13px; }
+    @media(max-width:800px){ .start-grid,.start-three{grid-template-columns:1fr}.start-hero{padding:50px 24px 36px}.start-card{padding:22px}.start-hero-mascot{width:92px;right:10px;bottom:-4px;opacity:.72}.start-hero h1,.start-hero p{max-width:calc(100% - 76px)} }
   </style>
 </head>
 <body class="start-page">
-
 <header class="site-header home-header">
   <div class="home-nav-shell">
     <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
@@ -45,102 +51,107 @@
       <a href="index.html">HOME</a>
       <a class="active" href="start-here.html">START HERE</a>
       <a href="monster-check.html">MONSTER CHECK</a>
-      <a href="top-monsters.html">TOP MONSTERS</a>
-      <a href="market-explorer.html">FULL CHARTS</a>
+      <a href="top-monsters.html">MONSTER HUNT</a>
+      <a href="vcl-library.html">VCL™ LIBRARY</a>
     </nav>
-    <a class="home-nav-cta" href="monster-check.html">CHECK A TICKER</a>
+    <a class="home-nav-cta" href="monster-check.html#ticker-search">CHECK A TICKER</a>
   </div>
 </header>
-
 <main>
   <section class="start-hero">
     <p class="start-kicker">NEW VISITOR GUIDE · READ THIS FIRST</p>
-    <h1>HOW TO USE<br><strong>THE SITE.</strong></h1>
-    <p>This is the quick guide for book readers, investors, friends, and anyone else who lands here and does not want to decode a website like it was recovered from an ancient trading desk.</p>
+    <h1>CHECK YOUR STOCK.<br><strong>FOLLOW THE EVIDENCE.</strong></h1>
+    <p>Next Year’s Monsters™ now separates three different questions that used to be too easy to mix together: how a stock rates today, whether it resembles a historical pre-breakout Monster, and where it sits in the active Monster Hunt™.</p>
+    <figure class="start-hero-mascot" aria-label="Detective Break reviewing the evidence">
+      <img src="assets/detective-break-actual.svg" alt="Detective Break reviewing the evidence">
+    </figure>
   </section>
 
   <section class="start-main">
     <article class="start-card start-card-dark">
       <h2>THE SIMPLE VERSION</h2>
       <ol>
-        <li>Start on the homepage and use the ticker search.</li>
-        <li>Open Monster Check™ to study one company.</li>
-        <li>Use Top Monsters to see the current 15-stock demonstration leaderboard.</li>
-        <li>Use Full Charts to study price action.</li>
-        <li>Use Market Pulse and News Radar for outside context.</li>
-        <li>Read every data label. Some items are live external tools, while Monster Ratings™ are still clearly labeled demonstrations until verified live scoring is fully connected.</li>
+        <li>Enter <strong>their stock</strong> in Monster Check™.</li>
+        <li>Read the <strong>Current Stock Rating™</strong> status. If required verified inputs are missing, it says <strong>Data Incomplete / Not Yet Rated</strong>. We do not manufacture a number.</li>
+        <li>Read the separate <strong>Future Monster Fingerprint Rating™</strong> when the company is part of the research board.</li>
+        <li>Read <strong>Monster Hunt Status</strong> to see whether it is Top 15, Rising, Watchlist, Dropped, an Established Leader, or Not Yet Evaluated.</li>
+        <li>Open the case file, evidence, chart, and historical VCL™ comparisons for context.</li>
       </ol>
+      <div class="start-three" aria-label="The three Monster Check answers">
+        <div><span>01 / THEIR STOCK</span><strong>Current Stock Rating™</strong><p>How the company rates today from verified present-day evidence when the required inputs are complete.</p></div>
+        <div><span>02 / FUTURE MONSTER</span><strong>Fingerprint Rating™</strong><p>How closely an active candidate matches the evidence seen in historical Monsters before their major climbs.</p></div>
+        <div><span>03 / THE HUNT</span><strong>Monster Hunt Status</strong><p>Where the company sits in the active research process right now.</p></div>
+      </div>
       <div class="start-action-row">
-        <a href="monster-check.html">RUN MONSTER CHECK™</a>
-        <a href="index.html">GO HOME</a>
+        <a href="monster-check.html#ticker-search">RUN MONSTER CHECK™</a>
+        <a href="top-monsters.html">OPEN THE MONSTER HUNT™</a>
       </div>
     </article>
 
     <div class="start-grid">
       <article class="start-card">
         <h2>1. HOME</h2>
-        <p>The homepage is the front door. It explains the idea, shows Captain Breakout, and gives you the fastest search box.</p>
-        <p>Use it when you are lost or when you want to restart the site flow.</p>
+        <p>The homepage is the front door. It explains the idea, introduces Captain Breakout™, and gives you the fastest route to a stock check.</p>
+        <p>Use HOME from any major page whenever you want to restart the flow.</p>
         <div class="start-action-row"><a href="index.html">OPEN HOME</a></div>
       </article>
 
       <article class="start-card">
         <h2>2. MONSTER CHECK™</h2>
-        <p>This is the most important book-release page. Enter a ticker or click one of the 15 VCL™ quick picks.</p>
-        <p>For the original 15 VCL™ stocks, the page shows the Monster Rating™, tier, explanation, Monster DNA™, Tipping Point™, Market Weather™, Move Driver™, chart link, news/filings link, and educational disclaimer.</p>
-        <div class="start-action-row"><a href="monster-check.html">OPEN MONSTER CHECK</a></div>
+        <p>Enter an exact U.S. ticker. Monster Check separates the current-stock question from the Future Monster question instead of pretending they are the same thing.</p>
+        <p>Historical VCL™ companies such as Apple, NVIDIA, Netflix and Microsoft remain educational case studies. Their historical case-study scores are <strong>not</strong> current stock ratings and do not automatically make them new-Monster candidates.</p>
+        <div class="start-action-row"><a href="monster-check.html#ticker-search">OPEN MONSTER CHECK</a></div>
       </article>
 
       <article class="start-card">
-        <h2>3. TOP MONSTERS</h2>
-        <p>This page ranks the 15 book-based demonstration companies. It also shows the live-data readiness board.</p>
-        <p class="start-note">If it says “not live yet,” believe it. That board is honest status tracking, not a failure to read your mind.</p>
-        <div class="start-action-row"><a href="top-monsters.html">OPEN TOP MONSTERS</a></div>
+        <h2>3. MONSTER HUNT™</h2>
+        <p>This is Detective Break’s active research board: <strong>Top 15, Rising Monsters™, Monster Watchlist™, and Dropped Cases™.</strong></p>
+        <p>The Future Monster Fingerprint score is a research ranking, not a probability forecast and not a recommendation to buy.</p>
+        <div class="start-action-row"><a href="top-monsters.html">OPEN MONSTER HUNT</a></div>
       </article>
 
       <article class="start-card">
-        <h2>4. FULL CHARTS</h2>
-        <p>Use Full Charts when you want a larger external chart for one stock or a side-by-side comparison.</p>
-        <p>Charts can be delayed depending on the external data source. They are for research context, not day-trading guarantees.</p>
+        <h2>4. VCL™ LIBRARY</h2>
+        <p>The Visual Case Library™ studies historical leaders and the evidence visible before, during and after their major moves.</p>
+        <p>Its historical case scores are teaching tools. They stay separate from today’s Current Stock Rating™ and today’s Monster Hunt™ ranking.</p>
+        <div class="start-action-row"><a href="vcl-library.html">OPEN VCL™</a></div>
+      </article>
+
+      <article class="start-card">
+        <h2>5. FULL CHARTS</h2>
+        <p>Use Full Charts for larger price-action views and comparisons. External chart data can be delayed depending on the provider.</p>
         <div class="start-action-row"><a href="market-explorer.html">OPEN FULL CHARTS</a></div>
       </article>
 
       <article class="start-card">
-        <h2>5. MARKET PULSE</h2>
-        <p>Market Pulse helps you understand the broader market weather around the stock: indexes, sectors, macro context, and market tone.</p>
-        <div class="start-action-row"><a href="market-pulse.html">OPEN MARKET PULSE</a></div>
-      </article>
-
-      <article class="start-card">
-        <h2>6. NEWS RADAR</h2>
-        <p>News Radar is for current-story context and company evidence. It must not invent rating impact when a verified source is not connected.</p>
-        <div class="start-action-row"><a href="news-radar.html">OPEN NEWS RADAR</a></div>
+        <h2>6. THE SYSTEM</h2>
+        <p>The System explains what evidence belongs in a current rating, what belongs in the Future Monster fingerprint, and why missing information stays visibly missing.</p>
+        <div class="start-action-row"><a href="how-it-works.html">OPEN THE SYSTEM</a></div>
       </article>
     </div>
 
     <article class="start-card">
-      <h2>WHAT IS LIVE VS DEMO?</h2>
+      <h2>WHAT IS LIVE RIGHT NOW?</h2>
       <ul>
-        <li><strong>External charts and ticker tape:</strong> visible market tools, may be delayed.</li>
-        <li><strong>SEC identity lookup:</strong> official company identity when the secure API is available.</li>
-        <li><strong>15 VCL™ Monster Ratings:</strong> book-release demonstrations, not verified live calculations yet.</li>
-        <li><strong>Live internal ratings:</strong> coming after secure backend, database, refresh jobs, and rating Version 1 are fully connected.</li>
+        <li><strong>SEC identity lookup:</strong> official company identity and filing evidence when the secure SEC service is available.</li>
+        <li><strong>Monster Hunt™ board:</strong> published research-board scores and tier positions for active candidates.</li>
+        <li><strong>Historical VCL™ case studies:</strong> educational historical comparisons, explicitly labeled as historical.</li>
+        <li><strong>Current Stock Rating™:</strong> only shown as a numeric score when the required verified business, financial, market, risk and freshness inputs are complete. Otherwise the result says <strong>Data Incomplete / Not Yet Rated</strong>.</li>
       </ul>
+      <p class="start-note">A blank or incomplete rating is intentional. Missing evidence is not secretly a zero, and it is definitely not an invitation for a decorative 92.</p>
     </article>
 
     <article class="start-card">
       <h2>QUICK VIDEO SCRIPT</h2>
-      <p>This can become a YouTube short, Facebook post, blog post, or weekend mini-class.</p>
-      <div class="start-script">Welcome to Next Year’s Monsters™. This site is the companion to the book. Start on the homepage, then run a Monster Check by typing a ticker. For the original 15 Visual Case Library stocks, you will see a demonstration Monster Rating™, the rating tier, the reason behind it, the Monster DNA™, the Tipping Point™, the Market Weather™, and the Move Driver™. Then you can open the full chart or the news and filings page. Top Monsters ranks the current 15 book-based demos, while the live-data board shows what is still being connected. The goal is simple: do not chase hype. Search the market, follow the evidence, and remember that the screen does not find guaranteed winners. It finds evidence.</div>
+      <p>This is the current short explanation of the site.</p>
+      <div class="start-script">Welcome to Next Year’s Monsters™. Start with Monster Check™ and enter a ticker. You will see three separate answers: how the stock rates today, whether it matches the historical fingerprints of a future Monster, and where it sits in the Monster Hunt™. If the verified inputs needed for a Current Stock Rating™ are incomplete, the site says so instead of inventing a score. Then open the Monster Hunt™ to see Detective Break’s Top 15, Rising Monsters™, Watchlist™, and Dropped Cases™, or open the VCL™ to study historical leaders. The screen does not find guaranteed winners. It finds evidence.</div>
     </article>
   </section>
 </main>
-
 <footer class="home-footer">
-  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>START WITH THE GUIDE. THEN RUN THE CHECK.</span></div>
-  <p><strong>Educational Use Only:</strong> Monster Rating™ is not a recommendation to buy, sell, or hold a security. Investing involves risk, including possible loss of principal.</p>
+  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>CHECK THE STOCK. CHECK THE FINGERPRINT. CHECK THE HUNT.</span></div>
+  <p><strong>Educational Use Only:</strong> Current Stock Rating™, Future Monster Fingerprint Rating™, Monster Hunt™ and related evidence tools are not recommendations to buy, sell, or hold a security. Investing involves risk, including possible loss of principal.</p>
 </footer>
-
 <script src="assets/market-ticker-strip.js"></script>
 </body>
 </html>
