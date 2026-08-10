@@ -1,4 +1,4 @@
-/* TS: 2026-08-08 09:34 ET */
+/* TS: 2026-08-10 08:04 ET */
 
 .tier-preview-page { margin:0; overflow-x:hidden; background:#f4efe3; color:#111512; font-family:Arial,Helvetica,sans-serif; }
 .tier-shell { width:min(1240px,92vw); margin:0 auto; }
@@ -55,4 +55,5 @@
 .tier-method-note p { margin:10px 0 0; color:#d4dad5; line-height:1.65; }
 .tier-loading { color:#58615a; }
 @media (max-width:1050px) { .tier-row { grid-template-columns:58px minmax(150px,.8fr) 120px minmax(220px,1.2fr) auto; } .tier-copy-risk { grid-column:2/-1; } .tier-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:760px) { .tier-hero { padding-top:54px; } .tier-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .tier-section-head { grid-template-columns:1fr; } .tier-row { grid-template-columns:44px 1fr; } .tier-score,.tier-copy,.tier-copy-risk,.tier-case-link { grid-column:2/-1; } .tier-case-link { justify-self:start; } .tier-card-grid { grid-template-columns:1fr; } }
+@media (max-width:760px) { .tier-hero { padding-top:54px; } .tier-section-head { grid-template-columns:1fr; } .tier-row { grid-template-columns:44px 1fr; } .tier-score,.tier-copy,.tier-copy-risk,.tier-case-link { grid-column:2/-1; } .tier-case-link { justify-self:start; } .tier-card-grid { grid-template-columns:1fr; } }
+@media (max-width:560px) { .tier-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
