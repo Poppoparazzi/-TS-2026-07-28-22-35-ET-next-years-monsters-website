@@ -2,8 +2,15 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateAndPersistProductionRating } from "../src/ratings/evaluation-service.js";
+import {
+  evaluateAndPersistProductionRating,
+  evaluatePersistAndVerifyProductionRating,
+} from "../src/ratings/evaluation-service.js";
 import type { ProductionRatingAssemblySource } from "../src/ratings/production-input.js";
+import type {
+  RatingReadStore,
+  RatingReadStoreStatus,
+} from "../src/ratings/read-store.js";
 import type {
   RatingWriteStore,
   SavedRatingResult,
@@ -61,6 +68,33 @@ class RecordingStore implements RatingWriteStore {
   public async close(): Promise<void> {}
 }
 
+class ReadBackStore implements RatingReadStore {
+  public readonly configured = true;
+
+  public constructor(private readonly current: Readonly<Record<string, unknown>> | null) {}
+
+  public async getCurrent(_symbol: string): Promise<Record<string, unknown> | null> {
+    return this.current ? { ...this.current } : null;
+  }
+
+  public async getHistory(): Promise<readonly Record<string, unknown>[]> {
+    return Object.freeze([]);
+  }
+
+  public async getStatus(): Promise<RatingReadStoreStatus> {
+    return Object.freeze({
+      configured: true,
+      schemaReady: true,
+      ratedCount: 0,
+      eligibilityCount: 1,
+      latestCalculatedAt: null,
+      message: "test",
+    });
+  }
+
+  public async close(): Promise<void> {}
+}
+
 test("fail-closed evaluation is persisted as Not Yet Rated rather than a score", async () => {
   const store = new RecordingStore();
   const persisted = await evaluateAndPersistProductionRating(incompleteSource, store);
@@ -90,5 +124,57 @@ test("unconfigured persistence blocks evaluation writes explicitly", async () =>
   await assert.rejects(
     evaluateAndPersistProductionRating(incompleteSource, store),
     /Production rating database is not configured/,
+  );
+});
+
+test("persisted Not Yet Rated result is verified through the public read store", async () => {
+  const writeStore = new RecordingStore();
+  const expected = await evaluateAndPersistProductionRating(incompleteSource, writeStore);
+  assert.ok(writeStore.savedResult);
+
+  const verificationWriteStore = new RecordingStore();
+  const readStore = new ReadBackStore({ ...writeStore.savedResult! });
+  const verified = await evaluatePersistAndVerifyProductionRating(
+    incompleteSource,
+    verificationWriteStore,
+    readStore,
+  );
+
+  assert.equal(verified.evaluation.ready, false);
+  assert.equal(verified.publicResult.symbol, expected.evaluation.result.symbol);
+  assert.equal(verified.publicResult.eligible, false);
+  assert.equal(verified.publicResult.score, null);
+  assert.equal(verified.publicResult.tier, null);
+  assert.equal(verified.publicResult.engineVersion, expected.evaluation.result.engineVersion);
+});
+
+test("read-back mismatch is rejected as an integrity failure", async () => {
+  const writeStore = new RecordingStore();
+  const expected = await evaluateAndPersistProductionRating(incompleteSource, writeStore);
+  assert.ok(writeStore.savedResult);
+
+  const verificationWriteStore = new RecordingStore();
+  const readStore = new ReadBackStore({
+    ...writeStore.savedResult!,
+    engineVersion: `${expected.evaluation.result.engineVersion}-wrong`,
+  });
+
+  await assert.rejects(
+    evaluatePersistAndVerifyProductionRating(
+      incompleteSource,
+      verificationWriteStore,
+      readStore,
+    ),
+    /read-back mismatch.*engineVersion/i,
+  );
+});
+
+test("missing public read-back is rejected rather than silently accepted", async () => {
+  const writeStore = new RecordingStore();
+  const readStore = new ReadBackStore(null);
+
+  await assert.rejects(
+    evaluatePersistAndVerifyProductionRating(incompleteSource, writeStore, readStore),
+    /was not readable/,
   );
 });
