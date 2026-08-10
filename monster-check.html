@@ -1,116 +1,36 @@
-<!-- TS: 2026-08-10 04:17 ET -->
+<!-- TS: 2026-08-10 13:07 ET -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Monster Check™ | Next Year’s Monsters™</title>
-  <meta name="description" content="Enter a stock ticker to see its illustrative Monster Rating™, evidence, risks, future watch points, and the structure planned for live news impact.">
+  <meta name="description" content="Enter a stock ticker to review its verified current-stock evidence, separate Future Monster fingerprint status where applicable, risks, and SEC identity.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/monster-check.css">
   <style>
-    .monster-chart-door {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      align-items: center;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(255,255,255,.18);
-    }
-    .monster-chart-door span {
-      color: #c4c8c2;
-      font-size: 12px;
-      font-weight: 800;
-      line-height: 1.45;
-    }
-    .monster-result-chart-link {
-      display: inline-flex;
-      margin-top: 18px;
-      text-decoration: none;
-    }
-    .monster-shortcut-guide {
-      margin: 14px 0 0;
-      color: #9ea59f;
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: .045em;
-    }
-    .monster-suggestions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px 18px;
-      align-items: center;
-      margin-top: 12px;
-    }
-    .monster-stock-shortcut {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 48px;
-      border: 0;
-      background: transparent;
-    }
-    .monster-stock-shortcut .chip {
-      min-width: 86px;
-      height: 44px;
-      margin: 0;
-      padding: 0 18px;
-      border: 1px solid rgba(255,255,255,.3);
-      border-radius: 999px;
-      background: #1b211f;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 950;
-      letter-spacing: .04em;
-    }
-    .monster-stock-shortcut .chip:hover,
-    .monster-stock-shortcut .chip:focus-visible {
-      border-color: var(--editorial-lime);
-      background: #2a312e;
-      color: var(--editorial-lime);
-    }
-    .monster-shortcut-chart {
-      display: grid;
-      width: 48px;
-      height: 48px;
-      place-items: center;
-      flex: 0 0 48px;
-      border: 2px solid #f5d36a;
-      border-radius: 50%;
-      background: var(--editorial-gold);
-      color: #080c0b;
-      font-size: 9px;
-      font-weight: 950;
-      letter-spacing: .025em;
-      line-height: 1;
-      text-decoration: none;
-      box-shadow: 0 5px 14px rgba(0,0,0,.28);
-      transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
-    }
-    .monster-shortcut-chart:hover,
-    .monster-shortcut-chart:focus-visible {
-      background: #f1c94a;
-      box-shadow: 0 7px 18px rgba(0,0,0,.36);
-      transform: translateY(-1px) scale(1.04);
-    }
-    .monster-shortcut-chart:focus-visible {
-      outline: 3px solid var(--editorial-lime);
-      outline-offset: 3px;
-    }
-    @media (max-width:650px) {
-      .monster-hero h1 { font-size: clamp(62px, 18.5vw, 82px); }
-      .monster-suggestions { gap: 12px 14px; }
-      .monster-stock-shortcut .chip {
-        min-width: 78px;
-        padding: 0 14px;
-      }
-      .monster-shortcut-chart {
-        width: 44px;
-        height: 44px;
-        flex-basis: 44px;
-      }
-    }
+    .monster-chart-door {display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.18)}
+    .monster-chart-door span {color:#c4c8c2;font-size:12px;font-weight:800;line-height:1.45}
+    .monster-result-chart-link {display:inline-flex;margin-top:18px;text-decoration:none}
+    .monster-shortcut-guide {margin:14px 0 0;color:#9ea59f;font-size:10px;font-weight:900;letter-spacing:.045em}
+    .monster-suggestions {display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;margin-top:12px}
+    .monster-stock-shortcut {display:inline-flex;align-items:center;gap:8px;min-height:48px;border:0;background:transparent}
+    .monster-stock-shortcut .chip {min-width:86px;height:44px;margin:0;padding:0 18px;border:1px solid rgba(255,255,255,.3);border-radius:999px;background:#1b211f;color:#fff;font-size:11px;font-weight:950;letter-spacing:.04em}
+    .monster-stock-shortcut .chip:hover,.monster-stock-shortcut .chip:focus-visible {border-color:var(--editorial-lime);background:#2a312e;color:var(--editorial-lime)}
+    .monster-shortcut-chart {display:grid;width:48px;height:48px;place-items:center;flex:0 0 48px;border:2px solid #f5d36a;border-radius:50%;background:var(--editorial-gold);color:#080c0b;font-size:9px;font-weight:950;letter-spacing:.025em;line-height:1;text-decoration:none;box-shadow:0 5px 14px rgba(0,0,0,.28);transition:transform .16s ease,background .16s ease,box-shadow .16s ease}
+    .monster-shortcut-chart:hover,.monster-shortcut-chart:focus-visible {background:#f1c94a;box-shadow:0 7px 18px rgba(0,0,0,.36);transform:translateY(-1px) scale(1.04)}
+    .monster-shortcut-chart:focus-visible {outline:3px solid var(--editorial-lime);outline-offset:3px}
+    .monster-rating-architecture {padding:46px max(24px,calc((100vw - 1240px)/2));background:#f5f0e5;color:#101512}
+    .monster-rating-architecture h2 {margin:0 0 20px;font-size:clamp(30px,4vw,54px);line-height:.95}
+    .monster-rating-architecture>p {max-width:900px;margin:0 0 24px;color:#4a524c;line-height:1.55}
+    .monster-rating-architecture-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .monster-rating-architecture-grid article {min-height:180px;padding:22px;background:#fffaf0;border-top:5px solid #111512}
+    .monster-rating-architecture-grid article:nth-child(2) {border-top-color:#9fcf35}.monster-rating-architecture-grid article:nth-child(3) {border-top-color:#d84a45}
+    .monster-rating-architecture-grid span {display:block;margin-bottom:12px;color:#727a74;font-size:10px;font-weight:950;letter-spacing:.06em}
+    .monster-rating-architecture-grid strong {display:block;margin-bottom:10px;font-size:20px}
+    .monster-rating-architecture-grid p {margin:0;color:#4e5650;line-height:1.5}
+    @media (max-width:800px){.monster-rating-architecture-grid{grid-template-columns:1fr}}
+    @media (max-width:650px){.monster-hero h1{font-size:clamp(62px,18.5vw,82px)}.monster-suggestions{gap:12px 14px}.monster-stock-shortcut .chip{min-width:78px;padding:0 14px}.monster-shortcut-chart{width:44px;height:44px;flex-basis:44px}}
   </style>
   <link rel="stylesheet" href="assets/monster-autocomplete.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
@@ -119,101 +39,51 @@
   <link rel="stylesheet" href="assets/data-status.css">
 </head>
 <body class="monster-page">
-
 <header class="site-header home-header">
   <div class="home-nav-shell">
-    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home">
-      <span class="home-brand-arrow">↗</span>
-      <span>NEXT YEAR’S MONSTERS™</span>
-    </a>
+    <a class="brand home-brand" href="index.html" aria-label="Next Year's Monsters home"><span class="home-brand-arrow">↗</span><span>NEXT YEAR’S MONSTERS™</span></a>
     <nav class="nav-links home-nav-links" aria-label="Main navigation">
-      <a class="active" href="monster-check.html">MONSTER CHECK</a>
-      <a href="top-monsters.html">TOP MONSTERS</a>
-      <a href="how-it-works.html">THE SYSTEM</a>
-      <a href="vcl-library.html">VCL™ LIBRARY</a>
-      <a href="about.html">ABOUT</a>
+      <a href="index.html">HOME</a><a href="start-here.html">START HERE</a><a class="active" href="monster-check.html">MONSTER CHECK</a><a href="top-monsters.html">MONSTER HUNT</a><a href="how-it-works.html">THE SYSTEM</a><a href="vcl-library.html">VCL™ LIBRARY</a><a href="about.html">ABOUT</a>
     </nav>
     <a class="home-nav-cta" href="#ticker-search">CHECK A TICKER</a>
   </div>
 </header>
-
 <main>
   <section class="monster-hero">
     <div class="monster-hero-copy">
       <p class="home-kicker"><span></span> ENTER THE SYMBOL. READ THE EVIDENCE.</p>
       <h1>MONSTER<br><strong>CHECK™</strong></h1>
-      <p class="monster-hero-line">ONE SCORE GETS YOUR ATTENTION. THE EVIDENCE EARNS YOUR TRUST.</p>
-      <p class="monster-hero-text">Search the original 15-stock demonstration by ticker or company name—or enter another exact U.S. ticker to load its official SEC identity and latest filing without inventing a rating.</p>
-      <p class="monster-hero-text vcl-brief"><strong>VCL™ means Visual Case Library.</strong> It uses dated charts to study what happened before, during, and after a major stock move.</p>
+      <p class="monster-hero-line">RATE THEIR STOCK TODAY. KEEP FUTURE-MONSTER POTENTIAL SEPARATE.</p>
+      <p class="monster-hero-text">Enter an exact U.S. ticker. Monster Check™ separates a stock’s current evidence from the Future Monster Fingerprint™ used in the Monster Hunt. When required data is incomplete, the result says so instead of manufacturing a score.</p>
+      <p class="monster-hero-text vcl-brief"><strong>VCL™ means Visual Case Library.</strong> Historical cases remain educational examples and are not treated as current Future Monster candidates merely because they became great companies.</p>
     </div>
-    <div class="monster-hero-art">
-      <div class="monster-meter" aria-label="Monster Rating scale from 0 to 100">
-        <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
-      </div>
-      <img src="captain_breakout.png" alt="Approved full-color Captain Breakout">
-      <p>CAPTAIN BREAKOUT / EVIDENCE BEFORE EXCITEMENT</p>
+    <div class="monster-hero-art"><div class="monster-meter" aria-label="Monster Rating scale from 0 to 100"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div><img src="captain_breakout.png" alt="Approved full-color Captain Breakout"><p>CAPTAIN BREAKOUT / EVIDENCE BEFORE EXCITEMENT</p></div>
+  </section>
+  <section class="monster-rating-architecture" aria-labelledby="monster-rating-architecture-title">
+    <h2 id="monster-rating-architecture-title">THREE ANSWERS. THREE DIFFERENT QUESTIONS.</h2>
+    <p>A mature leader can be an excellent stock without being a new Monster candidate. Monster Check™ keeps those ideas separate so a visitor can check the stock they care about without confusing present quality with future-Monster screening.</p>
+    <div class="monster-rating-architecture-grid">
+      <article><span>01 / THEIR STOCK</span><strong>CURRENT STOCK RATING™</strong><p>Measures the company as it exists now using verified business, financial, market, risk, and data-completeness evidence. If required inputs are missing, the result is Data Incomplete / Not Yet Rated.</p></article>
+      <article><span>02 / FUTURE MONSTER</span><strong>FUTURE MONSTER FINGERPRINT RATING™</strong><p>Measures similarity to historical pre-breakout Monster fingerprints. Established historical leaders can show N/A here even when their Current Stock Rating is strong.</p></article>
+      <article><span>03 / THE HUNT</span><strong>MONSTER HUNT STATUS</strong><p>Shows whether the company is Top 15, Rising Monster, Watchlist, Dropped Case, Established Leader / Not a Future-Monster Candidate, or Not Yet Evaluated.</p></article>
     </div>
   </section>
-
   <section class="monster-search" id="ticker-search">
-    <div class="monster-search-intro">
-      <span class="home-section-number">00 / SEARCH</span>
-      <h2>WHAT DOES THIS STOCK HAVE?</h2>
-      <p>Enter an exact ticker. The original 15 Visual Case Library™ companies include deeper educational demonstrations; other SEC-listed companies receive an official SEC profile with no unverified rating.</p>
-    </div>
-
+    <div class="monster-search-intro"><span class="home-section-number">00 / SEARCH</span><h2>WHAT DOES THEIR STOCK HAVE?</h2><p>Enter an exact ticker. Official SEC identity is available for covered U.S. companies. A Current Stock Rating™ appears only when the required verified evidence is complete; otherwise Monster Check™ reports the missing-data boundary plainly.</p></div>
     <div class="monster-search-panel">
       <label for="monster-ticker">MONSTER CHECK™</label>
-      <div class="monster-search-input-shell">
-        <div class="monster-search-row">
-          <span>$</span>
-          <input id="monster-ticker" data-ticker-input aria-label="Ticker or company name" placeholder="ENTER STOCK SYMBOL" autocomplete="off">
-          <button data-rate-button type="button">RUN THE CHECK</button>
-        </div>
-        <div id="monster-autocomplete-list" class="monster-autocomplete" data-monster-autocomplete role="listbox" aria-label="Matching stocks" hidden></div>
-      </div>
-      <p class="monster-shortcut-guide">QUICK PICKS · ALL 15 VCL™ DEMOS · TICKER OPENS THE CHECK · GOLD CIRCLE OPENS THE CHART</p>
+      <div class="monster-search-input-shell"><div class="monster-search-row"><span>$</span><input id="monster-ticker" data-ticker-input aria-label="Ticker or company name" placeholder="ENTER STOCK SYMBOL" autocomplete="off"><button data-rate-button type="button">RUN THE CHECK</button></div><div id="monster-autocomplete-list" class="monster-autocomplete" data-monster-autocomplete role="listbox" aria-label="Matching stocks" hidden></div></div>
+      <p class="monster-shortcut-guide">QUICK PICKS · HISTORICAL VCL™ CASES · TICKER OPENS THE CHECK · GOLD CIRCLE OPENS THE CHART</p>
       <div class="suggestions monster-suggestions" data-suggestions></div>
-      <div class="monster-chart-door">
-        <a class="home-btn home-btn-green" href="market-explorer.html?mode=single">OPEN FULL CHARTS →</a>
-        <span>Every selected stock result also includes its own larger full-chart button below.</span>
-      </div>
-      <p class="monster-demo-note">OFFICIAL SEC PROFILES ARE LIVE FOR EXACT U.S. TICKERS. VERIFIED MONSTER RATINGS™ REMAIN CLEARLY LABELED DEMONSTRATIONS.</p>
+      <div class="monster-chart-door"><a class="home-btn home-btn-green" href="market-explorer.html?mode=single">OPEN FULL CHARTS →</a><span>Every selected stock result also includes its own larger full-chart button below.</span></div>
+      <p class="monster-demo-note">OFFICIAL SEC PROFILES ARE LIVE FOR EXACT U.S. TICKERS. HISTORICAL VCL™ CASE STUDIES ARE CLEARLY LABELED AND ARE NOT CURRENT STOCK RATINGS.</p>
     </div>
   </section>
-
-  <section class="monster-result-shell" aria-live="polite">
-    <div class="result-card monster-result" data-result></div>
-  </section>
-
-  <div class="concept-tape" aria-label="Next Year's Monsters evidence concepts">
-    <div class="concept-tape-track">
-      <span>RECENT NEWS</span><b>◆</b><span>RATING IMPACT</span><b>◆</b><span>WHAT TO WATCH</span><b>◆</b><span>MONSTER DNA™</span><b>◆</b><span>MARKET WEATHER™</span><b>◆</b><span>RISK SIGNALS</span><b>◆</b>
-      <span>RECENT NEWS</span><b>◆</b><span>RATING IMPACT</span><b>◆</b><span>WHAT TO WATCH</span><b>◆</b><span>MONSTER DNA™</span><b>◆</b><span>MARKET WEATHER™</span><b>◆</b><span>RISK SIGNALS</span><b>◆</b>
-    </div>
-  </div>
-
-  <section class="monster-roadmap">
-    <div class="home-section-rule">
-      <span>THE LIVE VERSION</span>
-      <span>01 / WHAT COMES NEXT</span>
-    </div>
-    <div class="monster-roadmap-grid">
-      <h2>FROM DEMO<br>TO 2,000+<br>TICKERS.</h2>
-      <div>
-        <article><strong>LIVE MARKET DATA</strong><p>Price, volume, trend, relative strength, and market context refreshed during market hours.</p></article>
-        <article><strong>VERIFIED NEWS IMPACT</strong><p>Recent developments linked to the rating components they strengthen, weaken, or leave unchanged.</p></article>
-        <article><strong>RATING HISTORY</strong><p>A dated record showing why a score rose, fell, or stayed put.</p></article>
-      </div>
-    </div>
-  </section>
+  <section class="monster-result-shell" aria-live="polite"><div class="result-card monster-result" data-result></div></section>
+  <div class="concept-tape" aria-label="Next Year's Monsters evidence concepts"><div class="concept-tape-track"><span>RECENT NEWS</span><b>◆</b><span>RATING IMPACT</span><b>◆</b><span>WHAT TO WATCH</span><b>◆</b><span>MONSTER DNA™</span><b>◆</b><span>MARKET WEATHER™</span><b>◆</b><span>RISK SIGNALS</span><b>◆</b><span>RECENT NEWS</span><b>◆</b><span>RATING IMPACT</span><b>◆</b><span>WHAT TO WATCH</span><b>◆</b><span>MONSTER DNA™</span><b>◆</b><span>MARKET WEATHER™</span><b>◆</b><span>RISK SIGNALS</span><b>◆</b></div></div>
+  <section class="monster-roadmap"><div class="home-section-rule"><span>THE LIVE VERSION</span><span>01 / WHAT COMES NEXT</span></div><div class="monster-roadmap-grid"><h2>FROM SEC IDENTITY<br>TO VERIFIED<br>RATINGS.</h2><div><article><strong>CURRENT STOCK RATING™</strong><p>Present-day company quality and market evidence, calculated only when the required verified inputs are complete.</p></article><article><strong>FUTURE MONSTER FINGERPRINT™</strong><p>A separate historical-pattern score for active Monster Hunt candidates, never a disguised general-stock quality score.</p></article><article><strong>RATING HISTORY</strong><p>A dated record showing why a verified score rose, fell, or stayed put without rewriting old results.</p></article></div></div></section>
 </main>
-
-<footer class="home-footer">
-  <div><strong>NEXT YEAR’S MONSTERS™</strong><span>THE SCREEN DOES NOT FIND GUARANTEED WINNERS. IT FINDS EVIDENCE.</span></div>
-  <p><strong>Educational Use Only:</strong> Monster Rating™ is not a recommendation to buy, sell, or hold any security and does not guarantee future performance. Market conditions and company fundamentals can change rapidly. Investing involves risk, including possible loss of principal.</p>
-</footer>
-
+<footer class="home-footer"><div><strong>NEXT YEAR’S MONSTERS™</strong><span>THE SCREEN DOES NOT FIND GUARANTEED WINNERS. IT FINDS EVIDENCE.</span></div><p><strong>Educational Use Only:</strong> Monster Rating™ and related evidence tools are not recommendations to buy, sell, or hold any security and do not guarantee future performance. Market conditions and company fundamentals can change rapidly. Investing involves risk, including possible loss of principal.</p></footer>
 <script src="assets/runtime-config.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/monster-check-launch-result.js"></script>
@@ -222,7 +92,8 @@
 <script src="assets/monster-query.js"></script>
 <script src="assets/monster-autocomplete.js"></script>
 <script src="assets/monster-chart-link.js"></script>
+<script src="assets/monster-check-rating-trio.js"></script>
+<script src="assets/current-stock-readiness.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
-<script src="assets/monster-check-current-readiness.js"></script>
 </body>
 </html>
