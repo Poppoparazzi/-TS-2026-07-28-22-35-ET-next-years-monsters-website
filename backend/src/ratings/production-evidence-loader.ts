@@ -1,7 +1,10 @@
-// TS: 2026-08-10 03:04 UTC
+// TS: 2026-08-10 15:16 UTC
 
 import type { SecCompanyFactsSummary, SecDataProvider } from "../sec/types.js";
-import type { MarketEvidenceSource } from "./market-evidence.js";
+import type {
+  MarketEvidenceSource,
+  RawCurrentQuote,
+} from "./market-evidence.js";
 import type {
   ProductionRatingAssemblySource,
   VerifiedRiskEvidence,
@@ -14,6 +17,12 @@ export interface ProductionMarketEvidenceProvider {
   load(symbol: string, calculatedAt: string): Promise<MarketEvidenceSource>;
 }
 
+export interface ProductionCurrentQuoteProvider {
+  readonly name: string;
+  readonly configured: boolean;
+  load(symbol: string, calculatedAt: string): Promise<RawCurrentQuote>;
+}
+
 export interface ProductionRiskEvidenceProvider {
   readonly name: string;
   readonly configured: boolean;
@@ -23,6 +32,7 @@ export interface ProductionRiskEvidenceProvider {
 export interface ProductionEvidenceLoaderDependencies {
   readonly secProvider: SecDataProvider;
   readonly companyMarketProvider?: ProductionMarketEvidenceProvider | null;
+  readonly companyQuoteProvider?: ProductionCurrentQuoteProvider | null;
   readonly benchmarkMarketProvider?: ProductionMarketEvidenceProvider | null;
   readonly riskProvider?: ProductionRiskEvidenceProvider | null;
   readonly benchmarkSymbol?: string;
@@ -59,6 +69,20 @@ function unavailableMarketEvidence(
     fetchedAt: null,
     symbol,
     bars: Object.freeze([]),
+  });
+}
+
+function unavailableCurrentQuote(
+  symbol: string,
+  provider: ProductionCurrentQuoteProvider | null | undefined,
+): RawCurrentQuote {
+  return Object.freeze({
+    symbol,
+    price: null,
+    observedAt: null,
+    fetchedAt: null,
+    providerName: provider?.name?.trim() || null,
+    providerConfigured: provider?.configured === true,
   });
 }
 
@@ -158,6 +182,24 @@ export class ProductionSingleSymbolEvidenceLoader implements SingleSymbolEvidenc
     }
   }
 
+  private async loadQuote(
+    symbol: string,
+    calculatedAt: string,
+  ): Promise<RawCurrentQuote> {
+    const provider = this.dependencies.companyQuoteProvider;
+    if (!provider?.configured) return unavailableCurrentQuote(symbol, provider);
+
+    try {
+      const quote = await provider.load(symbol, calculatedAt);
+      if (normalizeSymbol(quote.symbol) !== symbol) {
+        return unavailableCurrentQuote(symbol, provider);
+      }
+      return quote;
+    } catch {
+      return unavailableCurrentQuote(symbol, provider);
+    }
+  }
+
   private async loadRisk(
     symbol: string,
     calculatedAt: string,
@@ -179,12 +221,13 @@ export class ProductionSingleSymbolEvidenceLoader implements SingleSymbolEvidenc
     const symbol = normalizeSymbol(rawSymbol);
     const sec = await this.loadSec(symbol, calculatedAt);
 
-    const [companyMarket, benchmarkMarket, riskEvidence] = await Promise.all([
+    const [companyMarket, companyQuote, benchmarkMarket, riskEvidence] = await Promise.all([
       this.loadMarket(
         symbol,
         calculatedAt,
         this.dependencies.companyMarketProvider,
       ),
+      this.loadQuote(symbol, calculatedAt),
       this.loadMarket(
         this.benchmarkSymbol,
         calculatedAt,
@@ -202,6 +245,7 @@ export class ProductionSingleSymbolEvidenceLoader implements SingleSymbolEvidenc
       secCik: sec.secCik,
       secFacts: sec.secFacts,
       companyMarket,
+      companyQuote,
       benchmarkMarket,
       benchmarkSymbol: this.benchmarkSymbol,
       riskEvidence,
