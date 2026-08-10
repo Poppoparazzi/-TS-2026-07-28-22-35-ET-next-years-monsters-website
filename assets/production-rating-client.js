@@ -1,4 +1,4 @@
-// TS: 2026-08-10 14:08 ET
+// TS: 2026-08-10 17:05 ET
 
 (() => {
   "use strict";
@@ -66,6 +66,11 @@
     })();
 
     cache.set(symbol, pending);
+    pending.then((result) => {
+      if (result?.status !== "ok" && cache.get(symbol) === pending) {
+        cache.delete(symbol);
+      }
+    });
     return pending;
   }
 
