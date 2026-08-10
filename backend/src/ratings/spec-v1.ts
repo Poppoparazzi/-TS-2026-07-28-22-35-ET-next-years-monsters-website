@@ -1,4 +1,4 @@
-// TS: 2026-08-10 03:12 UTC
+// TS: 2026-08-10 08:10 UTC
 
 import type { RatingComponentKey, RatingTier } from "./types.js";
 
@@ -6,6 +6,7 @@ export const MONSTER_RATING_ENGINE_VERSION = "nym-rating-v1.0.0";
 export const MINIMUM_FINANCIAL_PERIODS = 2;
 export const MINIMUM_MARKET_BARS = 126;
 export const MAXIMUM_MARKET_DATA_AGE_DAYS = 7;
+export const MAXIMUM_SEC_EVIDENCE_AGE_DAYS = 7;
 export const MAXIMUM_RISK_EVIDENCE_AGE_DAYS = 7;
 export const MINIMUM_AVERAGE_DOLLAR_VOLUME_20D = 500_000;
 export const MINIMUM_DATA_COMPLETENESS_SCORE = 70;
