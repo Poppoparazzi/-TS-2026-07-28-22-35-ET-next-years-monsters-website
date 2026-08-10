@@ -1,0 +1,9 @@
+/* TS: 2026-08-10 10:14 ET */
+.tier-hero{position:relative;overflow:hidden;min-height:520px}
+.tier-hero .tier-shell{position:relative;z-index:2}
+.tier-detective-break{position:absolute;right:2.4vw;bottom:0;z-index:3;width:min(300px,24vw);margin:0;text-align:center;pointer-events:none}
+.tier-detective-break img{display:block;width:100%;height:auto;max-height:450px;object-fit:contain;object-position:center bottom;filter:brightness(1.13) saturate(1.28) contrast(1.04) drop-shadow(0 18px 30px rgba(0,0,0,.45))}
+.tier-detective-break figcaption{margin:-2px 0 14px;color:#b8ff3d;font-size:10px;font-weight:900;letter-spacing:.08em;line-height:1.5;text-transform:uppercase;text-shadow:0 1px 0 #000}
+@media (min-width:1100px){.tier-hero .tier-shell{padding-right:320px}.tier-intro{max-width:760px}}
+@media (max-width:1099px){.tier-detective-break{right:-18px;width:210px;opacity:.92}.tier-hero .tier-shell{padding-right:135px}.tier-detective-break figcaption{display:none}}
+@media (max-width:760px){.tier-hero{min-height:auto}.tier-detective-break{position:relative;right:auto;bottom:auto;width:150px;margin:24px 0 0 auto;opacity:1}.tier-hero .tier-shell{padding-right:0}.tier-detective-break figcaption{display:block;font-size:9px}}
