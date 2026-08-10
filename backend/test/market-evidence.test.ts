@@ -1,8 +1,11 @@
-// TS: 2026-08-09 16:02 ET
+// TS: 2026-08-10 10:18 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { verifyMarketEvidence } from "../src/ratings/market-evidence.js";
+import {
+  verifyCurrentQuoteEvidence,
+  verifyMarketEvidence,
+} from "../src/ratings/market-evidence.js";
 
 test("verified market evidence preserves provider provenance and sorted bars", () => {
   const result = verifyMarketEvidence({
@@ -77,4 +80,96 @@ test("duplicate market dates resolve deterministically to the last explicit obse
   assert.equal(result.evidence.bars.length, 1);
   assert.equal(result.evidence.bars[0]?.close, 201);
   assert.equal(result.evidence.bars[0]?.volume, 2_000_000);
+});
+
+test("current quote verifies positive price, provenance, identity, and freshness", () => {
+  const result = verifyCurrentQuoteEvidence(
+    {
+      providerName: "Licensed Provider",
+      providerConfigured: true,
+      symbol: " aapl ",
+      price: 203.25,
+      observedAt: "2026-08-10T10:00:00Z",
+      fetchedAt: "2026-08-10T10:01:00Z",
+    },
+    "2026-08-10T10:02:00Z",
+  );
+
+  assert.equal(result.verified, true);
+  if (!result.verified) return;
+  assert.equal(result.evidence.symbol, "AAPL");
+  assert.equal(result.evidence.price, 203.25);
+  assert.equal(result.evidence.providerName, "Licensed Provider");
+});
+
+test("current quote fails closed when provider is not connected", () => {
+  const result = verifyCurrentQuoteEvidence(
+    {
+      providerName: null,
+      providerConfigured: false,
+      symbol: "AAPL",
+      price: 203.25,
+      observedAt: "2026-08-10T10:00:00Z",
+      fetchedAt: "2026-08-10T10:01:00Z",
+    },
+    "2026-08-10T10:02:00Z",
+  );
+
+  assert.equal(result.verified, false);
+  if (result.verified) return;
+  assert.equal(result.reason, "provider_not_connected");
+});
+
+test("current quote rejects non-positive or non-finite prices", () => {
+  const result = verifyCurrentQuoteEvidence(
+    {
+      providerName: "Licensed Provider",
+      providerConfigured: true,
+      symbol: "AAPL",
+      price: 0,
+      observedAt: "2026-08-10T10:00:00Z",
+      fetchedAt: "2026-08-10T10:01:00Z",
+    },
+    "2026-08-10T10:02:00Z",
+  );
+
+  assert.equal(result.verified, false);
+  if (result.verified) return;
+  assert.equal(result.reason, "invalid_quote_price");
+});
+
+test("current quote rejects impossible future timestamp ordering", () => {
+  const result = verifyCurrentQuoteEvidence(
+    {
+      providerName: "Licensed Provider",
+      providerConfigured: true,
+      symbol: "AAPL",
+      price: 203.25,
+      observedAt: "2026-08-10T10:05:00Z",
+      fetchedAt: "2026-08-10T10:01:00Z",
+    },
+    "2026-08-10T10:02:00Z",
+  );
+
+  assert.equal(result.verified, false);
+  if (result.verified) return;
+  assert.equal(result.reason, "quote_from_future");
+});
+
+test("current quote rejects evidence outside the versioned market freshness window", () => {
+  const result = verifyCurrentQuoteEvidence(
+    {
+      providerName: "Licensed Provider",
+      providerConfigured: true,
+      symbol: "AAPL",
+      price: 203.25,
+      observedAt: "2026-08-01T10:00:00Z",
+      fetchedAt: "2026-08-01T10:01:00Z",
+    },
+    "2026-08-10T10:02:00Z",
+  );
+
+  assert.equal(result.verified, false);
+  if (result.verified) return;
+  assert.equal(result.reason, "stale_quote");
 });
