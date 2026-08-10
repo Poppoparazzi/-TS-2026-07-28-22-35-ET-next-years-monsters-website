@@ -1,4 +1,4 @@
-// TS: 2026-08-10 03:14 UTC
+// TS: 2026-08-10 08:14 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -50,6 +50,34 @@ test("production input assembly fails closed when any evidence family is missing
   assert.ok(result.missingEvidence.includes("verified current risk evidence"));
   assert.ok(result.missingEvidence.includes("licensed market-data provider"));
   assert.ok(result.missingEvidence.some((item) => item.startsWith("benchmark ")));
+});
+
+test("stale SEC company facts cannot qualify as current financial evidence", () => {
+  const result = assembleProductionRatingInput({
+    ...incompleteSource,
+    secFacts: {
+      ...secFacts,
+      retrievedAt: "2026-07-20T20:55:00Z",
+    },
+  });
+
+  assert.equal(result.ready, false);
+  if (result.ready) return;
+  assert.ok(result.missingEvidence.includes("fresh verified SEC financial evidence"));
+});
+
+test("SEC financial evidence requires data.sec.gov source provenance", () => {
+  const result = assembleProductionRatingInput({
+    ...incompleteSource,
+    secFacts: {
+      ...secFacts,
+      sourceUrl: "https://example.com/companyfacts.json",
+    },
+  });
+
+  assert.equal(result.ready, false);
+  if (result.ready) return;
+  assert.ok(result.missingEvidence.includes("verified SEC financial source provenance"));
 });
 
 test("risk provenance cannot be replaced by an unverified boolean claim", () => {
