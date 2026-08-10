@@ -1,4 +1,4 @@
-// TS: 2026-08-10 15:12 UTC
+// TS: 2026-08-10 08:07 ET
 
 import type { SecCompanyFactsSummary } from "../sec/types.js";
 import { buildAnnualFinancialPeriods } from "./financial-periods.js";
@@ -12,6 +12,7 @@ import {
   MAXIMUM_MARKET_DATA_AGE_DAYS,
   MAXIMUM_RISK_EVIDENCE_AGE_DAYS,
   MAXIMUM_SEC_EVIDENCE_AGE_DAYS,
+  MINIMUM_FINANCIAL_PERIODS,
 } from "./spec-v1.js";
 import type { ProductionRatingInput } from "./types.js";
 
@@ -109,7 +110,7 @@ export function assembleProductionRatingInput(
   }
 
   const financial = buildAnnualFinancialPeriods(source.secFacts);
-  if (!financial.historyAvailable || financial.periods.length < 3) {
+  if (!financial.historyAvailable || financial.periods.length < MINIMUM_FINANCIAL_PERIODS) {
     missing.add("verified comparable annual financial history");
   }
 
