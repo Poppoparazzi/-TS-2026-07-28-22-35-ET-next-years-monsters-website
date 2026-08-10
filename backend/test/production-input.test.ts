@@ -1,4 +1,4 @@
-// TS: 2026-08-10 08:14 UTC
+// TS: 2026-08-10 15:20 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -29,6 +29,14 @@ const incompleteSource = {
     symbol: "AAPL",
     bars: [],
   },
+  companyQuote: {
+    symbol: "AAPL",
+    price: null,
+    observedAt: null,
+    fetchedAt: null,
+    providerName: null,
+    providerConfigured: false,
+  },
   benchmarkMarket: {
     providerName: null,
     providerConfigured: false,
@@ -49,6 +57,7 @@ test("production input assembly fails closed when any evidence family is missing
   assert.ok(result.missingEvidence.includes("verified comparable annual financial history"));
   assert.ok(result.missingEvidence.includes("verified current risk evidence"));
   assert.ok(result.missingEvidence.includes("licensed market-data provider"));
+  assert.ok(result.missingEvidence.includes("licensed current-quote provider"));
   assert.ok(result.missingEvidence.some((item) => item.startsWith("benchmark ")));
 });
 
@@ -93,6 +102,29 @@ test("risk provenance cannot be replaced by an unverified boolean claim", () => 
   assert.equal(result.ready, false);
   if (result.ready) return;
   assert.ok(result.missingEvidence.includes("verified current risk evidence"));
+});
+
+test("current quote must come from a configured provider and match the requested symbol", () => {
+  const unconfigured = assembleProductionRatingInput(incompleteSource);
+  assert.equal(unconfigured.ready, false);
+  if (!unconfigured.ready) {
+    assert.ok(unconfigured.missingEvidence.includes("licensed current-quote provider"));
+  }
+
+  const mismatched = assembleProductionRatingInput({
+    ...incompleteSource,
+    companyQuote: {
+      symbol: "MSFT",
+      price: 200,
+      observedAt: "2026-08-09T20:57:00Z",
+      fetchedAt: "2026-08-09T20:57:30Z",
+      providerName: "licensed-test-quote",
+      providerConfigured: true,
+    },
+  });
+  assert.equal(mismatched.ready, false);
+  if (mismatched.ready) return;
+  assert.ok(mismatched.missingEvidence.includes("current-quote symbol match"));
 });
 
 test("stale company and benchmark market evidence fail closed before calculation", () => {
