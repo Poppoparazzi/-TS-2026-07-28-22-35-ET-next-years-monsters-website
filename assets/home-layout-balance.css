@@ -1,4 +1,4 @@
-/* TS: 2026-08-11 20:12 UTC */
+/* TS: 2026-08-11 23:49 UTC */
 
 /* Keep the Monster Hunt choices equal and intentionally arranged two over two. */
 #monster-hunt-board .home-market-tools-grid {
@@ -52,12 +52,17 @@
 
 .home-page .home-detective-stack {
   display: grid;
+  flex: 0 0 auto;
   gap: 30px;
   margin: 30px calc(clamp(30px, 5vw, 82px) * -1) calc(clamp(56px, 5vw, 82px) * -1);
+  overflow: visible;
 }
 
 .home-page .home-detective-scene {
   position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
   margin: 0;
   border-top: 10px solid #e2ad29;
   background: #08100d;
@@ -67,7 +72,18 @@
 .home-page .home-detective-scene img {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Keep every historical-case heading inside its own result card. */
+.home-page .home-result-card .monster-trigger h3 {
+  max-width: 100%;
+  font-size: clamp(23px, 1.55vw, 30px);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .home-page .home-detective-scene-case figcaption {
