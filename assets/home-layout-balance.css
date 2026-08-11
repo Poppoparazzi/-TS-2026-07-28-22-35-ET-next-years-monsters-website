@@ -1,4 +1,4 @@
-/* TS: 2026-08-11 17:18 UTC */
+/* TS: 2026-08-11 17:25 UTC */
 
 /* Keep the Monster Hunt choices equal and intentionally arranged two over two. */
 #monster-hunt-board .home-market-tools-grid {
@@ -39,32 +39,34 @@
   line-height: 1.55;
 }
 
-/* Fill the lower Detective Break rail with a bright evidence panel instead of empty black. */
+/* Turn the lower Detective Break rail into a second, distinct investigation scene. */
 .home-page .home-check-heading {
   display: flex;
   flex-direction: column;
 }
 
 .home-page .home-check-heading::after {
-  content: "FOLLOW THE FINGERPRINTS  •  CHECK THE EVIDENCE  •  BUILD THE CASE";
+  content: "WE’VE GOT A BREAK ON THE CASE.\A ONE CLUE IS INTERESTING. A PATTERN IS EVIDENCE.";
   box-sizing: border-box;
   display: flex;
-  flex: 1 1 300px;
-  min-height: 300px;
-  align-items: flex-end;
+  flex: 1 1 620px;
+  min-height: 620px;
+  align-items: flex-start;
   margin: 30px calc(clamp(30px, 5vw, 82px) * -1) calc(clamp(56px, 5vw, 82px) * -1);
   padding: 34px clamp(30px, 5vw, 82px);
-  border-top: 10px solid #b8f34a;
-  background-color: #e2ad29;
-  background-image: linear-gradient(90deg, rgba(226, 173, 41, .9), rgba(226, 173, 41, .5)), url("monster-fingerprint-green-blue.png");
-  background-position: center, right 8% center;
+  border-top: 10px solid #e2ad29;
+  background-color: #08100d;
+  background-image: linear-gradient(180deg, rgba(6, 14, 11, .94) 0, rgba(6, 14, 11, .18) 32%, rgba(6, 14, 11, .08) 100%), url("2026-08-11_1725_Detective-Break_Break-On-The-Case.webp");
+  background-position: center, center bottom;
   background-repeat: no-repeat;
-  background-size: cover, min(72%, 470px) auto;
-  color: #07100f;
-  font-size: clamp(18px, 1.6vw, 26px);
+  background-size: cover, cover;
+  color: #f7f2e7;
+  font-size: clamp(19px, 1.7vw, 28px);
   font-weight: 950;
   letter-spacing: .035em;
-  line-height: 1.2;
+  line-height: 1.35;
+  white-space: pre-line;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, .9);
 }
 
 @media (max-width: 920px) {
@@ -86,12 +88,13 @@
   }
 
   .home-page .home-check-heading::after {
-    flex-basis: 220px;
-    min-height: 220px;
+    flex-basis: 500px;
+    min-height: 500px;
     margin-right: -24px;
     margin-bottom: -42px;
     margin-left: -24px;
     padding: 26px 24px;
-    background-size: cover, 76% auto;
+    background-position: center, center bottom;
+    background-size: cover, cover;
   }
 }
