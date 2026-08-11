@@ -1,4 +1,4 @@
-// TS: 2026-08-02 21:48 ET
+// TS: 2026-08-11 12:10 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -183,4 +183,46 @@ test("bulk SEC workers support a 2000-company target while using recoverable wav
   assert.deepEqual(queue.claimLimits, [3, 3, 3]);
   assert.equal(queue.closed, true);
   assert.equal(persistenceStore.closed, true);
+});
+
+test("bulk SEC workers mark a duplicate active SEC identity unresolved", async () => {
+  const queue = new MemoryQueue();
+  const persistenceStore = new MemoryPersistence();
+
+  async function duplicateIdentityRefresh(
+    symbol: string,
+    dependencies: PilotRefreshDependencies,
+  ): Promise<PilotRefreshResult> {
+    if (symbol === "AAPL") {
+      throw Object.assign(
+        new Error('duplicate key value violates unique constraint "companies_sec_cik_unique"'),
+        { code: "23505", constraint: "companies_sec_cik_unique" },
+      );
+    }
+    return refreshOverride(symbol, dependencies);
+  }
+
+  const summary = await runSecUniverseBatch(
+    testConfig(),
+    { batchSize: 1, concurrency: 1, maxAgeHours: 24 },
+    {
+      queue,
+      persistenceStore,
+      secProvider: new ConfiguredSecProvider(),
+      marketProvider: new UnconfiguredMarketDataProvider(),
+      refreshSymbol: duplicateIdentityRefresh,
+    },
+  );
+
+  assert.equal(summary.succeededCount, 0);
+  assert.equal(summary.failedCount, 0);
+  assert.equal(summary.unresolvedCount, 1);
+  assert.deepEqual(summary.unresolvedTickers, ["AAPL"]);
+  assert.deepEqual(queue.failed, []);
+  assert.deepEqual(queue.unresolved, [
+    {
+      ticker: "AAPL",
+      message: 'duplicate key value violates unique constraint "companies_sec_cik_unique"',
+    },
+  ]);
 });
