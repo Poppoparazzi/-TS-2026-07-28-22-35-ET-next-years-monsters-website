@@ -1,4 +1,4 @@
-// TS: 2026-08-10 16:01 ET
+// TS: 2026-08-11 15:50 UTC
 
 (function installMonsterCheckRatingTrio() {
   "use strict";
@@ -144,6 +144,7 @@
     style.id = "monster-rating-trio-styles";
     style.textContent = `
       .monster-rating-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 24px;padding:0}
+      .monster-case-loaded-banner{grid-column:1/-1;margin:0;padding:13px 16px;border-left:5px solid #a8df34;background:#eaf6d2;color:#17200f;font-size:11px;font-weight:950;letter-spacing:.035em;line-height:1.45}
       .monster-rating-trio-card{min-height:158px;padding:18px;border:1px solid rgba(255,255,255,.18);background:#111715;color:#fffaf0}
       .monster-rating-trio-card:nth-child(1){border-top:5px solid #d9aa31}.monster-rating-trio-card:nth-child(2){border-top:5px solid #a8df34}.monster-rating-trio-card:nth-child(3){border-top:5px solid #e64545}
       .monster-rating-trio-card span{display:block;margin-bottom:9px;color:#aeb6af;font-size:9px;font-weight:950;letter-spacing:.06em}
@@ -169,6 +170,9 @@
     const content = result.querySelector(":scope > .monster-investigator-result-content") || result;
     const found = findBoardEntry(data, ticker);
     const established = VCL_ESTABLISHED.has(ticker) && !found;
+    const historicalScore = established
+      ? String(result.querySelector(".monster-score-card strong")?.textContent ?? "").trim()
+      : "";
 
     let trio = content.querySelector(":scope > .monster-rating-trio");
     if (!trio) {
@@ -176,28 +180,38 @@
       let futureStatus = "NOT YET EVALUATED";
       let huntValue = "NOT YET EVALUATED";
       let huntDetail = "This ticker is not currently on the published Monster Hunt board.";
+      let loadedBanner = `${ticker} COMPANY RECORD LOADED · CURRENT LIVE RATING REMAINS PENDING`;
+      let currentValue = "LIVE RATING PENDING";
+      let currentStatus = "CURRENT STOCK RATING™";
+      let currentDetail = "Official company evidence can load now, but a current numeric rating waits for the licensed market feed and complete versioned calculation.";
 
       if (found) {
         futureValue = safe(found.item.score_status ?? found.item.score ?? "SCORING");
         futureStatus = "FINGERPRINT SCORE";
         huntValue = found.rank ? `#${found.rank} TOP 15` : found.label;
         huntDetail = found.item.status ? safe(found.item.status) : "Active Monster Hunt case.";
+        loadedBanner = `${ticker} MONSTER HUNT RESEARCH DATA LOADED · CURRENT LIVE RATING REMAINS PENDING`;
       } else if (established) {
-        futureValue = "N/A";
-        futureStatus = "ESTABLISHED LEADER";
-        huntValue = "NOT A NEW-MONSTER CANDIDATE";
-        huntDetail = "Historical VCL™ leader. Studied for fingerprints, not ranked as an emerging Monster merely because it became a great company.";
+        futureValue = historicalScore ? `${safe(historicalScore)} HISTORICAL` : "CASE LOADED";
+        futureStatus = "VCL™ CASE-STUDY SCORE";
+        huntValue = "ESTABLISHED LEADER";
+        huntDetail = "The selected company’s historical evidence, risks, Monster DNA™, and lessons are loaded directly below these status cards.";
+        loadedBanner = `${ticker} HISTORICAL VCL™ CASE DATA LOADED · CURRENT LIVE RATING REMAINS PENDING`;
+        currentValue = "CASE DATA LOADED";
+        currentStatus = "CURRENT LIVE RATING PENDING";
+        currentDetail = "This selection is working: it loaded the company-specific historical VCL™ evidence below without substituting the old case score for a current rating.";
       }
 
       trio = document.createElement("section");
       trio.className = "monster-rating-trio";
       trio.setAttribute("aria-label", `Current stock, Future Monster fingerprint, and Monster Hunt status for ${ticker}`);
       trio.innerHTML = `
+        <p class="monster-case-loaded-banner">✓ ${loadedBanner}</p>
         <article class="monster-rating-trio-card">
           <span>01 / THEIR STOCK</span>
-          <strong>DATA INCOMPLETE</strong>
-          <em>CURRENT STOCK RATING™ · NOT YET RATED</em>
-          <p>No current score is manufactured until the required verified business, financial, market, risk, and freshness inputs are complete.</p>
+          <strong>${currentValue}</strong>
+          <em>${currentStatus}</em>
+          <p>${currentDetail}</p>
         </article>
         <article class="monster-rating-trio-card">
           <span>02 / FUTURE MONSTER</span>
