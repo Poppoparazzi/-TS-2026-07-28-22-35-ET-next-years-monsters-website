@@ -1,4 +1,4 @@
-# TS: 2026-08-11 11:03 ET
+# TS: 2026-08-11 11:58 ET
 name: Deploy website to GitHub Pages
 
 on:
@@ -41,7 +41,16 @@ jobs:
           echo "Verified gh-pages payload: CNAME, publication probe, and homepage artifact are present."
 
       - name: Configure GitHub Pages
+        id: pages
         uses: actions/configure-pages@v5
+
+      - name: Report Pages configuration
+        shell: bash
+        run: |
+          echo "Pages base URL: ${{ steps.pages.outputs.base_url }}"
+          echo "Pages origin: ${{ steps.pages.outputs.origin }}"
+          echo "Pages host: ${{ steps.pages.outputs.host }}"
+          echo "Pages base path: ${{ steps.pages.outputs.base_path }}"
 
       - name: Upload static website
         uses: actions/upload-pages-artifact@v4
@@ -51,3 +60,26 @@ jobs:
       - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify deployed Pages URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYED_URL="${{ steps.deployment.outputs.page_url }}"
+          echo "Deployment output URL: ${DEPLOYED_URL}"
+          test -n "${DEPLOYED_URL}"
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
+            "${DEPLOYED_URL%/}/site-version.json?cb=${GITHUB_SHA}" \
+            -o /tmp/pages-site-version.json
+          grep -q 'nym-publication-probe-2026-08-11-0902-ET' /tmp/pages-site-version.json
+          echo "Verified publication probe through GitHub Pages deployment URL."
+
+      - name: Verify public custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
+            "https://nextyearsmonsters.com/site-version.json?cb=${GITHUB_SHA}" \
+            -o /tmp/custom-domain-site-version.json
+          grep -q 'nym-publication-probe-2026-08-11-0902-ET' /tmp/custom-domain-site-version.json
+          echo "PUBLIC CUSTOM DOMAIN VERIFIED: nextyearsmonsters.com is serving the intended gh-pages publication probe."
