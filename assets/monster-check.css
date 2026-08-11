@@ -472,6 +472,30 @@
   line-height: 1.5;
 }
 
+/* TS: 2026-08-11 16:24 UTC — working research links for the selected ticker. */
+.monster-research-doors {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.monster-research-doors a {
+  display: block;
+  padding: 12px 14px;
+  border: 2px solid currentColor;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.monster-research-doors a:hover,
+.monster-research-doors a:focus-visible {
+  background: #fff;
+  color: #111;
+}
+
 .monster-trigger-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
