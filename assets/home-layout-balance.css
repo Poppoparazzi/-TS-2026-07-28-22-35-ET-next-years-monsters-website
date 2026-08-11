@@ -1,4 +1,4 @@
-/* TS: 2026-08-11 17:25 UTC */
+/* TS: 2026-08-11 15:56 UTC */
 
 /* Keep the Monster Hunt choices equal and intentionally arranged two over two. */
 #monster-hunt-board .home-market-tools-grid {
@@ -43,6 +43,31 @@
 .home-page .home-check-heading {
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Keep the approved transparent Detective visible beside the first result screen. */
+@media (min-width: 1051px) {
+  .home-page .home-check-heading > p {
+    max-width: 365px;
+  }
+
+  .home-page .home-check-detective {
+    position: absolute;
+    top: 455px;
+    right: -16px;
+    z-index: 3;
+    width: 330px;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .home-page .home-check-detective img {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 18px 28px rgba(0, 0, 0, .5));
+  }
 }
 
 .home-page .home-check-heading::after {
@@ -73,6 +98,17 @@
   #monster-hunt-board .home-market-tool-card,
   #monster-hunt-board .home-market-tool-card-featured {
     min-height: 240px;
+  }
+
+  .home-page .home-check-detective {
+    width: min(360px, 86%);
+    margin: 24px auto 0;
+  }
+
+  .home-page .home-check-detective img {
+    display: block;
+    width: 100%;
+    height: auto;
   }
 }
 
