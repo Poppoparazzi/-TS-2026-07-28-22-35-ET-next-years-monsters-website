@@ -1,4 +1,4 @@
-// TS: 2026-08-02 21:48 ET
+// TS: 2026-08-11 12:10 UTC
 
 import type { AppConfig } from "../config.js";
 import {
@@ -71,6 +71,17 @@ function isPermanentSecNotFound(error: unknown): boolean {
   );
 }
 
+function isDuplicateSecIdentity(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "23505" &&
+    "constraint" in error &&
+    error.constraint === "companies_sec_cik_unique"
+  );
+}
+
 export async function runSecUniverseBatch(
   config: AppConfig,
   options: SecBatchRunOptions,
@@ -133,7 +144,7 @@ export async function runSecUniverseBatch(
           } catch (error) {
             const message = safeMessage(error);
 
-            if (isPermanentSecNotFound(error)) {
+            if (isPermanentSecNotFound(error) || isDuplicateSecIdentity(error)) {
               unresolvedCount += 1;
               unresolvedTickers.push(candidate.ticker);
               await queue.markUnresolved(candidate.ticker, message);
