@@ -1,4 +1,4 @@
-// TS: 2026-08-08 20:24 ET
+// TS: 2026-08-11 12:10 UTC
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -160,7 +160,7 @@ function ensureMarketExplorerNavLink() {
   ensureNavLink(navigation, "news-radar.html", "NEWS RADAR", "Open News Radar", "news-radar.html");
   ensureNavLink(navigation, "coverage-universe.html", "COVERAGE", "Open the stock coverage universe", "coverage-universe.html");
   ensureNavLink(navigation, "verification-ledger.html", "VERIFICATION", "Open the 15-stock verification ledger", "verification-ledger.html");
-  ensureNavLink(navigation, "factory-status.html", "500-STOCK FACTORY", "Open the 500-stock factory status", "factory-status.html");
+  ensureNavLink(navigation, "factory-status.html", "2,000-STOCK FACTORY", "Open the 2,000-stock factory status", "factory-status.html");
 }
 
 async function createMarketTickerStrip() {
@@ -239,7 +239,7 @@ async function createMarketTickerStrip() {
   const note = document.createElement("p");
   note.className = "nym-market-tape-note";
   note.textContent =
-    `CLICK ANY TICKER BUTTON ABOVE to open that company in the full single-chart view. The ${count}-stock tape uses external market data that may be delayed. The original fifteen VCL™ names are historical case studies; use Monster Check™ for separate present-day Current Stock Rating™, Future Monster Fingerprint, and Hunt-status information.`;
+    `CLICK ANY TICKER BUTTON ABOVE to open that company in the full single-chart view. The ${count}-stock tape uses external market data that may be delayed. Fifteen companies currently have demonstration Monster Checks; the additional ten are chart-and-news coverage only.`;
 
   section.append(head, widgetShell, quickLinks, note);
   header.insertAdjacentElement("afterend", section);
