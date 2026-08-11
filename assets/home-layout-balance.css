@@ -1,4 +1,4 @@
-/* TS: 2026-08-11 15:56 UTC */
+/* TS: 2026-08-11 16:12 UTC */
 
 /* Keep the Monster Hunt choices equal and intentionally arranged two over two. */
 #monster-hunt-board .home-market-tools-grid {
@@ -76,21 +76,24 @@
   display: flex;
   flex: 1 1 620px;
   min-height: 620px;
-  align-items: flex-start;
+  align-items: flex-end;
   margin: 30px calc(clamp(30px, 5vw, 82px) * -1) calc(clamp(56px, 5vw, 82px) * -1);
   padding: 34px clamp(30px, 5vw, 82px);
   border-top: 10px solid #e2ad29;
   background-color: #08100d;
-  background-image: linear-gradient(180deg, rgba(6, 14, 11, .94) 0, rgba(6, 14, 11, .18) 32%, rgba(6, 14, 11, .08) 100%), url("2026-08-11_1725_Detective-Break_Break-On-The-Case.webp");
-  background-position: center, center bottom;
+  background-image: linear-gradient(0deg, rgba(6, 14, 11, .96) 0, rgba(6, 14, 11, .72) 18%, rgba(6, 14, 11, .05) 46%), url("2026-08-11_1725_Detective-Break_Break-On-The-Case.webp");
+  background-position: center, center top;
   background-repeat: no-repeat;
-  background-size: cover, cover;
+  background-size: 100% 100%, 100% auto;
   color: #f7f2e7;
   font-size: clamp(19px, 1.7vw, 28px);
   font-weight: 950;
   letter-spacing: .035em;
   line-height: 1.35;
   white-space: pre-line;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow: hidden;
   text-shadow: 0 3px 12px rgba(0, 0, 0, .9);
 }
 
@@ -130,7 +133,7 @@
     margin-bottom: -42px;
     margin-left: -24px;
     padding: 26px 24px;
-    background-position: center, center bottom;
-    background-size: cover, cover;
+    background-position: center, center top;
+    background-size: 100% 100%, 100% auto;
   }
 }
