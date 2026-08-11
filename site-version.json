@@ -1,11 +1,14 @@
 {
-  "release": "2026-08-10-publication-path-probe-1903-ET",
+  "release": "2026-08-11-publication-path-probe-0701-ET",
   "homepage_reference": "approved-homepage-gold-master-2026-08-06",
   "working_homepage": true,
   "sec_connection_strip": true,
   "frontend_sources": ["gh-pages"],
-  "deployment_commit": "4ac190c3d6110655300bb80fdbcc5e1afe2313b0",
-  "pages_branch_refresh_triggered_at": "2026-08-10T23:03:00Z",
-  "publication_probe": "nym-publication-probe-2026-08-10-1903-ET",
-  "publication_probe_purpose": "Verify nextyearsmonsters.com is serving the current gh-pages branch without changing the locked homepage."
+  "pages_branch": "gh-pages",
+  "custom_domain": "nextyearsmonsters.com",
+  "pages_cname_present": true,
+  "publication_probe": "nym-publication-probe-2026-08-11-0701-ET",
+  "publication_probe_purpose": "Force a harmless gh-pages publish event and provide a unique public marker without changing the locked homepage.",
+  "probe_expected_public_url": "/site-version.json",
+  "probe_created_at": "2026-08-11T11:01:35Z"
 }
