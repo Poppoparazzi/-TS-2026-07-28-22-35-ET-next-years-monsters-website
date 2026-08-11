@@ -1,10 +1,10 @@
-// TS: 2026-08-02 18:36 ET
+// TS: 2026-08-11 12:10 UTC
 
 (() => {
   "use strict";
 
   const EXPECTED_API_VERSION = "0.6.0";
-  const FACTORY_LIMIT = 500;
+  const FACTORY_LIMIT = 2_000;
   const refreshButton = document.querySelector("[data-factory-refresh]");
   const checkedNode = document.querySelector("[data-factory-checked]");
   const tableBody = document.querySelector("[data-factory-body]");
@@ -166,7 +166,7 @@
   function verifyProductionHealth(health) {
     if (health?.version !== EXPECTED_API_VERSION) {
       throw new Error(
-        `Render is still serving backend version ${health?.version || "unknown"}. The 500-stock factory requires version ${EXPECTED_API_VERSION}, so the latest main branch has not been deployed.`,
+        `Render is still serving backend version ${health?.version || "unknown"}. The 2,000-stock factory requires version ${EXPECTED_API_VERSION}, so the latest main branch has not been deployed.`,
       );
     }
 
