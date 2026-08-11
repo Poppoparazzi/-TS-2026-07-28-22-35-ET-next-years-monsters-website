@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:32 ET
+// TS: 2026-08-11 12:24 UTC
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -7,7 +7,7 @@ const factoryPageUrl = (process.env.NYM_FACTORY_PAGE_URL ||
   "https://poppoparazzi.github.io/-TS-2026-07-28-22-35-ET-next-years-monsters-website/factory-status.html")
   .trim();
 const expectedVersion = (process.env.NYM_EXPECTED_VERSION || "0.6.0").trim();
-const expectedUniverseMinimum = Number(process.env.NYM_EXPECTED_UNIVERSE_MIN || "500");
+const expectedUniverseMinimum = Number(process.env.NYM_EXPECTED_UNIVERSE_MIN || "2000");
 const attemptCount = Number(process.env.NYM_SMOKE_ATTEMPTS || "10");
 const delayMs = Number(process.env.NYM_SMOKE_DELAY_MS || "30000");
 
