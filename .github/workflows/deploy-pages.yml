@@ -4,6 +4,7 @@ name: Deploy website to GitHub Pages
 on:
   push:
     branches:
+      - main
       - gh-pages
   workflow_dispatch:
 
@@ -25,6 +26,8 @@ jobs:
     steps:
       - name: Check out publishing branch
         uses: actions/checkout@v6
+        with:
+          ref: gh-pages
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
