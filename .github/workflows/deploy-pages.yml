@@ -1,10 +1,10 @@
-# TS: 2026-08-06 13:05 ET
+# TS: 2026-08-11 08:03 ET
 name: Deploy website to GitHub Pages
 
 on:
   push:
     branches:
-      - main
+      - gh-pages
   workflow_dispatch:
 
 permissions:
@@ -18,9 +18,12 @@ concurrency:
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out publishing branch
         uses: actions/checkout@v6
 
       - name: Configure GitHub Pages
