@@ -1,4 +1,4 @@
-# TS: 2026-08-02 21:33 ET
+# TS: 2026-08-02 21:45 ET
 
 name: Production smoke
 
@@ -26,7 +26,7 @@ permissions:
 jobs:
   verify-production:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -36,59 +36,90 @@ jobs:
         with:
           node-version: 22
 
-      - name: Confirm completed 500-company SEC batch
+      - name: Watch deployment and confirm completed 500-company SEC batch
         run: |
           node --input-type=module <<'NODE'
-          const url = "https://next-years-monsters-api.onrender.com/api/universe/status?limit=500";
-          const response = await fetch(url, {
-            headers: { Accept: "application/json" },
-            signal: AbortSignal.timeout(70_000),
-          });
-          const status = await response.json();
+          const apiBaseUrl = "https://next-years-monsters-api.onrender.com";
+          const expectedCommit = "5f90832376e736dfb46d29fcb4d1c88572740b0b";
+          const attemptCount = 20;
+          const delayMs = 30_000;
 
-          if (!response.ok) {
-            throw new Error(`Universe endpoint returned HTTP ${response.status}.`);
+          function sleep(milliseconds) {
+            return new Promise((resolve) => setTimeout(resolve, milliseconds));
           }
 
-          const summary = {
-            universeSize: Number(status.universeSize || 0),
-            examinedCount: Number(status.examinedCount || 0),
-            queuedCount: Number(status.queuedCount || 0),
-            processingCount: Number(status.processingCount || 0),
-            secCompleteCount: Number(status.secCompleteCount || 0),
-            unresolvedCount: Number(status.unresolvedCount || 0),
-            failedCount: Number(status.failedCount || 0),
-            partialCount: Number(status.partialCount || 0),
-            staleCount: Number(status.staleCount || 0),
-            filingCompleteCount: Number(status.filingCompleteCount || 0),
-            factsCompleteCount: Number(status.factsCompleteCount || 0),
-            quoteCompleteCount: Number(status.quoteCompleteCount || 0),
-            ratingCompleteCount: Number(status.ratingCompleteCount || 0),
-            generatedAt: status.generatedAt || null,
-          };
-
-          console.log("Final 500-company universe status:");
-          console.log(JSON.stringify(summary, null, 2));
-
-          const problems = [];
-          if (summary.examinedCount !== 500) {
-            problems.push(`examinedCount is ${summary.examinedCount}, expected 500`);
-          }
-          if (summary.processingCount !== 0) {
-            problems.push(`processingCount is ${summary.processingCount}, expected 0`);
-          }
-          if (summary.failedCount !== 0) {
-            problems.push(`failedCount is ${summary.failedCount}, expected 0`);
-          }
-          if (summary.secCompleteCount + summary.unresolvedCount !== 500) {
-            problems.push(
-              `secCompleteCount + unresolvedCount is ${summary.secCompleteCount + summary.unresolvedCount}, expected 500`,
-            );
+          async function requestJson(path, optional = false) {
+            try {
+              const response = await fetch(`${apiBaseUrl}${path}`, {
+                headers: { Accept: "application/json" },
+                signal: AbortSignal.timeout(70_000),
+              });
+              const payload = await response.json();
+              if (!response.ok) {
+                throw new Error(`${path} returned HTTP ${response.status}.`);
+              }
+              return payload;
+            } catch (error) {
+              if (optional) return null;
+              throw error;
+            }
           }
 
-          if (problems.length) {
-            throw new Error(problems.join("; "));
+          let lastSummary = null;
+
+          for (let attempt = 1; attempt <= attemptCount; attempt += 1) {
+            const [health, startup, status] = await Promise.all([
+              requestJson("/api/health"),
+              requestJson("/api/startup-status", true),
+              requestJson("/api/universe/status?limit=500"),
+            ]);
+
+            const summary = {
+              attempt,
+              checkedAt: new Date().toISOString(),
+              apiVersion: health?.version || null,
+              deploymentCommit: startup?.deploymentCommit || null,
+              expectedCommit,
+              startupImportState: startup?.jobs?.universeImport?.state || null,
+              startupSecBatchState: startup?.jobs?.secUniverseBatch?.state || null,
+              startupSecBatchSummary: startup?.jobs?.secUniverseBatch?.summary || null,
+              universeSize: Number(status.universeSize || 0),
+              examinedCount: Number(status.examinedCount || 0),
+              queuedCount: Number(status.queuedCount || 0),
+              processingCount: Number(status.processingCount || 0),
+              secCompleteCount: Number(status.secCompleteCount || 0),
+              unresolvedCount: Number(status.unresolvedCount || 0),
+              failedCount: Number(status.failedCount || 0),
+              partialCount: Number(status.partialCount || 0),
+              staleCount: Number(status.staleCount || 0),
+              filingCompleteCount: Number(status.filingCompleteCount || 0),
+              factsCompleteCount: Number(status.factsCompleteCount || 0),
+              quoteCompleteCount: Number(status.quoteCompleteCount || 0),
+              ratingCompleteCount: Number(status.ratingCompleteCount || 0),
+              generatedAt: status.generatedAt || null,
+            };
+
+            lastSummary = summary;
+            console.log(`Production recovery check ${attempt}/${attemptCount}:`);
+            console.log(JSON.stringify(summary, null, 2));
+
+            const complete =
+              summary.examinedCount === 500 &&
+              summary.processingCount === 0 &&
+              summary.failedCount === 0 &&
+              summary.secCompleteCount + summary.unresolvedCount === 500;
+
+            if (complete) {
+              console.log("The 500-company SEC batch is complete and reconciled.");
+              process.exit(0);
+            }
+
+            if (attempt < attemptCount) await sleep(delayMs);
           }
+
+          throw new Error(
+            `The 500-company SEC batch did not reconcile during the monitor window: ${JSON.stringify(lastSummary)}`,
+          );
           NODE
 
       - name: Verify Render API, 500-company database, and public factory page
