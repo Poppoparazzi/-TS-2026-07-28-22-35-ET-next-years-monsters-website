@@ -1,0 +1,7 @@
+TS: 2026-08-10 20:05 ET
+Next Year's Monsters public publication diagnostic.
+Expected public URL: https://nextyearsmonsters.com/publication-check-2026-08-10-2005.txt
+Publishing branch: gh-pages
+Custom domain: nextyearsmonsters.com
+Homepage intentionally untouched.
+If this exact file is visible on the custom domain, the current gh-pages branch is reaching the public custom domain.
