@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:48 ET
+// TS: 2026-08-03 16:32 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -160,7 +160,7 @@ function ensureMarketExplorerNavLink() {
   ensureNavLink(navigation, "news-radar.html", "NEWS RADAR", "Open News Radar", "news-radar.html");
   ensureNavLink(navigation, "coverage-universe.html", "COVERAGE", "Open the stock coverage universe", "coverage-universe.html");
   ensureNavLink(navigation, "verification-ledger.html", "VERIFICATION", "Open the 15-stock verification ledger", "verification-ledger.html");
-  ensureNavLink(navigation, "factory-status.html", "500-STOCK FACTORY", "Open the 500-stock factory status", "factory-status.html");
+  ensureNavLink(navigation, "factory-status.html", "2,000-STOCK FACTORY", "Open the 2,000-stock factory status", "factory-status.html");
 }
 
 async function createMarketTickerStrip() {
@@ -222,31 +222,12 @@ async function createMarketTickerStrip() {
 
   tradingViewContainer.append(tradingViewWidget, script);
   widgetShell.append(tradingViewContainer);
-
-  const quickLinks = document.createElement("nav");
-  quickLinks.className = "nym-market-tape-links";
-  quickLinks.setAttribute("aria-label", "Open a market stock in its full single chart");
-
-  stocks.forEach(({ ticker, name }) => {
-    const link = document.createElement("a");
-    link.href = `market-explorer.html?left=${encodeURIComponent(ticker)}&mode=single`;
-    link.textContent = ticker;
-    link.title = `Open ${name} in the full single-chart view`;
-    link.setAttribute("aria-label", `Open ${name} full chart`);
-    quickLinks.append(link);
-  });
-
-  const note = document.createElement("p");
-  note.className = "nym-market-tape-note";
-  note.textContent =
-    `CLICK ANY TICKER BUTTON ABOVE to open that company in the full single-chart view. The ${count}-stock tape uses external market data that may be delayed. Fifteen companies currently have demonstration Monster Checks; the additional ten are chart-and-news coverage only.`;
-
-  section.append(head, widgetShell, quickLinks, note);
+  section.append(head, widgetShell);
   header.insertAdjacentElement("afterend", section);
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", createMarketTickerStrip);
+  document.addEventListener("DOMContentLoaded", () => void createMarketTickerStrip());
 } else {
-  createMarketTickerStrip();
+  void createMarketTickerStrip();
 }
