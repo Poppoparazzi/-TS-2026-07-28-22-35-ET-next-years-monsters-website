@@ -253,6 +253,7 @@ function renderSecCompanyResult(result, company) {
 }
 
 function renderStockResult(result, stock) {
+  // TS: 2026-08-11 16:24 UTC — expose working current-research doors while licensed feeds are pending.
   const cssTier = tierClass(stock.score);
   const outlook = getDemoOutlook(stock);
   const dna = stock.dna.map(item => `<span class="dna">${escapeHtml(item)}</span>`).join("");
@@ -301,8 +302,12 @@ function renderStockResult(result, stock) {
         <p>${escapeHtml(impactLogic)}</p>
       </div>
       <div class="monster-news-status">
-        <strong>NO LIVE NEWS CONNECTED</strong>
-        <span>The production version will show a verified headline, publisher, source link, publication time, retrieval timestamp, and explainable rating impact.</span>
+        <strong>CURRENT RESEARCH</strong>
+        <span>Use the live research doors below. Monster Rating™ does not change until a licensed, timestamped headline feed is connected and verified.</span>
+        <div class="monster-research-doors">
+          <a href="news-radar.html?ticker=${encodeURIComponent(stock.ticker)}" target="_blank" rel="noopener noreferrer">OPEN ${escapeHtml(stock.ticker)} NEWS RADAR →</a>
+          <a href="https://www.sec.gov/edgar/browse/?CIK=${encodeURIComponent(stock.ticker)}&owner=exclude" target="_blank" rel="noopener noreferrer">OPEN OFFICIAL SEC FILINGS ↗</a>
+        </div>
       </div>
     </section>
 
