@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:47 ET
+// TS: 2026-08-03 16:34 ET
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -161,15 +161,15 @@ function validateFactoryStatus() {
     "data-factory-body",
   ].forEach((attribute) => {
     if (!html.includes(attribute)) {
-      fail(`500-stock factory page is missing required hook: ${attribute}`);
+      fail(`2,000-stock factory page is missing required hook: ${attribute}`);
     }
   });
 
-  if (!script.includes("FACTORY_LIMIT = 500")) {
-    fail("500-stock factory page does not set the bulk universe request limit to 500.");
+  if (!script.includes("FACTORY_LIMIT = 2000")) {
+    fail("2,000-stock factory page does not set the bulk universe request limit to 2,000.");
   }
   if (!script.includes("/api/universe/status?limit=${FACTORY_LIMIT}")) {
-    fail("500-stock factory page does not read the bulk universe status endpoint.");
+    fail("2,000-stock factory page does not read the bulk universe status endpoint.");
   }
 
   [
@@ -181,16 +181,16 @@ function validateFactoryStatus() {
     "staleCount",
   ].forEach((field) => {
     if (!script.includes(field)) {
-      fail(`500-stock factory logic does not display required progress field: ${field}`);
+      fail(`2,000-stock factory logic does not display required progress field: ${field}`);
     }
   });
 
   const navigationScript = read("assets/market-ticker-strip.js");
   if (!navigationScript.includes("factory-status.html")) {
-    fail("Site-wide navigation does not include the 500-stock factory page.");
+    fail("Site-wide navigation does not include the 2,000-stock factory page.");
   }
-  if (!navigationScript.includes("500-STOCK FACTORY")) {
-    fail("Site-wide navigation still labels the factory with the old company count.");
+  if (!navigationScript.includes("2,000-STOCK FACTORY")) {
+    fail("Site-wide navigation does not label the factory with the current 2,000-company target.");
   }
 }
 
