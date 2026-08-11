@@ -1,4 +1,4 @@
-# TS: 2026-08-02 21:33 ET
+# TS: 2026-08-11 12:24 UTC
 
 name: Production smoke
 
@@ -36,10 +36,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Confirm completed 500-company SEC batch
+      - name: Confirm completed 2,000-company SEC batch
         run: |
           node --input-type=module <<'NODE'
-          const url = "https://next-years-monsters-api.onrender.com/api/universe/status?limit=500";
+          const expectedCount = 2_000;
+          const url = `https://next-years-monsters-api.onrender.com/api/universe/status?limit=${expectedCount}`;
           const response = await fetch(url, {
             headers: { Accept: "application/json" },
             signal: AbortSignal.timeout(70_000),
@@ -67,12 +68,12 @@ jobs:
             generatedAt: status.generatedAt || null,
           };
 
-          console.log("Final 500-company universe status:");
+          console.log("Final 2,000-company universe status:");
           console.log(JSON.stringify(summary, null, 2));
 
           const problems = [];
-          if (summary.examinedCount !== 500) {
-            problems.push(`examinedCount is ${summary.examinedCount}, expected 500`);
+          if (summary.examinedCount !== expectedCount) {
+            problems.push(`examinedCount is ${summary.examinedCount}, expected ${expectedCount}`);
           }
           if (summary.processingCount !== 0) {
             problems.push(`processingCount is ${summary.processingCount}, expected 0`);
@@ -80,9 +81,9 @@ jobs:
           if (summary.failedCount !== 0) {
             problems.push(`failedCount is ${summary.failedCount}, expected 0`);
           }
-          if (summary.secCompleteCount + summary.unresolvedCount !== 500) {
+          if (summary.secCompleteCount + summary.unresolvedCount !== expectedCount) {
             problems.push(
-              `secCompleteCount + unresolvedCount is ${summary.secCompleteCount + summary.unresolvedCount}, expected 500`,
+              `secCompleteCount + unresolvedCount is ${summary.secCompleteCount + summary.unresolvedCount}, expected ${expectedCount}`,
             );
           }
 
@@ -91,10 +92,10 @@ jobs:
           }
           NODE
 
-      - name: Verify Render API, 500-company database, and public factory page
+      - name: Verify Render API, 2,000-company database, and public factory page
         env:
           NYM_EXPECTED_VERSION: "0.6.0"
-          NYM_EXPECTED_UNIVERSE_MIN: "500"
+          NYM_EXPECTED_UNIVERSE_MIN: "2000"
           NYM_SMOKE_ATTEMPTS: "10"
           NYM_SMOKE_DELAY_MS: "30000"
         run: node scripts/verify-production.mjs
