@@ -1,4 +1,4 @@
-// TS: 2026-08-09 07:00 ET
+// TS: 2026-08-01 15:25 ET
 const DEMO_NOTICE = "Illustrative demonstration only. This is not live market data, current news, investment advice, or a recommendation.";
 const EDUCATIONAL_DISCLAIMER = "Monster Rating™ is an educational framework for organizing evidence. It is not a buy, sell, or hold recommendation, does not predict future performance, and may become outdated as company results, prices, market conditions, and verified news change. Investing involves risk, including possible loss of principal.";
 
@@ -253,6 +253,7 @@ function renderSecCompanyResult(result, company) {
 }
 
 function renderStockResult(result, stock) {
+  // TS: 2026-08-11 16:24 UTC — expose working current-research doors while licensed feeds are pending.
   const cssTier = tierClass(stock.score);
   const outlook = getDemoOutlook(stock);
   const dna = stock.dna.map(item => `<span class="dna">${escapeHtml(item)}</span>`).join("");
@@ -301,8 +302,12 @@ function renderStockResult(result, stock) {
         <p>${escapeHtml(impactLogic)}</p>
       </div>
       <div class="monster-news-status">
-        <strong>NO LIVE NEWS CONNECTED</strong>
-        <span>The production version will show a verified headline, publisher, source link, publication time, retrieval timestamp, and explainable rating impact.</span>
+        <strong>CURRENT RESEARCH</strong>
+        <span>Use the live research doors below. Monster Rating™ does not change until a licensed, timestamped headline feed is connected and verified.</span>
+        <div class="monster-research-doors">
+          <a href="news-radar.html?ticker=${encodeURIComponent(stock.ticker)}" target="_blank" rel="noopener noreferrer">OPEN ${escapeHtml(stock.ticker)} NEWS RADAR →</a>
+          <a href="https://www.sec.gov/edgar/browse/?CIK=${encodeURIComponent(stock.ticker)}&owner=exclude" target="_blank" rel="noopener noreferrer">OPEN OFFICIAL SEC FILINGS ↗</a>
+        </div>
       </div>
     </section>
 
@@ -403,7 +408,7 @@ async function setupMonsterCheck() {
   });
 
   if (suggestions) {
-    ["AAPL", "CRDO", "NVDA", "VRT", "AXON", "MSFT"].forEach(ticker => {
+    ["AAPL", "NVDA", "MNST", "AMZN", "VRT", "AXON"].forEach(ticker => {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "chip";
@@ -416,9 +421,8 @@ async function setupMonsterCheck() {
     });
   }
 
-  input.value = "";
-  result.style.display = "none";
-  result.innerHTML = "";
+  input.value = "NVDA";
+  render(byTicker.get("NVDA"), "NVDA");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
