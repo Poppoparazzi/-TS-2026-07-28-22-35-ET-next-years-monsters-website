@@ -1,4 +1,4 @@
-// TS: 2026-08-12 16:01 ET
+// TS: 2026-08-12 18:04 ET
 
 (() => {
   "use strict";
@@ -113,7 +113,7 @@
       timestampIsCurrent(payload.calculatedAt, MAX_QUOTE_AGE_MS) &&
       typeof payload.eligible === "boolean" &&
       (payload.eligible
-        ? Number.isFinite(Number(payload.score)) && Number(payload.score) >= 0 && Number(payload.score) <= 100
+        ? Number.isFinite(Number(payload.score)) && Number(payload.score) >= 1 && Number(payload.score) <= 100
         : payload.score === null && String(payload.eligibilityCode ?? "").trim())
     );
 
