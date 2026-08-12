@@ -1,4 +1,4 @@
-/* TS: 2026-08-11 23:49 UTC */
+/* TS: 2026-08-12 13:22 UTC */
 
 /* Keep the Monster Hunt choices equal and intentionally arranged two over two. */
 #monster-hunt-board .home-market-tools-grid {
@@ -44,6 +44,20 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  align-self: start;
+  min-width: 0;
+  background: #0d1211;
+}
+
+/* Do not stretch the black Detective rail to the height of the long stock report. */
+.home-page .home-check {
+  align-items: start;
+  background: #f5f1e7;
+}
+
+.home-page .home-check-panel {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .home-page .home-check-detective {
@@ -53,18 +67,19 @@
 .home-page .home-detective-stack {
   display: grid;
   flex: 0 0 auto;
-  gap: 30px;
-  margin: 30px calc(clamp(30px, 5vw, 82px) * -1) calc(clamp(56px, 5vw, 82px) * -1);
-  overflow: visible;
+  gap: 22px;
+  width: min(88%, 540px);
+  margin: 30px auto 0;
+  padding-bottom: 34px;
+  overflow: hidden;
 }
 
 .home-page .home-detective-scene {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
   flex: 0 0 auto;
   margin: 0;
-  border-top: 10px solid #e2ad29;
+  border: 6px solid #e2ad29;
   background: #08100d;
   overflow: hidden;
 }
@@ -72,7 +87,7 @@
 .home-page .home-detective-scene img {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
   object-fit: contain;
   object-position: center;
 }
@@ -91,10 +106,10 @@
   right: 0;
   bottom: 0;
   left: 0;
-  padding: 54px clamp(30px, 5vw, 82px) 30px;
+  padding: 48px 22px 20px;
   background: linear-gradient(0deg, rgba(6, 14, 11, .98), rgba(6, 14, 11, 0));
   color: #f7f2e7;
-  font-size: clamp(18px, 1.55vw, 26px);
+  font-size: clamp(15px, 1.15vw, 20px);
   font-weight: 950;
   letter-spacing: .035em;
   line-height: 1.35;
@@ -122,9 +137,9 @@
   }
 
   .home-page .home-detective-stack {
-    margin-right: -24px;
-    margin-bottom: -42px;
-    margin-left: -24px;
+    width: 100%;
+    margin: 26px auto 0;
+    padding-bottom: 0;
     gap: 20px;
   }
 
