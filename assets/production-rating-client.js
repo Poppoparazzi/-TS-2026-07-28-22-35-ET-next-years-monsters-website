@@ -1,4 +1,4 @@
-// TS: 2026-08-12 15:01 ET
+// TS: 2026-08-12 17:02 ET
 
 (() => {
   "use strict";
@@ -31,7 +31,7 @@
 
     if (value.eligible) {
       const score = Number(value.score);
-      return Number.isFinite(score) && score >= 0 && score <= 100;
+      return Number.isFinite(score) && score >= 1 && score <= 100;
     }
 
     return value.score === null &&
