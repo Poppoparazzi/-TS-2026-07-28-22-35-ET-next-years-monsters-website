@@ -1,4 +1,4 @@
-// TS: 2026-08-12 14:01 ET
+// TS: 2026-08-12 15:01 ET
 
 (() => {
   "use strict";
@@ -90,7 +90,10 @@
     const entry = { createdAt: Date.now(), promise: pending };
     cache.set(symbol, entry);
     pending.then((result) => {
-      if (result?.status !== "ok" && cache.get(symbol) === entry) {
+      // Keep successful responses and terminal negative results briefly cached.
+      // Only transient availability failures should immediately reopen the network path.
+      const keepCached = ["ok", "not_found", "invalid_payload"].includes(result?.status);
+      if (!keepCached && cache.get(symbol) === entry) {
         cache.delete(symbol);
       }
     });
