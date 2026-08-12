@@ -1,7 +1,11 @@
-// TS: 2026-08-12 08:59 ET
+// TS: 2026-08-12 14:01 ET
 
 (() => {
   "use strict";
+
+  // Runtime config and Monster Check can both request this client during a deploy transition.
+  // Keep one live client/cache instance instead of resetting it when a duplicate script arrives.
+  if (window.NYM_PRODUCTION_RATING?.fetchRating) return;
 
   const CACHE_TTL_MS = 5 * 60 * 1000;
   const REQUEST_TIMEOUT_MS = 10000;
