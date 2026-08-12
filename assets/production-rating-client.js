@@ -1,9 +1,10 @@
-// TS: 2026-08-12 08:04 ET
+// TS: 2026-08-12 08:59 ET
 
 (() => {
   "use strict";
 
   const CACHE_TTL_MS = 5 * 60 * 1000;
+  const REQUEST_TIMEOUT_MS = 10000;
   const cache = new Map();
 
   function normalizeSymbol(value) {
@@ -53,10 +54,14 @@
       const base = apiBase();
       if (!base) return { status: "unavailable", symbol, data: null };
 
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
       try {
         const response = await fetch(`${base}/api/ratings/${encodeURIComponent(symbol)}`, {
           cache: "no-store",
           headers: { Accept: "application/json" },
+          signal: controller.signal,
         });
 
         if (response.status === 404) {
@@ -73,6 +78,8 @@
         return { status: "ok", symbol, data };
       } catch (_error) {
         return { status: "unavailable", symbol, data: null };
+      } finally {
+        window.clearTimeout(timeoutId);
       }
     })();
 
