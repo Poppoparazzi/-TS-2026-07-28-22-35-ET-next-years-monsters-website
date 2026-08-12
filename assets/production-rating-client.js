@@ -1,4 +1,4 @@
-// TS: 2026-08-12 17:02 ET
+// TS: 2026-08-12 19:04 ET
 
 (() => {
   "use strict";
@@ -9,6 +9,8 @@
 
   const CACHE_TTL_MS = 5 * 60 * 1000;
   const REQUEST_TIMEOUT_MS = 10000;
+  const MAX_CALC_AGE_MS = 36 * 60 * 60 * 1000;
+  const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
   const cache = new Map();
 
   function normalizeSymbol(value) {
@@ -20,13 +22,21 @@
     return String(window.NYM_CONFIG?.apiBaseUrl ?? "").replace(/\/$/, "");
   }
 
+  function isCurrentTimestamp(value, maxAgeMs) {
+    if (typeof value !== "string" || !value.trim()) return false;
+    const parsed = Date.parse(value);
+    if (!Number.isFinite(parsed)) return false;
+    const ageMs = Date.now() - parsed;
+    return ageMs >= -FUTURE_TOLERANCE_MS && ageMs <= maxAgeMs;
+  }
+
   function isProductionRating(value, expectedSymbol) {
     if (!value || typeof value !== "object") return false;
 
     const symbol = normalizeSymbol(value.symbol);
     if (!symbol || symbol !== expectedSymbol) return false;
     if (typeof value.engineVersion !== "string" || !value.engineVersion.trim()) return false;
-    if (typeof value.calculatedAt !== "string" || !value.calculatedAt.trim()) return false;
+    if (!isCurrentTimestamp(value.calculatedAt, MAX_CALC_AGE_MS)) return false;
     if (typeof value.eligible !== "boolean") return false;
 
     if (value.eligible) {
