@@ -1,4 +1,4 @@
-// TS: 2026-08-12 13:01 ET
+// TS: 2026-08-12 16:01 ET
 
 (() => {
   "use strict";
@@ -7,6 +7,7 @@
   const MAX_SEC_AGE_MS = 7 * 24 * 60 * 60 * 1000;
   const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
   const RATING_RETRY_DELAY_MS = 30 * 1000;
+  const TERMINAL_RATING_STATES = new Set(["not_found", "invalid_payload"]);
 
   const REQUIRED_INPUTS = [
     { key: "identity", label: "Official SEC company identity" },
@@ -145,6 +146,24 @@
     }, RATING_RETRY_DELAY_MS + 50);
   }
 
+  function terminalRatingCopy(status, ticker) {
+    if (status === "not_found") {
+      return {
+        heading: "CURRENT RATING NOT AVAILABLE FOR THIS TICKER",
+        cardStatus: "CURRENT STOCK RATING™ · NOT AVAILABLE",
+        copy: `The production rating service has no Current Stock Rating™ record for ${ticker}. No score is being inferred or manufactured.`,
+      };
+    }
+    if (status === "invalid_payload") {
+      return {
+        heading: "PRODUCTION RATING RESPONSE FAILED VERIFICATION",
+        cardStatus: "CURRENT STOCK RATING™ · DATA VERIFICATION FAILED",
+        copy: "The production service returned a response that did not satisfy the required rating contract, so no numeric score is being published.",
+      };
+    }
+    return null;
+  }
+
   function requestProductionRating(ticker, result) {
     if (ratingResults.has(ticker) || ratingRequests.has(ticker)) return;
     if ((ratingRetryAfter.get(ticker) ?? 0) > Date.now()) return;
@@ -159,7 +178,7 @@
       })
       .then((response) => {
         ratingRequests.delete(ticker);
-        if (response?.status === "ok" && response.data) {
+        if ((response?.status === "ok" && response.data) || TERMINAL_RATING_STATES.has(response?.status)) {
           ratingResults.set(ticker, response);
           ratingRetryAfter.delete(ticker);
         } else {
@@ -182,15 +201,29 @@
   function syncCurrentRatingCard(result, ticker) {
     const card = result.querySelector(".monster-rating-trio-card:first-child");
     const response = ratingResults.get(ticker);
-    if (!card || response?.status !== "ok" || !response.data) return;
+    if (!card || !response) return;
 
-    const rating = response.data;
-    const machine = machineEvidence(rating, ticker);
-    const machineComplete = [machine.filing, machine.quote, machine.freshness, machine.financials, machine.risk, machine.calculation].every(Boolean);
     const value = card.querySelector("strong");
     const status = card.querySelector("em");
     const copy = card.querySelector("p");
     if (!value || !status || !copy) return;
+
+    const terminal = terminalRatingCopy(response.status, ticker);
+    if (terminal) {
+      value.textContent = "NOT AVAILABLE";
+      status.textContent = terminal.cardStatus;
+      copy.textContent = terminal.copy;
+      card.dataset.productionRatingStatus = response.status;
+      card.dataset.productionRatingEngine = "";
+      card.setAttribute("aria-label", `${terminal.cardStatus} for ${ticker}`);
+      return;
+    }
+
+    if (response.status !== "ok" || !response.data) return;
+
+    const rating = response.data;
+    const machine = machineEvidence(rating, ticker);
+    const machineComplete = [machine.filing, machine.quote, machine.freshness, machine.financials, machine.risk, machine.calculation].every(Boolean);
 
     if (rating.eligible === true && Number.isFinite(Number(rating.score)) && machineComplete) {
       const score = Math.round(Number(rating.score));
@@ -252,6 +285,7 @@
     const completeCount = REQUIRED_INPUTS.filter((item) => state[item.key]).length;
     const ready = completeCount === REQUIRED_INPUTS.length;
     const ratingState = ratingResults.get(ticker);
+    const terminal = terminalRatingCopy(ratingState?.status, ticker);
     const retryPending = (ratingRetryAfter.get(ticker) ?? 0) > Date.now();
     const machineStatus = ratingState?.status ?? (ratingRequests.has(ticker) ? "loading" : retryPending ? "retry-wait" : "idle");
     const signature = `${ticker}|${REQUIRED_INPUTS.map((item) => state[item.key] ? "1" : "0").join("")}|${machineStatus}`;
@@ -272,9 +306,9 @@
       <div class="current-stock-readiness-head">
         <div>
           <span class="current-stock-readiness-kicker">CURRENT STOCK RATING™ / REQUIRED EVIDENCE</span>
-          <h3>${ready ? "VERIFIED RATING INPUTS COMPLETE" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
+          <h3>${terminal ? terminal.heading : ready ? "VERIFIED RATING INPUTS COMPLETE" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
         </div>
-        <strong class="current-stock-readiness-summary">${completeCount} / ${REQUIRED_INPUTS.length} VERIFIED INPUTS PRESENT</strong>
+        <strong class="current-stock-readiness-summary">${terminal ? String(ratingState.status).replace("_", " ").toUpperCase() : `${completeCount} / ${REQUIRED_INPUTS.length} VERIFIED INPUTS PRESENT`}</strong>
       </div>
       <ul class="current-stock-readiness-grid">
         ${REQUIRED_INPUTS.map((item) => {
@@ -282,7 +316,7 @@
           return `<li class="${present ? "is-ready" : "is-missing"}"><b>${present ? "✓" : "!"}</b><span>${item.label}<br><small>${present ? "VERIFIED IN PRODUCTION PAYLOAD" : "REQUIRED BEFORE A CURRENT SCORE CAN BE PUBLISHED"}</small></span></li>`;
         }).join("")}
       </ul>
-      <p class="current-stock-readiness-note">A numeric Current Stock Rating™ is shown only when the production payload itself independently proves the required filing, market, freshness, financial, risk, and versioned-calculation evidence. Visible page text can explain evidence, but it cannot satisfy a machine-verification gate or create a score.</p>
+      <p class="current-stock-readiness-note">${terminal ? terminal.copy : "A numeric Current Stock Rating™ is shown only when the production payload itself independently proves the required filing, market, freshness, financial, risk, and versioned-calculation evidence. Visible page text can explain evidence, but it cannot satisfy a machine-verification gate or create a score."}</p>
     `;
   }
 
