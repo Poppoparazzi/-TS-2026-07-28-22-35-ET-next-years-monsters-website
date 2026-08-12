@@ -1,8 +1,8 @@
-/* TS: 2026-08-11 04:00 ET */
+/* TS: 2026-08-12 13:46 UTC */
 .tier-hero{position:relative;overflow:hidden;min-height:520px}
 .tier-hero .tier-shell{position:relative;z-index:2}
 .tier-detective-break{position:absolute;right:2.4vw;bottom:0;z-index:3;width:min(300px,24vw);margin:0;text-align:center;pointer-events:none}
-.tier-detective-break img{display:block;width:100%;height:auto;max-height:450px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}
+.tier-detective-break img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}
 .tier-detective-break figcaption{margin:-2px 0 14px;color:#b8ff3d;font-size:10px;font-weight:900;letter-spacing:.08em;line-height:1.5;text-transform:uppercase;text-shadow:0 1px 0 #000}
 @media (min-width:1100px){.tier-hero .tier-shell{padding-right:320px}.tier-intro{max-width:760px}}
 @media (max-width:1099px){.tier-detective-break{right:-18px;width:210px;opacity:.92}.tier-hero .tier-shell{padding-right:135px}.tier-detective-break figcaption{display:none}}

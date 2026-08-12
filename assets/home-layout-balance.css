@@ -1,4 +1,4 @@
-/* TS: 2026-08-12 13:22 UTC */
+/* TS: 2026-08-12 13:46 UTC */
 
 /* Keep the Monster Hunt choices equal and intentionally arranged two over two. */
 #monster-hunt-board .home-market-tools-grid {
@@ -45,6 +45,7 @@
   flex-direction: column;
   position: relative;
   align-self: start;
+  height: auto;
   min-width: 0;
   background: #0d1211;
 }
@@ -88,6 +89,7 @@
   display: block;
   width: 100%;
   height: auto;
+  max-height: none;
   object-fit: contain;
   object-position: center;
 }

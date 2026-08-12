@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-12 03:05 ET -->
+<!-- TS: 2026-08-12 13:46 UTC -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -16,8 +16,8 @@
     .start-hero h1 { position:relative; z-index:2; margin:0; max-width:1040px; font-size:clamp(64px,11vw,150px); line-height:.86; letter-spacing:-.07em; }
     .start-hero h1 strong { color:var(--editorial-lime,#b8f34a); }
     .start-hero p { position:relative; z-index:2; max-width:860px; margin:26px 0 0; color:#e9e1d1; font-size:19px; line-height:1.55; }
-    .start-hero-mascot { position:absolute; right:clamp(18px,3vw,48px); bottom:-12px; z-index:1; width:clamp(110px,14vw,190px); margin:0; pointer-events:none; opacity:.96; }
-    .start-hero-mascot img { display:block; width:100%; height:auto; transform:scaleX(-1); filter:drop-shadow(0 16px 24px rgba(0,0,0,.38)); }
+    .start-hero-mascot { position:absolute; right:clamp(18px,3vw,48px); bottom:0; z-index:1; width:clamp(110px,14vw,190px); margin:0; overflow:visible; pointer-events:none; opacity:.96; }
+    .start-hero-mascot img { display:block; width:100%; height:auto; max-height:none; object-fit:contain; transform:scaleX(-1); filter:drop-shadow(0 16px 24px rgba(0,0,0,.38)); }
     .start-main { max-width:1180px; margin:0 auto; padding:48px 24px 80px; }
     .start-card { margin-bottom:24px; padding:28px; border:2px solid #111; background:#fffaf0; box-shadow:10px 10px 0 rgba(17,23,21,.12); }
     .start-card-dark { background:#111715; color:#fffaf0; }
@@ -37,7 +37,7 @@
     .start-three span { display:block; color:#b8f34a; font-size:11px; font-weight:950; letter-spacing:.04em; }
     .start-three strong { display:block; margin:8px 0; color:#fffaf0; font-size:20px; }
     .start-three p { margin:0; color:#d2d8d2; font-size:13px; }
-    @media(max-width:800px){ .start-grid,.start-three{grid-template-columns:1fr}.start-hero{padding:50px 24px 36px}.start-card{padding:22px}.start-hero-mascot{width:92px;right:10px;bottom:-4px;opacity:.72}.start-hero h1,.start-hero p{max-width:calc(100% - 76px)} }
+    @media(max-width:800px){ .start-grid,.start-three{grid-template-columns:1fr}.start-hero{padding:50px 24px 36px}.start-card{padding:22px}.start-hero-mascot{width:92px;right:10px;bottom:0;opacity:.72}.start-hero h1,.start-hero p{max-width:calc(100% - 76px)} }
   </style>
 </head>
 <body class="start-page">

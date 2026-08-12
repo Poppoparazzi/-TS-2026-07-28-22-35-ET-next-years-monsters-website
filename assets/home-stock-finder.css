@@ -1,4 +1,4 @@
-/* TS: 2026-08-07 16:11 ET */
+/* TS: 2026-08-12 13:46 UTC */
 
 /*
  * Working homepage reconstruction based on the approved 1672 x 941 Photoshop
@@ -353,14 +353,14 @@
 
 .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
   position: absolute !important;
-  inset: auto auto -3% 30% !important;
-  width: 79% !important;
+  inset: auto auto 0 28% !important;
+  width: 70% !important;
   max-width: none !important;
-  height: 111% !important;
+  height: 100% !important;
   padding: 0 !important;
   object-fit: contain !important;
   object-position: left bottom !important;
-  transform: translate(-6%, -6%) scale(1.12) rotate(-1deg) !important;
+  transform: translate(-4%, 0) !important;
   transform-origin: left bottom !important;
   filter: brightness(1.01) contrast(1.05) saturate(1.05) !important;
   z-index: 2 !important;
@@ -455,13 +455,14 @@
 
   .home-page .home-hero-art {
     position: relative !important;
-    min-height: 680px !important;
+    min-height: clamp(480px, 64vw, 680px) !important;
   }
 
   .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
-    inset: auto auto -2% -5% !important;
-    width: 110% !important;
-    height: 108% !important;
+    inset: auto auto 0 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-position: center bottom !important;
     transform: none !important;
   }
 }
@@ -550,13 +551,117 @@
   }
 
   .home-page .home-hero-art {
-    min-height: 500px !important;
+    min-height: clamp(300px, 66vw, 500px) !important;
   }
 
   .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
-    inset: auto auto -2% -12% !important;
-    width: 124% !important;
-    height: 108% !important;
+    inset: auto auto 0 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     transform: none !important;
+  }
+}
+
+/* Keep the complete approved homepage visible in short desktop viewports and
+   at enlarged browser zoom without making Captain Breakout feel small. */
+@media (min-width: 1051px) and (max-height: 780px) {
+  .home-page .home-header,
+  .home-page .home-nav-shell {
+    min-height: 62px;
+  }
+
+  .home-page .nym-market-tape,
+  .home-page .nym-market-tape-widget,
+  .home-page .nym-market-tape-widget .tradingview-widget-container,
+  .home-page .nym-market-tape-widget .tradingview-widget-container__widget {
+    height: 60px;
+    min-height: 60px;
+  }
+
+  .home-page .nym-market-tape-head {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .home-page .nym-market-tape-widget iframe {
+    height: 54px !important;
+    min-height: 54px !important;
+  }
+
+  .home-page .home-data-status {
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .home-page .home-data-status-title,
+  .home-page .home-data-status-item {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+
+  .home-page .home-hero {
+    height: calc(100dvh - 162px) !important;
+    min-height: 520px !important;
+  }
+
+  .home-page .home-hero-copy {
+    min-height: 0;
+    padding: 18px 26px 16px 60px !important;
+  }
+
+  .home-page .home-kicker {
+    margin-bottom: 12px !important;
+    font-size: 11px !important;
+  }
+
+  .home-page .home-hero h1 {
+    font-size: clamp(78px, 6vw, 92px) !important;
+  }
+
+  .home-page .home-hero-line {
+    margin: 12px 0 7px !important;
+    font-size: 19px !important;
+  }
+
+  .home-page .home-hero-text {
+    max-width: 500px !important;
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+
+  .home-page .home-stock-finder {
+    margin-top: 10px;
+    padding: 8px 10px;
+  }
+
+  .home-page .home-stock-finder label {
+    margin-bottom: 5px;
+    font-size: 9px;
+  }
+
+  .home-page .home-stock-finder input,
+  .home-page .home-stock-finder button {
+    min-height: 38px;
+  }
+
+  .home-page .home-stock-finder small {
+    margin-top: 4px;
+    font-size: 7px;
+  }
+
+  .home-page .home-hero-actions {
+    margin-top: 10px;
+  }
+
+  .home-page .home-btn {
+    min-height: 40px;
+    font-size: 10px;
+  }
+
+  .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
+    inset: auto auto 0 40% !important;
+    width: 79% !important;
+    height: 100% !important;
+    transform: scale(.98) !important;
   }
 }
