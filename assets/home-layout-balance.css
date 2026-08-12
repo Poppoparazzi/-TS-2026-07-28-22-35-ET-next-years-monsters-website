@@ -1,4 +1,4 @@
-/* TS: 2026-08-12 14:02 UTC */
+/* TS: 2026-08-12 14:06 UTC */
 
 /* Keep the Monster Hunt choices equal and intentionally arranged two over two. */
 #monster-hunt-board .home-market-tools-grid {
@@ -99,6 +99,8 @@
    empty cream slab after the Detective Break scenes end. */
 .home-page .home-check-followthrough {
   position: relative;
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 420px;
   margin: 34px calc(0px - clamp(30px, 5vw, 82px)) 0;
@@ -161,9 +163,46 @@
   font-weight: 950;
 }
 
+.home-page .home-check-followthrough-principle {
+  max-width: 500px;
+  margin-top: 72px;
+  padding: 30px 0;
+  border-top: 2px solid #111715;
+  border-bottom: 2px solid #111715;
+}
+
+.home-page .home-check-followthrough-principle span,
+.home-page .home-check-followthrough-principle strong {
+  display: block;
+}
+
+.home-page .home-check-followthrough-principle span {
+  margin-bottom: 13px;
+  color: #d9483b;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .075em;
+}
+
+.home-page .home-check-followthrough-principle strong {
+  max-width: 450px;
+  color: #111715;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: clamp(28px, 2.45vw, 40px);
+  line-height: 1;
+}
+
+.home-page .home-check-followthrough-principle p {
+  max-width: 470px;
+  margin: 18px 0 0;
+  color: #303733;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
 .home-page .home-check-followthrough .home-check-followthrough-close {
   max-width: 500px;
-  margin: 34px 0 0;
+  margin: auto 0 0;
   padding: 18px 20px;
   border-left: 6px solid #ef342b;
   background: #111715;
@@ -255,5 +294,13 @@
 
   .home-page .home-check-followthrough h3 {
     font-size: clamp(39px, 13vw, 52px);
+  }
+
+  .home-page .home-check-followthrough-principle {
+    margin-top: 48px;
+  }
+
+  .home-page .home-check-followthrough .home-check-followthrough-close {
+    margin-top: 36px;
   }
 }
