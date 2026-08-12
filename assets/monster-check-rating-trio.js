@@ -1,4 +1,4 @@
-// TS: 2026-08-11 15:50 UTC
+// TS: 2026-08-12 14:02 UTC
 
 (function installMonsterCheckRatingTrio() {
   "use strict";
@@ -151,7 +151,8 @@
       .monster-rating-trio-card strong{display:block;margin-bottom:7px;color:#fffaf0;font-size:clamp(22px,2.5vw,34px);line-height:1}
       .monster-rating-trio-card em{display:block;margin-bottom:10px;color:#b8f34a;font-size:11px;font-style:normal;font-weight:950;letter-spacing:.035em}
       .monster-rating-trio-card p{margin:0;color:#cfd5cf;font-size:12px;line-height:1.45}
-      .monster-rating-trio-note{grid-column:1/-1;margin:0;padding:11px 14px;border-left:4px solid #d9aa31;background:rgba(217,170,49,.08);color:#d6dbd5;font-size:11px;line-height:1.45}
+      .monster-rating-trio-note{grid-column:1/-1;margin:0;padding:11px 14px;border-left:4px solid #d9aa31;background:#fff3cf;color:#26302b;font-size:12px;font-weight:650;line-height:1.45}
+      .monster-rating-trio-note strong{color:#111715;font-weight:950}
       @media(max-width:850px){.monster-rating-trio{grid-template-columns:1fr}}
     `;
     document.head.append(style);

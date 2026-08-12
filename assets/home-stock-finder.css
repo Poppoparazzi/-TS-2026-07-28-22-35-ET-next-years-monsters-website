@@ -1,4 +1,4 @@
-/* TS: 2026-08-12 13:46 UTC */
+/* TS: 2026-08-12 14:02 UTC */
 
 /*
  * Working homepage reconstruction based on the approved 1672 x 941 Photoshop
@@ -353,14 +353,14 @@
 
 .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
   position: absolute !important;
-  inset: auto auto 0 28% !important;
-  width: 70% !important;
+  inset: auto auto -5% 24% !important;
+  width: 76% !important;
   max-width: none !important;
-  height: 100% !important;
+  height: 105% !important;
   padding: 0 !important;
   object-fit: contain !important;
   object-position: left bottom !important;
-  transform: translate(-4%, 0) !important;
+  transform: none !important;
   transform-origin: left bottom !important;
   filter: brightness(1.01) contrast(1.05) saturate(1.05) !important;
   z-index: 2 !important;
@@ -659,9 +659,9 @@
   }
 
   .home-page .home-hero-art img[data-captain-image].home-bull-rider-hero {
-    inset: auto auto 0 40% !important;
+    inset: auto auto -10% 36% !important;
     width: 79% !important;
-    height: 100% !important;
-    transform: scale(.98) !important;
+    height: 110% !important;
+    transform: none !important;
   }
 }

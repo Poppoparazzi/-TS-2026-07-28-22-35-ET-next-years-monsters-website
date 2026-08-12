@@ -1,4 +1,4 @@
-// TS: 2026-08-12 13:46 UTC
+// TS: 2026-08-12 14:02 UTC
 
 function restoreLandingAnchor() {
   if (!window.location.hash) return;
@@ -37,11 +37,7 @@ function tuneHomepageHero() {
   hero.style.setProperty('display', 'block', 'important');
 
   if (window.innerWidth >= 1051) {
-    const shortDesktopViewport = window.innerHeight <= 780;
-    const transform = shortDesktopViewport
-      ? 'scale(.98)'
-      : 'translate(-4%, 0)';
-    hero.style.setProperty('transform', transform, 'important');
+    hero.style.setProperty('transform', 'none', 'important');
   }
 }
 

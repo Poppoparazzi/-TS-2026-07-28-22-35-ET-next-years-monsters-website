@@ -1,4 +1,4 @@
-// TS: 2026-08-09 03:06 ET
+// TS: 2026-08-12 14:02 UTC
 
 window.NYM_CONFIG = Object.freeze({
   // Public backend address only. Never place an API key or private credential here.
@@ -30,7 +30,7 @@ window.NYM_CONFIG = Object.freeze({
   if (page === "monster-check.html" || isHomePage) {
     if (!document.querySelector('script[data-monster-rating-trio-script]')) {
       const script = document.createElement("script");
-      script.src = "assets/monster-check-rating-trio.js";
+      script.src = "assets/monster-check-rating-trio.js?v=20260812-1402";
       script.defer = true;
       script.dataset.monsterRatingTrioScript = "";
       document.head.append(script);
