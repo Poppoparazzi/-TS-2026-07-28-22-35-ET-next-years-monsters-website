@@ -1,8 +1,9 @@
-// TS: 2026-08-10 17:05 ET
+// TS: 2026-08-12 08:04 ET
 
 (() => {
   "use strict";
 
+  const CACHE_TTL_MS = 5 * 60 * 1000;
   const cache = new Map();
 
   function normalizeSymbol(value) {
@@ -33,10 +34,20 @@
       Boolean(value.eligibilityCode.trim());
   }
 
+  function freshCachedRequest(symbol) {
+    const entry = cache.get(symbol);
+    if (!entry) return null;
+    if (Date.now() - entry.createdAt < CACHE_TTL_MS) return entry.promise;
+    cache.delete(symbol);
+    return null;
+  }
+
   async function fetchRating(symbolValue) {
     const symbol = normalizeSymbol(symbolValue);
     if (!symbol) return { status: "invalid", symbol, data: null };
-    if (cache.has(symbol)) return cache.get(symbol);
+
+    const cached = freshCachedRequest(symbol);
+    if (cached) return cached;
 
     const pending = (async () => {
       const base = apiBase();
@@ -65,9 +76,10 @@
       }
     })();
 
-    cache.set(symbol, pending);
+    const entry = { createdAt: Date.now(), promise: pending };
+    cache.set(symbol, entry);
     pending.then((result) => {
-      if (result?.status !== "ok" && cache.get(symbol) === pending) {
+      if (result?.status !== "ok" && cache.get(symbol) === entry) {
         cache.delete(symbol);
       }
     });
