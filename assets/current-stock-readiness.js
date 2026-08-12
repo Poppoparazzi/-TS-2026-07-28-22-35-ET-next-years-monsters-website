@@ -1,4 +1,4 @@
-// TS: 2026-08-10 15:09 ET
+// TS: 2026-08-12 13:01 ET
 
 (() => {
   "use strict";
@@ -6,6 +6,7 @@
   const MAX_QUOTE_AGE_MS = 36 * 60 * 60 * 1000;
   const MAX_SEC_AGE_MS = 7 * 24 * 60 * 60 * 1000;
   const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
+  const RATING_RETRY_DELAY_MS = 30 * 1000;
 
   const REQUIRED_INPUTS = [
     { key: "identity", label: "Official SEC company identity" },
@@ -19,6 +20,7 @@
 
   const ratingResults = new Map();
   const ratingRequests = new Map();
+  const ratingRetryAfter = new Map();
   let clientPromise = null;
 
   function text(node) {
@@ -133,19 +135,44 @@
     };
   }
 
+  function scheduleRatingRetry(ticker, result) {
+    const retryAt = Date.now() + RATING_RETRY_DELAY_MS;
+    ratingRetryAfter.set(ticker, retryAt);
+    window.setTimeout(() => {
+      if ((ratingRetryAfter.get(ticker) ?? 0) > Date.now()) return;
+      ratingRetryAfter.delete(ticker);
+      render(result);
+    }, RATING_RETRY_DELAY_MS + 50);
+  }
+
   function requestProductionRating(ticker, result) {
     if (ratingResults.has(ticker) || ratingRequests.has(ticker)) return;
+    if ((ratingRetryAfter.get(ticker) ?? 0) > Date.now()) return;
 
     const pending = ensureClient()
-      .then((client) => client?.fetchRating ? client.fetchRating(ticker) : { status: "unavailable", symbol: ticker, data: null })
+      .then((client) => {
+        if (!client?.fetchRating) {
+          clientPromise = null;
+          return { status: "unavailable", symbol: ticker, data: null };
+        }
+        return client.fetchRating(ticker);
+      })
       .then((response) => {
-        ratingResults.set(ticker, response);
         ratingRequests.delete(ticker);
+        if (response?.status === "ok" && response.data) {
+          ratingResults.set(ticker, response);
+          ratingRetryAfter.delete(ticker);
+        } else {
+          ratingResults.delete(ticker);
+          scheduleRatingRetry(ticker, result);
+        }
         render(result);
       })
       .catch(() => {
-        ratingResults.set(ticker, { status: "unavailable", symbol: ticker, data: null });
         ratingRequests.delete(ticker);
+        ratingResults.delete(ticker);
+        clientPromise = null;
+        scheduleRatingRetry(ticker, result);
         render(result);
       });
 
@@ -225,7 +252,8 @@
     const completeCount = REQUIRED_INPUTS.filter((item) => state[item.key]).length;
     const ready = completeCount === REQUIRED_INPUTS.length;
     const ratingState = ratingResults.get(ticker);
-    const machineStatus = ratingState?.status ?? (ratingRequests.has(ticker) ? "loading" : "idle");
+    const retryPending = (ratingRetryAfter.get(ticker) ?? 0) > Date.now();
+    const machineStatus = ratingState?.status ?? (ratingRequests.has(ticker) ? "loading" : retryPending ? "retry-wait" : "idle");
     const signature = `${ticker}|${REQUIRED_INPUTS.map((item) => state[item.key] ? "1" : "0").join("")}|${machineStatus}`;
 
     let panel = result.querySelector(":scope .current-stock-readiness");
