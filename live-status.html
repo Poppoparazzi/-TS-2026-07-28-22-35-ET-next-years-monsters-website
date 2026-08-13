@@ -1,4 +1,4 @@
-<!-- TS: 2026-07-30 07:56 ET -->
+<!-- TS: 2026-08-12 20:59 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,7 +8,7 @@
   <meta name="description" content="See what is working now, what comes from outside market services, and what Next Year’s Monsters™ is still building.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
-  <link rel="stylesheet" href="assets/live-status.css">
+  <link rel="stylesheet" href="assets/live-status.css?v=20260812-2059">
   <link rel="stylesheet" href="assets/aapl-market-snapshot.css">
 </head>
 <body class="live-status-page">
@@ -36,39 +36,39 @@
     <div class="status-shell">
       <p class="status-kicker">CLEAR STATUS · WHAT WORKS AND WHAT DOES NOT YET</p>
       <h1>WEBSITE<br><strong>DATA STATUS</strong></h1>
-      <p class="status-intro">This page explains what is working now, what information comes from outside market services, and what we are still building inside Next Year’s Monsters™.</p>
+      <p class="status-intro">This page separates what is publicly available now from what still requires verified saved production data. External charts, SEC identity lookup, demonstration Monster Checks™, and internally verified live ratings are different things.</p>
     </div>
   </section>
 
   <div class="status-main">
     <section class="status-summary" aria-label="Current data status">
-      <article><strong data-demo-count>15/15</strong><span>STOCK PAGES AVAILABLE</span></article>
-      <article><strong data-quote-count>0/15</strong><span>PRICES SAVED IN OUR SYSTEM</span></article>
-      <article><strong data-sec-count>0/15</strong><span>SEC RECORDS SAVED</span></article>
-      <article><strong data-rating-count>0/15</strong><span>RATINGS SAVED IN OUR SYSTEM</span></article>
-      <article><strong data-open-slot-count>10</strong><span>MORE STOCKS STILL TO ADD</span></article>
+      <article><strong data-demo-count>15/15</strong><span>DEMONSTRATION MONSTER CHECKS</span></article>
+      <article><strong>25</strong><span>EXTERNAL MARKET TICKERS</span></article>
+      <article><strong data-sec-count>0/15</strong><span>SAVED SEC READINESS RECORDS</span></article>
+      <article><strong data-rating-count>0/15</strong><span>VERIFIED SAVED RATINGS</span></article>
+      <article><strong>10K+</strong><span>OFFICIAL SEC TICKER IDENTITIES SEARCHABLE</span></article>
     </section>
 
     <div class="status-next">
-      <strong data-readiness-headline>NEXT STEP: SAVE AAPL IN OUR SYSTEM</strong>
-      <span data-readiness-message>AAPL will be the first test stock. The public website and outside charts are working, but our private database is not connected yet. Until it is, we will not pretend the stock is fully live inside our own system.</span>
+      <strong data-readiness-headline>CHECKING SAVED PRODUCTION READINESS</strong>
+      <span data-readiness-message>The public site can show demonstration profiles and external market tools without claiming that a ticker has a verified saved Current Stock Rating™. The readiness service, when reachable, supplies the saved-data counts below.</span>
     </div>
 
     <section class="market-snapshot" aria-labelledby="market-snapshot-title">
       <div class="market-snapshot-head">
         <div>
-          <p class="status-kicker">15-STOCK MARKET CHARTS</p>
+          <p class="status-kicker">ORIGINAL 15 · DEMONSTRATION PROFILE CHARTS</p>
           <h2 id="market-snapshot-title">$<span data-market-ticker>AAPL</span> MARKET<br>CHART</h2>
         </div>
         <div>
-          <p>Choose any of the 15 stocks to see its price movement, volume, and different time periods. TradingView supplies these charts, so prices may be delayed.</p>
-          <span class="snapshot-badge">OUTSIDE MARKET CHARTS · NOT YET SAVED IN OUR DATABASE</span>
+          <p>Choose one of the original 15 Visual Case Library companies here. TradingView supplies the chart, so market information may be delayed. The separate Market Explorer covers the full 25-stock external market universe.</p>
+          <span class="snapshot-badge">EXTERNAL MARKET CHART · NOT A VERIFIED SAVED RATING</span>
         </div>
       </div>
 
       <div class="snapshot-controls">
         <div class="snapshot-select-group">
-          <label for="market-ticker-select">CHOOSE A STOCK</label>
+          <label for="market-ticker-select">CHOOSE A VCL STOCK</label>
           <select id="market-ticker-select" data-market-select aria-label="Choose a stock"></select>
         </div>
         <div class="snapshot-stock-buttons" data-market-buttons aria-label="Stock shortcut buttons"></div>
@@ -82,67 +82,68 @@
       <div class="market-snapshot-frame" data-market-widget aria-live="polite">
         <p class="snapshot-loading">Loading market chart…</p>
       </div>
-      <p class="snapshot-note"><strong>What this page shows:</strong> visitors can view outside market charts for the 15 stocks now. <strong>What is still missing:</strong> saved prices, SEC records, rating history, and update times inside our own database.</p>
+      <p class="snapshot-note"><strong>What this page shows:</strong> demonstration profiles for the original 15 plus external charts. <strong>What this page does not assume:</strong> that a quote, SEC filing record, rating, evidence bundle, or update time has been saved internally unless the production readiness service confirms it.</p>
+      <p class="snapshot-note"><a href="market-explorer.html"><strong>OPEN THE FULL 25-STOCK MARKET EXPLORER →</strong></a></p>
     </section>
 
-    <section class="status-section" aria-labelledby="rollout-stages-title">
+    <section class="status-section" aria-labelledby="coverage-title">
       <div class="status-section-head">
-        <h2 id="rollout-stages-title">HOW WE GROW<br>THE SYSTEM.</h2>
-        <p>We will prove that the system works with one stock first. Then we will repeat the same process with 5, 10, 15, and 25 stocks.</p>
+        <h2 id="coverage-title">TWO DIFFERENT<br>PUBLIC UNIVERSES.</h2>
+        <p>The website deliberately separates the 15 historical Visual Case Library demonstration companies from the broader 25-stock external market coverage list.</p>
       </div>
       <div class="stage-grid">
-        <article><span>STEP 01</span><strong>1 STOCK</strong><p>Proves that the market provider, website, and database work together.</p></article>
-        <article><span>STEP 02</span><strong>5 STOCKS</strong><p>Proves that different companies can update correctly.</p></article>
-        <article><span>STEP 03</span><strong>10 STOCKS</strong><p>Proves that the process can repeat without missing or duplicate information.</p></article>
-        <article><span>STEP 04</span><strong>15 STOCKS</strong><p>Completes the original group from the book.</p></article>
-        <article><span>STEP 05</span><strong>25 STOCKS</strong><p>Completes the first larger public group.</p></article>
+        <article><span>VCL / DEMO</span><strong>15 STOCKS</strong><p>These companies have demonstration Monster Check™ profiles tied to the book and Visual Case Library.</p></article>
+        <article><span>MARKET TOOLS</span><strong>25 STOCKS</strong><p>These tickers are available in the external chart/news coverage universe. External market data may be delayed.</p></article>
+        <article><span>SEC IDENTITY</span><strong>10K+</strong><p>The stock directory can use the official SEC ticker identity universe to recognize public-company symbols without pretending every company already has a Monster Check.</p></article>
+        <article><span>VERIFIED RATINGS</span><strong>SEPARATE GATE</strong><p>A numeric Current Stock Rating™ appears only when the production evidence contract is satisfied.</p></article>
+        <article><span>HISTORY</span><strong>NO REWRITES</strong><p>Demonstration and historical material remain clearly labeled so they cannot be mistaken for current verified production ratings.</p></article>
       </div>
     </section>
 
     <section class="status-section" aria-labelledby="pilot-status-title">
       <div class="status-section-head">
         <h2 id="pilot-status-title">THE ORIGINAL 15.<br>STOCK BY STOCK.</h2>
-        <p>Each row shows what is already available and what is still missing. Once the database is connected, these rows will update from saved records.</p>
+        <p>Each row distinguishes a published demonstration profile from saved quote, SEC, evidence, and rating readiness. When the readiness API is reachable, these saved-data fields update from production instead of being invented in the browser.</p>
       </div>
       <div class="status-list" data-status-list>
-        <p class="leaderboard-empty">Loading the 15-stock checklist…</p>
+        <p class="leaderboard-empty">Loading the 15-stock readiness checklist…</p>
       </div>
     </section>
 
-    <section class="status-section" aria-labelledby="open-slots-title">
+    <section class="status-section" aria-labelledby="additional-coverage-title">
       <div class="status-section-head">
-        <h2 id="open-slots-title">TEN MORE STOCKS.<br>NOT CHOSEN YET.</h2>
-        <p>These ten stocks will be chosen carefully so the list includes different industries, company sizes, and chart patterns.</p>
+        <h2 id="additional-coverage-title">TEN MORE STOCKS.<br>NOW IN MARKET COVERAGE.</h2>
+        <p>These ten names expand the external chart/news universe from the original 15 to 25. They do not automatically receive a demonstration or verified Monster Rating™ merely because a chart exists.</p>
       </div>
-      <div class="open-slots" aria-label="Open Top 25 positions">
-        <article><strong>16</strong><span>Not chosen</span></article>
-        <article><strong>17</strong><span>Not chosen</span></article>
-        <article><strong>18</strong><span>Not chosen</span></article>
-        <article><strong>19</strong><span>Not chosen</span></article>
-        <article><strong>20</strong><span>Not chosen</span></article>
-        <article><strong>21</strong><span>Not chosen</span></article>
-        <article><strong>22</strong><span>Not chosen</span></article>
-        <article><strong>23</strong><span>Not chosen</span></article>
-        <article><strong>24</strong><span>Not chosen</span></article>
-        <article><strong>25</strong><span>Not chosen</span></article>
+      <div class="open-slots" aria-label="Additional market coverage tickers">
+        <article><strong>AVGO</strong><span>Broadcom</span></article>
+        <article><strong>COIN</strong><span>Coinbase</span></article>
+        <article><strong>CRWD</strong><span>CrowdStrike</span></article>
+        <article><strong>GOOGL</strong><span>Alphabet</span></article>
+        <article><strong>HOOD</strong><span>Robinhood</span></article>
+        <article><strong>PLTR</strong><span>Palantir</span></article>
+        <article><strong>RKLB</strong><span>Rocket Lab</span></article>
+        <article><strong>SHOP</strong><span>Shopify</span></article>
+        <article><strong>SOFI</strong><span>SoFi</span></article>
+        <article><strong>UBER</strong><span>Uber</span></article>
       </div>
     </section>
 
     <section class="status-section" aria-labelledby="pipeline-title">
       <div class="status-section-head">
-        <h2 id="pipeline-title">WHAT WE ARE<br>STILL BUILDING.</h2>
-        <p>The public website is working, but the private services below still need to be connected before we call our own stock information fully live.</p>
+        <h2 id="pipeline-title">WHAT IS LIVE.<br>WHAT STILL HAS A GATE.</h2>
+        <p>The website can use public identity data and external market tools today. Saved production ratings remain deliberately stricter.</p>
       </div>
       <div class="pipeline-grid">
-        <article><strong>MARKET PRICES</strong><span>The connection is built, but the private provider key and hosted service still need to be turned on.</span></article>
-        <article><strong>SEC RECORDS</strong><span>The SEC connection is built, but the information still needs to be saved in our database.</span></article>
-        <article><strong>DATABASE HISTORY</strong><span>The database design is ready, but the private hosted database still needs to be connected.</span></article>
-        <article><strong>STOCK NEWS</strong><span>News still needs sources, times, and a clear explanation of whether it changed the rating.</span></article>
+        <article><strong>MARKET CHARTS</strong><span>External TradingView charts are available for the 25-stock market universe and may be delayed. A chart is not proof that a licensed quote was saved internally.</span></article>
+        <article><strong>SEC IDENTITY &amp; EVIDENCE</strong><span>Official SEC ticker identity lookup is available. Saved SEC evidence counts are shown only when the production readiness service confirms them.</span></article>
+        <article><strong>DATABASE / RATING HISTORY</strong><span>The page reads the production readiness API when available. If it cannot verify saved progress, it reports the failure instead of substituting completion numbers.</span></article>
+        <article><strong>STOCK NEWS</strong><span>External current stories may be shown separately. News does not change a Current Stock Rating™ unless it enters the verified evidence path with source and time.</span></article>
       </div>
     </section>
 
     <div class="status-note">
-      <strong>Educational notice:</strong> A stock price by itself does not make a Monster Rating™ current. A current rating also needs saved evidence, risks, sources, and a real update time.
+      <strong>Educational notice:</strong> A stock price, chart, story, or SEC identity match by itself does not make a Current Stock Rating™ verified. A current rating needs the required evidence, risks, provenance, and freshness checks to pass.
     </div>
   </div>
 </main>
@@ -152,8 +153,8 @@
   <p><strong>Educational Use Only:</strong> Nothing on this page is a recommendation to buy, sell, or hold a security.</p>
 </footer>
 
-<script src="assets/runtime-config.js"></script>
-<script src="assets/live-status.js"></script>
-<script src="assets/market-ticker-strip.js"></script>
+<script src="assets/runtime-config.js?v=20260812-2059"></script>
+<script src="assets/live-status.js?v=20260812-2059"></script>
+<script src="assets/market-ticker-strip.js?v=20260812-2059"></script>
 </body>
 </html>
