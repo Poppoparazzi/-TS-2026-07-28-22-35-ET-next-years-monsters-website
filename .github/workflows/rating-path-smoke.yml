@@ -1,4 +1,4 @@
-# TS: 2026-08-13 00:12 ET
+# TS: 2026-08-13 01:09 ET
 
 name: Current Stock Rating production smoke
 
@@ -27,8 +27,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out repository
+      - name: Check out repository history
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
