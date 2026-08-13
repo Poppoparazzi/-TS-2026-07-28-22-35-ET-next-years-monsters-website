@@ -1,9 +1,10 @@
-// TS: 2026-08-13 01:05 ET
+// TS: 2026-08-13 01:08 ET
+
+import { execFileSync } from "node:child_process";
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
   .replace(/\/$/, "");
-const expectedCommit = (process.env.NYM_EXPECTED_COMMIT || process.env.GITHUB_SHA || "").trim();
 const expectedEngineVersion = (
   process.env.NYM_EXPECTED_RATING_ENGINE || "nym-current-stock-rating-v0.1-readiness-only"
 ).trim();
@@ -45,6 +46,21 @@ async function optionalJson(url) {
   try {
     return await requestJson(url, 30_000);
   } catch {
+    return null;
+  }
+}
+
+function hasDeployRelevantChangesSince(deploymentCommit) {
+  if (!deploymentCommit) return null;
+  try {
+    execFileSync(
+      "git",
+      ["diff", "--quiet", `${deploymentCommit}..HEAD`, "--", "backend", "render.yaml"],
+      { stdio: "ignore" },
+    );
+    return false;
+  } catch (error) {
+    if (typeof error?.status === "number" && error.status === 1) return true;
     return null;
   }
 }
@@ -116,15 +132,16 @@ async function verifyOnce() {
 
   const startup = await optionalJson(`${apiBaseUrl}/api/startup-status`);
   const deploymentCommit = String(startup?.deploymentCommit || "").trim();
+  const deployRelevantChangesPending = hasDeployRelevantChangesSince(deploymentCommit);
   const firstSymbol = symbols[0] || "AAPL";
   const routeProbe = await probeRatingRoute(firstSymbol);
 
-  if (expectedCommit && deploymentCommit && deploymentCommit !== expectedCommit) {
+  if (deployRelevantChangesPending === true) {
     const routeState = routeProbe.available
       ? `${firstSymbol} rating route responds on the stale deployment`
       : `${firstSymbol} rating route probe failed: ${routeProbe.error}`;
     throw new Error(
-      `Render is serving stale commit ${deploymentCommit}, expected ${expectedCommit}; ${routeState}.`,
+      `Render is serving stale commit ${deploymentCommit}; backend/render.yaml changes exist after that SHA; ${routeState}.`,
     );
   }
 
@@ -142,7 +159,7 @@ async function verifyOnce() {
     apiStatus: health.status,
     apiVersion: health.version || null,
     deploymentCommit: deploymentCommit || null,
-    expectedCommit: expectedCommit || null,
+    deployRelevantChangesPending,
     expectedEngineVersion,
     symbols: summaries,
   };
