@@ -1,4 +1,4 @@
-// TS: 2026-08-13 15:10 ET
+// TS: 2026-08-13 17:00 ET
 
 window.NYM_CONFIG = Object.freeze({
   // Public backend address only. Never place an API key or private credential here.
@@ -30,6 +30,14 @@ window.NYM_CONFIG = Object.freeze({
       script.src = "assets/live-status-nav.js?v=20260813-1510";
       script.defer = true;
       script.dataset.liveStatusNavScript = "";
+      document.head.appendChild(script);
+    }
+
+    if (!document.querySelector('script[data-live-status-rating-service-script]')) {
+      const script = document.createElement("script");
+      script.src = "assets/live-status-rating-service.js?v=20260813-1659";
+      script.defer = true;
+      script.dataset.liveStatusRatingServiceScript = "";
       document.head.appendChild(script);
     }
   }
