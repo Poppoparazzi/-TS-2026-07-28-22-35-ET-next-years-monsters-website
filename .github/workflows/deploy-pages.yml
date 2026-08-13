@@ -1,4 +1,4 @@
-# TS: 2026-08-12 22:59 ET
+# TS: 2026-08-13 07:08 ET
 name: Verify website publication
 
 on:
@@ -34,15 +34,19 @@ jobs:
           test -f index.html
           test -f live-status.html
           test -f top-monsters.html
+          test -f vcl-library.html
+          test -f about.html
           test -f data/monster-tier-board-preview.json
           grep -q '25</strong><span>EXTERNAL MARKET TICKERS' live-status.html
           grep -q 'TEN MORE STOCKS.<br>NOW IN MARKET COVERAGE.' live-status.html
+          grep -q '2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp?v=20260813-0704' vcl-library.html
+          grep -q 'Use the site in order' about.html
           python - <<'PY'
           import json
           with open('data/monster-tier-board-preview.json', encoding='utf-8') as handle:
               board = json.load(handle)
           assert len(board.get('top15', [])) == 15, 'Monster Hunt Top 15 payload must contain exactly 15 rows'
-          print('Verified gh-pages payload: CNAME, publication probe, reconciled Data Status, and 15-row Monster Hunt board are present.')
+          print('Verified gh-pages payload: CNAME, publication probe, reconciled Data Status, VCL/ About journey files, and 15-row Monster Hunt board are present.')
           PY
 
       - name: Verify Monster Hunt renderer emits all 15 case rows
@@ -148,8 +152,10 @@ jobs:
           wait_for_match "live-status.html" "https://nextyearsmonsters.com/live-status.html" "Data Status"
           wait_for_match "top-monsters.html" "https://nextyearsmonsters.com/top-monsters.html" "Monster Hunt HTML"
           wait_for_match "data/monster-tier-board-preview.json" "https://nextyearsmonsters.com/data/monster-tier-board-preview.json" "Monster Hunt Top 15 data"
+          wait_for_match "vcl-library.html" "https://nextyearsmonsters.com/vcl-library.html" "VCL Library"
+          wait_for_match "about.html" "https://nextyearsmonsters.com/about.html" "About"
 
-      - name: Verify public Data Status and Monster Hunt semantics
+      - name: Verify public Data Status, Monster Hunt, VCL, and About semantics
         shell: bash
         run: |
           set -euo pipefail
@@ -175,5 +181,19 @@ jobs:
           top15 = board.get('top15', [])
           assert len(top15) == 15, f'Expected 15 public Top 15 rows, found {len(top15)}'
           assert all(item.get('ticker') and item.get('score_status') for item in top15), 'Every public Top 15 row must contain ticker and published score status'
-          print('PUBLIC SCOREBOARD VERIFIED: exact gh-pages Data Status, Monster Hunt HTML, and 15-row board are live on nextyearsmonsters.com.')
+          print('PUBLIC MONSTER HUNT VERIFIED: 15-row board is live on nextyearsmonsters.com.')
           PY
+
+          curl --fail --silent --show-error --location \
+            "https://nextyearsmonsters.com/vcl-library.html?cb=${GITHUB_SHA}" \
+            -o /tmp/public-vcl.html
+          grep -q '2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp?v=20260813-0704' /tmp/public-vcl.html
+          ! grep -q '2026-08-11_1725_Detective-Break_Break-On-The-Case.webp' /tmp/public-vcl.html
+
+          curl --fail --silent --show-error --location \
+            "https://nextyearsmonsters.com/about.html?cb=${GITHUB_SHA}" \
+            -o /tmp/public-about.html
+          grep -q 'Use the site in order' /tmp/public-about.html
+          grep -q 'OPEN VCL™ LIBRARY' /tmp/public-about.html
+
+          echo 'PUBLIC SCOREBOARD VERIFIED: exact gh-pages Data Status, Monster Hunt, VCL Library, and About are live on nextyearsmonsters.com.'
