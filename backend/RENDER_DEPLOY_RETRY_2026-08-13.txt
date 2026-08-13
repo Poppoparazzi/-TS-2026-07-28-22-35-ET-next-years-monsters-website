@@ -1,0 +1,5 @@
+TS: 2026-08-13 16:03 ET
+
+Purpose: one-time safe backend-root change to test whether the Render Git auto-deploy connection is still observing main.
+
+No runtime logic, API behavior, scoring, frontend, or homepage content is changed by this file.
