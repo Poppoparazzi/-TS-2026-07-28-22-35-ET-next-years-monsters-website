@@ -1,4 +1,4 @@
-// TS: 2026-08-12 18:04 ET
+// TS: 2026-08-12 20:05 ET
 
 (() => {
   "use strict";
@@ -45,6 +45,16 @@
     return ageMs >= -FUTURE_TOLERANCE_MS && ageMs <= maxAgeMs;
   }
 
+  function isOfficialSecUrl(value) {
+    try {
+      const url = new URL(String(value ?? ""));
+      const host = url.hostname.toLowerCase();
+      return url.protocol === "https:" && (host === "sec.gov" || host.endsWith(".sec.gov"));
+    } catch {
+      return false;
+    }
+  }
+
   function ensureClient() {
     if (window.NYM_PRODUCTION_RATING?.fetchRating) return Promise.resolve(window.NYM_PRODUCTION_RATING);
     if (clientPromise) return clientPromise;
@@ -87,8 +97,8 @@
     const riskComponent = components.find((item) => item?.key === "risk_deterioration");
 
     const filing = filingEvidence.some((item) =>
-      String(item?.sourceUrl ?? "").startsWith("https://www.sec.gov/") &&
-      (!item?.sourceTimestamp || timestampIsCurrent(item.sourceTimestamp, MAX_SEC_AGE_MS))
+      isOfficialSecUrl(item?.sourceUrl) &&
+      timestampIsCurrent(item?.sourceTimestamp, MAX_SEC_AGE_MS)
     );
 
     const quote = marketEvidence.some((item) =>
@@ -98,8 +108,8 @@
     const freshness = marketEvidence.some((item) => timestampIsCurrent(item?.sourceTimestamp, MAX_QUOTE_AGE_MS));
 
     const financials = financialEvidence.some((item) =>
-      String(item?.sourceUrl ?? "").startsWith("https://") &&
-      (!item?.sourceTimestamp || timestampIsCurrent(item.sourceTimestamp, MAX_SEC_AGE_MS))
+      isOfficialSecUrl(item?.sourceUrl) &&
+      timestampIsCurrent(item?.sourceTimestamp, MAX_SEC_AGE_MS)
     );
 
     const risk = Boolean(
