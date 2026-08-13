@@ -1,10 +1,11 @@
-// TS: 2026-08-12 20:05 ET
+// TS: 2026-08-12 23:59 ET
 
 (() => {
   "use strict";
 
   const MAX_QUOTE_AGE_MS = 36 * 60 * 60 * 1000;
   const MAX_SEC_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  const MAX_RISK_AGE_MS = 36 * 60 * 60 * 1000;
   const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
   const RATING_RETRY_DELAY_MS = 30 * 1000;
   const TERMINAL_RATING_STATES = new Set(["not_found", "invalid_payload"]);
@@ -50,6 +51,23 @@
       const url = new URL(String(value ?? ""));
       const host = url.hostname.toLowerCase();
       return url.protocol === "https:" && (host === "sec.gov" || host.endsWith(".sec.gov"));
+    } catch {
+      return false;
+    }
+  }
+
+  function isTrustedHttpsEvidenceUrl(value) {
+    try {
+      const url = new URL(String(value ?? ""));
+      const host = url.hostname.toLowerCase();
+      return (
+        url.protocol === "https:" &&
+        Boolean(host) &&
+        host !== "localhost" &&
+        host !== "127.0.0.1" &&
+        host !== "0.0.0.0" &&
+        !host.endsWith(".local")
+      );
     } catch {
       return false;
     }
@@ -112,10 +130,14 @@
       timestampIsCurrent(item?.sourceTimestamp, MAX_SEC_AGE_MS)
     );
 
+    const riskSourceUrl = riskComponent?.sourceUrl ?? riskComponent?.provenance?.sourceUrl ?? riskComponent?.evidence?.sourceUrl;
+    const riskSourceTimestamp = riskComponent?.sourceTimestamp ?? riskComponent?.provenance?.sourceTimestamp ?? riskComponent?.evidence?.sourceTimestamp;
     const risk = Boolean(
       riskComponent &&
       riskComponent.direction !== "unavailable" &&
-      Number.isFinite(Number(riskComponent.score))
+      Number.isFinite(Number(riskComponent.score)) &&
+      isTrustedHttpsEvidenceUrl(riskSourceUrl) &&
+      timestampIsCurrent(riskSourceTimestamp, MAX_RISK_AGE_MS)
     );
 
     const calculation = Boolean(
@@ -326,7 +348,7 @@
           return `<li class="${present ? "is-ready" : "is-missing"}"><b>${present ? "✓" : "!"}</b><span>${item.label}<br><small>${present ? "VERIFIED IN PRODUCTION PAYLOAD" : "REQUIRED BEFORE A CURRENT SCORE CAN BE PUBLISHED"}</small></span></li>`;
         }).join("")}
       </ul>
-      <p class="current-stock-readiness-note">${terminal ? terminal.copy : "A numeric Current Stock Rating™ is shown only when the production payload itself independently proves the required filing, market, freshness, financial, risk, and versioned-calculation evidence. Visible page text can explain evidence, but it cannot satisfy a machine-verification gate or create a score."}</p>
+      <p class="current-stock-readiness-note">${terminal ? terminal.copy : "A numeric Current Stock Rating™ is shown only when the production payload itself independently proves the required filing, market, freshness, financial, risk, and versioned-calculation evidence. Risk evidence must include fresh source provenance; a component score by itself does not satisfy the gate. Visible page text can explain evidence, but it cannot satisfy a machine-verification gate or create a score."}</p>
     `;
   }
 
