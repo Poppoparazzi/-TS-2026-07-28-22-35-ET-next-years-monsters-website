@@ -1,27 +1,21 @@
-# TS: 2026-08-12 21:04 ET
-name: Deploy website to GitHub Pages
+# TS: 2026-08-12 22:03 ET
+name: Verify website publication
 
 on:
   push:
     branches:
-      - main
       - gh-pages
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: github-pages
+  group: public-site-verification
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  verify:
     runs-on: ubuntu-latest
     steps:
       - name: Check out publishing branch
@@ -51,67 +45,58 @@ jobs:
           print('Verified gh-pages payload: CNAME, publication probe, reconciled Data Status, and 15-row Monster Hunt board are present.')
           PY
 
-      - name: Configure GitHub Pages
-        id: pages
-        uses: actions/configure-pages@v5
-
-      - name: Report Pages configuration
-        shell: bash
-        run: |
-          echo "Pages base URL: ${{ steps.pages.outputs.base_url }}"
-          echo "Pages origin: ${{ steps.pages.outputs.origin }}"
-          echo "Pages host: ${{ steps.pages.outputs.host }}"
-          echo "Pages base path: ${{ steps.pages.outputs.base_path }}"
-
-      - name: Upload static website
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: .
-
-      - name: Deploy website
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Verify deployed Pages URL
+      - name: Wait for exact gh-pages files on public custom domain
         shell: bash
         run: |
           set -euo pipefail
-          DEPLOYED_URL="${{ steps.deployment.outputs.page_url }}"
-          echo "Deployment output URL: ${DEPLOYED_URL}"
-          test -n "${DEPLOYED_URL}"
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
-            "${DEPLOYED_URL%/}/site-version.json?cb=${GITHUB_SHA}" \
-            -o /tmp/pages-site-version.json
-          grep -q 'nym-publication-probe-2026-08-11-0902-ET' /tmp/pages-site-version.json
-          echo "Verified publication probe through GitHub Pages deployment URL."
 
-      - name: Verify public custom domain
+          wait_for_match() {
+            local source_file="$1"
+            local public_url="$2"
+            local label="$3"
+            local expected
+            expected="$(sha256sum "$source_file" | awk '{print $1}')"
+
+            for attempt in $(seq 1 18); do
+              if curl --fail --silent --show-error --location \
+                "${public_url}?cb=${GITHUB_SHA}-${attempt}" \
+                -o /tmp/public-file; then
+                actual="$(sha256sum /tmp/public-file | awk '{print $1}')"
+                if [ "$actual" = "$expected" ]; then
+                  echo "PUBLIC BYTE MATCH: ${label} matches gh-pages at ${GITHUB_SHA}."
+                  return 0
+                fi
+              fi
+              echo "Waiting for public ${label} to match gh-pages (${attempt}/18)..."
+              sleep 5
+            done
+
+            echo "ERROR: public ${label} never matched gh-pages commit ${GITHUB_SHA}." >&2
+            return 1
+          }
+
+          wait_for_match "site-version.json" "https://nextyearsmonsters.com/site-version.json" "publication probe"
+          wait_for_match "live-status.html" "https://nextyearsmonsters.com/live-status.html" "Data Status"
+          wait_for_match "top-monsters.html" "https://nextyearsmonsters.com/top-monsters.html" "Monster Hunt HTML"
+          wait_for_match "data/monster-tier-board-preview.json" "https://nextyearsmonsters.com/data/monster-tier-board-preview.json" "Monster Hunt Top 15 data"
+
+      - name: Verify public Data Status and Monster Hunt semantics
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
-            "https://nextyearsmonsters.com/site-version.json?cb=${GITHUB_SHA}" \
-            -o /tmp/custom-domain-site-version.json
-          grep -q 'nym-publication-probe-2026-08-11-0902-ET' /tmp/custom-domain-site-version.json
-          echo "PUBLIC CUSTOM DOMAIN VERIFIED: nextyearsmonsters.com is serving the intended gh-pages publication probe."
-
-      - name: Verify public Data Status and Monster Hunt board
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
+          curl --fail --silent --show-error --location \
             "https://nextyearsmonsters.com/live-status.html?cb=${GITHUB_SHA}" \
             -o /tmp/public-live-status.html
           grep -q '25</strong><span>EXTERNAL MARKET TICKERS' /tmp/public-live-status.html
           grep -q 'TEN MORE STOCKS.<br>NOW IN MARKET COVERAGE.' /tmp/public-live-status.html
 
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
+          curl --fail --silent --show-error --location \
             "https://nextyearsmonsters.com/top-monsters.html?cb=${GITHUB_SHA}" \
             -o /tmp/public-top-monsters.html
           grep -q 'data-tier-list="top15"' /tmp/public-top-monsters.html
           grep -q 'assets/monster-tier-board-preview.js' /tmp/public-top-monsters.html
 
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
+          curl --fail --silent --show-error --location \
             "https://nextyearsmonsters.com/data/monster-tier-board-preview.json?cb=${GITHUB_SHA}" \
             -o /tmp/public-monster-board.json
           python - <<'PY'
@@ -121,5 +106,5 @@ jobs:
           top15 = board.get('top15', [])
           assert len(top15) == 15, f'Expected 15 public Top 15 rows, found {len(top15)}'
           assert all(item.get('ticker') and item.get('score_status') for item in top15), 'Every public Top 15 row must contain ticker and published score status'
-          print('PUBLIC SCOREBOARD VERIFIED: reconciled Data Status and 15-row Monster Hunt payload are live on nextyearsmonsters.com.')
+          print('PUBLIC SCOREBOARD VERIFIED: exact gh-pages Data Status, Monster Hunt HTML, and 15-row board are live on nextyearsmonsters.com.')
           PY
