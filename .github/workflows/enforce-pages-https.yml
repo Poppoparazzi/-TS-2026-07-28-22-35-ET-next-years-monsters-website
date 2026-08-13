@@ -1,0 +1,69 @@
+# TS: 2026-08-13 11:10 ET
+
+name: Enforce Pages HTTPS
+
+on:
+  push:
+    branches:
+      - gh-pages
+    paths:
+      - ".github/workflows/enforce-pages-https.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+
+jobs:
+  enforce-https:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable HTTPS enforcement
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          response_code=$(curl -sS -o /tmp/pages-update.txt -w '%{http_code}' \
+            -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "https://api.github.com/repos/${REPOSITORY}/pages" \
+            -d '{"https_enforced":true}')
+          if [ "${response_code}" != "204" ]; then
+            echo "GitHub Pages HTTPS update returned HTTP ${response_code}."
+            cat /tmp/pages-update.txt
+            exit 1
+          fi
+
+      - name: Verify Pages HTTPS is enforced
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "https://api.github.com/repos/${REPOSITORY}/pages" > /tmp/pages.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const pages = JSON.parse(fs.readFileSync('/tmp/pages.json', 'utf8'));
+          console.log(JSON.stringify({
+            status: pages.status,
+            cname: pages.cname,
+            httpsEnforced: pages.https_enforced,
+            certificateState: pages.https_certificate?.state || null,
+          }, null, 2));
+          if (pages.cname !== 'nextyearsmonsters.com') {
+            throw new Error(`Unexpected Pages CNAME: ${pages.cname}`);
+          }
+          if (pages.https_certificate?.state !== 'approved') {
+            throw new Error(`Pages certificate is not approved: ${pages.https_certificate?.state}`);
+          }
+          if (pages.https_enforced !== true) {
+            throw new Error('GitHub Pages still reports HTTPS enforcement disabled.');
+          }
+          NODE
