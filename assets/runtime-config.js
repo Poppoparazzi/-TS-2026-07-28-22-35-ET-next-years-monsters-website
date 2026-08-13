@@ -1,4 +1,4 @@
-// TS: 2026-08-12 15:01 ET
+// TS: 2026-08-13 10:12 ET
 
 window.NYM_CONFIG = Object.freeze({
   // Public backend address only. Never place an API key or private credential here.
@@ -42,6 +42,14 @@ window.NYM_CONFIG = Object.freeze({
     script.src = "assets/production-rating-client.js?v=20260812-1501";
     script.defer = true;
     script.dataset.productionRatingClient = "";
+    document.head.appendChild(script);
+  }
+
+  if (page === "monster-check.html" && !document.querySelector('script[data-rating-service-state-guard]')) {
+    const script = document.createElement("script");
+    script.src = "assets/rating-service-state-guard.js?v=20260813-1008";
+    script.defer = true;
+    script.dataset.ratingServiceStateGuard = "";
     document.head.appendChild(script);
   }
 })();
