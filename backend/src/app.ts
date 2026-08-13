@@ -1,4 +1,4 @@
-// TS: 2026-08-02 15:19 ET
+// TS: 2026-08-13 00:06 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -17,6 +17,7 @@ import {
   ProviderNotConfiguredError,
 } from "./providers/types.js";
 import { QuoteService } from "./quotes/service.js";
+import { evaluatePublicRatingReadiness } from "./ratings/public-rating-readiness.js";
 import { createSecDataProvider } from "./sec/index.js";
 import type { SecDataProvider } from "./sec/types.js";
 import { createUniverseStore } from "./universe/store.js";
@@ -297,6 +298,107 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       provider: provider.name,
       cacheTtlSeconds: Math.max(Math.round((options.quoteCacheTtlMs ?? 60_000) / 1_000), 1),
       retrievedAt: new Date().toISOString(),
+    };
+  });
+
+  app.get<{ Params: SymbolParams }>("/api/ratings/:symbol", async (request, reply) => {
+    const symbol = normalizeTickerSymbol(request.params.symbol);
+    if (!symbol) return sendInvalidSymbol(reply);
+
+    const calculatedAt = new Date().toISOString();
+    const [quote, secCompany, filings, secFacts] = await Promise.all([
+      quoteService.getQuote(symbol),
+      secProvider.getCompany(symbol),
+      secProvider.getRecentFilings(symbol, 1),
+      secProvider.getCompanyFacts(symbol),
+    ]);
+
+    const readiness = evaluatePublicRatingReadiness({
+      symbol,
+      quote,
+      secCompany,
+      secFacts,
+      now: new Date(calculatedAt),
+    });
+    const latestFiling = filings[0] ?? null;
+    const firstFact = Object.values(secFacts.facts)[0] ?? null;
+    const evidenceInputs = [
+      {
+        key: "market_price",
+        sourceType: "market-data",
+        value: quote.price,
+        provider: quote.provider,
+        sourceUrl: null,
+        sourceTimestamp: quote.providerTimestamp,
+      },
+      latestFiling
+        ? {
+            key: "latest_sec_filing",
+            sourceType: "sec-filing",
+            value: `${latestFiling.form} filed ${latestFiling.filingDate}`,
+            provider: secProvider.name,
+            sourceUrl: latestFiling.primaryDocumentUrl,
+            sourceTimestamp: latestFiling.acceptanceDateTime ?? latestFiling.filingDate,
+          }
+        : null,
+      firstFact
+        ? {
+            key: `company_fact_${firstFact.key}`,
+            sourceType: "company-fact",
+            value: firstFact.value,
+            provider: secProvider.name,
+            sourceUrl: firstFact.sourceUrl || secFacts.sourceUrl,
+            sourceTimestamp: secFacts.retrievedAt,
+          }
+        : null,
+    ].filter((item) => item !== null);
+
+    const failedGates = Object.entries(readiness.gates)
+      .filter(([, gate]) => !gate.ready)
+      .map(([key, gate]) => ({
+        code: `gate_${key}`,
+        message: gate.reason,
+      }));
+    const sourceEvidenceReady = [
+      readiness.gates.secIdentity,
+      readiness.gates.marketQuote,
+      readiness.gates.quoteFreshness,
+      readiness.gates.financialEvidence,
+    ].every((gate) => gate.ready);
+
+    return {
+      symbol,
+      engineVersion: "nym-current-stock-rating-v0.1-readiness-only",
+      calculatedAt,
+      eligible: false,
+      score: null,
+      tier: "NOT YET RATED",
+      eligibilityCode: sourceEvidenceReady
+        ? "risk_and_versioned_calculation_not_connected"
+        : "required_evidence_incomplete",
+      summary: sourceEvidenceReady
+        ? "Verified market and SEC evidence are available, but Current Stock Rating™ remains withheld until verified risk evidence and a versioned scoring calculation are connected."
+        : "Current Stock Rating™ remains withheld because one or more required evidence gates are incomplete.",
+      evidenceInputs,
+      components: [
+        {
+          key: "risk_deterioration",
+          label: "Risk deterioration",
+          direction: "unavailable",
+          score: null,
+          sourceUrl: null,
+          sourceTimestamp: null,
+        },
+      ],
+      reasons:
+        failedGates.length > 0
+          ? failedGates
+          : [
+              {
+                code: "rating_model_not_connected",
+                message: "Verified risk evidence and a versioned Current Stock Rating™ calculation are not connected.",
+              },
+            ],
     };
   });
 
