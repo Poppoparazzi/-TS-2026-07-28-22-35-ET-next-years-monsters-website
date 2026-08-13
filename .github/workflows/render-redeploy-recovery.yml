@@ -1,4 +1,4 @@
-# TS: 2026-08-13 02:08 ET
+# TS: 2026-08-13 18:12 ET
 
 name: Render deploy recovery
 
@@ -20,6 +20,63 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify current Render deployment state
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+
+          const base = "https://next-years-monsters-api.onrender.com";
+          const startupResponse = await fetch(`${base}/api/startup-status`, {
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(70_000),
+          });
+          const startup = await startupResponse.json().catch(() => null);
+          const deployedCommit = startup?.deploymentCommit ?? null;
+          const latestRelevantCommit = execFileSync(
+            "git",
+            ["rev-list", "-1", "HEAD", "--", "backend", "render.yaml"],
+            { encoding: "utf8" },
+          ).trim();
+
+          let classification = "unknown";
+          let relevantChangesAfterDeploy = null;
+
+          if (deployedCommit) {
+            try {
+              const changed = execFileSync(
+                "git",
+                ["diff", "--name-only", `${deployedCommit}..HEAD`, "--", "backend", "render.yaml"],
+                { encoding: "utf8" },
+              )
+                .trim()
+                .split("\n")
+                .filter(Boolean);
+              relevantChangesAfterDeploy = changed.length;
+              classification = changed.length > 0 ? "stale_deployment" : "current_for_backend";
+            } catch {
+              classification = "deployed_commit_not_in_repository_history";
+            }
+          }
+
+          console.log("Render deployment diagnostic:");
+          console.log(JSON.stringify({
+            startupHttpStatus: startupResponse.status,
+            deployedCommit,
+            latestRelevantCommit,
+            relevantChangesAfterDeploy,
+            classification,
+          }, null, 2));
+
+          if (classification === "stale_deployment") {
+            console.log("Render is serving an older backend than the repository currently contains.");
+          }
+          NODE
+
       - name: Check deploy hook configuration
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
