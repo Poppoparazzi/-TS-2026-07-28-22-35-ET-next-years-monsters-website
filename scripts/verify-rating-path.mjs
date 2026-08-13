@@ -1,4 +1,4 @@
-// TS: 2026-08-13 00:10 ET
+// TS: 2026-08-13 01:05 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -97,20 +97,43 @@ function validateRating(symbol, rating) {
   };
 }
 
+async function probeRatingRoute(symbol) {
+  try {
+    const rating = await requestJson(`${apiBaseUrl}/api/ratings/${encodeURIComponent(symbol)}`, 30_000);
+    return { available: true, rating, error: null };
+  } catch (error) {
+    return {
+      available: false,
+      rating: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 async function verifyOnce() {
   const health = await requestJson(`${apiBaseUrl}/api/health`, 30_000);
   if (health?.status !== "ok") throw new Error("API health status is not ok.");
 
   const startup = await optionalJson(`${apiBaseUrl}/api/startup-status`);
   const deploymentCommit = String(startup?.deploymentCommit || "").trim();
+  const firstSymbol = symbols[0] || "AAPL";
+  const routeProbe = await probeRatingRoute(firstSymbol);
+
   if (expectedCommit && deploymentCommit && deploymentCommit !== expectedCommit) {
+    const routeState = routeProbe.available
+      ? `${firstSymbol} rating route responds on the stale deployment`
+      : `${firstSymbol} rating route probe failed: ${routeProbe.error}`;
     throw new Error(
-      `Render is serving commit ${deploymentCommit}, waiting for expected commit ${expectedCommit}.`,
+      `Render is serving stale commit ${deploymentCommit}, expected ${expectedCommit}; ${routeState}.`,
     );
   }
 
-  const summaries = [];
-  for (const symbol of symbols) {
+  if (!routeProbe.available) {
+    throw new Error(routeProbe.error || `${firstSymbol} rating route is unavailable.`);
+  }
+
+  const summaries = [validateRating(firstSymbol, routeProbe.rating)];
+  for (const symbol of symbols.slice(1)) {
     const rating = await requestJson(`${apiBaseUrl}/api/ratings/${encodeURIComponent(symbol)}`);
     summaries.push(validateRating(symbol, rating));
   }
