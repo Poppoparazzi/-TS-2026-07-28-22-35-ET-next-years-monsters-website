@@ -1,0 +1,52 @@
+# TS: 2026-08-13 09:06 ET
+name: Verify Monster Check public
+
+on:
+  push:
+    branches:
+      - gh-pages
+    paths:
+      - "monster-check.html"
+      - "assets/current-stock-readiness.js"
+      - "assets/production-rating-client.js"
+      - ".github/workflows/verify-monster-check-public.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-monster-check-public:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out publishing branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+
+      - name: Wait for exact Monster Check on public custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(sha256sum monster-check.html | awk '{print $1}')"
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error --location \
+              "https://nextyearsmonsters.com/monster-check.html?cb=${GITHUB_SHA}-${attempt}" \
+              -o /tmp/public-monster-check.html; then
+              actual="$(sha256sum /tmp/public-monster-check.html | awk '{print $1}')"
+              if [ "$actual" = "$expected" ]; then
+                echo "PUBLIC BYTE MATCH: Monster Check matches gh-pages at ${GITHUB_SHA}."
+                break
+              fi
+            fi
+            if [ "$attempt" -eq 18 ]; then
+              echo "ERROR: public Monster Check never matched gh-pages commit ${GITHUB_SHA}." >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
+          grep -q '2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp' /tmp/public-monster-check.html
+          ! grep -q '2026-08-11_1725_Detective-Break_Break-On-The-Case.webp' /tmp/public-monster-check.html
+          grep -q 'assets/current-stock-readiness.js' /tmp/public-monster-check.html
+          echo 'PUBLIC MONSTER CHECK VERIFIED: exact HTML is live, approved bright Detective Break is present, old Detective reference is absent, and Current Stock Rating readiness wiring is present.'
