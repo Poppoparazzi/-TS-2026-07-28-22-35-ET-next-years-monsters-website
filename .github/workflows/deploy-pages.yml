@@ -1,4 +1,4 @@
-# TS: 2026-08-12 22:03 ET
+# TS: 2026-08-12 22:59 ET
 name: Verify website publication
 
 on:
@@ -44,6 +44,75 @@ jobs:
           assert len(board.get('top15', [])) == 15, 'Monster Hunt Top 15 payload must contain exactly 15 rows'
           print('Verified gh-pages payload: CNAME, publication probe, reconciled Data Status, and 15-row Monster Hunt board are present.')
           PY
+
+      - name: Verify Monster Hunt renderer emits all 15 case rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const board = JSON.parse(fs.readFileSync('data/monster-tier-board-preview.json', 'utf8'));
+          const renderer = fs.readFileSync('assets/monster-tier-board-preview.js', 'utf8');
+
+          const lists = Object.fromEntries(['top15', 'rising', 'watchlist', 'dropped'].map(key => [key, { innerHTML: '' }]));
+          const counts = Object.fromEntries(['top15', 'rising', 'watchlist', 'dropped'].map(key => [key, { textContent: '' }]));
+          const snapshot = { textContent: '' };
+          const method = { textContent: '' };
+          const snapshotStatus = { textContent: '' };
+          const notes = [{ innerHTML: '' }, { innerHTML: '' }];
+          let domReady = null;
+
+          const document = {
+            querySelector(selector) {
+              if (selector === '[data-snapshot-date]') return snapshot;
+              if (selector === '[data-score-method]') return method;
+              if (selector === '.tier-snapshot-bar strong') return snapshotStatus;
+              const countMatch = selector.match(/^\[data-count="([^"]+)"\]$/);
+              if (countMatch) return counts[countMatch[1]] || null;
+              const listMatch = selector.match(/^\[data-tier-list="([^"]+)"\]$/);
+              if (listMatch) return lists[listMatch[1]] || null;
+              return null;
+            },
+            querySelectorAll(selector) {
+              if (selector === '.tier-method-note p') return notes;
+              if (selector === '[data-tier-list]') return Object.values(lists);
+              return [];
+            },
+            addEventListener(event, callback) {
+              if (event === 'DOMContentLoaded') domReady = callback;
+            },
+          };
+
+          const context = {
+            document,
+            console,
+            fetch: async () => ({ ok: true, json: async () => board }),
+            encodeURIComponent,
+          };
+          vm.createContext(context);
+          vm.runInContext(renderer, context, { filename: 'monster-tier-board-preview.js' });
+
+          (async () => {
+            if (typeof domReady !== 'function') throw new Error('Monster Hunt renderer did not register DOMContentLoaded setup.');
+            await domReady();
+            await new Promise(resolve => setImmediate(resolve));
+
+            const rendered = lists.top15.innerHTML;
+            const rowCount = (rendered.match(/<article class="tier-row">/g) || []).length;
+            const caseLinkCount = (rendered.match(/OPEN CASE FILE →/g) || []).length;
+            if (rowCount !== 15) throw new Error(`Expected 15 rendered Top 15 rows, found ${rowCount}`);
+            if (caseLinkCount !== 15) throw new Error(`Expected 15 rendered case-file links, found ${caseLinkCount}`);
+            if (String(counts.top15.textContent) !== '15') throw new Error(`Top 15 visible count rendered as ${counts.top15.textContent}`);
+            for (const stock of board.top15) {
+              if (!rendered.includes(`$${stock.ticker}`)) throw new Error(`Rendered Monster Hunt is missing ${stock.ticker}`);
+            }
+            console.log('RENDER VERIFIED: Monster Hunt emits 15 visible Top 15 rows and 15 case-file links from the published board.');
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
 
       - name: Wait for exact gh-pages files on public custom domain
         shell: bash
