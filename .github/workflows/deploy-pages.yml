@@ -1,4 +1,4 @@
-# TS: 2026-08-11 11:58 ET
+# TS: 2026-08-12 21:04 ET
 name: Deploy website to GitHub Pages
 
 on:
@@ -38,7 +38,18 @@ jobs:
           test -f site-version.json
           grep -q 'nym-publication-probe-2026-08-11-0902-ET' site-version.json
           test -f index.html
-          echo "Verified gh-pages payload: CNAME, publication probe, and homepage artifact are present."
+          test -f live-status.html
+          test -f top-monsters.html
+          test -f data/monster-tier-board-preview.json
+          grep -q '25</strong><span>EXTERNAL MARKET TICKERS' live-status.html
+          grep -q 'TEN MORE STOCKS.<br>NOW IN MARKET COVERAGE.' live-status.html
+          python - <<'PY'
+          import json
+          with open('data/monster-tier-board-preview.json', encoding='utf-8') as handle:
+              board = json.load(handle)
+          assert len(board.get('top15', [])) == 15, 'Monster Hunt Top 15 payload must contain exactly 15 rows'
+          print('Verified gh-pages payload: CNAME, publication probe, reconciled Data Status, and 15-row Monster Hunt board are present.')
+          PY
 
       - name: Configure GitHub Pages
         id: pages
@@ -83,3 +94,32 @@ jobs:
             -o /tmp/custom-domain-site-version.json
           grep -q 'nym-publication-probe-2026-08-11-0902-ET' /tmp/custom-domain-site-version.json
           echo "PUBLIC CUSTOM DOMAIN VERIFIED: nextyearsmonsters.com is serving the intended gh-pages publication probe."
+
+      - name: Verify public Data Status and Monster Hunt board
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
+            "https://nextyearsmonsters.com/live-status.html?cb=${GITHUB_SHA}" \
+            -o /tmp/public-live-status.html
+          grep -q '25</strong><span>EXTERNAL MARKET TICKERS' /tmp/public-live-status.html
+          grep -q 'TEN MORE STOCKS.<br>NOW IN MARKET COVERAGE.' /tmp/public-live-status.html
+
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
+            "https://nextyearsmonsters.com/top-monsters.html?cb=${GITHUB_SHA}" \
+            -o /tmp/public-top-monsters.html
+          grep -q 'data-tier-list="top15"' /tmp/public-top-monsters.html
+          grep -q 'assets/monster-tier-board-preview.js' /tmp/public-top-monsters.html
+
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 \
+            "https://nextyearsmonsters.com/data/monster-tier-board-preview.json?cb=${GITHUB_SHA}" \
+            -o /tmp/public-monster-board.json
+          python - <<'PY'
+          import json
+          with open('/tmp/public-monster-board.json', encoding='utf-8') as handle:
+              board = json.load(handle)
+          top15 = board.get('top15', [])
+          assert len(top15) == 15, f'Expected 15 public Top 15 rows, found {len(top15)}'
+          assert all(item.get('ticker') and item.get('score_status') for item in top15), 'Every public Top 15 row must contain ticker and published score status'
+          print('PUBLIC SCOREBOARD VERIFIED: reconciled Data Status and 15-row Monster Hunt payload are live on nextyearsmonsters.com.')
+          PY
