@@ -1,0 +1,44 @@
+# TS: 2026-08-13 00:12 ET
+
+name: Current Stock Rating production smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 * * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "render.yaml"
+      - "scripts/verify-rating-path.mjs"
+      - ".github/workflows/rating-path-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: current-stock-rating-production-smoke
+  cancel-in-progress: true
+
+jobs:
+  verify-rating-path:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify AAPL, CRDO, RKLB, and MSFT production rating path
+        env:
+          NYM_RATING_SMOKE_SYMBOLS: "AAPL,CRDO,RKLB,MSFT"
+          NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v0.1-readiness-only"
+          NYM_RATING_SMOKE_ATTEMPTS: "12"
+          NYM_RATING_SMOKE_DELAY_MS: "30000"
+        run: node scripts/verify-rating-path.mjs
