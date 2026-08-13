@@ -1,0 +1,85 @@
+# TS: 2026-08-13 02:08 ET
+
+name: Render deploy recovery
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "render.yaml"
+      - ".github/workflows/render-redeploy-recovery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check deploy hook configuration
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL is not configured in GitHub Actions secrets."
+            echo "Automatic Render recovery cannot be triggered from GitHub until that secret is added."
+            exit 2
+          fi
+
+      - name: Trigger Render deployment
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            "$RENDER_DEPLOY_HOOK_URL"
+
+      - name: Verify backend advanced and rating route exists
+        run: |
+          node --input-type=module <<'NODE'
+          const base = "https://next-years-monsters-api.onrender.com";
+          const expectedRoute = `${base}/api/ratings/AAPL`;
+          const attempts = 12;
+          const delayMs = 30_000;
+
+          for (let attempt = 1; attempt <= attempts; attempt += 1) {
+            const [startupResponse, ratingResponse] = await Promise.all([
+              fetch(`${base}/api/startup-status`, {
+                headers: { Accept: "application/json" },
+                signal: AbortSignal.timeout(70_000),
+              }),
+              fetch(expectedRoute, {
+                headers: { Accept: "application/json" },
+                signal: AbortSignal.timeout(70_000),
+              }),
+            ]);
+
+            const startup = await startupResponse.json().catch(() => null);
+            const rating = await ratingResponse.json().catch(() => null);
+            const deployedCommit = startup?.deploymentCommit ?? null;
+
+            console.log(JSON.stringify({
+              attempt,
+              deployedCommit,
+              ratingStatus: ratingResponse.status,
+              ratingEngine: rating?.engineVersion ?? null,
+              ratingTier: rating?.tier ?? null,
+              ratingEligibilityCode: rating?.eligibilityCode ?? null,
+            }));
+
+            if (ratingResponse.ok && rating?.symbol === "AAPL" && rating?.score === null) {
+              console.log("Render rating route is live and failing closed as intended.");
+              process.exit(0);
+            }
+
+            if (attempt < attempts) {
+              await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+          }
+
+          throw new Error("Render did not expose the repaired rating route within the verification window.");
+          NODE
