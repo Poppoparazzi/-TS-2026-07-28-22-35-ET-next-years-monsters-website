@@ -1,4 +1,4 @@
-# TS: 2026-08-13 18:12 ET
+# TS: 2026-08-13 19:00 ET
 
 name: Render deploy recovery
 
@@ -74,20 +74,25 @@ jobs:
 
           if (classification === "stale_deployment") {
             console.log("Render is serving an older backend than the repository currently contains.");
+            console.log("Render documents that deploying a specific commit or performing a rollback can disable automatic deploys; restoring Auto-Deploy to On Commit is the dashboard-side recovery if that occurred.");
           }
           NODE
 
       - name: Check deploy hook configuration
+        id: deploy_hook
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "RENDER_DEPLOY_HOOK_URL is not configured in GitHub Actions secrets."
-            echo "Automatic Render recovery cannot be triggered from GitHub until that secret is added."
-            exit 2
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "RENDER_DEPLOY_HOOK_URL is not configured. Skipping forced deploy, but continuing with live production verification."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Render deploy hook is available."
           fi
 
       - name: Trigger Render deployment
+        if: steps.deploy_hook.outputs.configured == 'true'
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
