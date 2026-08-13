@@ -1,4 +1,4 @@
-// TS: 2026-08-13 10:12 ET
+// TS: 2026-08-13 15:10 ET
 
 window.NYM_CONFIG = Object.freeze({
   // Public backend address only. Never place an API key or private credential here.
@@ -23,6 +23,14 @@ window.NYM_CONFIG = Object.freeze({
       script.async = false;
       script.dataset.liveStatusHealthScript = "";
       document.head.append(script);
+    }
+
+    if (!document.querySelector('script[data-live-status-nav-script]')) {
+      const script = document.createElement("script");
+      script.src = "assets/live-status-nav.js?v=20260813-1510";
+      script.defer = true;
+      script.dataset.liveStatusNavScript = "";
+      document.head.appendChild(script);
     }
   }
 
