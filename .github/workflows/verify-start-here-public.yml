@@ -1,0 +1,47 @@
+# TS: 2026-08-13 04:10 ET
+name: Verify Start Here public
+
+on:
+  push:
+    branches:
+      - gh-pages
+    paths:
+      - "start-here.html"
+      - "assets/2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp"
+      - ".github/workflows/verify-start-here-public.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-start-here:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check out publishing branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+
+      - name: Verify exact public Start Here
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(sha256sum start-here.html | awk '{print $1}')"
+          for attempt in $(seq 1 24); do
+            if curl --fail --silent --show-error --location \
+              "https://nextyearsmonsters.com/start-here.html?cb=${GITHUB_SHA}-${attempt}" \
+              -o /tmp/public-start-here.html; then
+              actual="$(sha256sum /tmp/public-start-here.html | awk '{print $1}')"
+              if [ "$actual" = "$expected" ]; then
+                grep -q '2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp' /tmp/public-start-here.html
+                echo "PUBLIC START HERE VERIFIED: exact gh-pages file and approved bright Detective Break reference are live on nextyearsmonsters.com."
+                exit 0
+              fi
+            fi
+            echo "Waiting for public Start Here to match gh-pages (${attempt}/24)..."
+            sleep 5
+          done
+          echo "ERROR: public Start Here never matched gh-pages commit ${GITHUB_SHA}." >&2
+          exit 1
