@@ -1,0 +1,45 @@
+# TS: 2026-08-13 11:18 ET
+
+name: Verify public transport
+
+on:
+  push:
+    branches:
+      - gh-pages
+    paths:
+      - ".github/workflows/verify-public-transport.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-public-transport:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify HTTPS custom domain and HTTP behavior
+        run: |
+          set -euo pipefail
+
+          https_code=$(curl -sS -o /tmp/https-body.html -w '%{http_code}' --max-time 30 https://nextyearsmonsters.com/)
+          echo "HTTPS apex status: ${https_code}"
+          test "${https_code}" = "200"
+          grep -q "Next Year" /tmp/https-body.html
+
+          curl -sS -D /tmp/http-headers.txt -o /dev/null --max-time 30 http://nextyearsmonsters.com/
+          echo "HTTP apex response headers:"
+          cat /tmp/http-headers.txt
+
+          http_code=$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END {print code}' /tmp/http-headers.txt)
+          location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/,""); print $2}' /tmp/http-headers.txt | tail -1)
+          echo "HTTP apex status: ${http_code}"
+          echo "HTTP apex location: ${location:-none}"
+
+          if [ "${http_code}" != "301" ] && [ "${http_code}" != "302" ] && [ "${http_code}" != "307" ] && [ "${http_code}" != "308" ]; then
+            echo "HTTP is not redirecting to HTTPS."
+            exit 1
+          fi
+          case "${location}" in
+            https://nextyearsmonsters.com/*|https://www.nextyearsmonsters.com/*) ;;
+            *) echo "HTTP redirect target is not the approved HTTPS custom domain."; exit 1 ;;
+          esac
