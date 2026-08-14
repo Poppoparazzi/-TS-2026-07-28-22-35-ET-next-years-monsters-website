@@ -1,4 +1,4 @@
-# TS: 2026-08-13 21:59 ET
+# TS: 2026-08-13 23:05 ET
 
 name: Render deploy recovery
 
@@ -26,6 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Classify current Render deployment state
+        id: render_state
         run: |
           node --input-type=module <<'NODE'
           import { execFileSync } from "node:child_process";
@@ -72,9 +73,20 @@ jobs:
             classification,
           }, null, 2));
 
+          console.log(`classification=${classification}`);
+          console.log(`deployed_commit=${deployedCommit ?? ""}`);
+          console.log(`latest_relevant_commit=${latestRelevantCommit}`);
+
           if (classification === "stale_deployment") {
             console.log("Render is serving an older backend than the repository currently contains.");
-            console.log("If a specific commit was manually deployed, Render may have disabled auto-deploy; the recovery paths below can force the latest connected-branch deploy without inventing application data.");
+          }
+
+          const output = process.env.GITHUB_OUTPUT;
+          if (output) {
+            const fs = await import("node:fs");
+            fs.appendFileSync(output, `classification=${classification}\n`);
+            fs.appendFileSync(output, `deployed_commit=${deployedCommit ?? ""}\n`);
+            fs.appendFileSync(output, `latest_relevant_commit=${latestRelevantCommit}\n`);
           }
           NODE
 
@@ -93,7 +105,7 @@ jobs:
             echo "Render API credentials are available."
           else
             echo "method=none" >> "$GITHUB_OUTPUT"
-            echo "No Render deploy hook or API credential pair is configured. Continuing with live production verification only."
+            echo "No Render deploy hook or API credential pair is configured."
           fi
 
       - name: Trigger Render deployment through deploy hook
@@ -129,11 +141,14 @@ jobs:
           echo "Render API accepted the deployment request with HTTP $status."
 
       - name: Verify backend advanced and rating route exists
+        env:
+          RECOVERY_METHOD: ${{ steps.render_auth.outputs.method }}
         run: |
           node --input-type=module <<'NODE'
           const base = "https://next-years-monsters-api.onrender.com";
           const expectedRoute = `${base}/api/ratings/AAPL`;
-          const attempts = 12;
+          const recoveryMethod = process.env.RECOVERY_METHOD || "none";
+          const attempts = recoveryMethod === "none" ? 1 : 12;
           const delayMs = 30_000;
 
           for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -154,6 +169,7 @@ jobs:
 
             console.log(JSON.stringify({
               attempt,
+              recoveryMethod,
               deployedCommit,
               ratingStatus: ratingResponse.status,
               ratingEngine: rating?.engineVersion ?? null,
@@ -171,5 +187,9 @@ jobs:
             }
           }
 
-          throw new Error("Render did not expose the repaired rating route within the verification window.");
+          if (recoveryMethod === "none") {
+            throw new Error("Render remains stale and no deploy authority is configured. Add RENDER_DEPLOY_HOOK_URL or the RENDER_API_KEY + RENDER_SERVICE_ID pair, or restore Render Git auto-deploy, then rerun this workflow.");
+          }
+
+          throw new Error("Render did not expose the repaired rating route within the verification window after an authorized redeploy attempt.");
           NODE
