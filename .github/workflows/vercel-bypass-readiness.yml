@@ -1,4 +1,4 @@
-# TS: 2026-08-14 11:01 ET
+# TS: 2026-08-14 11:05 ET
 name: Vercel bypass readiness
 
 on:
@@ -28,11 +28,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
 
       - name: Install backend dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Run backend checks
         run: npm run check
