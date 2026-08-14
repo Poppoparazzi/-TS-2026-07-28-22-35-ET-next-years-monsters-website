@@ -1,4 +1,4 @@
-# TS: 2026-08-03 13:39 ET
+# TS: 2026-08-14 06:01 ET
 
 databases:
   - name: next-years-monsters-db
@@ -12,6 +12,7 @@ services:
     runtime: node
     plan: free
     region: virginia
+    branch: main
     rootDir: backend
     buildCommand: npm install --include=dev --no-audit --no-fund && npm run check && npm run build
     startCommand: npm run db:migrate && npm run db:verify && npm start
