@@ -1,4 +1,4 @@
-// TS: 2026-08-14 10:01 ET
+// TS: 2026-08-14 15:02 ET
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
@@ -15,6 +15,24 @@ import {
 
 function isServerlessRuntime(): boolean {
   return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+}
+
+function getDeploymentProvider(): "vercel" | "render" | "unknown" {
+  if (process.env.VERCEL) {
+    return "vercel";
+  }
+  if (process.env.RENDER) {
+    return "render";
+  }
+  return "unknown";
+}
+
+function getDeploymentCommit(): string | null {
+  return process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.RENDER_GIT_COMMIT ?? null;
+}
+
+function getDeploymentBranch(): string | null {
+  return process.env.VERCEL_GIT_COMMIT_REF ?? process.env.RENDER_GIT_BRANCH ?? null;
 }
 
 async function runStartupJobs(
@@ -69,6 +87,11 @@ async function start(): Promise<void> {
     ...getStartupStatusSnapshot(),
     runtime: isServerlessRuntime() ? "serverless" : "persistent-server",
     startupJobsEnabled: !isServerlessRuntime(),
+    deployment: {
+      provider: getDeploymentProvider(),
+      commit: getDeploymentCommit(),
+      branch: getDeploymentBranch(),
+    },
   }));
   installFailClosedRatingErrorHandler(app);
 
