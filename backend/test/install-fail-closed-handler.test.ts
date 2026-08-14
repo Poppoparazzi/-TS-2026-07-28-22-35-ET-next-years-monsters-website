@@ -1,4 +1,4 @@
-// TS: 2026-08-14 04:02 ET
+// TS: 2026-08-14 06:59 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -23,6 +23,25 @@ test("rating provider failures return a truthful fail-closed response", async (t
   assert.equal(payload.tier, "NOT YET RATED");
   assert.equal(payload.eligible, false);
   assert.equal(payload.reasons[0].code, "gate_marketQuote");
+});
+
+test("generic rating evidence failures also remain fail-closed", async (t) => {
+  const app = Fastify({ logger: false });
+  installFailClosedRatingErrorHandler(app);
+  app.get("/api/ratings/:symbol", async () => {
+    throw new Error("SEC evidence fetch failed");
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({ method: "GET", url: "/api/ratings/RKLB" });
+  const payload = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(payload.symbol, "RKLB");
+  assert.equal(payload.score, null);
+  assert.equal(payload.tier, "NOT YET RATED");
+  assert.equal(payload.eligible, false);
+  assert.equal(payload.reasons[0].code, "required_evidence_incomplete");
 });
 
 test("non-rating provider failures retain service-unavailable semantics", async (t) => {
