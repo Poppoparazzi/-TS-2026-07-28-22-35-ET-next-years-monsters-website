@@ -1,4 +1,4 @@
-// TS: 2026-08-13 01:08 ET
+// TS: 2026-08-14 05:02 ET
 
 import { execFileSync } from "node:child_process";
 
@@ -14,37 +14,52 @@ const symbols = (process.env.NYM_RATING_SMOKE_SYMBOLS || "AAPL,CRDO,RKLB,MSFT")
   .filter(Boolean);
 const attemptCount = Number(process.env.NYM_RATING_SMOKE_ATTEMPTS || "12");
 const delayMs = Number(process.env.NYM_RATING_SMOKE_DELAY_MS || "30000");
+const healthTimeoutMs = Number(process.env.NYM_RATING_HEALTH_TIMEOUT_MS || "75000");
+const routeTimeoutMs = Number(process.env.NYM_RATING_ROUTE_TIMEOUT_MS || "30000");
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function requestJson(url, timeoutMs = 70_000) {
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+function timeoutMessage(label, timeoutMs) {
+  return `${label} did not respond within ${Math.round(timeoutMs / 1000)}s; Render may be sleeping, starting, or unresponsive.`;
+}
+
+async function requestJson(url, timeoutMs = 70_000, label = url) {
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+      throw new Error(timeoutMessage(label, timeoutMs));
+    }
+    throw error;
+  }
+
   const text = await response.text();
   let payload = null;
 
   try {
     payload = text ? JSON.parse(text) : null;
   } catch {
-    throw new Error(`${url} returned non-JSON content with HTTP ${response.status}.`);
+    throw new Error(`${label} returned non-JSON content with HTTP ${response.status}.`);
   }
 
   if (!response.ok) {
     throw new Error(
-      `${url} returned HTTP ${response.status}: ${payload?.message || payload?.error || "no JSON error"}`,
+      `${label} returned HTTP ${response.status}: ${payload?.message || payload?.error || "no JSON error"}`,
     );
   }
 
   return payload;
 }
 
-async function optionalJson(url) {
+async function optionalJson(url, timeoutMs, label) {
   try {
-    return await requestJson(url, 30_000);
+    return await requestJson(url, timeoutMs, label);
   } catch {
     return null;
   }
@@ -115,7 +130,11 @@ function validateRating(symbol, rating) {
 
 async function probeRatingRoute(symbol) {
   try {
-    const rating = await requestJson(`${apiBaseUrl}/api/ratings/${encodeURIComponent(symbol)}`, 30_000);
+    const rating = await requestJson(
+      `${apiBaseUrl}/api/ratings/${encodeURIComponent(symbol)}`,
+      routeTimeoutMs,
+      `${symbol} rating route`,
+    );
     return { available: true, rating, error: null };
   } catch (error) {
     return {
@@ -127,10 +146,14 @@ async function probeRatingRoute(symbol) {
 }
 
 async function verifyOnce() {
-  const health = await requestJson(`${apiBaseUrl}/api/health`, 30_000);
+  const health = await requestJson(`${apiBaseUrl}/api/health`, healthTimeoutMs, "API health endpoint");
   if (health?.status !== "ok") throw new Error("API health status is not ok.");
 
-  const startup = await optionalJson(`${apiBaseUrl}/api/startup-status`);
+  const startup = await optionalJson(
+    `${apiBaseUrl}/api/startup-status`,
+    Math.min(healthTimeoutMs, 60_000),
+    "API startup-status endpoint",
+  );
   const deploymentCommit = String(startup?.deploymentCommit || "").trim();
   const deployRelevantChangesPending = hasDeployRelevantChangesSince(deploymentCommit);
   const firstSymbol = symbols[0] || "AAPL";
@@ -151,7 +174,11 @@ async function verifyOnce() {
 
   const summaries = [validateRating(firstSymbol, routeProbe.rating)];
   for (const symbol of symbols.slice(1)) {
-    const rating = await requestJson(`${apiBaseUrl}/api/ratings/${encodeURIComponent(symbol)}`);
+    const rating = await requestJson(
+      `${apiBaseUrl}/api/ratings/${encodeURIComponent(symbol)}`,
+      routeTimeoutMs,
+      `${symbol} rating route`,
+    );
     summaries.push(validateRating(symbol, rating));
   }
 
@@ -161,6 +188,8 @@ async function verifyOnce() {
     deploymentCommit: deploymentCommit || null,
     deployRelevantChangesPending,
     expectedEngineVersion,
+    healthTimeoutMs,
+    routeTimeoutMs,
     symbols: summaries,
   };
 }
