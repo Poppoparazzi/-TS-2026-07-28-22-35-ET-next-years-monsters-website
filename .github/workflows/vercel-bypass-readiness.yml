@@ -1,4 +1,4 @@
-# TS: 2026-08-14 11:05 ET
+# TS: 2026-08-14 12:02 ET
 name: Vercel bypass readiness
 
 on:
@@ -85,6 +85,7 @@ jobs:
           api_pid=$!
           trap 'kill "$api_pid" 2>/dev/null || true; cat /tmp/nym-vercel-rating.log || true' EXIT
 
+          code="000"
           for attempt in $(seq 1 30); do
             code=$(curl --silent --output /tmp/aapl-rating.json --write-out '%{http_code}' http://127.0.0.1:8788/api/ratings/AAPL || true)
             if [ "$code" != "000" ]; then
@@ -93,15 +94,23 @@ jobs:
             sleep 1
           done
 
-          node - <<'NODE'
+          HTTP_CODE="$code" node - <<'NODE'
           const fs = require('fs');
           const payload = JSON.parse(fs.readFileSync('/tmp/aapl-rating.json', 'utf8'));
-          if (payload.score !== null) {
-            throw new Error(`Expected score=null without market credentials, got ${payload.score}`);
+          const httpCode = process.env.HTTP_CODE;
+
+          if (httpCode !== '503') {
+            throw new Error(`Expected HTTP 503 while market provider is deliberately unconfigured, got ${httpCode}`);
           }
-          const status = String(payload.status ?? payload.ratingStatus ?? '').toUpperCase();
-          if (!status.includes('NOT') && !status.includes('INCOMPLETE')) {
-            throw new Error(`Expected fail-closed rating status, got ${status || '(missing)'}`);
+          if (payload.error !== 'provider_not_configured') {
+            throw new Error(`Expected provider_not_configured, got ${payload.error ?? '(missing)'}`);
           }
-          console.log('AAPL fail-closed behavior verified without invented score.');
+          if (Object.prototype.hasOwnProperty.call(payload, 'score') && payload.score !== null) {
+            throw new Error(`Unconfigured market provider must never return a numeric score, got ${payload.score}`);
+          }
+
+          console.log('AAPL safely fails closed on the Vercel bypass with no invented score:', {
+            httpCode,
+            error: payload.error,
+          });
           NODE
