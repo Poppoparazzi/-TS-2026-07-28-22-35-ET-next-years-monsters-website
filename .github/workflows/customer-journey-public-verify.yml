@@ -1,4 +1,4 @@
-# TS: 2026-08-13 20:05 ET
+# TS: 2026-08-13 21:08 ET
 name: Verify public customer journey
 
 on:
@@ -75,8 +75,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location "https://nextyearsmonsters.com/start-here.html?cb=${GITHUB_SHA}" | grep -q '<title>Start Here | Next Year’s Monsters™</title>'
-          curl --fail --silent --show-error --location "https://nextyearsmonsters.com/monster-check.html?cb=${GITHUB_SHA}" | grep -q '<title>Monster Check™ | Next Year’s Monsters™</title>'
-          curl --fail --silent --show-error --location "https://nextyearsmonsters.com/how-it-works.html?cb=${GITHUB_SHA}" | grep -q '<title>The System | Next Year’s Monsters™</title>'
-          curl --fail --silent --show-error --location "https://nextyearsmonsters.com/about.html?cb=${GITHUB_SHA}" | grep -q 'Use the site in order'
+
+          check_public_content() {
+            local public_url="$1"
+            local expected_text="$2"
+            local label="$3"
+            local target="/tmp/public-${label// /-}.html"
+
+            curl --fail --silent --show-error --location \
+              "${public_url}?cb=${GITHUB_SHA}" \
+              -o "$target"
+            grep -Fq "$expected_text" "$target"
+            echo "PUBLIC IDENTITY MATCH: ${label}."
+          }
+
+          check_public_content "https://nextyearsmonsters.com/start-here.html" '<title>Start Here | Next Year’s Monsters™</title>' "Start Here"
+          check_public_content "https://nextyearsmonsters.com/monster-check.html" '<title>Monster Check™ | Next Year’s Monsters™</title>' "Monster Check"
+          check_public_content "https://nextyearsmonsters.com/how-it-works.html" '<title>The System | Next Year’s Monsters™</title>' "The System"
+          check_public_content "https://nextyearsmonsters.com/about.html" 'Use the site in order' "About"
           echo 'PUBLIC JOURNEY VERIFIED: Start Here, Monster Check, Monster Hunt, The System, VCL Library, and About match gh-pages.'
