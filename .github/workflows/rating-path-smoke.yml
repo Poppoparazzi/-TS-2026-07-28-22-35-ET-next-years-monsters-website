@@ -1,4 +1,4 @@
-# TS: 2026-08-13 01:09 ET
+# TS: 2026-08-14 02:02 ET
 
 name: Current Stock Rating production smoke
 
@@ -25,7 +25,7 @@ concurrency:
 jobs:
   verify-rating-path:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 3
     steps:
       - name: Check out repository history
         uses: actions/checkout@v4
@@ -41,6 +41,9 @@ jobs:
         env:
           NYM_RATING_SMOKE_SYMBOLS: "AAPL,CRDO,RKLB,MSFT"
           NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v0.1-readiness-only"
-          NYM_RATING_SMOKE_ATTEMPTS: "12"
-          NYM_RATING_SMOKE_DELAY_MS: "30000"
+          # The scheduled smoke is a snapshot, not a deployment waiter. The dedicated
+          # Render recovery workflow owns deploy retries. One probe prevents a known
+          # stale deployment from burning six minutes on twelve identical 404s.
+          NYM_RATING_SMOKE_ATTEMPTS: "1"
+          NYM_RATING_SMOKE_DELAY_MS: "0"
         run: node scripts/verify-rating-path.mjs
