@@ -1,4 +1,4 @@
-# TS: 2026-08-14 12:02 ET
+# TS: 2026-08-14 15:03 ET
 name: Vercel bypass readiness
 
 on:
@@ -38,6 +38,8 @@ jobs:
       - name: Boot backend in Vercel runtime mode
         env:
           VERCEL: "1"
+          VERCEL_GIT_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567"
+          VERCEL_GIT_COMMIT_REF: "main"
           PORT: "8787"
           HOST: "127.0.0.1"
           NODE_ENV: "production"
@@ -65,9 +67,19 @@ jobs:
           if (payload.startupJobsEnabled !== false) {
             throw new Error(`Expected startupJobsEnabled=false, got ${payload.startupJobsEnabled}`);
           }
+          if (payload.deployment?.provider !== 'vercel') {
+            throw new Error(`Expected deployment.provider=vercel, got ${payload.deployment?.provider ?? '(missing)'}`);
+          }
+          if (payload.deployment?.commit !== '0123456789abcdef0123456789abcdef01234567') {
+            throw new Error(`Expected Vercel deployment commit metadata, got ${payload.deployment?.commit ?? '(missing)'}`);
+          }
+          if (payload.deployment?.branch !== 'main') {
+            throw new Error(`Expected Vercel deployment branch=main, got ${payload.deployment?.branch ?? '(missing)'}`);
+          }
           console.log('Vercel collateral runtime verified:', {
             runtime: payload.runtime,
             startupJobsEnabled: payload.startupJobsEnabled,
+            deployment: payload.deployment,
           });
           NODE
 
