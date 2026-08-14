@@ -1,4 +1,4 @@
-// TS: 2026-08-14 03:10 ET
+// TS: 2026-08-14 04:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -18,7 +18,7 @@ test("rating provider failures return a truthful fail-closed response", async (t
   const payload = response.json();
 
   assert.equal(response.statusCode, 200);
-  assert.equal(payload.symbol, "aapl");
+  assert.equal(payload.symbol, "AAPL");
   assert.equal(payload.score, null);
   assert.equal(payload.tier, "NOT YET RATED");
   assert.equal(payload.eligible, false);
