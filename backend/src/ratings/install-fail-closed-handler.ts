@@ -1,24 +1,45 @@
-// TS: 2026-08-14 03:08 ET
+// TS: 2026-08-14 09:02 ET
 
 import type { FastifyInstance } from "fastify";
 import { ProviderNotConfiguredError } from "../providers/types.js";
+import { SecCompanyNotFoundError, SecEdgarRequestError } from "../sec/types.js";
 import { buildFailClosedRatingResponse } from "./fail-closed-response.js";
+
+function ratingFailureReason(error: unknown): { code: string; message: string } {
+  if (error instanceof ProviderNotConfiguredError) {
+    return {
+      code: "gate_marketQuote",
+      message: "Current market-data evidence is not configured in the production rating service.",
+    };
+  }
+
+  if (error instanceof SecCompanyNotFoundError) {
+    return {
+      code: "gate_secIdentity",
+      message: "Verified SEC identity could not be matched to the requested ticker.",
+    };
+  }
+
+  if (error instanceof SecEdgarRequestError) {
+    return {
+      code: "gate_financialEvidence",
+      message: "Current SEC filing or financial-fact evidence could not be retrieved from EDGAR.",
+    };
+  }
+
+  return {
+    code: "required_evidence_incomplete",
+    message: "One or more required production evidence sources could not be retrieved.",
+  };
+}
 
 export function installFailClosedRatingErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
     if (request.url.startsWith("/api/ratings/")) {
       const symbol = request.url.split("?")[0]?.split("/").filter(Boolean).at(-1) ?? "UNKNOWN";
-      const reason = error instanceof ProviderNotConfiguredError
-        ? {
-            code: "gate_marketQuote",
-            message: "Current market-data evidence is not configured in the production rating service.",
-          }
-        : {
-            code: "required_evidence_incomplete",
-            message: "One or more required production evidence sources could not be retrieved.",
-          };
+      const reason = ratingFailureReason(error);
 
-      request.log.error({ error, symbol }, "Rating evidence retrieval failed closed");
+      request.log.error({ error, symbol, reason: reason.code }, "Rating evidence retrieval failed closed");
       return reply.code(200).send(
         buildFailClosedRatingResponse(symbol, new Date().toISOString(), [reason]),
       );
