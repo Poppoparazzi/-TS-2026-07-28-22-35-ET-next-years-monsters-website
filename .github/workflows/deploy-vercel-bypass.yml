@@ -1,4 +1,4 @@
-# TS: 2026-08-14 16:00 ET
+# TS: 2026-08-14 16:58 ET
 name: Deploy Vercel collateral backend
 
 on:
@@ -40,15 +40,21 @@ jobs:
       - name: Check Vercel deployment authority
         run: |
           set -euo pipefail
-          missing=()
-          [ -n "${VERCEL_TOKEN:-}" ] || missing+=(VERCEL_TOKEN)
-          [ -n "${VERCEL_ORG_ID:-}" ] || missing+=(VERCEL_ORG_ID)
-          [ -n "${VERCEL_PROJECT_ID:-}" ] || missing+=(VERCEL_PROJECT_ID)
-          if [ "${#missing[@]}" -gt 0 ]; then
-            printf 'Vercel collateral deployment is ready but missing GitHub Actions secrets: %s\n' "${missing[*]}"
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "Vercel collateral deployment is ready but missing the one required GitHub Actions secret: VERCEL_TOKEN"
             exit 2
           fi
-          echo "Vercel deployment authority is configured."
+          if [ -n "${VERCEL_ORG_ID:-}" ] && [ -n "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "Vercel token plus explicit org/project IDs are configured."
+          else
+            echo "Vercel token is configured; workflow will create/link the backend project non-interactively."
+          fi
+
+      - name: Link Vercel project when IDs are not preconfigured
+        if: ${{ env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == '' }}
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest link --yes --project next-years-monsters-api --token="$VERCEL_TOKEN"
 
       - name: Pull Vercel production settings
         run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
@@ -70,6 +76,7 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          code=000
           for attempt in $(seq 1 20); do
             code=$(curl --silent --show-error --output /tmp/startup.json --write-out '%{http_code}' "$DEPLOY_URL/api/startup-status" || true)
             if [ "$code" = "200" ]; then
