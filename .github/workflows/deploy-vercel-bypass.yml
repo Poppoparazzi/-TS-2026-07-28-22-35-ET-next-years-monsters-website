@@ -1,0 +1,120 @@
+# TS: 2026-08-14 16:00 ET
+name: Deploy Vercel collateral backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-vercel-bypass.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-collateral-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-vercel-bypass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check Vercel deployment authority
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -n "${VERCEL_TOKEN:-}" ] || missing+=(VERCEL_TOKEN)
+          [ -n "${VERCEL_ORG_ID:-}" ] || missing+=(VERCEL_ORG_ID)
+          [ -n "${VERCEL_PROJECT_ID:-}" ] || missing+=(VERCEL_PROJECT_ID)
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Vercel collateral deployment is ready but missing GitHub Actions secrets: %s\n' "${missing[*]}"
+            exit 2
+          fi
+          echo "Vercel deployment authority is configured."
+
+      - name: Pull Vercel production settings
+        run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build Vercel production artifact
+        run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy prebuilt backend to Vercel
+        id: deploy
+        run: |
+          set -euo pipefail
+          url=$(npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Vercel production URL: $url"
+
+      - name: Verify deployed startup identity
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            code=$(curl --silent --show-error --output /tmp/startup.json --write-out '%{http_code}' "$DEPLOY_URL/api/startup-status" || true)
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            sleep 3
+          done
+          HTTP_CODE="$code" node - <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/startup.json', 'utf8'));
+          const expected = process.env.EXPECTED_SHA;
+          if (process.env.HTTP_CODE !== '200') {
+            throw new Error(`Expected startup-status HTTP 200, got ${process.env.HTTP_CODE}`);
+          }
+          if (payload.runtime !== 'serverless') {
+            throw new Error(`Expected runtime=serverless, got ${payload.runtime}`);
+          }
+          if (payload.deployment?.provider !== 'vercel') {
+            throw new Error(`Expected deployment.provider=vercel, got ${payload.deployment?.provider ?? '(missing)'}`);
+          }
+          if (payload.deployment?.commit && payload.deployment.commit !== expected) {
+            throw new Error(`Expected deployment commit ${expected}, got ${payload.deployment.commit}`);
+          }
+          console.log('Vercel production startup verified:', payload.deployment);
+          NODE
+
+      - name: Verify AAPL fails closed until real market data is configured
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          code=$(curl --silent --show-error --output /tmp/aapl.json --write-out '%{http_code}' "$DEPLOY_URL/api/ratings/AAPL" || true)
+          HTTP_CODE="$code" node - <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/aapl.json', 'utf8'));
+          const code = process.env.HTTP_CODE;
+          if (code === '200') {
+            if (typeof payload.score === 'number') {
+              throw new Error('A numeric production rating appeared before market-data deployment was explicitly verified.');
+            }
+            console.log('AAPL returned a non-numeric fail-closed production response.');
+            process.exit(0);
+          }
+          if (code !== '503' || payload.error !== 'provider_not_configured') {
+            throw new Error(`Expected safe 503 provider_not_configured before market data is configured, got HTTP ${code} / ${payload.error ?? '(missing)'}`);
+          }
+          console.log('AAPL safely fails closed on deployed Vercel collateral backend.');
+          NODE
