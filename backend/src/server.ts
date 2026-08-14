@@ -1,4 +1,4 @@
-// TS: 2026-08-14 03:09 ET
+// TS: 2026-08-14 10:01 ET
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
@@ -12,6 +12,10 @@ import {
   markStartupJobFailed,
   markStartupJobRunning,
 } from "./startup-status.js";
+
+function isServerlessRuntime(): boolean {
+  return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+}
 
 async function runStartupJobs(
   config: ReturnType<typeof loadConfig>,
@@ -61,7 +65,11 @@ async function start(): Promise<void> {
   const config = loadConfig();
   const app = await buildApp();
 
-  app.get("/api/startup-status", async () => getStartupStatusSnapshot());
+  app.get("/api/startup-status", async () => ({
+    ...getStartupStatusSnapshot(),
+    runtime: isServerlessRuntime() ? "serverless" : "persistent-server",
+    startupJobsEnabled: !isServerlessRuntime(),
+  }));
   installFailClosedRatingErrorHandler(app);
 
   try {
@@ -70,7 +78,13 @@ async function start(): Promise<void> {
       port: config.port,
     });
 
-    void runStartupJobs(config, app);
+    if (isServerlessRuntime()) {
+      app.log.info(
+        "Serverless runtime detected; startup universe, SEC batch, and pilot refresh jobs are disabled",
+      );
+    } else {
+      void runStartupJobs(config, app);
+    }
   } catch (error) {
     app.log.error(error, "Next Year’s Monsters API failed to start");
     process.exitCode = 1;
