@@ -1,0 +1,109 @@
+# TS: 2026-08-14 11:01 ET
+name: Vercel bypass readiness
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/vercel-bypass-readiness.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-vercel-bypass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run backend checks
+        run: npm run check
+
+      - name: Boot backend in Vercel runtime mode
+        env:
+          VERCEL: "1"
+          PORT: "8787"
+          HOST: "127.0.0.1"
+          NODE_ENV: "production"
+          MARKET_DATA_PROVIDER: "unconfigured"
+          CORS_ORIGIN: "https://nextyearsmonsters.com"
+        run: |
+          set -euo pipefail
+          npm run dev > /tmp/nym-vercel-bypass.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true; cat /tmp/nym-vercel-bypass.log || true' EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:8787/api/startup-status > /tmp/startup-status.json; then
+              break
+            fi
+            sleep 1
+          done
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/startup-status.json', 'utf8'));
+          if (payload.runtime !== 'serverless') {
+            throw new Error(`Expected runtime=serverless, got ${payload.runtime}`);
+          }
+          if (payload.startupJobsEnabled !== false) {
+            throw new Error(`Expected startupJobsEnabled=false, got ${payload.startupJobsEnabled}`);
+          }
+          console.log('Vercel collateral runtime verified:', {
+            runtime: payload.runtime,
+            startupJobsEnabled: payload.startupJobsEnabled,
+          });
+          NODE
+
+      - name: Verify fail-closed AAPL route without market credentials
+        env:
+          VERCEL: "1"
+          PORT: "8788"
+          HOST: "127.0.0.1"
+          NODE_ENV: "production"
+          MARKET_DATA_PROVIDER: "unconfigured"
+          CORS_ORIGIN: "https://nextyearsmonsters.com"
+        run: |
+          set -euo pipefail
+          npm run dev > /tmp/nym-vercel-rating.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true; cat /tmp/nym-vercel-rating.log || true' EXIT
+
+          for attempt in $(seq 1 30); do
+            code=$(curl --silent --output /tmp/aapl-rating.json --write-out '%{http_code}' http://127.0.0.1:8788/api/ratings/AAPL || true)
+            if [ "$code" != "000" ]; then
+              break
+            fi
+            sleep 1
+          done
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/aapl-rating.json', 'utf8'));
+          if (payload.score !== null) {
+            throw new Error(`Expected score=null without market credentials, got ${payload.score}`);
+          }
+          const status = String(payload.status ?? payload.ratingStatus ?? '').toUpperCase();
+          if (!status.includes('NOT') && !status.includes('INCOMPLETE')) {
+            throw new Error(`Expected fail-closed rating status, got ${status || '(missing)'}`);
+          }
+          console.log('AAPL fail-closed behavior verified without invented score.');
+          NODE
