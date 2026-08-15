@@ -1,4 +1,4 @@
-# TS: 2026-08-14 16:58 ET
+# TS: 2026-08-15 09:03 ET
 name: Deploy Vercel collateral backend
 
 on:
@@ -8,6 +8,8 @@ on:
       - "backend/**"
       - ".github/workflows/deploy-vercel-bypass.yml"
   workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
 
 permissions:
   contents: read
@@ -41,9 +43,15 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${VERCEL_TOKEN:-}" ]; then
+            if [ "${{ github.event_name }}" = "schedule" ]; then
+              echo "VERCEL_AUTH_READY=false" >> "$GITHUB_ENV"
+              echo "Scheduled bypass check: VERCEL_TOKEN is not configured yet; no deployment attempted."
+              exit 0
+            fi
             echo "Vercel collateral deployment is ready but missing the one required GitHub Actions secret: VERCEL_TOKEN"
             exit 2
           fi
+          echo "VERCEL_AUTH_READY=true" >> "$GITHUB_ENV"
           if [ -n "${VERCEL_ORG_ID:-}" ] && [ -n "${VERCEL_PROJECT_ID:-}" ]; then
             echo "Vercel token plus explicit org/project IDs are configured."
           else
@@ -51,18 +59,21 @@ jobs:
           fi
 
       - name: Link Vercel project when IDs are not preconfigured
-        if: ${{ env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == '' }}
+        if: ${{ env.VERCEL_AUTH_READY == 'true' && (env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == '') }}
         run: |
           set -euo pipefail
           npx --yes vercel@latest link --yes --project next-years-monsters-api --token="$VERCEL_TOKEN"
 
       - name: Pull Vercel production settings
+        if: ${{ env.VERCEL_AUTH_READY == 'true' }}
         run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build Vercel production artifact
+        if: ${{ env.VERCEL_AUTH_READY == 'true' }}
         run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy prebuilt backend to Vercel
+        if: ${{ env.VERCEL_AUTH_READY == 'true' }}
         id: deploy
         run: |
           set -euo pipefail
@@ -71,6 +82,7 @@ jobs:
           echo "Vercel production URL: $url"
 
       - name: Verify deployed startup identity
+        if: ${{ env.VERCEL_AUTH_READY == 'true' }}
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
           EXPECTED_SHA: ${{ github.sha }}
@@ -104,6 +116,7 @@ jobs:
           NODE
 
       - name: Verify AAPL fails closed until real market data is configured
+        if: ${{ env.VERCEL_AUTH_READY == 'true' }}
         env:
           DEPLOY_URL: ${{ steps.deploy.outputs.url }}
         run: |
