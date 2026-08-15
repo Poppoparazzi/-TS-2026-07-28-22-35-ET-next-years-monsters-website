@@ -1,4 +1,4 @@
-/* TS: 2026-08-15 10:54 ET */
+/* TS: 2026-08-15 11:16 ET */
 
 .nym-market-tape {
   position: relative;
@@ -40,13 +40,11 @@
   color: var(--editorial-lime, #b8f34a);
 }
 
-/*
-  Give TradingView's three-line ticker cards enough vertical breathing room.
-  The old 70px shell plus overflow:hidden could crop the daily-change line.
-*/
+/* Keep the compact three-line TradingView card fully visible.
+   The daily-change line was being covered by the Data Status band below. */
 .nym-market-tape-widget {
-  min-height: 94px;
-  padding: 4px 0 6px;
+  min-height: 132px;
+  padding: 4px 0 8px;
   overflow: visible;
   background: #080d0b;
 }
@@ -54,14 +52,14 @@
 .nym-market-tape-widget .tradingview-widget-container,
 .nym-market-tape-widget .tradingview-widget-container__widget {
   width: 100% !important;
-  min-height: 84px !important;
+  min-height: 120px !important;
 }
 
 .nym-market-tape-widget iframe {
   display: block !important;
   width: 100% !important;
-  height: 84px !important;
-  min-height: 84px !important;
+  height: 120px !important;
+  min-height: 120px !important;
 }
 
 .nym-market-tape-links {
