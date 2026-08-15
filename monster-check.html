@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-15 09:58 ET -->
+<!-- TS: 2026-08-15 16:06 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -31,7 +31,8 @@
     .monster-rating-architecture-grid p {margin:0;color:#4e5650;line-height:1.5}
     /* TS: 2026-08-15 09:58 ET — prevent the search intro from being squeezed into a narrow left strip on desktop/tablet widths. */
     .monster-search {grid-template-columns:minmax(420px,.9fr) minmax(0,1.1fr)}
-    @media (max-width:1180px){.monster-search{grid-template-columns:1fr}.monster-search-panel{border-left:0;border-top:1px solid rgba(255,255,255,.13)}.monster-search-intro h2,.monster-search-intro p{max-width:900px}}
+    /* TS: 2026-08-15 16:06 ET — prevent the lower production-readiness roadmap from staying in a cramped two-column layout on laptop widths. */
+    @media (max-width:1180px){.monster-search{grid-template-columns:1fr}.monster-search-panel{border-left:0;border-top:1px solid rgba(255,255,255,.13)}.monster-search-intro h2,.monster-search-intro p{max-width:900px}.monster-roadmap-grid{grid-template-columns:1fr}}
     @media (max-width:800px){.monster-rating-architecture-grid{grid-template-columns:1fr}}
     @media (max-width:650px){.monster-hero h1{font-size:clamp(62px,18.5vw,82px)}.monster-suggestions{gap:12px 14px}.monster-stock-shortcut .chip{min-width:78px;padding:0 14px}.monster-shortcut-chart{width:44px;height:44px;flex-basis:44px}}
   </style>
