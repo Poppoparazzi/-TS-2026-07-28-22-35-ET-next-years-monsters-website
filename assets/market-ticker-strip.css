@@ -1,4 +1,4 @@
-/* TS: 2026-07-29 22:41 ET */
+/* TS: 2026-08-15 09:51 ET */
 
 .nym-market-tape {
   position: relative;
@@ -41,14 +41,17 @@
 }
 
 .nym-market-tape-widget {
-  min-height: 48px;
+  height: 64px;
+  min-height: 64px;
   overflow: hidden;
   background: #080d0b;
 }
 
 .nym-market-tape-widget .tradingview-widget-container,
-.nym-market-tape-widget .tradingview-widget-container__widget {
-  min-height: 48px;
+.nym-market-tape-widget .tradingview-widget-container__widget,
+.nym-market-tape-widget iframe {
+  height: 64px !important;
+  min-height: 64px !important;
 }
 
 .nym-market-tape-links {
