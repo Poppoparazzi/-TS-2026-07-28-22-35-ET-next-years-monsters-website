@@ -1,4 +1,4 @@
-// TS: 2026-08-11 15:50 UTC
+// TS: 2026-08-15 09:42 ET
 
 (function installMonsterCheckRatingTrio() {
   "use strict";
@@ -76,6 +76,7 @@
     const sector = identity?.querySelector(".monster-result-sector");
     const scoreCard = result.querySelector(".monster-score-card");
     const scoreLabel = scoreCard?.querySelector("span");
+    const scoreValue = scoreCard?.querySelector("strong");
     const scoreTier = scoreCard?.querySelector("em");
 
     if (flag?.textContent.includes("DEMONSTRATION RATING")) {
@@ -100,8 +101,22 @@
     }
 
     if (flag?.textContent.includes("OFFICIAL SEC COMPANY RECORD")) {
-      replaceText(scoreLabel, "CURRENT STOCK RATING™");
-      if (scoreCard) scoreCard.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}`);
+      if (found) {
+        const fingerprintScore = String(found.item.score_status ?? found.item.score ?? "SCORING");
+        replaceText(flag, "OFFICIAL SEC COMPANY RECORD · ACTIVE MONSTER HUNT CASE");
+        replaceText(scoreLabel, "FUTURE MONSTER FINGERPRINT RATING™");
+        replaceText(scoreValue, fingerprintScore);
+        replaceText(scoreTier, found.rank ? `#${found.rank} · TOP 15` : found.label);
+        if (scoreCard) {
+          scoreCard.setAttribute(
+            "aria-label",
+            `Future Monster Fingerprint Rating for ${ticker}: ${fingerprintScore}${found.rank ? `, rank ${found.rank} in the Top 15` : ""}`
+          );
+        }
+      } else {
+        replaceText(scoreLabel, "CURRENT STOCK RATING™");
+        if (scoreCard) scoreCard.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}`);
+      }
     }
 
     if (found && flag?.textContent.includes("NO SEC COMPANY MATCH FOUND")) {
@@ -143,6 +158,8 @@
     const style = document.createElement("style");
     style.id = "monster-rating-trio-styles";
     style.textContent = `
+      .monster-result-identity h2{color:#fffaf0}
+      .monster-result-identity h2 span{color:#ef4d43}
       .monster-rating-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 24px;padding:0}
       .monster-case-loaded-banner{grid-column:1/-1;margin:0;padding:13px 16px;border-left:5px solid #a8df34;background:#eaf6d2;color:#17200f;font-size:11px;font-weight:950;letter-spacing:.035em;line-height:1.45}
       .monster-rating-trio-card{min-height:158px;padding:18px;border:1px solid rgba(255,255,255,.18);background:#111715;color:#fffaf0}
@@ -151,7 +168,8 @@
       .monster-rating-trio-card strong{display:block;margin-bottom:7px;color:#fffaf0;font-size:clamp(22px,2.5vw,34px);line-height:1}
       .monster-rating-trio-card em{display:block;margin-bottom:10px;color:#b8f34a;font-size:11px;font-style:normal;font-weight:950;letter-spacing:.035em}
       .monster-rating-trio-card p{margin:0;color:#cfd5cf;font-size:12px;line-height:1.45}
-      .monster-rating-trio-note{grid-column:1/-1;margin:0;padding:11px 14px;border-left:4px solid #d9aa31;background:rgba(217,170,49,.08);color:#d6dbd5;font-size:11px;line-height:1.45}
+      .monster-rating-trio-note{grid-column:1/-1;margin:0;padding:11px 14px;border-left:4px solid #d9aa31;background:#fff3cf;color:#26302b;font-size:12px;font-weight:650;line-height:1.45}
+      .monster-rating-trio-note strong{color:#111715;font-weight:950}
       @media(max-width:850px){.monster-rating-trio{grid-template-columns:1fr}}
     `;
     document.head.append(style);
@@ -187,7 +205,7 @@
 
       if (found) {
         futureValue = safe(found.item.score_status ?? found.item.score ?? "SCORING");
-        futureStatus = "FINGERPRINT SCORE";
+        futureStatus = "FUTURE MONSTER FINGERPRINT RATING™";
         huntValue = found.rank ? `#${found.rank} TOP 15` : found.label;
         huntDetail = found.item.status ? safe(found.item.status) : "Active Monster Hunt case.";
         loadedBanner = `${ticker} MONSTER HUNT RESEARCH DATA LOADED · CURRENT LIVE RATING REMAINS PENDING`;
@@ -217,7 +235,7 @@
           <span>02 / FUTURE MONSTER</span>
           <strong>${futureValue}</strong>
           <em>${futureStatus}</em>
-          <p>${found ? "Research-board score measuring similarity to historical pre-breakout Monster fingerprints. It is not the same as a current-stock quality rating." : established ? "This mature VCL™ leader is a historical comparison case, so an emerging-Monster fingerprint score is not assigned here." : "No published Future Monster fingerprint score is assigned to this ticker yet."}</p>
+          <p>${found ? "This is the same published Monster Hunt research-board score shown on the ranking page. It measures similarity to historical pre-breakout Monster fingerprints; it is not the same as a current-stock quality rating." : established ? "This mature VCL™ leader is a historical comparison case, so an emerging-Monster fingerprint score is not assigned here." : "No published Future Monster fingerprint score is assigned to this ticker yet."}</p>
         </article>
         <article class="monster-rating-trio-card">
           <span>03 / THE HUNT</span>
@@ -225,7 +243,7 @@
           <em>MONSTER HUNT STATUS</em>
           <p>${huntDetail}</p>
         </article>
-        <p class="monster-rating-trio-note"><strong>Three different questions:</strong> how the stock rates today, whether it resembles a pre-breakout historical Monster, and where it sits in the active Hunt. Missing evidence stays missing rather than becoming a decorative number.</p>
+        <p class="monster-rating-trio-note"><strong>Same stock, same score:</strong> the Monster Hunt score follows the ticker into its case file. The separate Current Stock Rating™ stays pending until its required live evidence is complete.</p>
       `;
       content.prepend(trio);
     }
