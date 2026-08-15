@@ -1,9 +1,8 @@
-/* TS: 2026-08-15 11:52 ET */
+/* TS: 2026-08-15 11:54 ET */
 
 .nym-market-tape {
   position: relative;
   z-index: 4;
-  margin-bottom: 6px;
   border-top: 1px solid rgba(255, 255, 255, .14);
   border-bottom: 1px solid rgba(255, 255, 255, .14);
   background: #080d0b;
@@ -41,26 +40,18 @@
   color: var(--editorial-lime, #b8f34a);
 }
 
-/* Keep TradingView's compact three-line ticker at its original vertical position.
-   The 6px margin on .nym-market-tape moves only the Data Status band below it. */
+/* Final homepage tape: simple one-line TradingView layout. */
 .nym-market-tape-widget {
-  min-height: 94px;
-  padding: 4px 0 6px;
-  overflow: visible;
+  min-height: 70px;
+  overflow: hidden;
   background: #080d0b;
 }
 
 .nym-market-tape-widget .tradingview-widget-container,
-.nym-market-tape-widget .tradingview-widget-container__widget {
-  width: 100% !important;
-  min-height: 84px !important;
-}
-
+.nym-market-tape-widget .tradingview-widget-container__widget,
 .nym-market-tape-widget iframe {
-  display: block !important;
   width: 100% !important;
-  height: 84px !important;
-  min-height: 84px !important;
+  min-height: 70px !important;
 }
 
 .nym-market-tape-links {
