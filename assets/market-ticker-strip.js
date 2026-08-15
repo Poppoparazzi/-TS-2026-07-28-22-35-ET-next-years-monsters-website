@@ -1,4 +1,4 @@
-// TS: 2026-08-15 09:57 ET
+// TS: 2026-08-15 10:15 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -177,7 +177,7 @@ async function createMarketTickerStrip() {
   const section = document.createElement("section");
   section.className = "nym-market-tape";
   section.dataset.nymMarketTape = "";
-  section.setAttribute("aria-label", `${count}-stock external market ticker tape and full chart shortcuts`);
+  section.setAttribute("aria-label", `${count}-stock external market ticker tape and Market Explorer shortcut`);
 
   const head = document.createElement("div");
   head.className = "nym-market-tape-head";
@@ -188,9 +188,9 @@ async function createMarketTickerStrip() {
 
   const explorerLink = document.createElement("a");
   explorerLink.href = "market-explorer.html";
-  explorerLink.textContent = "OPEN FULL CHARTS →";
-  explorerLink.title = "Open one large chart or compare two charts";
-  explorerLink.setAttribute("aria-label", "Open the full Market Explorer charts");
+  explorerLink.textContent = "OPEN MARKET EXPLORER →";
+  explorerLink.title = "Open full stock charts in Market Explorer";
+  explorerLink.setAttribute("aria-label", "Open full stock charts in Market Explorer");
   head.append(label, explorerLink);
 
   const widgetShell = document.createElement("div");
