@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-15 14:01 ET -->
+<!-- TS: 2026-08-15 19:02 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,13 +11,13 @@
   <link rel="stylesheet" href="assets/data-status.css?v=20260815-0200">
   <link rel="stylesheet" href="assets/vcl-tier-table.css?v=20260815-0200">
   <style>
-    /* TS: 2026-08-15 14:01 ET */
+    /* TS: 2026-08-15 19:02 ET */
     .vcl-hero-wrap{position:relative;padding-right:clamp(150px,18vw,230px)}
     .vcl-detective{position:absolute;right:0;bottom:0;width:clamp(135px,15vw,205px);height:auto;margin:0;overflow:visible;pointer-events:none;text-align:right}
     .vcl-detective img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;filter:drop-shadow(0 15px 24px rgba(0,0,0,.3))}
     .vcl-detective figcaption{position:absolute;right:0;bottom:0;max-width:175px;padding:5px 7px;background:rgba(6,17,31,.9);color:#b8ff3d;font-size:9px;font-weight:900;letter-spacing:.06em;line-height:1.35;text-transform:uppercase}
-    /* Stop the Detective art from reserving a narrow right-side column on normal laptop widths. */
-    @media(max-width:1180px){
+    /* Keep the historical-case intro full width on common desktop/laptop widths instead of reserving a right-side art column. */
+    @media(max-width:1360px){
       .vcl-hero-wrap{padding-right:20px}
       .vcl-detective{position:relative;right:auto;bottom:auto;width:min(220px,28vw);margin:22px 0 0 auto}
     }
