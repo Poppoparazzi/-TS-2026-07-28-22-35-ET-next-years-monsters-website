@@ -1,0 +1,71 @@
+# TS: 2026-08-15 13:00 ET
+name: Verify core customer pages
+
+on:
+  push:
+    branches:
+      - gh-pages
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-customer-pages-public-verification
+  cancel-in-progress: true
+
+jobs:
+  verify-core-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out publishing branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+
+      - name: Wait for five exact core pages on nextyearsmonsters.com
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          wait_for_match() {
+            local source_file="$1"
+            local public_url="$2"
+            local label="$3"
+            local expected
+            expected="$(sha256sum "$source_file" | awk '{print $1}')"
+
+            for attempt in $(seq 1 24); do
+              if curl --fail --silent --show-error --location \
+                "${public_url}?cb=${GITHUB_SHA}-${attempt}" \
+                -o /tmp/public-core-page; then
+                actual="$(sha256sum /tmp/public-core-page | awk '{print $1}')"
+                if [ "$actual" = "$expected" ]; then
+                  echo "PUBLIC BYTE MATCH: ${label} matches gh-pages at ${GITHUB_SHA}."
+                  return 0
+                fi
+              fi
+              echo "Waiting for public ${label} (${attempt}/24)..."
+              sleep 5
+            done
+
+            echo "ERROR: public ${label} never matched gh-pages commit ${GITHUB_SHA}." >&2
+            return 1
+          }
+
+          wait_for_match "monster-check.html" "https://nextyearsmonsters.com/monster-check.html" "Monster Check"
+          wait_for_match "top-monsters.html" "https://nextyearsmonsters.com/top-monsters.html" "Monster Hunt"
+          wait_for_match "start-here.html" "https://nextyearsmonsters.com/start-here.html" "Start Here"
+          wait_for_match "how-it-works.html" "https://nextyearsmonsters.com/how-it-works.html" "The System"
+          wait_for_match "vcl-library.html" "https://nextyearsmonsters.com/vcl-library.html" "VCL Library"
+
+      - name: Verify The System laptop-width layout repair is public
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            "https://nextyearsmonsters.com/how-it-works.html?cb=${GITHUB_SHA}" \
+            -o /tmp/public-system.html
+          grep -Fq '@media(min-width:721px) and (max-width:1050px)' /tmp/public-system.html
+          grep -Fq '.system-brand-panel{padding-right:28px}' /tmp/public-system.html
+          echo 'PUBLIC CORE PAGE VERIFIED: The System laptop layout repair is live on nextyearsmonsters.com.'
