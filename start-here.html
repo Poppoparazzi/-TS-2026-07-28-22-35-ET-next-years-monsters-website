@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-14 22:01 ET -->
+<!-- TS: 2026-08-15 12:01 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -27,6 +27,7 @@
     .start-card ol,.start-card ul { margin:12px 0 0; padding-left:22px; line-height:1.65; }
     .start-card li { margin-bottom:8px; }
     .start-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+    .start-grid > .start-card:last-child { grid-column:1 / -1; }
     .start-action-row { display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
     .start-action-row a { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 18px; border:2px solid #111; background:#111; color:#fffaf0; font-size:12px; font-weight:950; letter-spacing:.04em; text-decoration:none; }
     .start-action-row a:first-child { background:var(--editorial-lime,#b8f34a); color:#101311; }
@@ -37,7 +38,7 @@
     .start-three span { display:block; color:#b8f34a; font-size:11px; font-weight:950; letter-spacing:.04em; }
     .start-three strong { display:block; margin:8px 0; color:#fffaf0; font-size:20px; }
     .start-three p { margin:0; color:#d2d8d2; font-size:13px; }
-    @media(max-width:800px){ .start-grid,.start-three{grid-template-columns:1fr}.start-hero{padding:50px 24px 36px}.start-card{padding:22px}.start-hero-mascot{width:92px;right:10px;bottom:0;opacity:.72}.start-hero h1,.start-hero p{max-width:calc(100% - 76px)} }
+    @media(max-width:800px){ .start-grid,.start-three{grid-template-columns:1fr}.start-grid > .start-card:last-child{grid-column:auto}.start-hero{padding:50px 24px 36px}.start-card{padding:22px}.start-hero-mascot{width:92px;right:10px;bottom:0;opacity:.72}.start-hero h1,.start-hero p{max-width:calc(100% - 76px)} }
   </style>
 </head>
 <body class="start-page">
