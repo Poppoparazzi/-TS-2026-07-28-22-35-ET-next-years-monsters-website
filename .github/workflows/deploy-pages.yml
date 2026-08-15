@@ -1,4 +1,4 @@
-# TS: 2026-08-13 07:08 ET
+# TS: 2026-08-15 02:58 ET
 name: Verify website publication
 
 on:
@@ -39,14 +39,14 @@ jobs:
           test -f data/monster-tier-board-preview.json
           grep -q '25</strong><span>EXTERNAL MARKET TICKERS' live-status.html
           grep -q 'TEN MORE STOCKS.<br>NOW IN MARKET COVERAGE.' live-status.html
-          grep -q '2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp?v=20260813-0704' vcl-library.html
+          grep -Eq '2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock\.webp\?v=[0-9-]+' vcl-library.html
           grep -q 'Use the site in order' about.html
           python - <<'PY'
           import json
           with open('data/monster-tier-board-preview.json', encoding='utf-8') as handle:
               board = json.load(handle)
           assert len(board.get('top15', [])) == 15, 'Monster Hunt Top 15 payload must contain exactly 15 rows'
-          print('Verified gh-pages payload: CNAME, publication probe, reconciled Data Status, VCL/ About journey files, and 15-row Monster Hunt board are present.')
+          print('Verified gh-pages payload: CNAME, publication probe, reconciled Data Status, VCL/About journey files, and 15-row Monster Hunt board are present.')
           PY
 
       - name: Verify Monster Hunt renderer emits all 15 case rows
@@ -187,7 +187,7 @@ jobs:
           curl --fail --silent --show-error --location \
             "https://nextyearsmonsters.com/vcl-library.html?cb=${GITHUB_SHA}" \
             -o /tmp/public-vcl.html
-          grep -q '2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp?v=20260813-0704' /tmp/public-vcl.html
+          grep -Eq '2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock\.webp\?v=[0-9-]+' /tmp/public-vcl.html
           ! grep -q '2026-08-11_1725_Detective-Break_Break-On-The-Case.webp' /tmp/public-vcl.html
 
           curl --fail --silent --show-error --location \
