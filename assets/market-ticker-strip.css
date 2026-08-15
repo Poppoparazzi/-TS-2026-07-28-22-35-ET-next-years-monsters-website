@@ -1,8 +1,9 @@
-/* TS: 2026-08-15 11:16 ET */
+/* TS: 2026-08-15 11:48 ET */
 
 .nym-market-tape {
   position: relative;
   z-index: 4;
+  margin-bottom: 6px;
   border-top: 1px solid rgba(255, 255, 255, .14);
   border-bottom: 1px solid rgba(255, 255, 255, .14);
   background: #080d0b;
