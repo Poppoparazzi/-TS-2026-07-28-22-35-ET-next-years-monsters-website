@@ -1,4 +1,4 @@
-// TS: 2026-08-11 12:10 UTC
+// TS: 2026-08-15 09:57 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -198,7 +198,6 @@ async function createMarketTickerStrip() {
 
   const tradingViewContainer = document.createElement("div");
   tradingViewContainer.className = "tradingview-widget-container";
-  tradingViewContainer.style.height = "100%";
   tradingViewContainer.style.width = "100%";
 
   const tradingViewWidget = document.createElement("div");
@@ -215,7 +214,7 @@ async function createMarketTickerStrip() {
     })),
     showSymbolLogo: true,
     isTransparent: true,
-    displayMode: "adaptive",
+    displayMode: "compact",
     colorTheme: "dark",
     locale: "en",
   });
