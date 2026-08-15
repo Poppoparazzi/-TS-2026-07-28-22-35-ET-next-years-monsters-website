@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-15 12:01 ET -->
+<!-- TS: 2026-08-15 18:08 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -38,6 +38,8 @@
     .start-three span { display:block; color:#b8f34a; font-size:11px; font-weight:950; letter-spacing:.04em; }
     .start-three strong { display:block; margin:8px 0; color:#fffaf0; font-size:20px; }
     .start-three p { margin:0; color:#d2d8d2; font-size:13px; }
+    /* TS: 2026-08-15 18:08 ET — at laptop widths, keep the hero copy full width and move Detective Break below it instead of letting the art overlap/squeeze the headline. */
+    @media(max-width:1180px) and (min-width:801px){ .start-hero-mascot{position:relative;right:auto;bottom:auto;width:140px;margin:24px 0 0 auto}.start-hero h1,.start-hero p{max-width:100%} }
     @media(max-width:800px){ .start-grid,.start-three{grid-template-columns:1fr}.start-grid > .start-card:last-child{grid-column:auto}.start-hero{padding:50px 24px 36px}.start-card{padding:22px}.start-hero-mascot{width:92px;right:10px;bottom:0;opacity:.72}.start-hero h1,.start-hero p{max-width:calc(100% - 76px)} }
   </style>
 </head>
