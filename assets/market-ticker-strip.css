@@ -1,4 +1,4 @@
-/* TS: 2026-08-15 11:48 ET */
+/* TS: 2026-08-15 11:52 ET */
 
 .nym-market-tape {
   position: relative;
@@ -41,11 +41,11 @@
   color: var(--editorial-lime, #b8f34a);
 }
 
-/* Keep the compact three-line TradingView card fully visible.
-   The daily-change line was being covered by the Data Status band below. */
+/* Keep TradingView's compact three-line ticker at its original vertical position.
+   The 6px margin on .nym-market-tape moves only the Data Status band below it. */
 .nym-market-tape-widget {
-  min-height: 132px;
-  padding: 4px 0 8px;
+  min-height: 94px;
+  padding: 4px 0 6px;
   overflow: visible;
   background: #080d0b;
 }
@@ -53,14 +53,14 @@
 .nym-market-tape-widget .tradingview-widget-container,
 .nym-market-tape-widget .tradingview-widget-container__widget {
   width: 100% !important;
-  min-height: 120px !important;
+  min-height: 84px !important;
 }
 
 .nym-market-tape-widget iframe {
   display: block !important;
   width: 100% !important;
-  height: 120px !important;
-  min-height: 120px !important;
+  height: 84px !important;
+  min-height: 84px !important;
 }
 
 .nym-market-tape-links {
