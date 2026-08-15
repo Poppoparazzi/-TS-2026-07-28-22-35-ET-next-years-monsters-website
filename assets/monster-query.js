@@ -1,4 +1,4 @@
-// TS: 2026-08-15 09:40 ET
+// TS: 2026-08-15 09:42 ET
 
 function setupRequestedTicker() {
   const requested = new URLSearchParams(window.location.search).get("ticker")?.trim().toUpperCase();
@@ -46,6 +46,16 @@ function setupRequestedTicker() {
     const content = result.querySelector(".monster-investigator-result-content") || result;
     const readiness = content.querySelector(".current-stock-readiness");
     if (readiness) content.appendChild(readiness);
+
+    content.querySelectorAll('a[href*="market-explorer.html"]').forEach((link) => {
+      try {
+        const url = new URL(link.getAttribute("href"), window.location.href);
+        url.searchParams.set("direct", "1");
+        link.href = url.toString();
+      } catch (_error) {
+        // Leave an already-valid link alone if the browser cannot normalize it.
+      }
+    });
 
     return (
       content.querySelector(".monster-launch-score-first") ||
