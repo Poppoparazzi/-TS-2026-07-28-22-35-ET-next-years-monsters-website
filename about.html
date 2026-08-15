@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-15 04:01 ET -->
+<!-- TS: 2026-08-15 06:00 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,19 +6,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>About | Next Year’s Monsters™</title>
   <meta name="description" content="About Next Year’s Monsters™, an educational evidence system for studying current stocks, future-Monster fingerprints, and historical VCL™ cases without inventing ratings or guarantees.">
-  <link rel="stylesheet" href="assets/styles.css?v=20260815-0401">
-  <link rel="stylesheet" href="assets/editorial-type.css?v=20260815-0401">
+  <link rel="stylesheet" href="assets/styles.css?v=20260815-0600">
+  <link rel="stylesheet" href="assets/editorial-type.css?v=20260815-0600">
   <style>
-    /* TS: 2026-08-15 04:01 ET */
+    /* TS: 2026-08-15 06:00 ET */
     .about-hero-wrap{position:relative;padding-right:clamp(160px,19vw,240px)}
     .about-detective{position:absolute;right:0;bottom:0;width:clamp(138px,15vw,205px);height:auto;margin:0;overflow:visible;pointer-events:none;text-align:right}
     .about-detective img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;filter:drop-shadow(0 15px 24px rgba(0,0,0,.3))}
     .about-detective figcaption{position:absolute;right:0;bottom:0;max-width:180px;padding:5px 7px;background:rgba(6,17,31,.9);color:#b8ff3d;font-size:9px;font-weight:900;letter-spacing:.06em;line-height:1.35;text-transform:uppercase}
-    .about-journey-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:22px}
-    .about-journey-grid .card{height:100%}
+    .about-journey-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:16px;margin-top:22px}
+    .about-journey-grid .card{grid-column:span 2;height:100%;display:flex;flex-direction:column}
+    .about-journey-grid .card:nth-child(5){grid-column:2 / span 2}
     .about-journey-grid .card p:last-child{margin-top:auto;padding-top:12px}
-    .about-journey-grid .card{display:flex;flex-direction:column}
-    @media (max-width:980px){.about-journey-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .about-finish{margin-top:22px;text-align:center}
+    .about-finish .home-nav-cta{display:inline-flex;align-items:center;justify-content:center}
+    @media (max-width:980px){.about-journey-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.about-journey-grid .card,.about-journey-grid .card:nth-child(5){grid-column:auto}}
     @media (max-width:720px){.about-hero-wrap{padding-right:20px;padding-bottom:148px}.about-detective{right:6px;bottom:0;width:126px}.about-detective figcaption{font-size:8px}}
     @media (max-width:620px){.about-journey-grid{grid-template-columns:1fr}}
   </style>
@@ -46,7 +48,7 @@
   <span class="eyebrow">About the project</span><h1>Built for Monster Hunters.</h1>
   <p class="lead">Next Year’s Monsters™ is an educational research system built to help people follow evidence, compare present-day companies with historical pre-breakout fingerprints, and keep current ratings separate from historical case studies.</p>
   <figure class="about-detective" aria-label="Detective Break representing the evidence-first mission of Next Year's Monsters">
-    <img src="assets/2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp?v=20260815-0401" alt="Detective Break, the bright neon-green Monster Hunter, following the evidence">
+    <img src="assets/2026-08-12_2305_Detective-Break_Evidence-Future-Monster-Stock.webp?v=20260815-0600" alt="Detective Break, the bright neon-green Monster Hunter, following the evidence">
     <figcaption>DETECTIVE BREAK™ · EVIDENCE BEFORE HYPE.</figcaption>
   </figure>
 </div></section>
@@ -71,6 +73,12 @@
     <article class="card"><h3>6. VCL™ Library</h3><p>Compare active evidence with historical cases while keeping historical case-study scoring separate from present-day ratings.</p><p><a href="vcl-library.html">OPEN VCL™ LIBRARY →</a></p></article>
     <article class="card"><h3>7. About</h3><p>You are here. Finish the guided path with the project purpose, operating principles, and educational limits.</p><p><a href="about.html">ABOUT THIS PROJECT →</a></p></article>
   </div>
+  <div class="feature-panel about-finish" aria-label="Finish the guided journey by checking a ticker">
+    <span class="eyebrow">Journey complete</span>
+    <h2>Now investigate a stock.</h2>
+    <p class="copy">You know what the site measures, what the scores mean, and what happens when evidence is incomplete. Return to Monster Check™ and start with a ticker.</p>
+    <p><a class="home-nav-cta" href="monster-check.html#ticker-search">RUN MONSTER CHECK™ →</a></p>
+  </div>
 </div></section>
 </main>
 
@@ -78,7 +86,7 @@
   <div><strong>NEXT YEAR’S MONSTERS™</strong><span>THE SCREEN DOES NOT FIND GUARANTEED WINNERS. IT FINDS EVIDENCE.</span></div>
   <p><strong>Educational Use Only:</strong> Current Stock Rating™, Future Monster Fingerprint Rating™, Monster Hunt™, VCL™ case studies and related evidence tools are not recommendations to buy, sell, or hold a security and are not financial advice. Investing involves risk, including loss of principal.</p>
 </footer>
-<script src="assets/app.js?v=20260815-0401"></script>
-<script src="assets/market-ticker-strip.js?v=20260815-0401"></script>
+<script src="assets/app.js?v=20260815-0600"></script>
+<script src="assets/market-ticker-strip.js?v=20260815-0600"></script>
 </body>
 </html>
