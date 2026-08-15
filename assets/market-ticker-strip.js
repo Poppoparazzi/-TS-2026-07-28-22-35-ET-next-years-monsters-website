@@ -1,4 +1,4 @@
-// TS: 2026-08-15 10:54 ET
+// TS: 2026-08-15 10:58 ET
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -34,7 +34,7 @@ function ensureMarketTickerStyles() {
   if (!document.querySelector('link[data-nym-market-tape-style]')) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "assets/market-ticker-strip.css?v=20260815-1054";
+    link.href = "assets/market-ticker-strip.css?v=20260815-1058";
     link.dataset.nymMarketTapeStyle = "";
     document.head.append(link);
   }
@@ -214,7 +214,7 @@ async function createMarketTickerStrip() {
     })),
     showSymbolLogo: true,
     isTransparent: true,
-    displayMode: "compact",
+    displayMode: "regular",
     colorTheme: "dark",
     locale: "en",
   });
