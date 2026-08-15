@@ -80,3 +80,18 @@
     height: 390px;
   }
 }
+
+/* TS: 2026-08-15 13:12 ET
+   Keep the large company name readable on every cream Monster Check result card.
+   This deliberately overrides the later rating-trio injected near-white heading color. */
+.monster-result-identity h2,
+.home-result-card .monster-result-identity h2 {
+  color: #565d57 !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.72);
+}
+
+.monster-result-identity h2 span,
+.home-result-card .monster-result-identity h2 span {
+  color: #ef4d43 !important;
+  text-shadow: none;
+}
