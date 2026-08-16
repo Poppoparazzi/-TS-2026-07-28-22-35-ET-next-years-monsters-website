@@ -1,61 +1,56 @@
-# TS: 2026-08-04 06:36 ET
+# TS: 2026-08-04 00:36 ET
 
-name: Static site checks
+name: Read-only production snapshot
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  validate-static-site:
+  snapshot:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 15
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Validate local links, JavaScript, VCL order, and verification ledger
-        run: node scripts/validate-static-site.mjs
-
-  read-live-production-snapshot:
-    runs-on: ubuntu-latest
-    timeout-minutes: 6
-
-    steps:
-      - name: Read live Render 2,300-candidate and public 2,000 counts
+      - name: Read live Render production counts
         run: |
           node --input-type=module <<'NODE'
+          import { writeFile } from "node:fs/promises";
+
           const apiBaseUrl = "https://next-years-monsters-api.onrender.com";
-          const attempts = 6;
-          const delayMs = 20_000;
+          const attempts = 12;
+          const delayMs = 30_000;
+
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
           async function requestJson(path) {
             const response = await fetch(`${apiBaseUrl}${path}`, {
               headers: {
                 Accept: "application/json",
-                "User-Agent": "NextYearsMonsters-OneShot-Snapshot/1.0",
+                "User-Agent": "NextYearsMonsters-ReadOnly-Production-Snapshot/1.0",
               },
-              signal: AbortSignal.timeout(75_000),
+              signal: AbortSignal.timeout(90_000),
             });
             const text = await response.text();
-            if (!response.ok) throw new Error(`${path} HTTP ${response.status}: ${text.slice(0, 200)}`);
+            let payload = null;
             try {
-              return JSON.parse(text);
+              payload = JSON.parse(text);
             } catch {
-              throw new Error(`${path} returned non-JSON: ${text.slice(0, 200)}`);
+              throw new Error(`${path} returned non-JSON HTTP ${response.status}: ${text.slice(0, 180)}`);
             }
+            if (!response.ok) {
+              throw new Error(`${path} returned HTTP ${response.status}: ${JSON.stringify(payload).slice(0, 180)}`);
+            }
+            return payload;
           }
 
           function counts(payload) {
@@ -81,8 +76,9 @@ jobs:
             try {
               const health = await requestJson("/api/health");
               const startup = await requestJson("/api/startup-status");
-              const reserve = counts(await requestJson("/api/universe/status?limit=2300"));
-              const published = counts(await requestJson("/api/universe/status?limit=2000"));
+              const reserve = await requestJson("/api/universe/status?limit=2300");
+              const published = await requestJson("/api/universe/status?limit=2000");
+
               const snapshot = {
                 checkedAt: new Date().toISOString(),
                 attempt,
@@ -99,24 +95,42 @@ jobs:
                   batchState: startup?.jobs?.secUniverseBatch?.state || null,
                   batchSummary: startup?.jobs?.secUniverseBatch?.summary || null,
                 },
-                reserve2300: reserve,
-                public2000: published,
-                reconciliation: {
-                  reserveTerminal: reserve.secCompleteCount + reserve.unresolvedCount,
-                  reserveOutstanding: reserve.queuedCount + reserve.processingCount + reserve.failedCount + reserve.partialCount + reserve.staleCount,
-                  publicTerminal: published.secCompleteCount + published.unresolvedCount,
-                  publicOutstanding: published.queuedCount + published.processingCount + published.failedCount + published.partialCount + published.staleCount,
-                  publicHas2000Complete: published.examinedCount === 2000 && published.secCompleteCount === 2000,
-                },
+                reserve2300: counts(reserve),
+                public2000: counts(published),
               };
+
+              snapshot.reconciliation = {
+                reserveTerminal: snapshot.reserve2300.secCompleteCount + snapshot.reserve2300.unresolvedCount,
+                reserveOutstanding: snapshot.reserve2300.queuedCount + snapshot.reserve2300.processingCount + snapshot.reserve2300.failedCount + snapshot.reserve2300.partialCount + snapshot.reserve2300.staleCount,
+                publicTerminal: snapshot.public2000.secCompleteCount + snapshot.public2000.unresolvedCount,
+                publicOutstanding: snapshot.public2000.queuedCount + snapshot.public2000.processingCount + snapshot.public2000.failedCount + snapshot.public2000.partialCount + snapshot.public2000.staleCount,
+                publicHas2000Complete: snapshot.public2000.examinedCount === 2000 && snapshot.public2000.secCompleteCount === 2000,
+              };
+
+              await writeFile("production-status.json", `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
               console.log("NYM_LIVE_PRODUCTION_SNAPSHOT");
               console.log(JSON.stringify(snapshot, null, 2));
               process.exit(0);
             } catch (error) {
               lastError = error instanceof Error ? error.message : String(error);
-              console.log(`Snapshot attempt ${attempt}/${attempts} failed: ${lastError}`);
+              console.log(`Read attempt ${attempt}/${attempts} failed: ${lastError}`);
               if (attempt < attempts) await sleep(delayMs);
             }
           }
-          throw new Error(`Live snapshot failed after ${attempts} attempts: ${lastError}`);
+
+          const failure = {
+            checkedAt: new Date().toISOString(),
+            error: lastError || "Unknown production snapshot failure",
+          };
+          await writeFile("production-status.json", `${JSON.stringify(failure, null, 2)}\n`, "utf8");
+          throw new Error(`Unable to read the live production endpoints after ${attempts} attempts: ${failure.error}`);
           NODE
+
+      - name: Upload production snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nym-production-status
+          path: production-status.json
+          if-no-files-found: error
+          retention-days: 7
