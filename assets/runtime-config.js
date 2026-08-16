@@ -1,4 +1,4 @@
-// TS: 2026-08-13 17:00 ET
+// TS: 2026-08-16 05:03 UTC
 
 window.NYM_CONFIG = Object.freeze({
   // Public backend address only. Never place an API key or private credential here.
@@ -50,6 +50,22 @@ window.NYM_CONFIG = Object.freeze({
       script.defer = true;
       script.dataset.monsterRatingTrioScript = "";
       document.head.appendChild(script);
+    }
+  }
+
+  if (page === "monster-check.html") {
+    if (!document.getElementById("monster-check-laptop-layout-fix")) {
+      const style = document.createElement("style");
+      style.id = "monster-check-laptop-layout-fix";
+      style.textContent = `
+        /* TS: 2026-08-16 05:03 UTC — prevent the strengthen/weaken/watch evidence cards from becoming three cramped laptop columns. */
+        @media (max-width: 1360px) {
+          .monster-page .monster-trigger-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `;
+      document.head.appendChild(style);
     }
   }
 
