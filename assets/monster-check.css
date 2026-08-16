@@ -641,7 +641,8 @@
   margin-top: 30px;
 }
 
-@media (max-width: 1050px) {
+/* TS: 2026-08-15 21:03 ET — keep Monster Check from squeezing hero and roadmap copy into half-width laptop columns. */
+@media (max-width: 1180px) {
   .monster-hero {
     grid-template-columns: 1fr;
     min-height: auto;
