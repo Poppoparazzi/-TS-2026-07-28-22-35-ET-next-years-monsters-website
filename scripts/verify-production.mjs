@@ -1,4 +1,4 @@
-// TS: 2026-08-16 15:03 ET
+// TS: 2026-08-16 16:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -114,16 +114,26 @@ function validateUniverse(status, startup) {
 }
 
 function validateProviderBackedProgress(status, health) {
+  const examinedCount = Number(status?.examinedCount || 0);
   const quoteCompleteCount = Number(status?.quoteCompleteCount || 0);
   const ratingCompleteCount = Number(status?.ratingCompleteCount || 0);
   const marketConfigured = Boolean(health?.marketData?.configured);
+  const problems = [];
 
+  if (quoteCompleteCount < 0 || quoteCompleteCount > examinedCount) {
+    problems.push(`quoteCompleteCount=${quoteCompleteCount} is outside 0..${examinedCount}`);
+  }
+  if (ratingCompleteCount < 0 || ratingCompleteCount > examinedCount) {
+    problems.push(`ratingCompleteCount=${ratingCompleteCount} is outside 0..${examinedCount}`);
+  }
   if (!marketConfigured && (quoteCompleteCount > 0 || ratingCompleteCount > 0)) {
-    throw new Error(
+    problems.push(
       `provider-backed completion advanced while market data is unconfigured: ` +
       `quoteCompleteCount=${quoteCompleteCount}, ratingCompleteCount=${ratingCompleteCount}`,
     );
   }
+
+  if (problems.length) throw new Error(problems.join("; "));
 }
 
 async function verifyOnce() {
