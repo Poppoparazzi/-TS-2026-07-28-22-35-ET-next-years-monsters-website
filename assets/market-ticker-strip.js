@@ -1,4 +1,5 @@
-// TS: 2026-08-15 10:15 ET
+// TS: 2026-08-16 07:32 ET
+// LOCK: User-approved homepage ticker uses compact mode so each stock shows name, price, and daily change. Do not switch this back to regular/one-line mode without explicit approval.
 
 const NYM_MARKET_FALLBACK = Object.freeze([
   { ticker: "AAPL", name: "Apple", proName: "NASDAQ:AAPL" },
@@ -34,7 +35,7 @@ function ensureMarketTickerStyles() {
   if (!document.querySelector('link[data-nym-market-tape-style]')) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "assets/market-ticker-strip.css";
+    link.href = "assets/market-ticker-strip.css?v=20260816-0732";
     link.dataset.nymMarketTapeStyle = "";
     document.head.append(link);
   }
