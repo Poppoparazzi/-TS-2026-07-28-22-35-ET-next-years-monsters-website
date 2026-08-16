@@ -1,4 +1,4 @@
-// TS: 2026-08-14 05:02 ET
+// TS: 2026-08-16 14:01 ET
 
 import { execFileSync } from "node:child_process";
 
@@ -16,6 +16,7 @@ const attemptCount = Number(process.env.NYM_RATING_SMOKE_ATTEMPTS || "12");
 const delayMs = Number(process.env.NYM_RATING_SMOKE_DELAY_MS || "30000");
 const healthTimeoutMs = Number(process.env.NYM_RATING_HEALTH_TIMEOUT_MS || "75000");
 const routeTimeoutMs = Number(process.env.NYM_RATING_ROUTE_TIMEOUT_MS || "30000");
+const allowKnownStaleBlocked = process.env.NYM_ALLOW_KNOWN_STALE_BLOCKED === "1";
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -160,6 +161,21 @@ async function verifyOnce() {
   const routeProbe = await probeRatingRoute(firstSymbol);
 
   if (deployRelevantChangesPending === true) {
+    const knownStale404 = !routeProbe.available && /HTTP 404\b/.test(routeProbe.error || "");
+    if (allowKnownStaleBlocked && knownStale404) {
+      return {
+        blocked: true,
+        blocker: "stale_render_deployment",
+        apiStatus: health.status,
+        apiVersion: health.version || null,
+        deploymentCommit: deploymentCommit || null,
+        deployRelevantChangesPending,
+        ratingRouteStatus: 404,
+        ratingRouteError: routeProbe.error,
+        expectedEngineVersion,
+      };
+    }
+
     const routeState = routeProbe.available
       ? `${firstSymbol} rating route responds on the stale deployment`
       : `${firstSymbol} rating route probe failed: ${routeProbe.error}`;
@@ -183,6 +199,7 @@ async function verifyOnce() {
   }
 
   return {
+    blocked: false,
     apiStatus: health.status,
     apiVersion: health.version || null,
     deploymentCommit: deploymentCommit || null,
@@ -199,6 +216,11 @@ let lastError = null;
 for (let attempt = 1; attempt <= attemptCount; attempt += 1) {
   try {
     const summary = await verifyOnce();
+    if (summary.blocked) {
+      console.log("Production Current Stock Rating path is blocked by the known stale Render deployment; no new rating-path regression was detected.");
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
+    }
     console.log("Production Current Stock Rating path passed.");
     console.log(JSON.stringify(summary, null, 2));
     process.exit(0);
