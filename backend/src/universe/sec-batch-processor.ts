@@ -1,4 +1,4 @@
-// TS: 2026-08-11 12:10 UTC
+// TS: 2026-08-16 10:01 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -72,13 +72,24 @@ function isPermanentSecNotFound(error: unknown): boolean {
 }
 
 function isDuplicateSecIdentity(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+
+  const code = "code" in error ? error.code : null;
+  const constraint = "constraint" in error ? error.constraint : null;
+  const message = "message" in error && typeof error.message === "string"
+    ? error.message
+    : "";
+
+  if (code === "23505" && constraint === "companies_sec_cik_unique") {
+    return true;
+  }
+
+  // Some database wrappers preserve only the error message. Treat only the exact
+  // SEC-CIK uniqueness signature as unresolved so unrelated unique-key failures
+  // still surface as genuine failures.
   return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "23505" &&
-    "constraint" in error &&
-    error.constraint === "companies_sec_cik_unique"
+    message.includes("duplicate key value violates unique constraint") &&
+    message.includes("companies_sec_cik_unique")
   );
 }
 
