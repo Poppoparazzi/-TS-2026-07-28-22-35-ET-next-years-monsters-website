@@ -1,4 +1,4 @@
-// TS: 2026-08-16 16:00 ET
+// TS: 2026-08-16 16:59 UTC
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -114,19 +114,35 @@ function validateUniverse(status, startup) {
 }
 
 function validateProviderBackedProgress(status, health) {
-  const examinedCount = Number(status?.examinedCount || 0);
-  const quoteCompleteCount = Number(status?.quoteCompleteCount || 0);
-  const ratingCompleteCount = Number(status?.ratingCompleteCount || 0);
+  const examinedCount = Number(status?.examinedCount);
+  const quoteCompleteCount = Number(status?.quoteCompleteCount);
+  const ratingCompleteCount = Number(status?.ratingCompleteCount);
   const marketConfigured = Boolean(health?.marketData?.configured);
   const problems = [];
 
-  if (quoteCompleteCount < 0 || quoteCompleteCount > examinedCount) {
+  const requiredCounts = [
+    ["examinedCount", examinedCount],
+    ["quoteCompleteCount", quoteCompleteCount],
+    ["ratingCompleteCount", ratingCompleteCount],
+  ];
+
+  for (const [name, value] of requiredCounts) {
+    if (!Number.isFinite(value) || !Number.isInteger(value)) {
+      problems.push(`${name}=${String(value)} is not a finite integer`);
+    }
+  }
+
+  if (Number.isFinite(examinedCount) && Number.isFinite(quoteCompleteCount) &&
+      (quoteCompleteCount < 0 || quoteCompleteCount > examinedCount)) {
     problems.push(`quoteCompleteCount=${quoteCompleteCount} is outside 0..${examinedCount}`);
   }
-  if (ratingCompleteCount < 0 || ratingCompleteCount > examinedCount) {
+  if (Number.isFinite(examinedCount) && Number.isFinite(ratingCompleteCount) &&
+      (ratingCompleteCount < 0 || ratingCompleteCount > examinedCount)) {
     problems.push(`ratingCompleteCount=${ratingCompleteCount} is outside 0..${examinedCount}`);
   }
-  if (!marketConfigured && (quoteCompleteCount > 0 || ratingCompleteCount > 0)) {
+  if (!marketConfigured &&
+      ((Number.isFinite(quoteCompleteCount) && quoteCompleteCount > 0) ||
+       (Number.isFinite(ratingCompleteCount) && ratingCompleteCount > 0))) {
     problems.push(
       `provider-backed completion advanced while market data is unconfigured: ` +
       `quoteCompleteCount=${quoteCompleteCount}, ratingCompleteCount=${ratingCompleteCount}`,
