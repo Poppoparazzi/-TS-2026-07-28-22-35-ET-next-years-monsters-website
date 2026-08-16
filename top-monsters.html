@@ -1,4 +1,4 @@
-<!-- TS: 2026-08-15 19:58 ET -->
+<!-- TS: 2026-08-16 06:07 ET -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,13 +8,18 @@
   <meta name="description" content="Explore Detective Break’s four-tier Next Year’s Monsters™ research board: Top 15, Rising Monsters, Monster Watchlist, and Dropped Cases.">
   <link rel="stylesheet" href="assets/styles.css?v=20260815-0002">
   <link rel="stylesheet" href="assets/editorial-type.css?v=20260815-0002">
-  <link rel="stylesheet" href="assets/monster-tier-board-preview.css?v=20260815-0002">
+  <link rel="stylesheet" href="assets/monster-tier-board-preview.css?v=20260816-0607">
   <link rel="stylesheet" href="assets/detective-break-hunt.css?v=20260815-1107">
   <style>
-    /* TS: 2026-08-15 19:58 ET — keep tier headings and their explanatory copy from being split into opposing half-width columns on common laptop widths. */
-    @media (max-width:1180px) {
+    /* TS: 2026-08-16 06:07 ET — keep tier headings and their explanatory copy from being split into opposing half-width columns on common laptop/desktop widths. */
+    @media (max-width:1500px) {
       .tier-section-head { grid-template-columns:1fr; align-items:start; }
-      .tier-section-head > p { max-width:900px; }
+      .tier-section-head > p { max-width:900px; margin-top:12px; }
+    }
+    /* TS: 2026-08-16 06:07 ET — give Top 15 evidence copy room by moving the risk column to a full second line through 1360px. */
+    @media (max-width:1360px) {
+      .tier-row { grid-template-columns:58px minmax(150px,.8fr) 120px minmax(220px,1.2fr) auto; }
+      .tier-copy-risk { grid-column:2/-1; }
     }
   </style>
 </head>
