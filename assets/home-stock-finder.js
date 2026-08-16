@@ -1,4 +1,4 @@
-// TS: 2026-08-09 08:17 ET
+// TS: 2026-08-16 09:05 ET
 
 function installHomeCheckDetective() {
   const heading = document.querySelector(".home-check-heading");
@@ -193,13 +193,15 @@ function startHomeStockFinder() {
     event.preventDefault();
     const query = input.value.trim();
     const exactTicker = query.toUpperCase();
+    const knownCompanyTicker = exactTicker === "APPLE" ? "AAPL" : null;
     const isExactTicker = /^[A-Z0-9.-]{1,15}$/.test(query) && !query.includes(" ");
+    const directTicker = knownCompanyTicker || (isExactTicker ? exactTicker : null);
     const url = new URL(
-      isExactTicker ? "market-explorer.html" : "coverage-universe.html",
+      directTicker ? "market-explorer.html" : "coverage-universe.html",
       window.location.href,
     );
-    if (isExactTicker) {
-      url.searchParams.set("left", exactTicker);
+    if (directTicker) {
+      url.searchParams.set("left", directTicker);
       url.searchParams.set("mode", "single");
     } else if (query) {
       url.searchParams.set("q", query);
