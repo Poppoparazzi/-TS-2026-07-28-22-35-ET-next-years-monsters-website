@@ -1,4 +1,4 @@
-// TS: 2026-08-16 16:59 UTC
+// TS: 2026-08-16 22:01 UTC
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -82,6 +82,28 @@ function startupDiagnostic(startup) {
 
 function validateUniverse(status, startup) {
   const problems = [];
+  const countFields = [
+    "universeSize",
+    "examinedCount",
+    "queuedCount",
+    "processingCount",
+    "secCompleteCount",
+    "partialCount",
+    "failedCount",
+    "staleCount",
+    "unresolvedCount",
+    "filingCompleteCount",
+    "factsCompleteCount",
+    "quoteCompleteCount",
+    "ratingCompleteCount",
+  ];
+
+  for (const field of countFields) {
+    const value = Number(status?.[field]);
+    if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+      problems.push(`${field}=${String(status?.[field])} is not a nonnegative finite integer`);
+    }
+  }
 
   if (status?.configured !== true) problems.push("universe endpoint is not configured");
   if (Number(status?.universeSize || 0) < expectedUniverseMinimum) {
