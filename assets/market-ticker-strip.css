@@ -1,4 +1,5 @@
-/* TS: 2026-08-15 11:54 ET */
+/* TS: 2026-08-16 07:32 ET */
+/* LOCK: User-approved homepage tape is the compact three-line presentation: company name, price, daily change. Keep the 70px clearance unless explicitly changed by the user. */
 
 .nym-market-tape {
   position: relative;
@@ -40,7 +41,6 @@
   color: var(--editorial-lime, #b8f34a);
 }
 
-/* Final homepage tape: simple one-line TradingView layout. */
 .nym-market-tape-widget {
   min-height: 70px;
   overflow: hidden;
