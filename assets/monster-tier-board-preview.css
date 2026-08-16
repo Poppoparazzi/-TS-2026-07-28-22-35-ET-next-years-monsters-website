@@ -1,4 +1,4 @@
-/* TS: 2026-08-16 04:58 ET */
+/* TS: 2026-08-16 06:04 ET */
 
 .tier-preview-page { margin:0; overflow-x:hidden; background:#f4efe3; color:#111512; font-family:Arial,Helvetica,sans-serif; }
 .tier-shell { width:min(1240px,92vw); margin:0 auto; }
@@ -59,6 +59,8 @@
 @media (min-width:561px) { .tier-summary { grid-template-columns:repeat(4,minmax(0,1fr)) !important; } .tier-summary span { white-space:nowrap; overflow-wrap:normal; } }
 /* TS: 2026-08-16 04:58 ET — keep Monster Hunt tier headers from splitting into left/right half-page columns on common laptop and desktop widths. */
 @media (max-width:1500px) { .tier-section-head { grid-template-columns:1fr; align-items:start; } .tier-section-head>p { max-width:900px; margin-top:12px; } }
-@media (max-width:1050px) { .tier-row { grid-template-columns:58px minmax(150px,.8fr) 120px minmax(220px,1.2fr) auto; } .tier-copy-risk { grid-column:2/-1; } .tier-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .tier-card-grid > .tier-card:last-child:nth-child(3n+1) { grid-column:auto; } .tier-card-grid > .tier-card:last-child:nth-child(odd) { grid-column:1 / -1; } }
+/* TS: 2026-08-16 06:04 ET — stop Top 15 evidence and risk copy from being squeezed into six narrow columns on laptop/common desktop widths. */
+@media (max-width:1360px) { .tier-row { grid-template-columns:58px minmax(150px,.8fr) 120px minmax(220px,1.2fr) auto; } .tier-copy-risk { grid-column:2/-1; } }
+@media (max-width:1050px) { .tier-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .tier-card-grid > .tier-card:last-child:nth-child(3n+1) { grid-column:auto; } .tier-card-grid > .tier-card:last-child:nth-child(odd) { grid-column:1 / -1; } }
 @media (max-width:760px) { .tier-hero { padding-top:54px; } .tier-section-head { grid-template-columns:1fr; } .tier-row { grid-template-columns:44px 1fr; } .tier-score,.tier-copy,.tier-copy-risk,.tier-case-link { grid-column:2/-1; } .tier-case-link { justify-self:start; } .tier-card-grid { grid-template-columns:1fr; } .tier-card-grid > .tier-card:last-child:nth-child(odd) { grid-column:auto; } .tier-summary { gap:6px; } .tier-summary article { min-height:84px; padding:10px 6px 9px; } .tier-summary strong { font-size:26px; } .tier-summary span { font-size:9px; letter-spacing:0; } }
 @media (max-width:560px) { .tier-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .tier-summary span { white-space:normal; } }
