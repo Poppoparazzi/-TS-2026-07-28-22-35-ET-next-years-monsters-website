@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:13 ET
+// TS: 2026-08-16 11:12 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -104,6 +104,16 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
           next_retry_at = now()
         WHERE sec_status = 'processing'
           AND last_started_at < now() - interval '30 minutes'
+      `);
+
+      await client.query(`
+        UPDATE company_pipeline_status
+        SET
+          sec_status = 'unresolved',
+          last_completed_at = now(),
+          next_retry_at = NULL
+        WHERE sec_status = 'failed'
+          AND last_error LIKE '%duplicate key value violates unique constraint "companies_sec_cik_unique"%'
       `);
 
       await client.query(
