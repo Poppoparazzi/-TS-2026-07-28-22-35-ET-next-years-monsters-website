@@ -1,4 +1,4 @@
-# TS: 2026-08-11 12:24 UTC
+# TS: 2026-08-16 08:57 ET
 
 name: Production smoke
 
@@ -70,6 +70,25 @@ jobs:
 
           console.log("Final 2,000-company universe status:");
           console.log(JSON.stringify(summary, null, 2));
+
+          const failedRecords = Array.isArray(status.companies)
+            ? status.companies
+                .filter((company) => company?.secStage === "failed")
+                .map((company) => ({
+                  ticker: company.ticker ?? null,
+                  companyName: company.companyName ?? null,
+                  exchange: company.exchange ?? null,
+                  secCik: company.secCik ?? null,
+                  secAttemptCount: company.secAttemptCount ?? null,
+                  lastError: company.lastError ?? null,
+                  lastStartedAt: company.lastStartedAt ?? null,
+                  lastCompletedAt: company.lastCompletedAt ?? null,
+                  nextRetryAt: company.nextRetryAt ?? null,
+                }))
+            : [];
+
+          console.log("Failed SEC records:");
+          console.log(JSON.stringify(failedRecords, null, 2));
 
           const problems = [];
           if (summary.examinedCount !== expectedCount) {
