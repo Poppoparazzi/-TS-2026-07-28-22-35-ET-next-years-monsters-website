@@ -1,4 +1,4 @@
-// TS: 2026-08-15 09:42 ET
+// TS: 2026-08-15 23:03 ET
 
 (function installMonsterCheckRatingTrio() {
   "use strict";
@@ -158,8 +158,8 @@
     const style = document.createElement("style");
     style.id = "monster-rating-trio-styles";
     style.textContent = `
-      .monster-result-identity h2{color:#fffaf0}
-      .monster-result-identity h2 span{color:#ef4d43}
+      .monster-result-identity h2{color:#3f4541;text-shadow:0 1px 0 rgba(255,255,255,.72)}
+      .monster-result-identity h2 span{color:#ef4d43;text-shadow:none}
       .monster-rating-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 24px;padding:0}
       .monster-case-loaded-banner{grid-column:1/-1;margin:0;padding:13px 16px;border-left:5px solid #a8df34;background:#eaf6d2;color:#17200f;font-size:11px;font-weight:950;letter-spacing:.035em;line-height:1.45}
       .monster-rating-trio-card{min-height:158px;padding:18px;border:1px solid rgba(255,255,255,.18);background:#111715;color:#fffaf0}
@@ -170,6 +170,12 @@
       .monster-rating-trio-card p{margin:0;color:#cfd5cf;font-size:12px;line-height:1.45}
       .monster-rating-trio-note{grid-column:1/-1;margin:0;padding:11px 14px;border-left:4px solid #d9aa31;background:#fff3cf;color:#26302b;font-size:12px;font-weight:650;line-height:1.45}
       .monster-rating-trio-note strong{color:#111715;font-weight:950}
+      @media(max-width:1360px){
+        .monster-page .monster-result-head,.monster-page .monster-news-section{grid-template-columns:1fr}
+        .monster-page .monster-result-identity{padding-right:0}
+        .monster-page .monster-score-card{border-top:1px solid #666;border-left:0}
+        .monster-page .monster-news-status{min-height:190px}
+      }
       @media(max-width:850px){.monster-rating-trio{grid-template-columns:1fr}}
     `;
     document.head.append(style);
