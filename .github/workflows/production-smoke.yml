@@ -1,24 +1,9 @@
-# TS: 2026-08-17 04:00 UTC
+# TS: 2026-08-17 10:01 ET
 
 name: Production smoke
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "17 12 * * *"
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"
-      - "render.yaml"
-      - "factory-status.html"
-      - "assets/factory-status.*"
-      - "scripts/verify-production.mjs"
-      - ".github/workflows/production-smoke.yml"
-  pull_request:
-    paths:
-      - ".production-smoke-trigger*"
 
 permissions:
   contents: read
