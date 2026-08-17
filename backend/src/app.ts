@@ -1,4 +1,4 @@
-// TS: 2026-08-13 00:06 ET
+// TS: 2026-08-17 19:02 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -184,7 +184,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get("/api/readiness", async () => readinessProvider.getSnapshot());
 
   app.get<{ Querystring: LimitQuery }>("/api/universe/status", async (request) => {
-    const limit = parseLimit(request.query.limit, 100, 2_500);
+    const limit = parseLimit(request.query.limit, 100, 5_000);
     return universeStore.getStatus(limit);
   });
 
