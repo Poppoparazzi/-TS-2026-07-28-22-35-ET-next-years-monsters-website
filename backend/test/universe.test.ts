@@ -1,4 +1,4 @@
-// TS: 2026-08-03 17:39 ET
+// TS: 2026-08-17 19:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -134,7 +134,7 @@ test("bulk universe status endpoint caps the requested company count", async (t)
   });
 
   assert.equal(response.statusCode, 200);
-  assert.equal(universeStore.requestedLimit, 2_500);
+  assert.equal(universeStore.requestedLimit, 5_000);
   assert.equal(response.json().universeSize, 100);
   assert.equal(response.json().queuedCount, 1);
   assert.equal(response.json().secCompleteCount, 1);
