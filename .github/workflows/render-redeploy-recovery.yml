@@ -1,4 +1,4 @@
-# TS: 2026-08-17 10:07 UTC
+# TS: 2026-08-17 12:57 ET
 
 name: Render deploy recovery
 
@@ -234,6 +234,12 @@ jobs:
 
       - name: Verify 2,000-stock production accounting and provider truth
         run: node scripts/verify-production.mjs
+
+      - name: Report 2,500-candidate reserve/backfill progress
+        env:
+          NYM_CANDIDATE_TARGET: "2500"
+          NYM_USABLE_TARGET: "2000"
+        run: node scripts/report-reserve-backfill.mjs
 
       - name: Detect Vercel collateral authority
         id: vercel_auth
