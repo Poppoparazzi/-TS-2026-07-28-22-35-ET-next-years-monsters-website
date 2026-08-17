@@ -1,10 +1,7 @@
-# TS: 2026-08-15 13:00 ET
-name: Verify core customer pages
+# TS: 2026-08-16 21:31 ET
+name: Verify core customer pages (manual only)
 
 on:
-  push:
-    branches:
-      - gh-pages
   workflow_dispatch:
 
 permissions:
