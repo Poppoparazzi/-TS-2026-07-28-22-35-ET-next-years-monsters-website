@@ -1,4 +1,4 @@
-# TS: 2026-08-17 10:57 ET
+# TS: 2026-08-17 17:58 ET
 
 databases:
   - name: next-years-monsters-db
@@ -34,9 +34,9 @@ services:
       - key: SEC_USER_AGENT
         sync: false
       - key: AUTO_IMPORT_UNIVERSE_LIMIT
-        value: "2500"
+        value: "3000"
       - key: AUTO_SEC_BATCH_SIZE
-        value: "2500"
+        value: "3000"
       - key: SEC_BATCH_CONCURRENCY
         value: "3"
       - key: SEC_BATCH_MAX_AGE_HOURS
