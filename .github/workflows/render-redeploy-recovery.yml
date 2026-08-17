@@ -1,4 +1,4 @@
-# TS: 2026-08-17 03:01 UTC
+# TS: 2026-08-17 07:35 UTC
 
 name: Render deploy recovery
 
@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   recover-render:
@@ -225,3 +226,54 @@ jobs:
           NYM_RATING_SMOKE_ATTEMPTS: "1"
           NYM_RATING_SMOKE_DELAY_MS: "0"
         run: node scripts/verify-rating-path.mjs
+
+      - name: Detect Vercel collateral authority
+        id: vercel_auth
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Vercel collateral deployment authority is available."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "VERCEL_TOKEN is not configured; collateral deployment remains blocked."
+            {
+              echo "### Vercel collateral blocked"
+              echo
+              echo "No collateral deployment was dispatched because **VERCEL_TOKEN** is missing."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check whether current main already has a verified Vercel collateral run
+        id: vercel_state
+        if: steps.vercel_auth.outputs.available == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          runs_json="$(gh api "/repos/$REPOSITORY/actions/workflows/deploy-vercel-bypass.yml/runs?branch=main&status=success&per_page=20")"
+          if printf '%s' "$runs_json" | jq -e --arg sha "$CURRENT_SHA" '.workflow_runs[] | select(.head_sha == $sha)' >/dev/null; then
+            echo "verified=true" >> "$GITHUB_OUTPUT"
+            echo "A successful Vercel collateral workflow already exists for current main ($CURRENT_SHA); no duplicate deployment will be dispatched."
+          else
+            echo "verified=false" >> "$GITHUB_OUTPUT"
+            echo "No successful Vercel collateral workflow exists for current main ($CURRENT_SHA)."
+          fi
+
+      - name: Dispatch prepared Vercel collateral workflow when authorized and not yet verified
+        if: steps.vercel_auth.outputs.available == 'true' && steps.vercel_state.outputs.verified != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-vercel-bypass.yml --repo "$REPOSITORY" --ref main
+          echo "Dispatched prepared Vercel collateral link/build/deploy/verify workflow."
+          {
+            echo "### Vercel collateral dispatched"
+            echo
+            echo "VERCEL_TOKEN is available, so the prepared collateral workflow was dispatched for current main."
+          } >> "$GITHUB_STEP_SUMMARY"
