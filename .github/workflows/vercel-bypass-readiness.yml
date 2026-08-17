@@ -1,12 +1,7 @@
-# TS: 2026-08-14 15:03 ET
+# TS: 2026-08-17 10:01 ET
 name: Vercel bypass readiness
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/vercel-bypass-readiness.yml"
   workflow_dispatch:
 
 permissions:
