@@ -1,4 +1,4 @@
-// TS: 2026-08-17 16:00 ET
+// TS: 2026-08-17 17:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -44,11 +44,28 @@ const unresolvedCount = asNonnegativeInteger(status.unresolvedCount, "unresolved
 const failedCount = asNonnegativeInteger(status.failedCount, "failedCount");
 const usableShortfall = Math.max(usableTarget - secCompleteCount, 0);
 const candidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
+const observedSecCompletionRate = examinedCount > 0 ? secCompleteCount / examinedCount : 0;
 const observedSecCompletionRatePercent = roundedPercent(secCompleteCount, examinedCount);
 const minimumRemainingSuccessRatePercent =
   usableShortfall === 0 ? 0 : roundedPercent(usableShortfall, candidateHeadroom);
 const reserveCapacityAdequate = usableShortfall === 0 || candidateHeadroom >= usableShortfall;
 const reserveCapacityMargin = candidateHeadroom - usableShortfall;
+const projectedSecCompleteAtCandidateTarget = Math.min(
+  candidateTarget,
+  secCompleteCount + Math.floor(candidateHeadroom * observedSecCompletionRate),
+);
+const projectedUsableSurplusAtCandidateTarget = projectedSecCompleteAtCandidateTarget - usableTarget;
+const estimatedAdditionalCandidatesNeededAtObservedRate =
+  usableShortfall === 0
+    ? 0
+    : observedSecCompletionRate > 0
+      ? Math.ceil(usableShortfall / observedSecCompletionRate)
+      : null;
+const estimatedTotalCandidatesNeededAtObservedRate =
+  estimatedAdditionalCandidatesNeededAtObservedRate === null
+    ? null
+    : examinedCount + estimatedAdditionalCandidatesNeededAtObservedRate;
+const observedRateProjectsTargetSuccess = projectedSecCompleteAtCandidateTarget >= usableTarget;
 
 const companies = Array.isArray(status.companies) ? status.companies : [];
 const unresolved = companies.filter((company) => company?.secStage === "unresolved");
@@ -78,6 +95,11 @@ const report = {
   candidateHeadroom,
   observedSecCompletionRatePercent,
   minimumRemainingSuccessRatePercent,
+  estimatedAdditionalCandidatesNeededAtObservedRate,
+  estimatedTotalCandidatesNeededAtObservedRate,
+  projectedSecCompleteAtCandidateTarget,
+  projectedUsableSurplusAtCandidateTarget,
+  observedRateProjectsTargetSuccess,
   reserveCapacityAdequate,
   reserveCapacityMargin,
   targetSatisfied: secCompleteCount >= usableTarget,
@@ -87,9 +109,11 @@ const report = {
   replaceableVisible,
   note:
     examinedCount < candidateTarget
-      ? reserveCapacityAdequate
-        ? `Production has ${candidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall. The remaining reserve only needs a ${minimumRemainingSuccessRatePercent}% SEC-completion rate to reach ${usableTarget}.`
-        : `Production does not have enough remaining candidate slots to cover the ${usableShortfall}-stock shortfall even if every remaining candidate resolves. Expand the candidate target.`
+      ? observedRateProjectsTargetSuccess
+        ? `At the observed ${observedSecCompletionRatePercent}% SEC-completion rate, production needs about ${estimatedAdditionalCandidatesNeededAtObservedRate} more candidates (${estimatedTotalCandidatesNeededAtObservedRate} total examined) to reach ${usableTarget}. Filling all ${candidateHeadroom} remaining slots projects roughly ${projectedSecCompleteAtCandidateTarget} SEC-complete stocks, a ${projectedUsableSurplusAtCandidateTarget}-stock cushion.`
+        : reserveCapacityAdequate
+          ? `Production has ${candidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall, but the observed completion rate does not project reaching ${usableTarget}. Expand the candidate target before the reserve is exhausted.`
+          : `Production does not have enough remaining candidate slots to cover the ${usableShortfall}-stock shortfall even if every remaining candidate resolves. Expand the candidate target.`
       : secCompleteCount >= usableTarget
         ? `Production has at least ${usableTarget} SEC-complete companies; unresolved lower-priority names no longer block the active target.`
         : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand the candidate target rather than retrying unchanged lower-priority unresolved names.`,
