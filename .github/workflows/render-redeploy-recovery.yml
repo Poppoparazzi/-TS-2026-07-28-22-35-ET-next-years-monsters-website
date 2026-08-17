@@ -1,4 +1,4 @@
-# TS: 2026-08-17 02:00 UTC
+# TS: 2026-08-17 03:01 UTC
 
 name: Render deploy recovery
 
@@ -13,12 +13,17 @@ permissions:
 jobs:
   recover-render:
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 12
     steps:
       - name: Check out repository history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Classify current Render deployment state
         id: render_state
@@ -211,3 +216,12 @@ jobs:
 
           throw new Error("Authorized Render recovery did not expose the repaired /api/ratings/AAPL route within the verification window.");
           NODE
+
+      - name: Run Current Stock Rating production smoke in the same hourly job
+        env:
+          NYM_RATING_SMOKE_SYMBOLS: "AAPL,CRDO,RKLB,MSFT"
+          NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v0.1-readiness-only"
+          NYM_ALLOW_KNOWN_STALE_BLOCKED: "1"
+          NYM_RATING_SMOKE_ATTEMPTS: "1"
+          NYM_RATING_SMOKE_DELAY_MS: "0"
+        run: node scripts/verify-rating-path.mjs
