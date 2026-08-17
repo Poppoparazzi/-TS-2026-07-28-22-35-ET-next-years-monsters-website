@@ -1,15 +1,8 @@
-# TS: 2026-08-15 09:03 ET
-name: Deploy Vercel collateral backend
+# TS: 2026-08-16 21:31 ET
+name: Deploy Vercel collateral backend (manual only)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/deploy-vercel-bypass.yml"
   workflow_dispatch:
-  schedule:
-    - cron: "17 * * * *"
 
 permissions:
   contents: read
@@ -43,12 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${VERCEL_TOKEN:-}" ]; then
-            if [ "${{ github.event_name }}" = "schedule" ]; then
-              echo "VERCEL_AUTH_READY=false" >> "$GITHUB_ENV"
-              echo "Scheduled bypass check: VERCEL_TOKEN is not configured yet; no deployment attempted."
-              exit 0
-            fi
-            echo "Vercel collateral deployment is ready but missing the one required GitHub Actions secret: VERCEL_TOKEN"
+            echo "Manual Vercel deployment was not started because VERCEL_TOKEN is not configured."
             exit 2
           fi
           echo "VERCEL_AUTH_READY=true" >> "$GITHUB_ENV"
