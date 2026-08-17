@@ -1,4 +1,4 @@
-// TS: 2026-08-17 12:07 ET
+// TS: 2026-08-17 16:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -20,6 +20,11 @@ function asNonnegativeInteger(value, name) {
   return parsed;
 }
 
+function roundedPercent(numerator, denominator) {
+  if (denominator <= 0) return null;
+  return Math.round((numerator / denominator) * 10_000) / 100;
+}
+
 async function requestJson(url) {
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
@@ -39,6 +44,11 @@ const unresolvedCount = asNonnegativeInteger(status.unresolvedCount, "unresolved
 const failedCount = asNonnegativeInteger(status.failedCount, "failedCount");
 const usableShortfall = Math.max(usableTarget - secCompleteCount, 0);
 const candidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
+const observedSecCompletionRatePercent = roundedPercent(secCompleteCount, examinedCount);
+const minimumRemainingSuccessRatePercent =
+  usableShortfall === 0 ? 0 : roundedPercent(usableShortfall, candidateHeadroom);
+const reserveCapacityAdequate = usableShortfall === 0 || candidateHeadroom >= usableShortfall;
+const reserveCapacityMargin = candidateHeadroom - usableShortfall;
 
 const companies = Array.isArray(status.companies) ? status.companies : [];
 const unresolved = companies.filter((company) => company?.secStage === "unresolved");
@@ -66,6 +76,10 @@ const report = {
   failedCount,
   usableShortfall,
   candidateHeadroom,
+  observedSecCompletionRatePercent,
+  minimumRemainingSuccessRatePercent,
+  reserveCapacityAdequate,
+  reserveCapacityMargin,
   targetSatisfied: secCompleteCount >= usableTarget,
   mustFixCount: mustFix.length,
   mustFix,
@@ -73,10 +87,12 @@ const report = {
   replaceableVisible,
   note:
     examinedCount < candidateTarget
-      ? `Production has not yet loaded the full ${candidateTarget}-candidate reserve pool.`
+      ? reserveCapacityAdequate
+        ? `Production has ${candidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall. The remaining reserve only needs a ${minimumRemainingSuccessRatePercent}% SEC-completion rate to reach ${usableTarget}.`
+        : `Production does not have enough remaining candidate slots to cover the ${usableShortfall}-stock shortfall even if every remaining candidate resolves. Expand the candidate target.`
       : secCompleteCount >= usableTarget
         ? `Production has at least ${usableTarget} SEC-complete companies; unresolved lower-priority names no longer block the active target.`
-        : `Production still needs ${usableShortfall} more SEC-complete companies from the reserve pool or must-fix queue.`,
+        : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand the candidate target rather than retrying unchanged lower-priority unresolved names.`,
 };
 
 console.log("Next Year's Monsters reserve/backfill report:");
