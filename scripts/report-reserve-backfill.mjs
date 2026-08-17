@@ -1,9 +1,9 @@
-// TS: 2026-08-17 17:00 ET
+// TS: 2026-08-17 17:58 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
   .replace(/\/$/, "");
-const candidateTarget = Number(process.env.NYM_CANDIDATE_TARGET || "2500");
+const candidateTarget = Number(process.env.NYM_CANDIDATE_TARGET || "3000");
 const usableTarget = Number(process.env.NYM_USABLE_TARGET || "2000");
 
 const mustResolve = new Set([
