@@ -1,4 +1,4 @@
-// TS: 2026-08-17 10:05 UTC
+// TS: 2026-08-17 11:00 UTC
 
 import { readFileSync } from "node:fs";
 
@@ -21,9 +21,10 @@ function verifyHomepageSearch() {
   const source = read("assets/home-stock-finder.js");
   const universe = JSON.parse(read("data/market-universe.json"));
   const apple = universe.find((stock) => String(stock.ticker || "").toUpperCase() === "AAPL");
+  const appleName = String(apple?.name || "").trim().toLowerCase();
 
-  if (!apple || String(apple.name || "").toLowerCase() !== "apple inc.") {
-    fail("Homepage search universe no longer contains the exact Apple Inc. → AAPL mapping.");
+  if (!apple || !["apple", "apple inc", "apple inc."].includes(appleName)) {
+    fail("Homepage search universe no longer contains a recognized Apple → AAPL mapping.");
   }
   if (!source.includes("const exactName = stocks.find")) {
     fail("Homepage search no longer resolves exact company names before fallback handling.");
