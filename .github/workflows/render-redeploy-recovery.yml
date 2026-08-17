@@ -1,4 +1,4 @@
-# TS: 2026-08-17 09:12 UTC
+# TS: 2026-08-17 10:07 UTC
 
 name: Render deploy recovery
 
@@ -228,7 +228,9 @@ jobs:
         run: node scripts/verify-rating-path.mjs
 
       - name: Verify frozen functional invariants without changing visuals
-        run: node scripts/validate-static-site.mjs
+        run: |
+          node scripts/validate-static-site.mjs
+          node scripts/verify-frozen-functional-invariants.mjs
 
       - name: Verify 2,000-stock production accounting and provider truth
         run: node scripts/verify-production.mjs
