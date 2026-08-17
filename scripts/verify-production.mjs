@@ -1,4 +1,4 @@
-// TS: 2026-08-16 22:01 UTC
+// TS: 2026-08-17 00:07 UTC
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -111,6 +111,23 @@ function validateUniverse(status, startup) {
   }
   if (Number(status?.examinedCount || 0) < expectedUniverseMinimum) {
     problems.push(`only ${status?.examinedCount || 0} companies were returned`);
+  }
+
+  const examinedCount = Number(status?.examinedCount);
+  const completionFields = [
+    "filingCompleteCount",
+    "factsCompleteCount",
+    "quoteCompleteCount",
+    "ratingCompleteCount",
+  ];
+
+  if (Number.isFinite(examinedCount) && examinedCount >= 0) {
+    for (const field of completionFields) {
+      const value = Number(status?.[field]);
+      if (Number.isFinite(value) && value > examinedCount) {
+        problems.push(`${field}=${value} exceeds examinedCount=${examinedCount}`);
+      }
+    }
   }
 
   const pipelineTotal = [
