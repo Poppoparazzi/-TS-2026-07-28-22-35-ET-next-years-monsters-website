@@ -1,0 +1,83 @@
+// TS: 2026-08-17 12:07 ET
+
+const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
+  .trim()
+  .replace(/\/$/, "");
+const candidateTarget = Number(process.env.NYM_CANDIDATE_TARGET || "2500");
+const usableTarget = Number(process.env.NYM_USABLE_TARGET || "2000");
+
+const mustResolve = new Set([
+  "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
+  "DECK", "WING", "META", "APP", "MSFT", "GOOGL", "GOOG", "AVGO", "PLTR", "CRDO",
+  "RKLB", "QCOM", "MU", "ARM", "DELL", "INTC", "MRVL", "HOOD", "COIN", "UBER",
+]);
+
+function asNonnegativeInteger(value, name) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${name}=${String(value)} is not a nonnegative integer.`);
+  }
+  return parsed;
+}
+
+async function requestJson(url) {
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(70_000),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(`${url} returned HTTP ${response.status}: ${payload?.message || payload?.error || "no JSON error"}`);
+  }
+  return payload;
+}
+
+const status = await requestJson(`${apiBaseUrl}/api/universe/status?limit=${candidateTarget}`);
+const examinedCount = asNonnegativeInteger(status.examinedCount, "examinedCount");
+const secCompleteCount = asNonnegativeInteger(status.secCompleteCount, "secCompleteCount");
+const unresolvedCount = asNonnegativeInteger(status.unresolvedCount, "unresolvedCount");
+const failedCount = asNonnegativeInteger(status.failedCount, "failedCount");
+const usableShortfall = Math.max(usableTarget - secCompleteCount, 0);
+const candidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
+
+const companies = Array.isArray(status.companies) ? status.companies : [];
+const unresolved = companies.filter((company) => company?.secStage === "unresolved");
+const failed = companies.filter((company) => company?.secStage === "failed");
+const mustFix = [...unresolved, ...failed]
+  .filter((company) => mustResolve.has(String(company?.ticker || "").toUpperCase()))
+  .map((company) => ({
+    ticker: company.ticker,
+    companyName: company.companyName,
+    secStage: company.secStage,
+    lastError: company.lastError ?? null,
+  }));
+const replaceableVisible = [...unresolved, ...failed]
+  .filter((company) => !mustResolve.has(String(company?.ticker || "").toUpperCase()))
+  .map((company) => company.ticker);
+
+const report = {
+  generatedAt: new Date().toISOString(),
+  candidateTarget,
+  usableTarget,
+  universeSize: status.universeSize,
+  examinedCount,
+  secCompleteCount,
+  unresolvedCount,
+  failedCount,
+  usableShortfall,
+  candidateHeadroom,
+  targetSatisfied: secCompleteCount >= usableTarget,
+  mustFixCount: mustFix.length,
+  mustFix,
+  replaceableVisibleCount: replaceableVisible.length,
+  replaceableVisible,
+  note:
+    examinedCount < candidateTarget
+      ? `Production has not yet loaded the full ${candidateTarget}-candidate reserve pool.`
+      : secCompleteCount >= usableTarget
+        ? `Production has at least ${usableTarget} SEC-complete companies; unresolved lower-priority names no longer block the active target.`
+        : `Production still needs ${usableShortfall} more SEC-complete companies from the reserve pool or must-fix queue.`,
+};
+
+console.log("Next Year's Monsters reserve/backfill report:");
+console.log(JSON.stringify(report, null, 2));
