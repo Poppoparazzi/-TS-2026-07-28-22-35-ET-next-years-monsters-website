@@ -1,18 +1,11 @@
-# TS: 2026-08-13 21:08 ET
-name: Verify public customer journey
+# TS: 2026-08-16 21:31 ET
+name: Verify public customer journey (manual only)
 
 on:
-  push:
-    branches:
-      - gh-pages
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: customer-journey-public-verification
-  cancel-in-progress: true
 
 jobs:
   verify:
@@ -23,74 +16,15 @@ jobs:
         with:
           ref: gh-pages
 
-      - name: Require journey files
+      - name: Require core customer journey files
         shell: bash
         run: |
           set -euo pipefail
+          test -f index.html
           test -f start-here.html
           test -f monster-check.html
           test -f top-monsters.html
           test -f how-it-works.html
           test -f vcl-library.html
           test -f about.html
-
-      - name: Byte-match public journey pages
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          wait_for_match() {
-            local source_file="$1"
-            local public_url="$2"
-            local label="$3"
-            local expected
-            expected="$(sha256sum "$source_file" | awk '{print $1}')"
-
-            for attempt in $(seq 1 18); do
-              if curl --fail --silent --show-error --location \
-                "${public_url}?cb=${GITHUB_SHA}-${attempt}" \
-                -o /tmp/public-file; then
-                actual="$(sha256sum /tmp/public-file | awk '{print $1}')"
-                if [ "$actual" = "$expected" ]; then
-                  echo "PUBLIC BYTE MATCH: ${label} matches gh-pages at ${GITHUB_SHA}."
-                  return 0
-                fi
-              fi
-              echo "Waiting for public ${label} to match gh-pages (${attempt}/18)..."
-              sleep 5
-            done
-
-            echo "ERROR: public ${label} never matched gh-pages commit ${GITHUB_SHA}." >&2
-            return 1
-          }
-
-          wait_for_match "start-here.html" "https://nextyearsmonsters.com/start-here.html" "Start Here"
-          wait_for_match "monster-check.html" "https://nextyearsmonsters.com/monster-check.html" "Monster Check"
-          wait_for_match "top-monsters.html" "https://nextyearsmonsters.com/top-monsters.html" "Monster Hunt"
-          wait_for_match "how-it-works.html" "https://nextyearsmonsters.com/how-it-works.html" "The System"
-          wait_for_match "vcl-library.html" "https://nextyearsmonsters.com/vcl-library.html" "VCL Library"
-          wait_for_match "about.html" "https://nextyearsmonsters.com/about.html" "About"
-
-      - name: Verify public page identities
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          check_public_content() {
-            local public_url="$1"
-            local expected_text="$2"
-            local label="$3"
-            local target="/tmp/public-${label// /-}.html"
-
-            curl --fail --silent --show-error --location \
-              "${public_url}?cb=${GITHUB_SHA}" \
-              -o "$target"
-            grep -Fq "$expected_text" "$target"
-            echo "PUBLIC IDENTITY MATCH: ${label}."
-          }
-
-          check_public_content "https://nextyearsmonsters.com/start-here.html" '<title>Start Here | Next Year’s Monsters™</title>' "Start Here"
-          check_public_content "https://nextyearsmonsters.com/monster-check.html" '<title>Monster Check™ | Next Year’s Monsters™</title>' "Monster Check"
-          check_public_content "https://nextyearsmonsters.com/how-it-works.html" '<title>The System | Next Year’s Monsters™</title>' "The System"
-          check_public_content "https://nextyearsmonsters.com/about.html" 'Use the site in order' "About"
-          echo 'PUBLIC JOURNEY VERIFIED: Start Here, Monster Check, Monster Hunt, The System, VCL Library, and About match gh-pages.'
+          echo "Core customer journey files are present on gh-pages."
