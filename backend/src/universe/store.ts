@@ -1,4 +1,4 @@
-// TS: 2026-08-03 17:38 ET
+// TS: 2026-08-17 19:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -143,10 +143,6 @@ export class PostgresUniverseStore implements UniverseStore {
       await client.query(DEACTIVATE_UNIVERSE_SQL);
 
       for (const company of companies) {
-        // A ticker change can leave the same SEC registrant attached to an old,
-        // now-inactive company row. Release that inactive CIK before assigning it
-        // to the selected active ticker, while preserving active-ticker conflict
-        // protection in the upsert itself.
         await client.query(RELEASE_INACTIVE_CIK_SQL, [company.cikPadded, company.ticker]);
 
         const companyResult = await client.query<{ id: string | number }>(
@@ -192,7 +188,7 @@ export class PostgresUniverseStore implements UniverseStore {
   }
 
   public async getStatus(limit: number): Promise<UniverseStatusSummary> {
-    const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 2_500);
+    const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 5_000);
     const client = await this.pool.connect();
 
     try {
@@ -217,18 +213,11 @@ export class PostgresUniverseStore implements UniverseStore {
               cps.last_completed_at,
               cps.next_retry_at,
               (c.sec_cik IS NOT NULL) AS has_sec_identity,
+              EXISTS (SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id) AS has_filings,
+              EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id) AS has_facts,
+              EXISTS (SELECT 1 FROM quote_snapshots qs WHERE qs.company_id = c.id) AS has_quote,
               EXISTS (
-                SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id
-              ) AS has_filings,
-              EXISTS (
-                SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id
-              ) AS has_facts,
-              EXISTS (
-                SELECT 1 FROM quote_snapshots qs WHERE qs.company_id = c.id
-              ) AS has_quote,
-              EXISTS (
-                SELECT 1
-                FROM monster_rating_runs mr
+                SELECT 1 FROM monster_rating_runs mr
                 WHERE mr.company_id = c.id AND mr.status = 'complete'
               ) AS has_rating,
               c.updated_at
@@ -271,18 +260,12 @@ export class PostgresUniverseStore implements UniverseStore {
       );
 
       const queuedCount = companies.filter((company) => company.secStage === "queued").length;
-      const processingCount = companies.filter(
-        (company) => company.secStage === "processing",
-      ).length;
-      const secCompleteCount = companies.filter(
-        (company) => company.secStage === "complete",
-      ).length;
+      const processingCount = companies.filter((company) => company.secStage === "processing").length;
+      const secCompleteCount = companies.filter((company) => company.secStage === "complete").length;
       const partialCount = companies.filter((company) => company.secStage === "partial").length;
       const failedCount = companies.filter((company) => company.secStage === "failed").length;
       const staleCount = companies.filter((company) => company.secStage === "stale").length;
-      const unresolvedCount = companies.filter(
-        (company) => company.secStage === "unresolved",
-      ).length;
+      const unresolvedCount = companies.filter((company) => company.secStage === "unresolved").length;
       const secIdentityCount = companies.filter((company) => company.hasSecIdentity).length;
       const filingCompleteCount = companies.filter((company) => company.hasFilings).length;
       const factsCompleteCount = companies.filter((company) => company.hasFacts).length;
