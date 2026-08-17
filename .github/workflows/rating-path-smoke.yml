@@ -1,19 +1,9 @@
-# TS: 2026-08-16 14:02 ET
+# TS: 2026-08-16 21:31 ET
 
-name: Current Stock Rating production smoke
+name: Current Stock Rating production smoke (manual only)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "23 * * * *"
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"
-      - "render.yaml"
-      - "scripts/verify-rating-path.mjs"
-      - ".github/workflows/rating-path-smoke.yml"
 
 permissions:
   contents: read
@@ -42,9 +32,6 @@ jobs:
           NYM_RATING_SMOKE_SYMBOLS: "AAPL,CRDO,RKLB,MSFT"
           NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v0.1-readiness-only"
           NYM_ALLOW_KNOWN_STALE_BLOCKED: "1"
-          # The scheduled smoke is a snapshot, not a deployment waiter. The dedicated
-          # Render recovery workflow owns deploy retries. One probe prevents a known
-          # stale deployment from burning six minutes on twelve identical 404s.
           NYM_RATING_SMOKE_ATTEMPTS: "1"
           NYM_RATING_SMOKE_DELAY_MS: "0"
         run: node scripts/verify-rating-path.mjs
