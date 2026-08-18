@@ -1,4 +1,4 @@
-// TS: 2026-08-17 00:07 UTC
+// TS: 2026-08-18 20:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -8,8 +8,15 @@ const factoryPageUrl = (process.env.NYM_FACTORY_PAGE_URL ||
   .trim();
 const expectedVersion = (process.env.NYM_EXPECTED_VERSION || "0.6.0").trim();
 const expectedUniverseMinimum = Number(process.env.NYM_EXPECTED_UNIVERSE_MIN || "2000");
+const statusLimit = Number(process.env.NYM_UNIVERSE_STATUS_LIMIT || "5000");
 const attemptCount = Number(process.env.NYM_SMOKE_ATTEMPTS || "10");
 const delayMs = Number(process.env.NYM_SMOKE_DELAY_MS || "30000");
+
+if (!Number.isInteger(statusLimit) || statusLimit < expectedUniverseMinimum || statusLimit > 5_000) {
+  throw new Error(
+    `NYM_UNIVERSE_STATUS_LIMIT must be an integer from ${expectedUniverseMinimum} to 5000.`,
+  );
+}
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -196,7 +203,7 @@ async function verifyOnce() {
   validateHealth(health);
 
   const [universe, startup] = await Promise.all([
-    requestJson(`${apiBaseUrl}/api/universe/status?limit=${expectedUniverseMinimum}`),
+    requestJson(`${apiBaseUrl}/api/universe/status?limit=${statusLimit}`),
     optionalJson(`${apiBaseUrl}/api/startup-status`),
   ]);
   validateUniverse(universe, startup);
@@ -211,6 +218,7 @@ async function verifyOnce() {
     marketConfigured: Boolean(health.marketData?.configured),
     secProvider: health.sec?.provider,
     databaseProvider: health.database?.provider,
+    requestedStatusLimit: statusLimit,
     universeSize: universe.universeSize,
     examinedCount: universe.examinedCount,
     queuedCount: universe.queuedCount,
