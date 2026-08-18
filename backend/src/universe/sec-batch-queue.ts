@@ -1,4 +1,4 @@
-// TS: 2026-08-18 08:58 ET
+// TS: 2026-08-18 19:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -19,6 +19,17 @@ export const SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL = `
       )
     )
   )
+`;
+
+export const CLEANUP_DUPLICATE_CIK_FAILURES_SQL = `
+  UPDATE company_pipeline_status
+  SET
+    sec_status = 'unresolved',
+    last_completed_at = now(),
+    next_retry_at = NULL
+  WHERE sec_status = 'failed'
+    AND last_error IS NOT NULL
+    AND last_error ILIKE '%companies_sec_cik_unique%'
 `;
 
 export const PROMOTE_EXHAUSTED_FAILURES_SQL = `
@@ -134,15 +145,10 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
           AND last_started_at < now() - interval '30 minutes'
       `);
 
-      await client.query(`
-        UPDATE company_pipeline_status
-        SET
-          sec_status = 'unresolved',
-          last_completed_at = now(),
-          next_retry_at = NULL
-        WHERE sec_status = 'failed'
-          AND last_error LIKE '%duplicate key value violates unique constraint "companies_sec_cik_unique"%'
-      `);
+      // Historic duplicate-CIK rows can have slightly different wrapped database
+      // messages. Key cleanup to the constraint name itself so known records such as
+      // ABBNY/ALFUU leave the retry pool on the first current-main queue pass.
+      await client.query(CLEANUP_DUPLICATE_CIK_FAILURES_SQL);
 
       // Do not let ordinary failures retry forever. After three attempts, move a
       // non-pilot record into the unresolved/replaceable pool so fresh reserve
