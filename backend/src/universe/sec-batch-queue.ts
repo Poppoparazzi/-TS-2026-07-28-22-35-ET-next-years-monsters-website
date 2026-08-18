@@ -1,4 +1,4 @@
-// TS: 2026-08-16 11:12 ET
+// TS: 2026-08-18 04:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -137,6 +137,13 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
               AND (cps.next_retry_at IS NULL OR cps.next_retry_at <= now())
             ORDER BY
               c.is_pilot DESC,
+              CASE cps.sec_status
+                WHEN 'queued' THEN 0
+                WHEN 'partial' THEN 1
+                WHEN 'failed' THEN 2
+                WHEN 'stale' THEN 3
+                ELSE 4
+              END,
               cps.sec_attempt_count ASC,
               cps.updated_at ASC,
               c.ticker ASC
