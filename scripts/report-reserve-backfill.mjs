@@ -1,4 +1,4 @@
-// TS: 2026-08-18 02:57 ET
+// TS: 2026-08-18 10:03 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -41,6 +41,11 @@ function roundedPercent(numerator, denominator) {
 
 function roundUp(value, increment) {
   return Math.ceil(value / increment) * increment;
+}
+
+function isProtectedCompany(company) {
+  const ticker = String(company?.ticker || "").toUpperCase();
+  return company?.isPilot === true || mustResolve.has(ticker);
 }
 
 async function requestJson(url) {
@@ -105,15 +110,16 @@ const companies = Array.isArray(status.companies) ? status.companies : [];
 const unresolved = companies.filter((company) => company?.secStage === "unresolved");
 const failed = companies.filter((company) => company?.secStage === "failed");
 const mustFix = [...unresolved, ...failed]
-  .filter((company) => mustResolve.has(String(company?.ticker || "").toUpperCase()))
+  .filter(isProtectedCompany)
   .map((company) => ({
     ticker: company.ticker,
     companyName: company.companyName,
     secStage: company.secStage,
+    isPilot: company.isPilot === true,
     lastError: company.lastError ?? null,
   }));
 const replaceableVisible = [...unresolved, ...failed]
-  .filter((company) => !mustResolve.has(String(company?.ticker || "").toUpperCase()))
+  .filter((company) => !isProtectedCompany(company))
   .map((company) => company.ticker);
 
 const report = {
