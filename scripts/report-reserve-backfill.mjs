@@ -1,10 +1,23 @@
-// TS: 2026-08-17 22:00 ET
+// TS: 2026-08-17 22:57 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
   .replace(/\/$/, "");
 const candidateTarget = Number(process.env.NYM_CANDIDATE_TARGET || "4000");
 const usableTarget = Number(process.env.NYM_USABLE_TARGET || "2000");
+
+function validateTargets() {
+  if (!Number.isInteger(candidateTarget) || candidateTarget < 1 || candidateTarget > 5_000) {
+    throw new Error(`NYM_CANDIDATE_TARGET=${String(candidateTarget)} must be an integer from 1 to 5000.`);
+  }
+  if (!Number.isInteger(usableTarget) || usableTarget < 1 || usableTarget > candidateTarget) {
+    throw new Error(
+      `NYM_USABLE_TARGET=${String(usableTarget)} must be an integer from 1 to NYM_CANDIDATE_TARGET (${candidateTarget}).`,
+    );
+  }
+}
+
+validateTargets();
 
 const mustResolve = new Set([
   "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
