@@ -1,4 +1,4 @@
-// TS: 2026-08-18 11:00 ET
+// TS: 2026-08-18 13:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -109,8 +109,13 @@ const expansionCeilingReached =
 const companies = Array.isArray(status.companies) ? status.companies : [];
 const unresolved = companies.filter((company) => company?.secStage === "unresolved");
 const failed = companies.filter((company) => company?.secStage === "failed");
-const mustFix = [...unresolved, ...failed]
-  .filter(isProtectedCompany)
+
+// Match the startup worker's completion rule exactly: every protected stock must be
+// SEC-complete, regardless of whether its current stage is queued, partial, failed,
+// stale, unresolved, or processing. Otherwise the report could declare victory while
+// the worker correctly keeps repairing an important name.
+const mustFix = companies
+  .filter((company) => isProtectedCompany(company) && company?.secStage !== "complete")
   .map((company) => ({
     ticker: company.ticker,
     companyName: company.companyName,
@@ -168,7 +173,7 @@ const report = {
         : targetSatisfied
           ? `Production has at least ${usableTarget} SEC-complete companies and every protected stock is complete; unresolved lower-priority names no longer block the active target.`
           : secCountTargetSatisfied && mustFix.length > 0
-            ? `Production has reached the ${usableTarget}-stock numeric target, but ${mustFix.length} protected stock(s) still require SEC repair before the reserve target is considered complete.`
+            ? `Production has reached the ${usableTarget}-stock numeric target, but ${mustFix.length} protected stock(s) are still not SEC-complete and must be repaired before the reserve target is considered complete.`
             : expansionRecommended
               ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
               : expansionCeilingReached
