@@ -1,4 +1,4 @@
-// TS: 2026-08-18 04:02 ET
+// TS: 2026-08-18 08:05 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -6,6 +6,20 @@ import { ProviderNotConfiguredError } from "../providers/types.js";
 
 const { Pool } = pg;
 type DatabasePool = InstanceType<typeof Pool>;
+
+export const SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL = `
+  (
+    cps.sec_status IN ('queued', 'partial', 'failed', 'stale')
+    OR (
+      c.is_pilot = true
+      AND cps.sec_status = 'unresolved'
+      AND (
+        cps.last_completed_at IS NULL
+        OR cps.last_completed_at < now() - interval '24 hours'
+      )
+    )
+  )
+`;
 
 export interface SecBatchCandidate {
   readonly ticker: string;
@@ -133,7 +147,7 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
             FROM company_pipeline_status cps
             JOIN companies c ON c.id = cps.company_id
             WHERE c.is_active = true
-              AND cps.sec_status IN ('queued', 'partial', 'failed', 'stale')
+              AND ${SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL}
               AND (cps.next_retry_at IS NULL OR cps.next_retry_at <= now())
             ORDER BY
               c.is_pilot DESC,
@@ -141,8 +155,9 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
                 WHEN 'queued' THEN 0
                 WHEN 'partial' THEN 1
                 WHEN 'failed' THEN 2
-                WHEN 'stale' THEN 3
-                ELSE 4
+                WHEN 'unresolved' THEN 3
+                WHEN 'stale' THEN 4
+                ELSE 5
               END,
               cps.sec_attempt_count ASC,
               cps.updated_at ASC,
