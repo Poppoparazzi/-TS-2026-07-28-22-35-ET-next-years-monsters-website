@@ -1,4 +1,4 @@
-// TS: 2026-08-18 10:03 ET
+// TS: 2026-08-18 11:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -92,11 +92,11 @@ const estimatedTotalCandidatesNeededAtObservedRate =
     ? null
     : examinedCount + estimatedAdditionalCandidatesNeededAtObservedRate;
 const observedRateProjectsTargetSuccess = projectedSecCompleteAtCandidateTarget >= usableTarget;
-const targetSatisfied = secCompleteCount >= usableTarget;
+const secCountTargetSatisfied = secCompleteCount >= usableTarget;
 const candidatePoolExhausted = examinedCount >= candidateTarget;
 
 const recommendedCandidateTarget = (() => {
-  if (targetSatisfied || observedRateProjectsTargetSuccess) return candidateTarget;
+  if (secCountTargetSatisfied || observedRateProjectsTargetSuccess) return candidateTarget;
   const rateBasedTarget = estimatedTotalCandidatesNeededAtObservedRate === null
     ? candidateTarget + 500
     : estimatedTotalCandidatesNeededAtObservedRate + 250;
@@ -104,7 +104,7 @@ const recommendedCandidateTarget = (() => {
 })();
 const expansionRecommended = recommendedCandidateTarget > candidateTarget;
 const expansionCeilingReached =
-  !targetSatisfied && recommendedCandidateTarget === maximumCandidateTarget && candidateTarget === maximumCandidateTarget;
+  !secCountTargetSatisfied && recommendedCandidateTarget === maximumCandidateTarget && candidateTarget === maximumCandidateTarget;
 
 const companies = Array.isArray(status.companies) ? status.companies : [];
 const unresolved = companies.filter((company) => company?.secStage === "unresolved");
@@ -121,6 +121,7 @@ const mustFix = [...unresolved, ...failed]
 const replaceableVisible = [...unresolved, ...failed]
   .filter((company) => !isProtectedCompany(company))
   .map((company) => company.ticker);
+const targetSatisfied = secCountTargetSatisfied && mustFix.length === 0;
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -146,6 +147,7 @@ const report = {
   reserveCapacityAdequate,
   reserveCapacityMargin,
   candidatePoolExhausted,
+  secCountTargetSatisfied,
   targetSatisfied,
   expansionRecommended,
   recommendedCandidateTarget,
@@ -164,12 +166,14 @@ const report = {
             ? `The current ${candidateTarget}-candidate pool does not project reaching ${usableTarget} usable stocks. Expand to at least ${recommendedCandidateTarget} candidates instead of retrying unchanged lower-priority unresolved names.`
             : `Production has ${candidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall.`
         : targetSatisfied
-          ? `Production has at least ${usableTarget} SEC-complete companies; unresolved lower-priority names no longer block the active target.`
-          : expansionRecommended
-            ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
-            : expansionCeilingReached
-              ? `The ${maximumCandidateTarget}-candidate safety ceiling is exhausted and production still needs ${usableShortfall} SEC-complete companies. At this point only the strategically important unresolved names should be repaired; lower-priority names should remain exceptions.`
-              : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies.`,
+          ? `Production has at least ${usableTarget} SEC-complete companies and every protected stock is complete; unresolved lower-priority names no longer block the active target.`
+          : secCountTargetSatisfied && mustFix.length > 0
+            ? `Production has reached the ${usableTarget}-stock numeric target, but ${mustFix.length} protected stock(s) still require SEC repair before the reserve target is considered complete.`
+            : expansionRecommended
+              ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
+              : expansionCeilingReached
+                ? `The ${maximumCandidateTarget}-candidate safety ceiling is exhausted and production still needs ${usableShortfall} SEC-complete companies. At this point only the strategically important unresolved names should be repaired; lower-priority names should remain exceptions.`
+                : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies.`,
 };
 
 console.log("Next Year's Monsters reserve/backfill report:");
