@@ -1,4 +1,4 @@
-// TS: 2026-08-18 02:03 ET
+// TS: 2026-08-18 02:57 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -56,12 +56,15 @@ async function requestJson(url) {
 }
 
 const status = await requestJson(`${apiBaseUrl}/api/universe/status?limit=${candidateTarget}`);
+const universeSize = asNonnegativeInteger(status.universeSize, "universeSize");
 const examinedCount = asNonnegativeInteger(status.examinedCount, "examinedCount");
 const secCompleteCount = asNonnegativeInteger(status.secCompleteCount, "secCompleteCount");
 const unresolvedCount = asNonnegativeInteger(status.unresolvedCount, "unresolvedCount");
 const failedCount = asNonnegativeInteger(status.failedCount, "failedCount");
 const usableShortfall = Math.max(usableTarget - secCompleteCount, 0);
 const candidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
+const candidateImportShortfall = Math.max(candidateTarget - universeSize, 0);
+const candidateTargetLoaded = candidateImportShortfall === 0;
 const observedSecCompletionRate = examinedCount > 0 ? secCompleteCount / examinedCount : 0;
 const observedSecCompletionRatePercent = roundedPercent(secCompleteCount, examinedCount);
 const minimumRemainingSuccessRatePercent =
@@ -118,7 +121,9 @@ const report = {
   candidateTarget,
   usableTarget,
   maximumCandidateTarget,
-  universeSize: status.universeSize,
+  universeSize,
+  candidateTargetLoaded,
+  candidateImportShortfall,
   examinedCount,
   secCompleteCount,
   unresolvedCount,
@@ -144,19 +149,21 @@ const report = {
   replaceableVisibleCount: replaceableVisible.length,
   replaceableVisible,
   note:
-    examinedCount < candidateTarget
-      ? observedRateProjectsTargetSuccess
-        ? `At the observed ${observedSecCompletionRatePercent}% SEC-completion rate, production needs about ${estimatedAdditionalCandidatesNeededAtObservedRate} more candidates (${estimatedTotalCandidatesNeededAtObservedRate} total examined) to reach ${usableTarget}. Filling all ${candidateHeadroom} remaining slots projects roughly ${projectedSecCompleteAtCandidateTarget} SEC-complete stocks, a ${projectedUsableSurplusAtCandidateTarget}-stock cushion.`
-        : expansionRecommended
-          ? `The current ${candidateTarget}-candidate pool does not project reaching ${usableTarget} usable stocks. Expand to at least ${recommendedCandidateTarget} candidates instead of retrying unchanged lower-priority unresolved names.`
-          : `Production has ${candidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall.`
-      : targetSatisfied
-        ? `Production has at least ${usableTarget} SEC-complete companies; unresolved lower-priority names no longer block the active target.`
-        : expansionRecommended
-          ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
-          : expansionCeilingReached
-            ? `The ${maximumCandidateTarget}-candidate safety ceiling is exhausted and production still needs ${usableShortfall} SEC-complete companies. At this point only the strategically important unresolved names should be repaired; lower-priority names should remain exceptions.`
-            : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies.`,
+    !candidateTargetLoaded
+      ? `Production currently has ${universeSize} active candidates loaded of the prepared ${candidateTarget} target. The reserve expansion is not live yet; production must import ${candidateImportShortfall} more candidates before projections against the full pool can be treated as executable capacity.`
+      : examinedCount < candidateTarget
+        ? observedRateProjectsTargetSuccess
+          ? `At the observed ${observedSecCompletionRatePercent}% SEC-completion rate, production needs about ${estimatedAdditionalCandidatesNeededAtObservedRate} more candidates (${estimatedTotalCandidatesNeededAtObservedRate} total examined) to reach ${usableTarget}. Filling all ${candidateHeadroom} remaining slots projects roughly ${projectedSecCompleteAtCandidateTarget} SEC-complete stocks, a ${projectedUsableSurplusAtCandidateTarget}-stock cushion.`
+          : expansionRecommended
+            ? `The current ${candidateTarget}-candidate pool does not project reaching ${usableTarget} usable stocks. Expand to at least ${recommendedCandidateTarget} candidates instead of retrying unchanged lower-priority unresolved names.`
+            : `Production has ${candidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall.`
+        : targetSatisfied
+          ? `Production has at least ${usableTarget} SEC-complete companies; unresolved lower-priority names no longer block the active target.`
+          : expansionRecommended
+            ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
+            : expansionCeilingReached
+              ? `The ${maximumCandidateTarget}-candidate safety ceiling is exhausted and production still needs ${usableShortfall} SEC-complete companies. At this point only the strategically important unresolved names should be repaired; lower-priority names should remain exceptions.`
+              : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies.`,
 };
 
 console.log("Next Year's Monsters reserve/backfill report:");
