@@ -1,4 +1,4 @@
-// TS: 2026-08-16 10:01 ET
+// TS: 2026-08-17 20:07 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -84,9 +84,6 @@ function isDuplicateSecIdentity(error: unknown): boolean {
     return true;
   }
 
-  // Some database wrappers preserve only the error message. Treat only the exact
-  // SEC-CIK uniqueness signature as unresolved so unrelated unique-key failures
-  // still surface as genuine failures.
   return (
     message.includes("duplicate key value violates unique constraint") &&
     message.includes("companies_sec_cik_unique")
@@ -98,7 +95,9 @@ export async function runSecUniverseBatch(
   options: SecBatchRunOptions,
   dependencies: SecBatchProcessorDependencies = {},
 ): Promise<SecBatchRunSummary> {
-  const batchSize = boundedInteger(options.batchSize, 1, 2_500);
+  // Keep this ceiling aligned with importer/startup/status so reserve candidates
+  // above the old 2,500 limit are actually processed instead of silently skipped.
+  const batchSize = boundedInteger(options.batchSize, 1, 5_000);
   const concurrency = boundedInteger(options.concurrency, 1, 8);
   const maxAgeHours = boundedInteger(options.maxAgeHours, 1, 24 * 30);
   const queue = dependencies.queue ?? createSecBatchQueue(config);
