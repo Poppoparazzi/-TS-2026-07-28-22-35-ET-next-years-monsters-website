@@ -1,4 +1,4 @@
-// TS: 2026-08-18 12:03 ET
+// TS: 2026-08-18 15:36 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -65,23 +65,19 @@ export async function runSecUniverseBatchOnStartup(
     5_000,
   );
 
-  // Once the active universe already contains the requested number of SEC-complete
-  // companies, avoid spending restart time and SEC fair-access capacity on ordinary
-  // reserve names. However, never treat the target as satisfied while a protected
-  // pilot stock is still incomplete. Core names such as AAPL, NVDA, and MNST must
-  // remain repair candidates even after the broader 2,000-stock target is reached.
+  // The reserve milestone is numeric: once 2,000 SEC-complete companies exist,
+  // the broad backfill is done. Failed or incomplete names no longer hold the
+  // universe open. Important/pilot stocks can remain on their separate repair
+  // path without blocking completion of the usable-stock target.
   const universeStore = createUniverseStore(config);
   try {
     if (universeStore.configured) {
       const status = await universeStore.getStatus(5_000);
-      const incompletePilotTickers = status.companies
-        .filter((company) => company.isPilot && company.secStage !== "complete")
-        .map((company) => company.ticker);
 
-      if (status.secCompleteCount >= usableTarget && incompletePilotTickers.length === 0) {
+      if (status.secCompleteCount >= usableTarget) {
         return skippedSummary(
           batchSize,
-          `SEC usable target already satisfied: ${status.secCompleteCount} complete >= ${usableTarget}, with all protected pilot stocks complete.`,
+          `SEC usable target already satisfied: ${status.secCompleteCount} complete >= ${usableTarget}. Remaining failures are exceptions, not blockers.`,
         );
       }
     }
