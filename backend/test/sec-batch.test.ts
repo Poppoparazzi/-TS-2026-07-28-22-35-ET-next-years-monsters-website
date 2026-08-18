@@ -1,4 +1,4 @@
-// TS: 2026-08-18 05:02 ET
+// TS: 2026-08-18 08:07 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -19,9 +19,10 @@ import {
   SecEdgarRequestError,
   type SecFilingSummary,
 } from "../src/sec/types.js";
-import type {
-  SecBatchCandidate,
-  SecBatchQueue,
+import {
+  SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL,
+  type SecBatchCandidate,
+  type SecBatchQueue,
 } from "../src/universe/sec-batch-queue.js";
 import { runSecUniverseBatch } from "../src/universe/sec-batch-processor.js";
 
@@ -148,6 +149,16 @@ async function refreshOverride(
     completedAt: "2026-08-02T19:00:00.000Z",
   });
 }
+
+test("protected unresolved pilots are eligible for a bounded daily SEC retry", () => {
+  assert.match(SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL, /c\.is_pilot = true/);
+  assert.match(SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL, /cps\.sec_status = 'unresolved'/);
+  assert.match(SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL, /interval '24 hours'/);
+  assert.match(
+    SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL,
+    /cps\.sec_status IN \('queued', 'partial', 'failed', 'stale'\)/,
+  );
+});
 
 test("bulk SEC workers support a 5000-company reserve target while using recoverable waves", async () => {
   const queue = new MemoryQueue();
