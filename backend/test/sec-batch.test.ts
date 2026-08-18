@@ -1,4 +1,4 @@
-// TS: 2026-08-18 08:07 ET
+// TS: 2026-08-18 08:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -20,6 +20,7 @@ import {
   type SecFilingSummary,
 } from "../src/sec/types.js";
 import {
+  PROMOTE_EXHAUSTED_FAILURES_SQL,
   SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL,
   type SecBatchCandidate,
   type SecBatchQueue,
@@ -158,6 +159,14 @@ test("protected unresolved pilots are eligible for a bounded daily SEC retry", (
     SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL,
     /cps\.sec_status IN \('queued', 'partial', 'failed', 'stale'\)/,
   );
+});
+
+test("ordinary SEC failures stop retrying after three attempts and become replaceable", () => {
+  assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /c\.is_pilot = false/);
+  assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /cps\.sec_status = 'failed'/);
+  assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /cps\.sec_attempt_count >= 3/);
+  assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /sec_status = 'unresolved'/);
+  assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /next_retry_at = NULL/);
 });
 
 test("bulk SEC workers support a 5000-company reserve target while using recoverable waves", async () => {
