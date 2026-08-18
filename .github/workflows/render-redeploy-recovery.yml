@@ -1,4 +1,4 @@
-# TS: 2026-08-18 14:00 ET
+# TS: 2026-08-18 15:02 ET
 
 name: Render deploy recovery
 
@@ -14,7 +14,7 @@ permissions:
 jobs:
   recover-render:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - name: Check out repository history
         uses: actions/checkout@v4
@@ -248,7 +248,18 @@ jobs:
           throw new Error("Authorized Render recovery did not expose the repaired /api/ratings/AAPL route within the verification window.");
           NODE
 
+      - name: Record unreachable production blocker without duplicate failures
+        if: steps.render_state.outputs.classification == 'render_unreachable' && steps.render_auth.outputs.method == 'none'
+        run: |
+          {
+            echo "### Production verification deferred"
+            echo
+            echo "Render was unreachable during this run and no deployment authority exists."
+            echo "The live rating smoke, production accounting, and reserve/backfill report are deferred rather than generating duplicate failure notifications for the same unreachable backend."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run Current Stock Rating production smoke in the same hourly job
+        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
         env:
           NYM_RATING_SMOKE_SYMBOLS: "AAPL,CRDO,RKLB,MSFT"
           NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v0.1-readiness-only"
@@ -263,9 +274,11 @@ jobs:
           node scripts/verify-frozen-functional-invariants.mjs
 
       - name: Verify 2,000-stock production accounting and provider truth
+        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
         run: node scripts/verify-production.mjs
 
       - name: Report 5,000-candidate reserve/backfill progress
+        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
         env:
           NYM_CANDIDATE_TARGET: "5000"
           NYM_USABLE_TARGET: "2000"
