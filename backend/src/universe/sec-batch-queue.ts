@@ -1,4 +1,4 @@
-// TS: 2026-08-18 08:05 ET
+// TS: 2026-08-18 08:58 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -19,6 +19,20 @@ export const SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL = `
       )
     )
   )
+`;
+
+export const PROMOTE_EXHAUSTED_FAILURES_SQL = `
+  UPDATE company_pipeline_status cps
+  SET
+    sec_status = 'unresolved',
+    last_completed_at = now(),
+    next_retry_at = NULL
+  FROM companies c
+  WHERE c.id = cps.company_id
+    AND c.is_active = true
+    AND c.is_pilot = false
+    AND cps.sec_status = 'failed'
+    AND cps.sec_attempt_count >= 3
 `;
 
 export interface SecBatchCandidate {
@@ -129,6 +143,11 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
         WHERE sec_status = 'failed'
           AND last_error LIKE '%duplicate key value violates unique constraint "companies_sec_cik_unique"%'
       `);
+
+      // Do not let ordinary failures retry forever. After three attempts, move a
+      // non-pilot record into the unresolved/replaceable pool so fresh reserve
+      // candidates can take its place. Protected pilot stocks remain repairable.
+      await client.query(PROMOTE_EXHAUSTED_FAILURES_SQL);
 
       await client.query(
         `
