@@ -1,4 +1,4 @@
-// TS: 2026-08-18 15:36 ET
+// TS: 2026-08-18 18:01 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -46,6 +46,36 @@ function roundUp(value, increment) {
 function isProtectedCompany(company) {
   const ticker = String(company?.ticker || "").toUpperCase();
   return company?.isPilot === true || mustResolve.has(ticker);
+}
+
+function exceptionReason(company) {
+  const message = String(company?.lastError || "").toLowerCase();
+  const ticker = String(company?.ticker || "").toUpperCase();
+  const exchange = String(company?.exchange || "unknown").toUpperCase();
+
+  if (message.includes("companies_sec_cik_unique") || (message.includes("duplicate") && message.includes("cik"))) {
+    return "duplicate_cik";
+  }
+  if (message.includes("404") || message.includes("not found") || message.includes("no sec")) {
+    return "sec_not_found";
+  }
+  if (message.includes("timeout") || message.includes("timed out") || message.includes("429") || message.includes("rate limit")) {
+    return "transient_sec_transport";
+  }
+  if (message.includes("mismatch") || message.includes("ambiguous") || message.includes("multiple")) {
+    return "identity_ambiguous";
+  }
+  if (exchange.includes("OTC")) {
+    return "otc_or_foreign_style";
+  }
+  if (ticker.endsWith("Y") || ticker.endsWith("F")) {
+    return "adr_or_foreign_style";
+  }
+  return message ? "other_error" : "no_error_detail";
+}
+
+function increment(map, key) {
+  map.set(key, (map.get(key) || 0) + 1);
 }
 
 async function requestJson(url) {
@@ -109,6 +139,7 @@ const expansionCeilingReached =
 const companies = Array.isArray(status.companies) ? status.companies : [];
 const unresolved = companies.filter((company) => company?.secStage === "unresolved");
 const failed = companies.filter((company) => company?.secStage === "failed");
+const exceptions = [...unresolved, ...failed];
 
 // Important names remain visible as a separate repair backlog, but they do not block
 // the broad reserve milestone. The production target is 2,000 usable SEC-complete
@@ -120,12 +151,19 @@ const mustFix = companies
     companyName: company.companyName,
     secStage: company.secStage,
     isPilot: company.isPilot === true,
+    reason: exceptionReason(company),
     lastError: company.lastError ?? null,
   }));
-const replaceableVisible = [...unresolved, ...failed]
-  .filter((company) => !isProtectedCompany(company))
-  .map((company) => company.ticker);
+const replaceableCompanies = exceptions.filter((company) => !isProtectedCompany(company));
+const replaceableVisible = replaceableCompanies.map((company) => company.ticker);
 const targetSatisfied = secCountTargetSatisfied;
+
+const exceptionReasonBuckets = new Map();
+const exceptionExchangeBuckets = new Map();
+for (const company of exceptions) {
+  increment(exceptionReasonBuckets, exceptionReason(company));
+  increment(exceptionExchangeBuckets, String(company?.exchange || "unknown").toUpperCase());
+}
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -160,6 +198,16 @@ const report = {
   mustFix,
   replaceableVisibleCount: replaceableVisible.length,
   replaceableVisible,
+  exceptionReasonBuckets: Object.fromEntries([...exceptionReasonBuckets.entries()].sort((a, b) => b[1] - a[1])),
+  exceptionExchangeBuckets: Object.fromEntries([...exceptionExchangeBuckets.entries()].sort((a, b) => b[1] - a[1])),
+  sampleReplaceable: replaceableCompanies.slice(0, 50).map((company) => ({
+    ticker: company.ticker,
+    companyName: company.companyName,
+    exchange: company.exchange ?? null,
+    secStage: company.secStage,
+    reason: exceptionReason(company),
+    lastError: company.lastError ?? null,
+  })),
   note:
     !candidateTargetLoaded
       ? `Production currently has ${universeSize} active candidates loaded of the prepared ${candidateTarget} target. The reserve expansion is not live yet; production must import ${candidateImportShortfall} more candidates before projections against the full pool can be treated as executable capacity.`
