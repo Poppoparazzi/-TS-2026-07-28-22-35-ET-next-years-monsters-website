@@ -1,4 +1,4 @@
-# TS: 2026-08-18 02:03 ET
+# TS: 2026-08-18 14:00 ET
 
 name: Render deploy recovery
 
@@ -33,46 +33,63 @@ jobs:
           import { execFileSync } from "node:child_process";
 
           const base = "https://next-years-monsters-api.onrender.com";
-          const startupResponse = await fetch(`${base}/api/startup-status`, {
-            headers: { Accept: "application/json" },
-            signal: AbortSignal.timeout(70_000),
-          });
-          const startup = await startupResponse.json().catch(() => null);
-          const deployedCommit = startup?.deploymentCommit ?? null;
           const latestRelevantCommit = execFileSync(
             "git",
             ["rev-list", "-1", "HEAD", "--", "backend", "render.yaml"],
             { encoding: "utf8" },
           ).trim();
 
+          let startupHttpStatus = null;
+          let startupError = null;
+          let deployedCommit = null;
           let classification = "unknown";
           let relevantChangesAfterDeploy = null;
 
-          if (deployedCommit) {
-            try {
-              const changed = execFileSync(
-                "git",
-                ["diff", "--name-only", `${deployedCommit}..HEAD`, "--", "backend", "render.yaml"],
-                { encoding: "utf8" },
-              )
-                .trim()
-                .split("\n")
-                .filter(Boolean);
-              relevantChangesAfterDeploy = changed.length;
-              classification = changed.length > 0 ? "stale_deployment" : "current_for_backend";
-            } catch {
-              classification = "deployed_commit_not_in_repository_history";
+          try {
+            const startupResponse = await fetch(`${base}/api/startup-status`, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(70_000),
+            });
+            startupHttpStatus = startupResponse.status;
+            const startup = await startupResponse.json().catch(() => null);
+            deployedCommit = startup?.deploymentCommit ?? startup?.deployment?.commit ?? null;
+
+            if (deployedCommit) {
+              try {
+                const changed = execFileSync(
+                  "git",
+                  ["diff", "--name-only", `${deployedCommit}..HEAD`, "--", "backend", "render.yaml"],
+                  { encoding: "utf8" },
+                )
+                  .trim()
+                  .split("\n")
+                  .filter(Boolean);
+                relevantChangesAfterDeploy = changed.length;
+                classification = changed.length > 0 ? "stale_deployment" : "current_for_backend";
+              } catch {
+                classification = "deployed_commit_not_in_repository_history";
+              }
+            } else if (!startupResponse.ok) {
+              classification = "render_unhealthy";
             }
+          } catch (error) {
+            startupError = error instanceof Error ? error.message : String(error);
+            classification = "render_unreachable";
           }
 
           console.log("Render deployment diagnostic:");
           console.log(JSON.stringify({
-            startupHttpStatus: startupResponse.status,
+            startupHttpStatus,
+            startupError,
             deployedCommit,
             latestRelevantCommit,
             relevantChangesAfterDeploy,
             classification,
           }, null, 2));
+
+          if (classification === "render_unreachable") {
+            console.log("Render could not be reached for classification; continue to credential detection so an authorized recovery can still run.");
+          }
 
           if (process.env.GITHUB_OUTPUT) {
             const fs = await import("node:fs");
@@ -174,31 +191,44 @@ jobs:
           const delayMs = 30_000;
 
           for (let attempt = 1; attempt <= attempts; attempt += 1) {
-            const [startupResponse, ratingResponse] = await Promise.all([
-              fetch(`${base}/api/startup-status`, {
-                headers: { Accept: "application/json" },
-                signal: AbortSignal.timeout(70_000),
-              }),
-              fetch(`${base}/api/ratings/AAPL`, {
-                headers: { Accept: "application/json" },
-                signal: AbortSignal.timeout(70_000),
-              }),
-            ]);
+            try {
+              const [startupResponse, ratingResponse] = await Promise.all([
+                fetch(`${base}/api/startup-status`, {
+                  headers: { Accept: "application/json" },
+                  signal: AbortSignal.timeout(70_000),
+                }),
+                fetch(`${base}/api/ratings/AAPL`, {
+                  headers: { Accept: "application/json" },
+                  signal: AbortSignal.timeout(70_000),
+                }),
+              ]);
 
-            const startup = await startupResponse.json().catch(() => null);
-            const rating = await ratingResponse.json().catch(() => null);
-            console.log(JSON.stringify({
-              attempt,
-              recoveryMethod,
-              deployedCommit: startup?.deploymentCommit ?? null,
-              ratingStatus: ratingResponse.status,
-              ratingSymbol: rating?.symbol ?? null,
-              ratingScore: rating?.score ?? null,
-            }));
+              const startup = await startupResponse.json().catch(() => null);
+              const rating = await ratingResponse.json().catch(() => null);
+              console.log(JSON.stringify({
+                attempt,
+                recoveryMethod,
+                deployedCommit: startup?.deploymentCommit ?? startup?.deployment?.commit ?? null,
+                ratingStatus: ratingResponse.status,
+                ratingSymbol: rating?.symbol ?? null,
+                ratingScore: rating?.score ?? null,
+              }));
 
-            if (ratingResponse.ok && rating?.symbol === "AAPL" && rating?.score === null) {
-              console.log("Render rating route is live and failing closed as intended.");
-              process.exit(0);
+              if (ratingResponse.ok && rating?.symbol === "AAPL" && rating?.score === null) {
+                console.log("Render rating route is live and failing closed as intended.");
+                process.exit(0);
+              }
+            } catch (error) {
+              console.log(JSON.stringify({
+                attempt,
+                recoveryMethod,
+                verificationError: error instanceof Error ? error.message : String(error),
+              }));
+
+              if (recoveryMethod === "none") {
+                console.log("Render verification is unreachable and no deployment authority exists; preserve the exact blocker and continue the watchdog.");
+                process.exit(0);
+              }
             }
 
             if (attempt < attempts) {
