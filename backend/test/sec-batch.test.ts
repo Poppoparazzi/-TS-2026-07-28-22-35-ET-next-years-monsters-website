@@ -1,4 +1,4 @@
-// TS: 2026-08-18 08:58 ET
+// TS: 2026-08-18 19:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -20,6 +20,7 @@ import {
   type SecFilingSummary,
 } from "../src/sec/types.js";
 import {
+  CLEANUP_DUPLICATE_CIK_FAILURES_SQL,
   PROMOTE_EXHAUSTED_FAILURES_SQL,
   SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL,
   type SecBatchCandidate,
@@ -159,6 +160,14 @@ test("protected unresolved pilots are eligible for a bounded daily SEC retry", (
     SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL,
     /cps\.sec_status IN \('queued', 'partial', 'failed', 'stale'\)/,
   );
+});
+
+test("historic duplicate-CIK failures are cleaned by constraint identity, not one exact wrapped message", () => {
+  assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /sec_status = 'failed'/);
+  assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /last_error IS NOT NULL/);
+  assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /ILIKE '%companies_sec_cik_unique%'/);
+  assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /sec_status = 'unresolved'/);
+  assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /next_retry_at = NULL/);
 });
 
 test("ordinary SEC failures stop retrying after three attempts and become replaceable", () => {
