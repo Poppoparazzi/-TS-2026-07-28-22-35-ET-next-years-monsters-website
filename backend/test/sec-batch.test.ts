@@ -1,4 +1,4 @@
-// TS: 2026-08-16 10:01 ET
+// TS: 2026-08-18 05:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -149,13 +149,13 @@ async function refreshOverride(
   });
 }
 
-test("bulk SEC workers support a 2000-company target while using recoverable waves", async () => {
+test("bulk SEC workers support a 5000-company reserve target while using recoverable waves", async () => {
   const queue = new MemoryQueue();
   const persistenceStore = new MemoryPersistence();
 
   const summary = await runSecUniverseBatch(
     testConfig(),
-    { batchSize: 2_000, concurrency: 3, maxAgeHours: 24 },
+    { batchSize: 5_000, concurrency: 3, maxAgeHours: 24 },
     {
       queue,
       persistenceStore,
@@ -166,7 +166,7 @@ test("bulk SEC workers support a 2000-company target while using recoverable wav
   );
 
   assert.equal(summary.status, "completed");
-  assert.equal(summary.requestedBatchSize, 2_000);
+  assert.equal(summary.requestedBatchSize, 5_000);
   assert.equal(summary.claimedCount, 4);
   assert.equal(summary.succeededCount, 2);
   assert.equal(summary.unresolvedCount, 1);
