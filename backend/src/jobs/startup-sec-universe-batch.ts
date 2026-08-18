@@ -1,4 +1,4 @@
-// TS: 2026-08-18 15:36 ET
+// TS: 2026-08-18 16:00 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -64,6 +64,23 @@ export async function runSecUniverseBatchOnStartup(
     1,
     5_000,
   );
+  const importLimit = environmentInteger(
+    environment,
+    "AUTO_IMPORT_UNIVERSE_LIMIT",
+    0,
+    0,
+    5_000,
+  );
+
+  // Prevent the exact fixed-universe trap that left the broad target permanently
+  // below 2,000 usable stocks. When automatic import is enabled, it must be able
+  // to load at least as many candidates as the usable-stock target requires.
+  if (importLimit > 0 && importLimit < usableTarget) {
+    throw new Error(
+      `AUTO_IMPORT_UNIVERSE_LIMIT=${importLimit} cannot satisfy SEC_USABLE_TARGET=${usableTarget}. ` +
+      "Raise the candidate pool instead of retrying the same unresolved stocks.",
+    );
+  }
 
   // The reserve milestone is numeric: once 2,000 SEC-complete companies exist,
   // the broad backfill is done. Failed or incomplete names no longer hold the
