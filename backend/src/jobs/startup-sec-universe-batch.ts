@@ -1,4 +1,4 @@
-// TS: 2026-08-18 06:57 ET
+// TS: 2026-08-18 12:03 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -98,10 +98,13 @@ export async function runSecUniverseBatchOnStartup(
       1,
       8,
     ),
+    // Keep the fallback aligned with production's reserve-first policy. If the
+    // environment value is ever absent, do not recycle yesterday's successful SEC
+    // records ahead of fresh replacement candidates.
     maxAgeHours: environmentInteger(
       environment,
       "SEC_BATCH_MAX_AGE_HOURS",
-      24,
+      720,
       1,
       720,
     ),
