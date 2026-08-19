@@ -1,4 +1,4 @@
-// TS: 2026-08-19 17:59 ET
+// TS: 2026-08-19 18:58 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -146,9 +146,9 @@ const unresolved = companies.filter((company) => company?.secStage === "unresolv
 const failed = companies.filter((company) => company?.secStage === "failed");
 const exceptions = [...unresolved, ...failed];
 
-// Important names remain visible as a separate repair backlog, but they do not block
-// the broad reserve milestone. The production target is 2,200 usable SEC-complete
-// companies from the 5,000-candidate pool. Failures are exceptions, not completion gates.
+// Important names remain on a mandatory repair list. The broad reserve target is
+// numerically satisfied at 2,200 SEC-complete companies, but the overall milestone
+// is not complete while a protected pilot or strategic ticker remains incomplete.
 const mustFix = companies
   .filter((company) => isProtectedCompany(company) && company?.secStage !== "complete")
   .map((company) => ({
@@ -161,7 +161,7 @@ const mustFix = companies
   }));
 const replaceableCompanies = exceptions.filter((company) => !isProtectedCompany(company));
 const replaceableVisible = replaceableCompanies.map((company) => company.ticker);
-const targetSatisfied = secCountTargetSatisfied;
+const targetSatisfied = secCountTargetSatisfied && mustFix.length === 0;
 
 const exceptionReasonBuckets = new Map();
 const exceptionExchangeBuckets = new Map();
@@ -227,12 +227,14 @@ const report = {
             ? `The current ${candidateTarget}-candidate pool does not project reaching ${usableTarget} usable stocks. Expand to at least ${recommendedCandidateTarget} candidates instead of retrying unchanged lower-priority unresolved names.`
             : `Production has ${preparedCandidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall.`
         : targetSatisfied
-          ? `Production has at least ${usableTarget} SEC-complete companies. The broad reserve milestone is complete. ${mustFix.length} protected stock(s) remain on a separate repair list and do not block completion.`
-          : expansionRecommended
-            ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
-            : expansionCeilingReached
-              ? `The ${maximumCandidateTarget}-candidate safety ceiling is exhausted and production still needs ${usableShortfall} SEC-complete companies. Remaining failures stay exceptions; only separate priority repair work should continue.`
-              : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies.`,
+          ? `Production has at least ${usableTarget} SEC-complete companies and every protected stock is SEC-complete. The reserve milestone is complete.`
+          : secCountTargetSatisfied && mustFix.length > 0
+            ? `Production has at least ${usableTarget} SEC-complete companies, but ${mustFix.length} protected stock(s) remain incomplete. Keep those names on the mandatory repair path; lower-priority unresolved names remain replaceable exceptions.`
+            : expansionRecommended
+              ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
+              : expansionCeilingReached
+                ? `The ${maximumCandidateTarget}-candidate safety ceiling is exhausted and production still needs ${usableShortfall} SEC-complete companies. Remaining failures stay exceptions; only separate priority repair work should continue.`
+                : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies.`,
 };
 
 console.log("Next Year's Monsters reserve/backfill report:");
