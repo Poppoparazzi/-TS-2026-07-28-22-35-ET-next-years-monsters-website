@@ -1,4 +1,4 @@
-// TS: 2026-08-19 10:00 ET
+// TS: 2026-08-19 12:00 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -76,7 +76,7 @@ export async function runSecUniverseBatchOnStartup(
   const usableTarget = environmentInteger(
     environment,
     "SEC_USABLE_TARGET",
-    2_000,
+    2_200,
     1,
     5_000,
   );
@@ -89,8 +89,8 @@ export async function runSecUniverseBatchOnStartup(
   );
 
   // Prevent the exact fixed-universe trap that left the broad target permanently
-  // below 2,000 usable stocks. When automatic import is enabled, it must be able
-  // to load at least as many candidates as the usable-stock target requires.
+  // below the desired usable-stock count. When automatic import is enabled, it
+  // must be able to load at least as many candidates as the usable target requires.
   if (importLimit > 0 && importLimit < usableTarget) {
     throw new Error(
       `AUTO_IMPORT_UNIVERSE_LIMIT=${importLimit} cannot satisfy SEC_USABLE_TARGET=${usableTarget}. ` +
