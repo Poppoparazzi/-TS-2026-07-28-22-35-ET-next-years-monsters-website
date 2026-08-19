@@ -1,7 +1,10 @@
-// TS: 2026-08-02 13:55 ET
+// TS: 2026-08-19 01:03 ET
 
 import type { AppConfig } from "../config.js";
-import { createPersistenceStore } from "../database/persistence.js";
+import {
+  createPersistenceStore,
+  type StoredCompanySnapshot,
+} from "../database/persistence.js";
 import { createMarketDataProvider } from "../providers/index.js";
 import { createSecDataProvider } from "../sec/index.js";
 import { PILOT_SYMBOLS, refreshPilotSymbols } from "./pilot-refresh.js";
@@ -43,6 +46,22 @@ function isStale(updatedAt: string | null | undefined, now: number, maximumAgeMs
   const timestamp = Date.parse(updatedAt);
   if (!Number.isFinite(timestamp)) return true;
   return now - timestamp >= maximumAgeMs;
+}
+
+export function pilotNeedsRefresh(
+  stored: StoredCompanySnapshot | null,
+  now: number,
+  maximumAgeMs: number,
+): boolean {
+  if (!stored) return true;
+
+  // Important pilot stocks must not be treated as healthy merely because the
+  // company row was updated recently. Missing SEC identity, filings, or facts
+  // means the evidence is incomplete and should be repaired on startup.
+  const secEvidenceIncomplete =
+    !stored.secCik || stored.filingCount < 1 || stored.factCount < 1;
+
+  return secEvidenceIncomplete || isStale(stored.updatedAt, now, maximumAgeMs);
 }
 
 export async function refreshStalePilotOnStartup(
@@ -91,7 +110,7 @@ export async function refreshStalePilotOnStartup(
 
     for (const symbol of PILOT_SYMBOLS) {
       const stored = await persistenceStore.getStoredCompany(symbol);
-      if (!stored || isStale(stored.updatedAt, now, maximumAgeMs)) {
+      if (pilotNeedsRefresh(stored, now, maximumAgeMs)) {
         staleSymbols.push(symbol);
       }
     }
@@ -104,7 +123,7 @@ export async function refreshStalePilotOnStartup(
         refreshedCount: 0,
         refreshedSymbols: Object.freeze([]),
         completedAt: new Date().toISOString(),
-        detail: `All ${PILOT_SYMBOLS.length} pilot records are newer than ${maxAgeHours(environment)} hours.`,
+        detail: `All ${PILOT_SYMBOLS.length} pilot records have complete SEC evidence and are newer than ${maxAgeHours(environment)} hours.`,
       });
     }
 
@@ -122,8 +141,8 @@ export async function refreshStalePilotOnStartup(
       refreshedSymbols: Object.freeze(results.map((result) => result.symbol)),
       completedAt: new Date().toISOString(),
       detail: marketProvider.configured
-        ? "Stale pilot SEC evidence and available quote snapshots were refreshed."
-        : "Stale pilot SEC evidence was refreshed; quote snapshots remain unconfigured.",
+        ? "Incomplete or stale pilot SEC evidence and available quote snapshots were refreshed."
+        : "Incomplete or stale pilot SEC evidence was refreshed; quote snapshots remain unconfigured.",
     });
   } finally {
     await persistenceStore.close();
