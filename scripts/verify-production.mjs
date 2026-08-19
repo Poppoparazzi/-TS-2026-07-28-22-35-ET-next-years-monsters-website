@@ -1,4 +1,4 @@
-// TS: 2026-08-19 12:00 ET
+// TS: 2026-08-19 15:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -70,6 +70,10 @@ async function requestPage(url) {
   }
 }
 
+function deployedCommit(startup) {
+  return startup?.deployment?.commit ?? startup?.deploymentCommit ?? null;
+}
+
 function validateHealth(health) {
   const problems = [];
 
@@ -87,7 +91,7 @@ function validateHealth(health) {
 function startupDiagnostic(startup) {
   if (!startup) return "startup diagnostics unavailable, likely an older deployment";
 
-  const commit = startup.deploymentCommit || "unknown commit";
+  const commit = deployedCommit(startup) || "unknown commit";
   const importJob = startup.jobs?.universeImport;
   const batchJob = startup.jobs?.secUniverseBatch;
   const importDetail = importJob?.error || JSON.stringify(importJob?.summary ?? null);
@@ -249,7 +253,7 @@ async function verifyOnce() {
 
   return {
     apiVersion: health.version,
-    deploymentCommit: startup?.deploymentCommit ?? null,
+    deploymentCommit: deployedCommit(startup),
     backfillPolicy: startup?.backfillPolicy ?? null,
     marketProvider: health.marketData?.provider,
     marketConfigured: Boolean(health.marketData?.configured),
