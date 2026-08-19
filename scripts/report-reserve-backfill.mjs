@@ -1,4 +1,4 @@
-// TS: 2026-08-18 18:01 ET
+// TS: 2026-08-19 03:07 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -97,18 +97,23 @@ const secCompleteCount = asNonnegativeInteger(status.secCompleteCount, "secCompl
 const unresolvedCount = asNonnegativeInteger(status.unresolvedCount, "unresolvedCount");
 const failedCount = asNonnegativeInteger(status.failedCount, "failedCount");
 const usableShortfall = Math.max(usableTarget - secCompleteCount, 0);
-const candidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
+const preparedCandidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
+const loadedCandidateHeadroom = Math.max(Math.min(universeSize, candidateTarget) - examinedCount, 0);
 const candidateImportShortfall = Math.max(candidateTarget - universeSize, 0);
 const candidateTargetLoaded = candidateImportShortfall === 0;
 const observedSecCompletionRate = examinedCount > 0 ? secCompleteCount / examinedCount : 0;
 const observedSecCompletionRatePercent = roundedPercent(secCompleteCount, examinedCount);
-const minimumRemainingSuccessRatePercent =
-  usableShortfall === 0 ? 0 : roundedPercent(usableShortfall, candidateHeadroom);
-const reserveCapacityAdequate = usableShortfall === 0 || candidateHeadroom >= usableShortfall;
-const reserveCapacityMargin = candidateHeadroom - usableShortfall;
+const minimumLoadedSuccessRatePercent =
+  usableShortfall === 0 ? 0 : roundedPercent(usableShortfall, loadedCandidateHeadroom);
+const minimumPreparedSuccessRatePercent =
+  usableShortfall === 0 ? 0 : roundedPercent(usableShortfall, preparedCandidateHeadroom);
+const loadedReserveCapacityAdequate = usableShortfall === 0 || loadedCandidateHeadroom >= usableShortfall;
+const preparedReserveCapacityAdequate = usableShortfall === 0 || preparedCandidateHeadroom >= usableShortfall;
+const loadedReserveCapacityMargin = loadedCandidateHeadroom - usableShortfall;
+const preparedReserveCapacityMargin = preparedCandidateHeadroom - usableShortfall;
 const projectedSecCompleteAtCandidateTarget = Math.min(
   candidateTarget,
-  secCompleteCount + Math.floor(candidateHeadroom * observedSecCompletionRate),
+  secCompleteCount + Math.floor(preparedCandidateHeadroom * observedSecCompletionRate),
 );
 const projectedUsableSurplusAtCandidateTarget = projectedSecCompleteAtCandidateTarget - usableTarget;
 const estimatedAdditionalCandidatesNeededAtObservedRate =
@@ -178,16 +183,20 @@ const report = {
   unresolvedCount,
   failedCount,
   usableShortfall,
-  candidateHeadroom,
+  preparedCandidateHeadroom,
+  loadedCandidateHeadroom,
   observedSecCompletionRatePercent,
-  minimumRemainingSuccessRatePercent,
+  minimumLoadedSuccessRatePercent,
+  minimumPreparedSuccessRatePercent,
   estimatedAdditionalCandidatesNeededAtObservedRate,
   estimatedTotalCandidatesNeededAtObservedRate,
   projectedSecCompleteAtCandidateTarget,
   projectedUsableSurplusAtCandidateTarget,
   observedRateProjectsTargetSuccess,
-  reserveCapacityAdequate,
-  reserveCapacityMargin,
+  loadedReserveCapacityAdequate,
+  preparedReserveCapacityAdequate,
+  loadedReserveCapacityMargin,
+  preparedReserveCapacityMargin,
   candidatePoolExhausted,
   secCountTargetSatisfied,
   targetSatisfied,
@@ -210,13 +219,13 @@ const report = {
   })),
   note:
     !candidateTargetLoaded
-      ? `Production currently has ${universeSize} active candidates loaded of the prepared ${candidateTarget} target. The reserve expansion is not live yet; production must import ${candidateImportShortfall} more candidates before projections against the full pool can be treated as executable capacity.`
+      ? `Production currently has ${universeSize} active candidates loaded of the prepared ${candidateTarget} target. Only ${loadedCandidateHeadroom} additional loaded candidates are executable now; ${candidateImportShortfall} more candidates still need to be imported. Prepared headroom is ${preparedCandidateHeadroom}, so do not treat the configured reserve as live capacity yet.`
       : examinedCount < candidateTarget
         ? observedRateProjectsTargetSuccess
-          ? `At the observed ${observedSecCompletionRatePercent}% SEC-completion rate, production needs about ${estimatedAdditionalCandidatesNeededAtObservedRate} more candidates (${estimatedTotalCandidatesNeededAtObservedRate} total examined) to reach ${usableTarget}. Filling all ${candidateHeadroom} remaining slots projects roughly ${projectedSecCompleteAtCandidateTarget} SEC-complete stocks, a ${projectedUsableSurplusAtCandidateTarget}-stock cushion.`
+          ? `At the observed ${observedSecCompletionRatePercent}% SEC-completion rate, production needs about ${estimatedAdditionalCandidatesNeededAtObservedRate} more candidates (${estimatedTotalCandidatesNeededAtObservedRate} total examined) to reach ${usableTarget}. Filling all ${preparedCandidateHeadroom} remaining slots projects roughly ${projectedSecCompleteAtCandidateTarget} SEC-complete stocks, a ${projectedUsableSurplusAtCandidateTarget}-stock cushion.`
           : expansionRecommended
             ? `The current ${candidateTarget}-candidate pool does not project reaching ${usableTarget} usable stocks. Expand to at least ${recommendedCandidateTarget} candidates instead of retrying unchanged lower-priority unresolved names.`
-            : `Production has ${candidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall.`
+            : `Production has ${preparedCandidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall.`
         : targetSatisfied
           ? `Production has at least ${usableTarget} SEC-complete companies. The broad reserve milestone is complete. ${mustFix.length} protected stock(s) remain on a separate repair list and do not block completion.`
           : expansionRecommended
