@@ -1,12 +1,35 @@
-# TS: 2026-08-02 13:31 ET
+# TS: 2026-08-19 06:03 ET
 
 name: Static site checks
 
 on:
   push:
     branches: [main]
+    paths:
+      - "*.html"
+      - "*.css"
+      - "*.js"
+      - "*.json"
+      - "CNAME"
+      - "assets/**"
+      - "data/**"
+      - "scripts/validate-static-site.mjs"
+      - "scripts/verify-frozen-functional-invariants.mjs"
+      - ".github/workflows/static-site-checks.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "*.html"
+      - "*.css"
+      - "*.js"
+      - "*.json"
+      - "CNAME"
+      - "assets/**"
+      - "data/**"
+      - "scripts/validate-static-site.mjs"
+      - "scripts/verify-frozen-functional-invariants.mjs"
+      - ".github/workflows/static-site-checks.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
