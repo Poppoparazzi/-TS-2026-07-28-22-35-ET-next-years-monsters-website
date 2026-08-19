@@ -1,4 +1,4 @@
-// TS: 2026-08-14 15:02 ET
+// TS: 2026-08-19 04:07 ET
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
@@ -33,6 +33,24 @@ function getDeploymentCommit(): string | null {
 
 function getDeploymentBranch(): string | null {
   return process.env.VERCEL_GIT_COMMIT_REF ?? process.env.RENDER_GIT_BRANCH ?? null;
+}
+
+function safeEnvironmentInteger(key: string): number | null {
+  const raw = process.env[key]?.trim();
+  if (!raw) return null;
+
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function getBackfillPolicySnapshot() {
+  return Object.freeze({
+    candidateTarget: safeEnvironmentInteger("AUTO_IMPORT_UNIVERSE_LIMIT"),
+    secBatchSize: safeEnvironmentInteger("AUTO_SEC_BATCH_SIZE"),
+    usableTarget: safeEnvironmentInteger("SEC_USABLE_TARGET"),
+    concurrency: safeEnvironmentInteger("SEC_BATCH_CONCURRENCY"),
+    maxAgeHours: safeEnvironmentInteger("SEC_BATCH_MAX_AGE_HOURS"),
+  });
 }
 
 async function runStartupJobs(
@@ -92,6 +110,7 @@ async function start(): Promise<void> {
       commit: getDeploymentCommit(),
       branch: getDeploymentBranch(),
     },
+    backfillPolicy: getBackfillPolicySnapshot(),
   }));
   installFailClosedRatingErrorHandler(app);
 
