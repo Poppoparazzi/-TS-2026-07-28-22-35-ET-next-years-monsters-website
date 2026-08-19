@@ -1,4 +1,4 @@
-// TS: 2026-08-01 21:45 ET
+// TS: 2026-08-19 01:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -10,6 +10,7 @@ import {
   normalizeRefreshSymbols,
   refreshPilotSymbol,
 } from "../src/jobs/pilot-refresh.js";
+import { pilotNeedsRefresh } from "../src/jobs/startup-pilot-refresh.js";
 import { UnconfiguredMarketDataProvider } from "../src/providers/unconfigured.js";
 import type {
   MarketDataProvider,
@@ -169,6 +170,49 @@ test("pilot refresh symbol normalization deduplicates and rejects malformed valu
   assert.deepEqual(normalizeRefreshSymbols([" aapl ", "AAPL", "msft"]), ["AAPL", "MSFT"]);
   assert.throws(() => normalizeRefreshSymbols(["AAPL/../secret"]), /invalid pilot refresh ticker/i);
   assert.throws(() => normalizeRefreshSymbols([]), /at least one/i);
+});
+
+test("protected pilot refresh never treats incomplete SEC evidence as healthy", () => {
+  const now = Date.parse("2026-08-19T05:58:00.000Z");
+  const maximumAgeMs = 24 * 60 * 60 * 1000;
+  const recentUpdatedAt = "2026-08-19T05:30:00.000Z";
+
+  assert.equal(
+    pilotNeedsRefresh(Object.freeze({ ...storedSnapshot, updatedAt: recentUpdatedAt }), now, maximumAgeMs),
+    false,
+  );
+  assert.equal(
+    pilotNeedsRefresh(
+      Object.freeze({ ...storedSnapshot, updatedAt: recentUpdatedAt, secCik: null }),
+      now,
+      maximumAgeMs,
+    ),
+    true,
+  );
+  assert.equal(
+    pilotNeedsRefresh(
+      Object.freeze({ ...storedSnapshot, updatedAt: recentUpdatedAt, filingCount: 0 }),
+      now,
+      maximumAgeMs,
+    ),
+    true,
+  );
+  assert.equal(
+    pilotNeedsRefresh(
+      Object.freeze({ ...storedSnapshot, updatedAt: recentUpdatedAt, factCount: 0 }),
+      now,
+      maximumAgeMs,
+    ),
+    true,
+  );
+  assert.equal(
+    pilotNeedsRefresh(
+      Object.freeze({ ...storedSnapshot, updatedAt: "2026-08-17T05:30:00.000Z" }),
+      now,
+      maximumAgeMs,
+    ),
+    true,
+  );
 });
 
 test("pilot refresh persists SEC evidence when market quotes are unconfigured", async () => {
