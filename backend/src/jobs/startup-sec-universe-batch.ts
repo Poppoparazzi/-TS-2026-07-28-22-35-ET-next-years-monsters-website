@@ -1,4 +1,4 @@
-// TS: 2026-08-19 12:00 ET
+// TS: 2026-08-19 12:58 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -121,10 +121,13 @@ export async function runSecUniverseBatchOnStartup(
 
   return runSecUniverseBatch(config, {
     batchSize,
+    // Match the production reserve-backfill policy even if an environment variable
+    // is lost during manual recovery. The SEC provider still enforces its own request
+    // gate, so eight workers improve pipeline utilization without bypassing throttling.
     concurrency: environmentInteger(
       environment,
       "SEC_BATCH_CONCURRENCY",
-      3,
+      8,
       1,
       8,
     ),
