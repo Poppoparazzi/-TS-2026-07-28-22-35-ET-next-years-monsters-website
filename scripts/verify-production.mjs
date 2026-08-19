@@ -1,4 +1,4 @@
-// TS: 2026-08-19 05:02 ET
+// TS: 2026-08-19 12:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -14,7 +14,7 @@ const delayMs = Number(process.env.NYM_SMOKE_DELAY_MS || "30000");
 const expectedBackfillPolicy = Object.freeze({
   candidateTarget: Number(process.env.NYM_EXPECTED_CANDIDATE_TARGET || "5000"),
   secBatchSize: Number(process.env.NYM_EXPECTED_SEC_BATCH_SIZE || "5000"),
-  usableTarget: Number(process.env.NYM_EXPECTED_USABLE_TARGET || "2000"),
+  usableTarget: Number(process.env.NYM_EXPECTED_USABLE_TARGET || "2200"),
   concurrency: Number(process.env.NYM_EXPECTED_SEC_CONCURRENCY || "8"),
   maxAgeHours: Number(process.env.NYM_EXPECTED_SEC_MAX_AGE_HOURS || "720"),
 });
