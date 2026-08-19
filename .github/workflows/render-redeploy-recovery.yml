@@ -1,4 +1,4 @@
-# TS: 2026-08-19 16:01 ET
+# TS: 2026-08-19 17:00 ET
 
 name: Render deploy recovery
 
@@ -52,7 +52,7 @@ jobs:
             });
             startupHttpStatus = startupResponse.status;
             const startup = await startupResponse.json().catch(() => null);
-            deployedCommit = startup?.deploymentCommit ?? startup?.deployment?.commit ?? null;
+            deployedCommit = startup?.deployment?.commit ?? startup?.deploymentCommit ?? null;
 
             if (deployedCommit) {
               try {
@@ -208,7 +208,7 @@ jobs:
               console.log(JSON.stringify({
                 attempt,
                 recoveryMethod,
-                deployedCommit: startup?.deploymentCommit ?? startup?.deployment?.commit ?? null,
+                deployedCommit: startup?.deployment?.commit ?? startup?.deploymentCommit ?? null,
                 ratingStatus: ratingResponse.status,
                 ratingSymbol: rating?.symbol ?? null,
                 ratingScore: rating?.score ?? null,
