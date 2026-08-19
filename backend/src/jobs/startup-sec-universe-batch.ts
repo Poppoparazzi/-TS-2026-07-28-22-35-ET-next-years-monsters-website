@@ -1,4 +1,4 @@
-// TS: 2026-08-18 16:00 ET
+// TS: 2026-08-19 09:03 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -82,19 +82,20 @@ export async function runSecUniverseBatchOnStartup(
     );
   }
 
-  // The reserve milestone is numeric: once 2,000 SEC-complete companies exist,
-  // the broad backfill is done. Failed or incomplete names no longer hold the
-  // universe open. Important/pilot stocks can remain on their separate repair
-  // path without blocking completion of the usable-stock target.
+  // Once the broad usable target is satisfied, ordinary unresolved names no
+  // longer hold the universe open. However, any rows still marked failed must
+  // get one more queue pass so cleanup rules can convert known duplicate-CIK or
+  // exhausted failures into nonblocking unresolved exceptions. This keeps the
+  // target-based stop rule without stranding historic failures forever.
   const universeStore = createUniverseStore(config);
   try {
     if (universeStore.configured) {
       const status = await universeStore.getStatus(5_000);
 
-      if (status.secCompleteCount >= usableTarget) {
+      if (status.secCompleteCount >= usableTarget && status.failedCount === 0) {
         return skippedSummary(
           batchSize,
-          `SEC usable target already satisfied: ${status.secCompleteCount} complete >= ${usableTarget}. Remaining failures are exceptions, not blockers.`,
+          `SEC usable target already satisfied: ${status.secCompleteCount} complete >= ${usableTarget}, with no remaining failed SEC records. Unresolved names are nonblocking exceptions.`,
         );
       }
     }
