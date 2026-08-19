@@ -1,4 +1,4 @@
-// TS: 2026-08-18 22:00 ET
+// TS: 2026-08-18 22:59 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -51,10 +51,11 @@ class MemoryQueue implements SecBatchQueue {
   public readonly claimLimits: number[] = [];
   public closed = false;
   private readonly candidates: SecBatchCandidate[] = [
-    Object.freeze({ ticker: "AAPL", attemptCount: 1 }),
-    Object.freeze({ ticker: "FAIL", attemptCount: 2 }),
-    Object.freeze({ ticker: "NOSEC", attemptCount: 1 }),
-    Object.freeze({ ticker: "NVDA", attemptCount: 1 }),
+    Object.freeze({ ticker: "AAPL", attemptCount: 1, isPilot: true }),
+    Object.freeze({ ticker: "FAIL", attemptCount: 2, isPilot: false }),
+    Object.freeze({ ticker: "EXHAUST", attemptCount: 3, isPilot: false }),
+    Object.freeze({ ticker: "NOSEC", attemptCount: 1, isPilot: false }),
+    Object.freeze({ ticker: "NVDA", attemptCount: 1, isPilot: true }),
   ];
 
   public async claim(
@@ -140,7 +141,7 @@ async function refreshOverride(
   symbol: string,
   _dependencies: PilotRefreshDependencies,
 ): Promise<PilotRefreshResult> {
-  if (symbol === "FAIL") throw new Error("Synthetic SEC failure.");
+  if (symbol === "FAIL" || symbol === "EXHAUST") throw new Error("Synthetic SEC failure.");
   if (symbol === "NOSEC") throw new SecEdgarRequestError(404);
 
   return Object.freeze({
@@ -187,7 +188,7 @@ test("third non-pilot SEC failure becomes replaceable immediately without anothe
   assert.match(MARK_FAILED_SQL, /make_interval/);
 });
 
-test("bulk SEC workers support a 5000-company reserve target while using recoverable waves", async () => {
+test("bulk SEC workers report exhausted non-pilot failures as unresolved, matching final database state", async () => {
   const queue = new MemoryQueue();
   const persistenceStore = new MemoryPersistence();
 
@@ -205,18 +206,21 @@ test("bulk SEC workers support a 5000-company reserve target while using recover
 
   assert.equal(summary.status, "completed");
   assert.equal(summary.requestedBatchSize, 5_000);
-  assert.equal(summary.claimedCount, 4);
+  assert.equal(summary.claimedCount, 5);
   assert.equal(summary.succeededCount, 2);
-  assert.equal(summary.unresolvedCount, 1);
+  assert.equal(summary.unresolvedCount, 2);
   assert.equal(summary.failedCount, 1);
-  assert.deepEqual(summary.unresolvedTickers, ["NOSEC"]);
+  assert.deepEqual(summary.unresolvedTickers.sort(), ["EXHAUST", "NOSEC"]);
   assert.deepEqual(queue.completed.sort(), ["AAPL", "NVDA"]);
   assert.deepEqual(queue.unresolved, [
     { ticker: "NOSEC", message: "SEC EDGAR request failed with HTTP 404." },
   ]);
   assert.deepEqual(queue.failed, [
     { ticker: "FAIL", message: "Synthetic SEC failure." },
+    { ticker: "EXHAUST", message: "Synthetic SEC failure." },
   ]);
+  assert.equal(summary.failures.length, 1);
+  assert.equal(summary.failures[0]?.ticker, "FAIL");
   assert.equal(summary.failures[0]?.attemptCount, 2);
   assert.deepEqual(queue.claimLimits, [3, 3, 3]);
   assert.equal(queue.closed, true);
