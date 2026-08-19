@@ -1,4 +1,4 @@
-// TS: 2026-08-18 19:00 ET
+// TS: 2026-08-18 21:59 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -44,6 +44,28 @@ export const PROMOTE_EXHAUSTED_FAILURES_SQL = `
     AND c.is_pilot = false
     AND cps.sec_status = 'failed'
     AND cps.sec_attempt_count >= 3
+`;
+
+export const MARK_FAILED_SQL = `
+  UPDATE company_pipeline_status cps
+  SET
+    sec_status = CASE
+      WHEN c.is_pilot = false AND cps.sec_attempt_count >= 3 THEN 'unresolved'
+      ELSE 'failed'
+    END,
+    last_error = left($2, 1000),
+    last_completed_at = CASE
+      WHEN c.is_pilot = false AND cps.sec_attempt_count >= 3 THEN now()
+      ELSE cps.last_completed_at
+    END,
+    next_retry_at = CASE
+      WHEN c.is_pilot = false AND cps.sec_attempt_count >= 3 THEN NULL
+      ELSE now() + make_interval(
+        mins => LEAST(GREATEST(cps.sec_attempt_count, 1) * 15, 1440)
+      )
+    END
+  FROM companies c
+  WHERE c.id = cps.company_id AND c.ticker = $1
 `;
 
 export interface SecBatchCandidate {
@@ -150,9 +172,8 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
       // ABBNY/ALFUU leave the retry pool on the first current-main queue pass.
       await client.query(CLEANUP_DUPLICATE_CIK_FAILURES_SQL);
 
-      // Do not let ordinary failures retry forever. After three attempts, move a
-      // non-pilot record into the unresolved/replaceable pool so fresh reserve
-      // candidates can take its place. Protected pilot stocks remain repairable.
+      // Backstop historic failed rows left by older deployments. New failures are
+      // promoted immediately in markFailed() once a non-pilot reaches three attempts.
       await client.query(PROMOTE_EXHAUSTED_FAILURES_SQL);
 
       await client.query(
@@ -240,20 +261,7 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
   }
 
   public async markFailed(ticker: string, message: string): Promise<void> {
-    await this.pool.query(
-      `
-        UPDATE company_pipeline_status cps
-        SET
-          sec_status = 'failed',
-          last_error = left($2, 1000),
-          next_retry_at = now() + make_interval(
-            mins => LEAST(GREATEST(cps.sec_attempt_count, 1) * 15, 1440)
-          )
-        FROM companies c
-        WHERE c.id = cps.company_id AND c.ticker = $1
-      `,
-      [ticker, message],
-    );
+    await this.pool.query(MARK_FAILED_SQL, [ticker, message]);
   }
 
   public async markUnresolved(ticker: string, message: string): Promise<void> {
