@@ -1,4 +1,4 @@
-// TS: 2026-08-18 20:00 ET
+// TS: 2026-08-19 05:02 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -11,11 +11,24 @@ const expectedUniverseMinimum = Number(process.env.NYM_EXPECTED_UNIVERSE_MIN || 
 const statusLimit = Number(process.env.NYM_UNIVERSE_STATUS_LIMIT || "5000");
 const attemptCount = Number(process.env.NYM_SMOKE_ATTEMPTS || "10");
 const delayMs = Number(process.env.NYM_SMOKE_DELAY_MS || "30000");
+const expectedBackfillPolicy = Object.freeze({
+  candidateTarget: Number(process.env.NYM_EXPECTED_CANDIDATE_TARGET || "5000"),
+  secBatchSize: Number(process.env.NYM_EXPECTED_SEC_BATCH_SIZE || "5000"),
+  usableTarget: Number(process.env.NYM_EXPECTED_USABLE_TARGET || "2000"),
+  concurrency: Number(process.env.NYM_EXPECTED_SEC_CONCURRENCY || "8"),
+  maxAgeHours: Number(process.env.NYM_EXPECTED_SEC_MAX_AGE_HOURS || "720"),
+});
 
 if (!Number.isInteger(statusLimit) || statusLimit < expectedUniverseMinimum || statusLimit > 5_000) {
   throw new Error(
     `NYM_UNIVERSE_STATUS_LIMIT must be an integer from ${expectedUniverseMinimum} to 5000.`,
   );
+}
+
+for (const [field, value] of Object.entries(expectedBackfillPolicy)) {
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+    throw new Error(`Expected backfill policy ${field} must be a nonnegative finite integer.`);
+  }
 }
 
 function sleep(milliseconds) {
@@ -85,6 +98,28 @@ function startupDiagnostic(startup) {
     `universe import ${importJob?.state || "missing"}: ${importDetail}`,
     `SEC batch ${batchJob?.state || "missing"}: ${batchDetail}`,
   ].join("; ");
+}
+
+function validateBackfillPolicy(startup) {
+  const policy = startup?.backfillPolicy;
+  if (!policy) return;
+
+  const problems = [];
+  for (const [field, expected] of Object.entries(expectedBackfillPolicy)) {
+    const actual = Number(policy[field]);
+    if (!Number.isFinite(actual) || !Number.isInteger(actual)) {
+      problems.push(`backfillPolicy.${field}=${String(policy[field])} is not a finite integer`);
+      continue;
+    }
+    if (actual !== expected) {
+      problems.push(`backfillPolicy.${field}=${actual}, expected ${expected}`);
+    }
+  }
+
+  if (problems.length) {
+    problems.push(startupDiagnostic(startup));
+    throw new Error(problems.join("; "));
+  }
 }
 
 function validateUniverse(status, startup) {
@@ -206,6 +241,7 @@ async function verifyOnce() {
     requestJson(`${apiBaseUrl}/api/universe/status?limit=${statusLimit}`),
     optionalJson(`${apiBaseUrl}/api/startup-status`),
   ]);
+  validateBackfillPolicy(startup);
   validateUniverse(universe, startup);
   validateProviderBackedProgress(universe, health);
 
@@ -214,6 +250,7 @@ async function verifyOnce() {
   return {
     apiVersion: health.version,
     deploymentCommit: startup?.deploymentCommit ?? null,
+    backfillPolicy: startup?.backfillPolicy ?? null,
     marketProvider: health.marketData?.provider,
     marketConfigured: Boolean(health.marketData?.configured),
     secProvider: health.sec?.provider,
