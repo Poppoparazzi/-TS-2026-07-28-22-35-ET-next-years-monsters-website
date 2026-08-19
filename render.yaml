@@ -1,4 +1,4 @@
-# TS: 2026-08-18 21:00 ET
+# TS: 2026-08-19 12:00 ET
 
 databases:
   - name: next-years-monsters-db
@@ -38,7 +38,7 @@ services:
       - key: AUTO_SEC_BATCH_SIZE
         value: "5000"
       - key: SEC_USABLE_TARGET
-        value: "2000"
+        value: "2200"
       - key: SEC_BATCH_CONCURRENCY
         value: "8"
       - key: SEC_BATCH_MAX_AGE_HOURS
