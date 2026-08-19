@@ -1,4 +1,4 @@
-// TS: 2026-08-18 19:00 ET
+// TS: 2026-08-18 22:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -21,6 +21,7 @@ import {
 } from "../src/sec/types.js";
 import {
   CLEANUP_DUPLICATE_CIK_FAILURES_SQL,
+  MARK_FAILED_SQL,
   PROMOTE_EXHAUSTED_FAILURES_SQL,
   SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL,
   type SecBatchCandidate,
@@ -176,6 +177,14 @@ test("ordinary SEC failures stop retrying after three attempts and become replac
   assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /cps\.sec_attempt_count >= 3/);
   assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /sec_status = 'unresolved'/);
   assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /next_retry_at = NULL/);
+});
+
+test("third non-pilot SEC failure becomes replaceable immediately without another queue pass", () => {
+  assert.match(MARK_FAILED_SQL, /c\.is_pilot = false AND cps\.sec_attempt_count >= 3/);
+  assert.match(MARK_FAILED_SQL, /THEN 'unresolved'/);
+  assert.match(MARK_FAILED_SQL, /ELSE 'failed'/);
+  assert.match(MARK_FAILED_SQL, /THEN NULL/);
+  assert.match(MARK_FAILED_SQL, /make_interval/);
 });
 
 test("bulk SEC workers support a 5000-company reserve target while using recoverable waves", async () => {
