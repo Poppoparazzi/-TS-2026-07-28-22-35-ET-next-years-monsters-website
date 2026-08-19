@@ -1,4 +1,4 @@
-// TS: 2026-08-17 20:07 ET
+// TS: 2026-08-18 22:59 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -95,8 +95,6 @@ export async function runSecUniverseBatch(
   options: SecBatchRunOptions,
   dependencies: SecBatchProcessorDependencies = {},
 ): Promise<SecBatchRunSummary> {
-  // Keep this ceiling aligned with importer/startup/status so reserve candidates
-  // above the old 2,500 limit are actually processed instead of silently skipped.
   const batchSize = boundedInteger(options.batchSize, 1, 5_000);
   const concurrency = boundedInteger(options.concurrency, 1, 8);
   const maxAgeHours = boundedInteger(options.maxAgeHours, 1, 24 * 30);
@@ -161,6 +159,18 @@ export async function runSecUniverseBatch(
               return;
             }
 
+            // markFailed() converts a non-pilot third attempt directly to unresolved.
+            // Mirror that final database state in the run summary so watchdogs do not
+            // emit a false "failed" signal for a stock that is already replaceable.
+            const becomesReplaceable = !candidate.isPilot && candidate.attemptCount >= 3;
+            await queue.markFailed(candidate.ticker, message);
+
+            if (becomesReplaceable) {
+              unresolvedCount += 1;
+              unresolvedTickers.push(candidate.ticker);
+              return;
+            }
+
             failedCount += 1;
             failures.push(
               Object.freeze({
@@ -169,7 +179,6 @@ export async function runSecUniverseBatch(
                 message,
               }),
             );
-            await queue.markFailed(candidate.ticker, message);
           }
         }),
       );
