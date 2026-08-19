@@ -1,4 +1,4 @@
-// TS: 2026-08-19 09:03 ET
+// TS: 2026-08-19 10:00 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -6,6 +6,7 @@ import {
   type SecBatchRunSummary,
 } from "../universe/sec-batch-processor.js";
 import { createUniverseStore } from "../universe/store.js";
+import type { UniverseStatusSummary } from "../universe/types.js";
 
 function environmentInteger(
   environment: NodeJS.ProcessEnv,
@@ -39,6 +40,21 @@ function skippedSummary(batchSize: number, reason: string): SecBatchRunSummary {
     reason,
     completedAt: new Date().toISOString(),
   });
+}
+
+export function shouldSkipSecBackfill(
+  status: UniverseStatusSummary,
+  usableTarget: number,
+): boolean {
+  const hasIncompleteProtectedPilot = status.companies.some(
+    (company) => company.isPilot && company.secStage !== "complete",
+  );
+
+  return (
+    status.secCompleteCount >= usableTarget &&
+    status.failedCount === 0 &&
+    !hasIncompleteProtectedPilot
+  );
 }
 
 export async function runSecUniverseBatchOnStartup(
@@ -85,17 +101,17 @@ export async function runSecUniverseBatchOnStartup(
   // Once the broad usable target is satisfied, ordinary unresolved names no
   // longer hold the universe open. However, any rows still marked failed must
   // get one more queue pass so cleanup rules can convert known duplicate-CIK or
-  // exhausted failures into nonblocking unresolved exceptions. This keeps the
-  // target-based stop rule without stranding historic failures forever.
+  // exhausted failures into nonblocking unresolved exceptions. Protected pilot
+  // stocks also keep the worker open until their SEC stage is actually complete.
   const universeStore = createUniverseStore(config);
   try {
     if (universeStore.configured) {
       const status = await universeStore.getStatus(5_000);
 
-      if (status.secCompleteCount >= usableTarget && status.failedCount === 0) {
+      if (shouldSkipSecBackfill(status, usableTarget)) {
         return skippedSummary(
           batchSize,
-          `SEC usable target already satisfied: ${status.secCompleteCount} complete >= ${usableTarget}, with no remaining failed SEC records. Unresolved names are nonblocking exceptions.`,
+          `SEC usable target already satisfied: ${status.secCompleteCount} complete >= ${usableTarget}, with no remaining failed SEC records and all protected pilot stocks complete. Unresolved names are nonblocking exceptions.`,
         );
       }
     }
