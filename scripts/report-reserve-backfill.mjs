@@ -1,10 +1,10 @@
-// TS: 2026-08-19 03:07 ET
+// TS: 2026-08-19 17:59 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
   .replace(/\/$/, "");
 const candidateTarget = Number(process.env.NYM_CANDIDATE_TARGET || "5000");
-const usableTarget = Number(process.env.NYM_USABLE_TARGET || "2000");
+const usableTarget = Number(process.env.NYM_USABLE_TARGET || "2200");
 const maximumCandidateTarget = 5_000;
 
 function validateTargets() {
@@ -147,7 +147,7 @@ const failed = companies.filter((company) => company?.secStage === "failed");
 const exceptions = [...unresolved, ...failed];
 
 // Important names remain visible as a separate repair backlog, but they do not block
-// the broad reserve milestone. The production target is 2,000 usable SEC-complete
+// the broad reserve milestone. The production target is 2,200 usable SEC-complete
 // companies from the 5,000-candidate pool. Failures are exceptions, not completion gates.
 const mustFix = companies
   .filter((company) => isProtectedCompany(company) && company?.secStage !== "complete")
