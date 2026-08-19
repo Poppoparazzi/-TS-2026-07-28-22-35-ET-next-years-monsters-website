@@ -1,4 +1,4 @@
-// TS: 2026-08-18 17:02 ET
+// TS: 2026-08-19 08:04 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -63,7 +63,19 @@ async function requestJson(url) {
 
 const status = await requestJson(`${apiBaseUrl}/api/universe/status?limit=${candidateTarget}`);
 const companies = Array.isArray(status?.companies) ? status.companies : [];
+const unresolvedCount = Number(status?.unresolvedCount || 0);
+const failedCount = Number(status?.failedCount || 0);
+const expectedExceptionCount = unresolvedCount + failedCount;
 const exceptions = companies.filter((company) => company?.secStage === "unresolved" || company?.secStage === "failed");
+const exceptionVisibilityComplete = exceptions.length === expectedExceptionCount;
+
+if (!exceptionVisibilityComplete) {
+  throw new Error(
+    `SEC exception classification is incomplete: API reports ${expectedExceptionCount} unresolved/failed records, ` +
+      `but only ${exceptions.length} are visible in the returned company list. Refusing to classify a partial exception set.`,
+  );
+}
+
 const protectedExceptions = exceptions.filter(isProtected);
 const replaceableExceptions = exceptions.filter((company) => !isProtected(company));
 
@@ -79,9 +91,11 @@ const report = {
   candidateTarget,
   examinedCount: Number(status?.examinedCount || 0),
   secCompleteCount: Number(status?.secCompleteCount || 0),
-  unresolvedCount: Number(status?.unresolvedCount || 0),
-  failedCount: Number(status?.failedCount || 0),
+  unresolvedCount,
+  failedCount,
+  expectedExceptionCount,
   exceptionCountVisible: exceptions.length,
+  exceptionVisibilityComplete,
   protectedExceptionCount: protectedExceptions.length,
   protectedExceptions: protectedExceptions.map((company) => ({
     ticker: company.ticker,
