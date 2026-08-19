@@ -1,4 +1,4 @@
-# TS: 2026-08-18 15:02 ET
+# TS: 2026-08-19 06:57 ET
 
 name: Render deploy recovery
 
@@ -283,6 +283,12 @@ jobs:
           NYM_CANDIDATE_TARGET: "5000"
           NYM_USABLE_TARGET: "2000"
         run: node scripts/report-reserve-backfill.mjs
+
+      - name: Classify SEC exceptions for repair versus replacement
+        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
+        env:
+          NYM_CANDIDATE_TARGET: "5000"
+        run: node scripts/report-sec-exceptions.mjs
 
       - name: Detect Vercel collateral authority
         id: vercel_auth
