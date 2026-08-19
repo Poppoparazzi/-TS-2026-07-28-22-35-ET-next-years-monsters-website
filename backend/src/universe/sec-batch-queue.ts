@@ -1,4 +1,4 @@
-// TS: 2026-08-18 21:59 ET
+// TS: 2026-08-18 22:59 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -71,6 +71,7 @@ export const MARK_FAILED_SQL = `
 export interface SecBatchCandidate {
   readonly ticker: string;
   readonly attemptCount: number;
+  readonly isPilot: boolean;
 }
 
 export interface SecBatchQueue {
@@ -86,6 +87,7 @@ export interface SecBatchQueue {
 interface ClaimedRow {
   readonly ticker: string;
   readonly sec_attempt_count: string | number;
+  readonly is_pilot: boolean;
 }
 
 function safeCount(value: string | number): number {
@@ -167,13 +169,7 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
           AND last_started_at < now() - interval '30 minutes'
       `);
 
-      // Historic duplicate-CIK rows can have slightly different wrapped database
-      // messages. Key cleanup to the constraint name itself so known records such as
-      // ABBNY/ALFUU leave the retry pool on the first current-main queue pass.
       await client.query(CLEANUP_DUPLICATE_CIK_FAILURES_SQL);
-
-      // Backstop historic failed rows left by older deployments. New failures are
-      // promoted immediately in markFailed() once a non-pilot reaches three attempts.
       await client.query(PROMOTE_EXHAUSTED_FAILURES_SQL);
 
       await client.query(
@@ -221,7 +217,7 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
           FROM candidates, companies c
           WHERE cps.company_id = candidates.company_id
             AND c.id = cps.company_id
-          RETURNING c.ticker, cps.sec_attempt_count
+          RETURNING c.ticker, cps.sec_attempt_count, c.is_pilot
         `,
         [safeLimit],
       );
@@ -233,6 +229,7 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
           Object.freeze({
             ticker: row.ticker,
             attemptCount: safeCount(row.sec_attempt_count),
+            isPilot: row.is_pilot === true,
           }),
         ),
       );
