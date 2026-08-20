@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:12 ET
+// TS: 2026-08-20 07:57 ET
 
 export type PipelineStatus =
   | "queued"
@@ -55,6 +55,7 @@ export interface UniverseStatusSummary {
   readonly queuedCount: number;
   readonly processingCount: number;
   readonly secCompleteCount: number;
+  readonly secEvidenceReadyCount: number;
   readonly partialCount: number;
   readonly failedCount: number;
   readonly staleCount: number;
