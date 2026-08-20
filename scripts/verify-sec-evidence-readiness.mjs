@@ -1,4 +1,4 @@
-// TS: 2026-08-20 16:58 ET
+// TS: 2026-08-20 19:04 ET
 
 import fs from "node:fs";
 
@@ -7,6 +7,7 @@ const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters
   .replace(/\/$/, "");
 const statusLimit = Number(process.env.NYM_UNIVERSE_STATUS_LIMIT || "5000");
 const usableTarget = Number(process.env.NYM_EXPECTED_USABLE_TARGET || "2200");
+const recoveryStateFile = (process.env.NYM_RECOVERY_STATE_FILE || "nym-recovery-state.json").trim();
 
 const protectedTickers = new Set([
   "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
@@ -23,6 +24,9 @@ if (!Number.isInteger(statusLimit) || statusLimit < usableTarget || statusLimit 
 }
 if (!Number.isInteger(usableTarget) || usableTarget < 1 || usableTarget > statusLimit) {
   throw new Error(`NYM_EXPECTED_USABLE_TARGET must be an integer from 1 to ${statusLimit}.`);
+}
+if (!recoveryStateFile) {
+  throw new Error("NYM_RECOVERY_STATE_FILE must not be empty.");
 }
 
 async function requestJson(url) {
@@ -139,6 +143,14 @@ const summary = {
   generatedAt: status.generatedAt,
 };
 const result = problems.length === 0 ? "pass" : "blocked";
+const recoveryState = {
+  result,
+  ...summary,
+  problems,
+  recordedAt: new Date().toISOString(),
+};
+
+fs.writeFileSync(recoveryStateFile, `${JSON.stringify(recoveryState, null, 2)}\n`, "utf8");
 
 appendOutput("result", result);
 appendOutput("evidence_ready_count", summary.secEvidenceReadyCount);
@@ -148,6 +160,7 @@ appendOutput("failed_count", summary.failedCount);
 appendOutput("unresolved_count", summary.unresolvedCount);
 appendOutput("protected_incomplete_count", summary.protectedIncompleteCount);
 appendOutput("protected_incomplete_tickers", summary.protectedIncompleteTickers.join(","));
+appendOutput("recovery_state_file", recoveryStateFile);
 
 appendStepSummary([
   "### SEC evidence-ready production gate",
@@ -160,6 +173,7 @@ appendStepSummary([
   ...(summary.protectedIncompleteTickers.length === 0
     ? []
     : [`- Protected stocks needing repair: **${summary.protectedIncompleteTickers.join(", ")}**`]),
+  `- Recovery-state file: **${recoveryStateFile}**`,
   `- Result: **${problems.length === 0 ? "PASS" : "BLOCKED"}**`,
   ...(problems.length === 0 ? [] : ["", ...problems.map((problem) => `- ${problem}`)]),
 ]);
