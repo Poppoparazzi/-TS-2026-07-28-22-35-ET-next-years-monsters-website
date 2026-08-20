@@ -1,4 +1,4 @@
-// TS: 2026-08-20 07:00 ET
+// TS: 2026-08-20 07:57 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -106,7 +106,16 @@ const secCompleteCount = asNonnegativeInteger(status.secCompleteCount, "secCompl
 const unresolvedCount = asNonnegativeInteger(status.unresolvedCount, "unresolvedCount");
 const failedCount = asNonnegativeInteger(status.failedCount, "failedCount");
 const companies = Array.isArray(status.companies) ? status.companies : [];
-const secEvidenceReadyCount = companies.filter(isSecEvidenceReady).length;
+const locallyDerivedSecEvidenceReadyCount = companies.filter(isSecEvidenceReady).length;
+const secEvidenceReadyCount = asNonnegativeInteger(
+  status.secEvidenceReadyCount ?? locallyDerivedSecEvidenceReadyCount,
+  "secEvidenceReadyCount",
+);
+if (status.secEvidenceReadyCount !== undefined && secEvidenceReadyCount !== locallyDerivedSecEvidenceReadyCount) {
+  throw new Error(
+    `SEC evidence-ready count mismatch: API=${secEvidenceReadyCount}, derived=${locallyDerivedSecEvidenceReadyCount}. Refusing reserve projections until production accounting agrees.`,
+  );
+}
 const usableShortfall = Math.max(usableTarget - secEvidenceReadyCount, 0);
 const preparedCandidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
 const loadedCandidateHeadroom = Math.max(Math.min(universeSize, candidateTarget) - examinedCount, 0);
