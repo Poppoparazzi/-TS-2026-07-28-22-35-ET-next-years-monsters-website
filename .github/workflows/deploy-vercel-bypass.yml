@@ -1,4 +1,4 @@
-# TS: 2026-08-16 21:31 ET
+# TS: 2026-08-19 20:03 ET
 name: Deploy Vercel collateral backend (manual only)
 
 on:
@@ -126,3 +126,45 @@ jobs:
           }
           console.log('AAPL safely fails closed on deployed Vercel collateral backend.');
           NODE
+
+      - name: Record verified Vercel collateral endpoint
+        if: ${{ env.VERCEL_AUTH_READY == 'true' }}
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const payload = {
+            verified: true,
+            provider: 'vercel',
+            url: process.env.DEPLOY_URL,
+            commit: process.env.EXPECTED_SHA,
+            verifiedAt: new Date().toISOString(),
+            checks: {
+              startupIdentity: 'passed',
+              aaplFailClosed: 'passed',
+            },
+          };
+
+          fs.writeFileSync('vercel-collateral-verification.json', `${JSON.stringify(payload, null, 2)}\n`);
+          console.log(`Verified Vercel collateral endpoint: ${payload.url}`);
+
+          if (process.env.GITHUB_STEP_SUMMARY) {
+            fs.appendFileSync(
+              process.env.GITHUB_STEP_SUMMARY,
+              `### Verified Vercel collateral backend\n\n- URL: ${payload.url}\n- Commit: ${payload.commit}\n- Startup identity: passed\n- AAPL fail-closed check: passed\n`,
+            );
+          }
+          NODE
+
+      - name: Upload verified Vercel collateral endpoint
+        if: ${{ env.VERCEL_AUTH_READY == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-vercel-collateral
+          path: backend/vercel-collateral-verification.json
+          if-no-files-found: error
+          retention-days: 30
