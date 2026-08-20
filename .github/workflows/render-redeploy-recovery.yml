@@ -1,4 +1,4 @@
-# TS: 2026-08-19 17:00 ET
+# TS: 2026-08-19 22:59 ET
 
 name: Render deploy recovery
 
@@ -226,6 +226,9 @@ jobs:
               }));
 
               if (recoveryMethod === "none") {
+                if (initialClassification === "current_for_backend") {
+                  throw new Error("Render reports current backend code, but /api/ratings/AAPL could not be verified.");
+                }
                 console.log("Render verification is unreachable and no deployment authority exists; preserve the exact blocker and continue the watchdog.");
                 process.exit(0);
               }
@@ -236,13 +239,13 @@ jobs:
             }
           }
 
+          if (initialClassification === "current_for_backend") {
+            throw new Error("Render reports current backend code, but /api/ratings/AAPL is still not healthy.");
+          }
+
           if (recoveryMethod === "none") {
             console.log("Render remains blocked by missing deployment authority; unchanged blocker is informational, not a workflow failure.");
             process.exit(0);
-          }
-
-          if (initialClassification === "current_for_backend") {
-            throw new Error("Render reports current backend code, but /api/ratings/AAPL is still not healthy.");
           }
 
           throw new Error("Authorized Render recovery did not expose the repaired /api/ratings/AAPL route within the verification window.");
