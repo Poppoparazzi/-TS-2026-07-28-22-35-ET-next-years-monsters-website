@@ -1,4 +1,4 @@
-// TS: 2026-08-20 00:58 ET
+// TS: 2026-08-20 07:00 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -42,16 +42,32 @@ function skippedSummary(batchSize: number, reason: string): SecBatchRunSummary {
   });
 }
 
+export function secEvidenceReadyCount(status: UniverseStatusSummary): number {
+  return status.companies.filter(
+    (company) =>
+      company.secStage === "complete" &&
+      company.hasSecIdentity &&
+      company.hasFilings &&
+      company.hasFacts,
+  ).length;
+}
+
 export function shouldSkipSecBackfill(
   status: UniverseStatusSummary,
   usableTarget: number,
 ): boolean {
   const hasIncompleteProtectedPilot = status.companies.some(
-    (company) => company.isPilot && company.secStage !== "complete",
+    (company) =>
+      company.isPilot &&
+      (company.secStage !== "complete" ||
+        !company.hasSecIdentity ||
+        !company.hasFilings ||
+        !company.hasFacts),
   );
+  const evidenceReadyCount = secEvidenceReadyCount(status);
 
   return (
-    status.secCompleteCount >= usableTarget &&
+    evidenceReadyCount >= usableTarget &&
     status.failedCount === 0 &&
     !hasIncompleteProtectedPilot
   );
@@ -92,9 +108,6 @@ export async function runSecUniverseBatchOnStartup(
     5_000,
   );
 
-  // Prevent the exact fixed-universe trap that left the broad target permanently
-  // below the desired usable-stock count. When automatic import is enabled, it
-  // must be able to load at least as many candidates as the usable target requires.
   if (importLimit > 0 && importLimit < usableTarget) {
     throw new Error(
       `AUTO_IMPORT_UNIVERSE_LIMIT=${importLimit} cannot satisfy SEC_USABLE_TARGET=${usableTarget}. ` +
@@ -102,20 +115,21 @@ export async function runSecUniverseBatchOnStartup(
     );
   }
 
-  // Once the broad usable target is satisfied, ordinary unresolved names no
-  // longer hold the universe open. However, any rows still marked failed must
-  // get one more queue pass so cleanup rules can convert known duplicate-CIK or
-  // exhausted failures into nonblocking unresolved exceptions. Protected pilot
-  // stocks also keep the worker open until their SEC stage is actually complete.
+  // "Usable" now means a company has completed SEC processing plus an SEC identity,
+  // at least one filing, and company facts. A green pipeline stage alone is not enough
+  // to stop the reserve worker. Ordinary unresolved names remain nonblocking once the
+  // evidence-ready target is satisfied, but failed rows and protected pilots still
+  // receive cleanup/repair attention.
   const universeStore = createUniverseStore(config);
   try {
     if (universeStore.configured) {
       const status = await universeStore.getStatus(5_000);
+      const evidenceReadyCount = secEvidenceReadyCount(status);
 
       if (shouldSkipSecBackfill(status, usableTarget)) {
         return skippedSummary(
           batchSize,
-          `SEC usable target already satisfied: ${status.secCompleteCount} complete >= ${usableTarget}, with no remaining failed SEC records and all protected pilot stocks complete. Unresolved names are nonblocking exceptions.`,
+          `SEC usable target already satisfied: ${evidenceReadyCount} evidence-ready >= ${usableTarget}, with no remaining failed SEC records and all protected pilot stocks evidence-ready. Unresolved names are nonblocking exceptions.`,
         );
       }
     }
@@ -125,9 +139,6 @@ export async function runSecUniverseBatchOnStartup(
 
   return runSecUniverseBatch(config, {
     batchSize,
-    // Match the production reserve-backfill policy even if an environment variable
-    // is lost during manual recovery. The SEC provider still enforces its own request
-    // gate, so eight workers improve pipeline utilization without bypassing throttling.
     concurrency: environmentInteger(
       environment,
       "SEC_BATCH_CONCURRENCY",
@@ -135,9 +146,6 @@ export async function runSecUniverseBatchOnStartup(
       1,
       8,
     ),
-    // Keep the fallback aligned with production's reserve-first policy. If the
-    // environment value is ever absent, do not recycle yesterday's successful SEC
-    // records ahead of fresh replacement candidates.
     maxAgeHours: environmentInteger(
       environment,
       "SEC_BATCH_MAX_AGE_HOURS",
