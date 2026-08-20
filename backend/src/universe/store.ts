@@ -1,4 +1,4 @@
-// TS: 2026-08-17 19:02 ET
+// TS: 2026-08-20 07:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -262,6 +262,13 @@ export class PostgresUniverseStore implements UniverseStore {
       const queuedCount = companies.filter((company) => company.secStage === "queued").length;
       const processingCount = companies.filter((company) => company.secStage === "processing").length;
       const secCompleteCount = companies.filter((company) => company.secStage === "complete").length;
+      const secEvidenceReadyCount = companies.filter(
+        (company) =>
+          company.secStage === "complete" &&
+          company.hasSecIdentity &&
+          company.hasFilings &&
+          company.hasFacts,
+      ).length;
       const partialCount = companies.filter((company) => company.secStage === "partial").length;
       const failedCount = companies.filter((company) => company.secStage === "failed").length;
       const staleCount = companies.filter((company) => company.secStage === "stale").length;
@@ -289,6 +296,7 @@ export class PostgresUniverseStore implements UniverseStore {
         queuedCount,
         processingCount,
         secCompleteCount,
+        secEvidenceReadyCount,
         partialCount,
         failedCount,
         staleCount,
