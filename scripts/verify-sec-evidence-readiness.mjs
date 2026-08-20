@@ -1,4 +1,4 @@
-// TS: 2026-08-20 15:01 ET
+// TS: 2026-08-20 16:58 ET
 
 import fs from "node:fs";
 
@@ -40,6 +40,11 @@ async function requestJson(url) {
 function appendStepSummary(lines) {
   if (!process.env.GITHUB_STEP_SUMMARY) return;
   fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
+}
+
+function appendOutput(name, value) {
+  if (!process.env.GITHUB_OUTPUT) return;
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${String(value)}\n`);
 }
 
 const status = await requestJson(`${apiBaseUrl}/api/universe/status?limit=${statusLimit}`);
@@ -133,6 +138,16 @@ const summary = {
   protectedIncompleteTickers: incompleteProtected.map((company) => company.ticker),
   generatedAt: status.generatedAt,
 };
+const result = problems.length === 0 ? "pass" : "blocked";
+
+appendOutput("result", result);
+appendOutput("evidence_ready_count", summary.secEvidenceReadyCount);
+appendOutput("usable_target", usableTarget);
+appendOutput("examined_count", summary.examinedCount);
+appendOutput("failed_count", summary.failedCount);
+appendOutput("unresolved_count", summary.unresolvedCount);
+appendOutput("protected_incomplete_count", summary.protectedIncompleteCount);
+appendOutput("protected_incomplete_tickers", summary.protectedIncompleteTickers.join(","));
 
 appendStepSummary([
   "### SEC evidence-ready production gate",
