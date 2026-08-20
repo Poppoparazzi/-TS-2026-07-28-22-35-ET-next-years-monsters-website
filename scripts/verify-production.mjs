@@ -1,4 +1,4 @@
-// TS: 2026-08-19 15:00 ET
+// TS: 2026-08-20 06:02 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -105,8 +105,18 @@ function startupDiagnostic(startup) {
 }
 
 function validateBackfillPolicy(startup) {
-  const policy = startup?.backfillPolicy;
-  if (!policy) return;
+  if (!startup) {
+    throw new Error(
+      "startup diagnostics are unavailable; production cannot prove the required backfill policy",
+    );
+  }
+
+  const policy = startup.backfillPolicy;
+  if (!policy) {
+    throw new Error(
+      `startup backfillPolicy is missing; production cannot prove the required 5000-candidate / 2200-usable reserve policy; ${startupDiagnostic(startup)}`,
+    );
+  }
 
   const problems = [];
   for (const [field, expected] of Object.entries(expectedBackfillPolicy)) {
