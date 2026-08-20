@@ -1,4 +1,4 @@
-// TS: 2026-08-02 14:34 ET
+// TS: 2026-08-20 00:58 ET
 
 import type { AppConfig } from "../config.js";
 import { loadSecUniverse } from "../universe/sec-source.js";
@@ -13,9 +13,12 @@ export interface StartupUniverseImportSummary {
   readonly completedAt: string;
 }
 
-function configuredLimit(environment: NodeJS.ProcessEnv): number {
+export function configuredUniverseImportLimit(
+  environment: NodeJS.ProcessEnv,
+  productionFallback = 0,
+): number {
   const raw = environment.AUTO_IMPORT_UNIVERSE_LIMIT?.trim();
-  if (!raw) return 0;
+  if (!raw) return productionFallback;
 
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 0 || value > 5_000) {
@@ -29,7 +32,13 @@ export async function importUniverseOnStartup(
   config: AppConfig,
   environment: NodeJS.ProcessEnv = process.env,
 ): Promise<StartupUniverseImportSummary> {
-  const requestedLimit = configuredLimit(environment);
+  // Production recovery must not silently fall back to a disabled universe import
+  // merely because Render's service environment drifts from render.yaml. Local/test
+  // environments still default to disabled unless they explicitly opt in.
+  const requestedLimit = configuredUniverseImportLimit(
+    environment,
+    config.nodeEnv === "production" ? 5_000 : 0,
+  );
   const completedAt = () => new Date().toISOString();
 
   if (requestedLimit === 0) {
