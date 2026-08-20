@@ -1,4 +1,4 @@
-// TS: 2026-08-20 11:03 ET
+// TS: 2026-08-20 15:01 ET
 
 import fs from "node:fs";
 
@@ -7,6 +7,16 @@ const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters
   .replace(/\/$/, "");
 const statusLimit = Number(process.env.NYM_UNIVERSE_STATUS_LIMIT || "5000");
 const usableTarget = Number(process.env.NYM_EXPECTED_USABLE_TARGET || "2200");
+
+const protectedTickers = new Set([
+  "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
+  "DECK", "WING", "META", "APP", "MSFT", "GOOGL", "GOOG", "AVGO", "PLTR", "CRDO",
+  "RKLB", "QCOM", "MU", "ARM", "DELL", "INTC", "MRVL", "HOOD", "COIN", "UBER",
+]);
+
+function isProtected(company) {
+  return company?.isPilot === true || protectedTickers.has(String(company?.ticker || "").toUpperCase());
+}
 
 if (!Number.isInteger(statusLimit) || statusLimit < usableTarget || statusLimit > 5_000) {
   throw new Error(`NYM_UNIVERSE_STATUS_LIMIT must be an integer from ${usableTarget} to 5000.`);
@@ -94,7 +104,7 @@ if (Number.isInteger(failed) && failed > 0) {
 
 const companies = Array.isArray(status?.companies) ? status.companies : [];
 const incompleteProtected = companies.filter((company) =>
-  company?.isPilot === true && !(
+  isProtected(company) && !(
     company?.secStage === "complete" &&
     company?.hasSecIdentity === true &&
     company?.hasFilings === true &&
@@ -120,6 +130,7 @@ const summary = {
   failedCount: status.failedCount,
   unresolvedCount: status.unresolvedCount,
   protectedIncompleteCount: incompleteProtected.length,
+  protectedIncompleteTickers: incompleteProtected.map((company) => company.ticker),
   generatedAt: status.generatedAt,
 };
 
@@ -131,6 +142,9 @@ appendStepSummary([
   `- Failed SEC rows: **${String(summary.failedCount)}**`,
   `- Unresolved SEC rows: **${String(summary.unresolvedCount)}**`,
   `- Incomplete protected stocks: **${summary.protectedIncompleteCount}**`,
+  ...(summary.protectedIncompleteTickers.length === 0
+    ? []
+    : [`- Protected stocks needing repair: **${summary.protectedIncompleteTickers.join(", ")}**`]),
   `- Result: **${problems.length === 0 ? "PASS" : "BLOCKED"}**`,
   ...(problems.length === 0 ? [] : ["", ...problems.map((problem) => `- ${problem}`)]),
 ]);
