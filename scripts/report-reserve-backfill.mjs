@@ -1,4 +1,4 @@
-// TS: 2026-08-20 00:03 ET
+// TS: 2026-08-20 07:00 ET
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -46,6 +46,15 @@ function roundUp(value, increment) {
 function isProtectedCompany(company) {
   const ticker = String(company?.ticker || "").toUpperCase();
   return company?.isPilot === true || mustResolve.has(ticker);
+}
+
+function isSecEvidenceReady(company) {
+  return (
+    company?.secStage === "complete" &&
+    company?.hasSecIdentity === true &&
+    company?.hasFilings === true &&
+    company?.hasFacts === true
+  );
 }
 
 function exceptionReason(company) {
@@ -96,13 +105,15 @@ const examinedCount = asNonnegativeInteger(status.examinedCount, "examinedCount"
 const secCompleteCount = asNonnegativeInteger(status.secCompleteCount, "secCompleteCount");
 const unresolvedCount = asNonnegativeInteger(status.unresolvedCount, "unresolvedCount");
 const failedCount = asNonnegativeInteger(status.failedCount, "failedCount");
-const usableShortfall = Math.max(usableTarget - secCompleteCount, 0);
+const companies = Array.isArray(status.companies) ? status.companies : [];
+const secEvidenceReadyCount = companies.filter(isSecEvidenceReady).length;
+const usableShortfall = Math.max(usableTarget - secEvidenceReadyCount, 0);
 const preparedCandidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
 const loadedCandidateHeadroom = Math.max(Math.min(universeSize, candidateTarget) - examinedCount, 0);
 const candidateImportShortfall = Math.max(candidateTarget - universeSize, 0);
 const candidateTargetLoaded = candidateImportShortfall === 0;
-const observedSecCompletionRate = examinedCount > 0 ? secCompleteCount / examinedCount : 0;
-const observedSecCompletionRatePercent = roundedPercent(secCompleteCount, examinedCount);
+const observedSecCompletionRate = examinedCount > 0 ? secEvidenceReadyCount / examinedCount : 0;
+const observedSecCompletionRatePercent = roundedPercent(secEvidenceReadyCount, examinedCount);
 const minimumLoadedSuccessRatePercent =
   usableShortfall === 0 ? 0 : roundedPercent(usableShortfall, loadedCandidateHeadroom);
 const minimumPreparedSuccessRatePercent =
@@ -113,7 +124,7 @@ const loadedReserveCapacityMargin = loadedCandidateHeadroom - usableShortfall;
 const preparedReserveCapacityMargin = preparedCandidateHeadroom - usableShortfall;
 const projectedSecCompleteAtCandidateTarget = Math.min(
   candidateTarget,
-  secCompleteCount + Math.floor(preparedCandidateHeadroom * observedSecCompletionRate),
+  secEvidenceReadyCount + Math.floor(preparedCandidateHeadroom * observedSecCompletionRate),
 );
 const projectedUsableSurplusAtCandidateTarget = projectedSecCompleteAtCandidateTarget - usableTarget;
 const estimatedAdditionalCandidatesNeededAtObservedRate =
@@ -127,7 +138,7 @@ const estimatedTotalCandidatesNeededAtObservedRate =
     ? null
     : examinedCount + estimatedAdditionalCandidatesNeededAtObservedRate;
 const observedRateProjectsTargetSuccess = projectedSecCompleteAtCandidateTarget >= usableTarget;
-const secCountTargetSatisfied = secCompleteCount >= usableTarget;
+const secCountTargetSatisfied = secEvidenceReadyCount >= usableTarget;
 const candidatePoolExhausted = examinedCount >= candidateTarget;
 
 const recommendedCandidateTarget = (() => {
@@ -141,23 +152,20 @@ const expansionRecommended = recommendedCandidateTarget > candidateTarget;
 const expansionCeilingReached =
   !secCountTargetSatisfied && recommendedCandidateTarget === maximumCandidateTarget && candidateTarget === maximumCandidateTarget;
 
-const companies = Array.isArray(status.companies) ? status.companies : [];
 const unresolved = companies.filter((company) => company?.secStage === "unresolved");
 const failed = companies.filter((company) => company?.secStage === "failed");
 const exceptions = [...unresolved, ...failed];
 
-// Important names remain on a mandatory repair list. The broad reserve target is
-// numerically satisfied at 2,200 SEC-complete companies, but the overall milestone
-// is not complete while a protected pilot or strategic ticker remains incomplete.
-// Failed rows also remain blocking until cleanup converts them to complete or to
-// an explicitly nonblocking unresolved exception, matching the startup worker rule.
 const mustFix = companies
-  .filter((company) => isProtectedCompany(company) && company?.secStage !== "complete")
+  .filter((company) => isProtectedCompany(company) && !isSecEvidenceReady(company))
   .map((company) => ({
     ticker: company.ticker,
     companyName: company.companyName,
     secStage: company.secStage,
     isPilot: company.isPilot === true,
+    hasSecIdentity: company.hasSecIdentity === true,
+    hasFilings: company.hasFilings === true,
+    hasFacts: company.hasFacts === true,
     reason: exceptionReason(company),
     lastError: company.lastError ?? null,
   }));
@@ -182,6 +190,7 @@ const report = {
   candidateImportShortfall,
   examinedCount,
   secCompleteCount,
+  secEvidenceReadyCount,
   unresolvedCount,
   failedCount,
   usableShortfall,
@@ -224,21 +233,21 @@ const report = {
       ? `Production currently has ${universeSize} active candidates loaded of the prepared ${candidateTarget} target. Only ${loadedCandidateHeadroom} additional loaded candidates are executable now; ${candidateImportShortfall} more candidates still need to be imported. Prepared headroom is ${preparedCandidateHeadroom}, so do not treat the configured reserve as live capacity yet.`
       : examinedCount < candidateTarget
         ? observedRateProjectsTargetSuccess
-          ? `At the observed ${observedSecCompletionRatePercent}% SEC-completion rate, production needs about ${estimatedAdditionalCandidatesNeededAtObservedRate} more candidates (${estimatedTotalCandidatesNeededAtObservedRate} total examined) to reach ${usableTarget}. Filling all ${preparedCandidateHeadroom} remaining slots projects roughly ${projectedSecCompleteAtCandidateTarget} SEC-complete stocks, a ${projectedUsableSurplusAtCandidateTarget}-stock cushion.`
+          ? `At the observed ${observedSecCompletionRatePercent}% SEC-evidence-ready rate, production needs about ${estimatedAdditionalCandidatesNeededAtObservedRate} more candidates (${estimatedTotalCandidatesNeededAtObservedRate} total examined) to reach ${usableTarget}. Filling all ${preparedCandidateHeadroom} remaining slots projects roughly ${projectedSecCompleteAtCandidateTarget} evidence-ready stocks, a ${projectedUsableSurplusAtCandidateTarget}-stock cushion.`
           : expansionRecommended
-            ? `The current ${candidateTarget}-candidate pool does not project reaching ${usableTarget} usable stocks. Expand to at least ${recommendedCandidateTarget} candidates instead of retrying unchanged lower-priority unresolved names.`
-            : `Production has ${preparedCandidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-complete shortfall.`
+            ? `The current ${candidateTarget}-candidate pool does not project reaching ${usableTarget} SEC-evidence-ready stocks. Expand to at least ${recommendedCandidateTarget} candidates instead of retrying unchanged lower-priority unresolved names.`
+            : `Production has ${preparedCandidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-evidence-ready shortfall.`
         : targetSatisfied
-          ? `Production has at least ${usableTarget} SEC-complete companies, every protected stock is SEC-complete, and no SEC records remain failed. The reserve milestone is complete.`
+          ? `Production has at least ${usableTarget} SEC-evidence-ready companies, every protected stock is evidence-ready, and no SEC records remain failed. The reserve milestone is complete.`
           : secCountTargetSatisfied && failedCount > 0
-            ? `Production has at least ${usableTarget} SEC-complete companies, but ${failedCount} SEC record(s) remain failed. Keep cleanup running until those rows become complete or explicit nonblocking unresolved exceptions; do not call the reserve milestone complete yet.`
+            ? `Production has at least ${usableTarget} SEC-evidence-ready companies, but ${failedCount} SEC record(s) remain failed. Keep cleanup running until those rows become complete or explicit nonblocking unresolved exceptions; do not call the reserve milestone complete yet.`
             : secCountTargetSatisfied && mustFix.length > 0
-              ? `Production has at least ${usableTarget} SEC-complete companies, but ${mustFix.length} protected stock(s) remain incomplete. Keep those names on the mandatory repair path; lower-priority unresolved names remain replaceable exceptions.`
+              ? `Production has at least ${usableTarget} SEC-evidence-ready companies, but ${mustFix.length} protected stock(s) remain incomplete. Keep those names on the mandatory repair path; lower-priority unresolved names remain replaceable exceptions.`
               : expansionRecommended
-                ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
+                ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-evidence-ready companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`
                 : expansionCeilingReached
-                  ? `The ${maximumCandidateTarget}-candidate safety ceiling is exhausted and production still needs ${usableShortfall} SEC-complete companies. Remaining failures stay exceptions; only separate priority repair work should continue.`
-                  : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-complete companies.`,
+                  ? `The ${maximumCandidateTarget}-candidate safety ceiling is exhausted and production still needs ${usableShortfall} SEC-evidence-ready companies. Remaining failures stay exceptions; only separate priority repair work should continue.`
+                  : `The current candidate pool is exhausted and still needs ${usableShortfall} SEC-evidence-ready companies.`,
 };
 
 console.log("Next Year's Monsters reserve/backfill report:");
