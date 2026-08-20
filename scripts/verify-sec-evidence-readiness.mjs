@@ -1,4 +1,6 @@
-// TS: 2026-08-20 08:57 ET
+// TS: 2026-08-20 11:03 ET
+
+import fs from "node:fs";
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -23,6 +25,11 @@ async function requestJson(url) {
     throw new Error(`${url} returned HTTP ${response.status}: ${payload?.message || payload?.error || "no JSON error"}`);
   }
   return payload;
+}
+
+function appendStepSummary(lines) {
+  if (!process.env.GITHUB_STEP_SUMMARY) return;
+  fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
 }
 
 const status = await requestJson(`${apiBaseUrl}/api/universe/status?limit=${statusLimit}`);
@@ -104,12 +111,7 @@ if (Number.isInteger(evidenceReady) && evidenceReady < usableTarget) {
   problems.push(`secEvidenceReadyCount=${evidenceReady}, target=${usableTarget}`);
 }
 
-if (problems.length > 0) {
-  throw new Error(problems.join("; "));
-}
-
-console.log("SEC evidence-ready production verification passed.");
-console.log(JSON.stringify({
+const summary = {
   universeSize: status.universeSize,
   examinedCount: status.examinedCount,
   secCompleteCount: status.secCompleteCount,
@@ -119,4 +121,23 @@ console.log(JSON.stringify({
   unresolvedCount: status.unresolvedCount,
   protectedIncompleteCount: incompleteProtected.length,
   generatedAt: status.generatedAt,
-}, null, 2));
+};
+
+appendStepSummary([
+  "### SEC evidence-ready production gate",
+  "",
+  `- Evidence-ready: **${String(summary.secEvidenceReadyCount)} / ${usableTarget}**`,
+  `- SEC complete: **${String(summary.secCompleteCount)}**`,
+  `- Failed SEC rows: **${String(summary.failedCount)}**`,
+  `- Unresolved SEC rows: **${String(summary.unresolvedCount)}**`,
+  `- Incomplete protected stocks: **${summary.protectedIncompleteCount}**`,
+  `- Result: **${problems.length === 0 ? "PASS" : "BLOCKED"}**`,
+  ...(problems.length === 0 ? [] : ["", ...problems.map((problem) => `- ${problem}`)]),
+]);
+
+if (problems.length > 0) {
+  throw new Error(problems.join("; "));
+}
+
+console.log("SEC evidence-ready production verification passed.");
+console.log(JSON.stringify(summary, null, 2));
