@@ -1,4 +1,4 @@
-# TS: 2026-08-19 22:59 ET
+# TS: 2026-08-20 13:00 ET
 
 name: Render deploy recovery
 
@@ -258,7 +258,7 @@ jobs:
             echo "### Production verification deferred"
             echo
             echo "Render was unreachable during this run and no deployment authority exists."
-            echo "The live rating smoke, production accounting, and reserve/backfill report are deferred rather than generating duplicate failure notifications for the same unreachable backend."
+            echo "The live rating smoke, production accounting, evidence-ready gate, and reserve/backfill report are deferred rather than generating duplicate failure notifications for the same unreachable backend."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run Current Stock Rating production smoke in the same hourly job
@@ -276,9 +276,18 @@ jobs:
           node scripts/validate-static-site.mjs
           node scripts/verify-frozen-functional-invariants.mjs
 
-      - name: Verify 2,000-stock production accounting and provider truth
+      - name: Verify production accounting and provider truth
         if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
         run: node scripts/verify-production.mjs
+
+      - name: Verify 2,200 SEC evidence-ready production target
+        id: evidence_ready
+        continue-on-error: true
+        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
+        env:
+          NYM_UNIVERSE_STATUS_LIMIT: "5000"
+          NYM_EXPECTED_USABLE_TARGET: "2200"
+        run: node scripts/verify-sec-evidence-readiness.mjs
 
       - name: Report 5,000-candidate reserve/backfill progress toward 2,200 usable
         if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
