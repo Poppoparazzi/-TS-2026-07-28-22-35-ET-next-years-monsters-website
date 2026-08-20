@@ -1,4 +1,4 @@
-// TS: 2026-08-19 12:58 ET
+// TS: 2026-08-20 00:58 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -61,10 +61,14 @@ export async function runSecUniverseBatchOnStartup(
   config: AppConfig,
   environment: NodeJS.ProcessEnv = process.env,
 ): Promise<SecBatchRunSummary> {
+  // Keep the agreed reserve strategy alive even if Render's service environment
+  // loses the Blueprint values. Local/test environments remain opt-in so development
+  // never launches a large SEC batch unexpectedly.
+  const productionCandidateFallback = config.nodeEnv === "production" ? 5_000 : 0;
   const batchSize = environmentInteger(
     environment,
     "AUTO_SEC_BATCH_SIZE",
-    0,
+    productionCandidateFallback,
     0,
     5_000,
   );
@@ -83,7 +87,7 @@ export async function runSecUniverseBatchOnStartup(
   const importLimit = environmentInteger(
     environment,
     "AUTO_IMPORT_UNIVERSE_LIMIT",
-    0,
+    productionCandidateFallback,
     0,
     5_000,
   );
