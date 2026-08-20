@@ -1,4 +1,4 @@
-// TS: 2026-08-19 04:07 ET
+// TS: 2026-08-20 02:58 ET
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
@@ -43,13 +43,29 @@ function safeEnvironmentInteger(key: string): number | null {
   return Number.isInteger(value) && value >= 0 ? value : null;
 }
 
-function getBackfillPolicySnapshot() {
+function getBackfillPolicySnapshot(nodeEnv: string) {
+  // Report the policy the persistent production worker will actually use, not only
+  // the raw Blueprint values. The startup jobs intentionally fall back to these
+  // settings when Render loses an environment value, so observability must mirror
+  // execution or the production smoke can misdiagnose a healthy recovery.
+  const useProductionFallbacks = nodeEnv === "production" && !isServerlessRuntime();
+
   return Object.freeze({
-    candidateTarget: safeEnvironmentInteger("AUTO_IMPORT_UNIVERSE_LIMIT"),
-    secBatchSize: safeEnvironmentInteger("AUTO_SEC_BATCH_SIZE"),
-    usableTarget: safeEnvironmentInteger("SEC_USABLE_TARGET"),
-    concurrency: safeEnvironmentInteger("SEC_BATCH_CONCURRENCY"),
-    maxAgeHours: safeEnvironmentInteger("SEC_BATCH_MAX_AGE_HOURS"),
+    candidateTarget:
+      safeEnvironmentInteger("AUTO_IMPORT_UNIVERSE_LIMIT") ??
+      (useProductionFallbacks ? 5_000 : null),
+    secBatchSize:
+      safeEnvironmentInteger("AUTO_SEC_BATCH_SIZE") ??
+      (useProductionFallbacks ? 5_000 : null),
+    usableTarget:
+      safeEnvironmentInteger("SEC_USABLE_TARGET") ??
+      (useProductionFallbacks ? 2_200 : null),
+    concurrency:
+      safeEnvironmentInteger("SEC_BATCH_CONCURRENCY") ??
+      (useProductionFallbacks ? 8 : null),
+    maxAgeHours:
+      safeEnvironmentInteger("SEC_BATCH_MAX_AGE_HOURS") ??
+      (useProductionFallbacks ? 720 : null),
   });
 }
 
@@ -110,7 +126,7 @@ async function start(): Promise<void> {
       commit: getDeploymentCommit(),
       branch: getDeploymentBranch(),
     },
-    backfillPolicy: getBackfillPolicySnapshot(),
+    backfillPolicy: getBackfillPolicySnapshot(config.nodeEnv),
   }));
   installFailClosedRatingErrorHandler(app);
 
