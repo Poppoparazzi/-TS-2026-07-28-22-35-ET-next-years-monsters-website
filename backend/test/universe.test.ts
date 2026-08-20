@@ -1,4 +1,4 @@
-// TS: 2026-08-17 19:02 ET
+// TS: 2026-08-20 07:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -58,6 +58,7 @@ class MemoryUniverseStore implements UniverseStore {
       queuedCount: 1,
       processingCount: 0,
       secCompleteCount: 1,
+      secEvidenceReadyCount: 1,
       partialCount: 0,
       failedCount: 0,
       staleCount: 0,
@@ -138,6 +139,7 @@ test("bulk universe status endpoint caps the requested company count", async (t)
   assert.equal(response.json().universeSize, 100);
   assert.equal(response.json().queuedCount, 1);
   assert.equal(response.json().secCompleteCount, 1);
+  assert.equal(response.json().secEvidenceReadyCount, 1);
   assert.equal(response.json().unresolvedCount, 0);
   assert.equal(response.json().secIdentityCount, 2);
   assert.equal(response.json().quoteCompleteCount, 0);
