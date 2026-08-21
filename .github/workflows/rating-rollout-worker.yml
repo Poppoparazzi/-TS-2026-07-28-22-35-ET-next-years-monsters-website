@@ -1,4 +1,4 @@
-# TS: 2026-08-21 17:02 ET
+# TS: 2026-08-21 16:57 ET
 
 name: Monster Rating rollout worker
 
@@ -62,8 +62,35 @@ jobs:
             process.exit(0);
           }
 
+          // Do not spend a two-hour worker run against a stale rating route or an
+          // unconfigured provider. The recovery workflow owns deployment repair;
+          // this worker should only consume real provider quota when production is ready.
+          const [{ response: healthResponse, body: health }, ratingPreflight] = await Promise.all([
+            getJson(`${base}/api/health`),
+            getJson(`${base}/api/ratings/AAPL`),
+          ]);
+          if (!healthResponse.ok || !health) {
+            console.log(`Rating rollout deferred: /api/health returned HTTP ${healthResponse.status}.`);
+            process.exit(0);
+          }
+          if (health?.marketData?.configured !== true) {
+            console.log("Rating rollout deferred: licensed market-data provider is not configured in production.");
+            process.exit(0);
+          }
+          if (ratingPreflight.response.status === 404) {
+            console.log("Rating rollout deferred: /api/ratings/AAPL is not deployed yet. Render recovery must update the backend first.");
+            process.exit(0);
+          }
+          if (!ratingPreflight.response.ok) {
+            console.log(
+              `Rating rollout deferred: AAPL rating preflight returned HTTP ${ratingPreflight.response.status} ` +
+              `(${ratingPreflight.body?.error ?? ratingPreflight.body?.eligibilityCode ?? "unknown"}).`,
+            );
+            process.exit(0);
+          }
+
           // Before taking over, make sure the Render startup batch is not already
-          // advancing on its own. This prevents two workers from wasting free-plan credits.
+          // advancing on its own. This prevents two workers from wasting provider credits.
           console.log("Watching production for five minutes before taking over...");
           await sleep(300000);
           const second = await getStatus();
@@ -92,6 +119,7 @@ jobs:
           let ratedThisRun = 0;
           let skipped = 0;
           let consecutiveProviderStops = 0;
+          let consecutiveRouteMisses = 0;
 
           for (const company of candidates) {
             if (liveCount >= target) break;
@@ -118,9 +146,19 @@ jobs:
               ratedThisRun += 1;
               liveCount += 1;
               consecutiveProviderStops = 0;
+              consecutiveRouteMisses = 0;
               console.log(`[rated] ${ticker} score=${body.score} estimatedComplete=${liveCount}`);
+            } else if (response.status === 404) {
+              consecutiveRouteMisses += 1;
+              consecutiveProviderStops = 0;
+              console.log(`[route-missing] ${ticker} HTTP 404; consecutive=${consecutiveRouteMisses}`);
+              if (consecutiveRouteMisses >= 3) {
+                console.log("Three consecutive rating-route 404s. Ending this run instead of hammering a stale Render backend.");
+                break;
+              }
             } else if (response.status === 429 || response.status === 503) {
               consecutiveProviderStops += 1;
+              consecutiveRouteMisses = 0;
               console.log(`[provider-stop] ${ticker} HTTP ${response.status}; consecutive=${consecutiveProviderStops}`);
               if (consecutiveProviderStops >= 3) {
                 console.log("Provider appears rate- or daily-quota-limited. Ending this run safely; the hourly schedule will resume automatically.");
@@ -131,6 +169,7 @@ jobs:
             } else {
               skipped += 1;
               consecutiveProviderStops = 0;
+              consecutiveRouteMisses = 0;
               console.log(`[skip] ${ticker} HTTP ${response.status} eligible=${body?.eligible ?? null} code=${body?.eligibilityCode ?? body?.error ?? "unknown"}`);
             }
 
