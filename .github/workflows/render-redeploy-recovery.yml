@@ -1,4 +1,4 @@
-# TS: 2026-08-20 20:05 ET
+# TS: 2026-08-21 02:08 ET
 
 name: Render deploy recovery
 
@@ -306,10 +306,21 @@ jobs:
         run: node scripts/report-reserve-backfill.mjs
 
       - name: Classify SEC exceptions for repair versus replacement
+        id: sec_exceptions
         if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
         env:
           NYM_CANDIDATE_TARGET: "5000"
+          NYM_USABLE_TARGET: "2200"
         run: node scripts/report-sec-exceptions.mjs
+
+      - name: Persist exact SEC exception roster artifact
+        if: steps.sec_exceptions.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nym-sec-exception-roster
+          path: ${{ steps.sec_exceptions.outputs.exception_state_file || 'nym-sec-exceptions.json' }}
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Detect Vercel collateral authority
         id: vercel_auth
