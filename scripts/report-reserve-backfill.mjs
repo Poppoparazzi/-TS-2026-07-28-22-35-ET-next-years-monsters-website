@@ -1,4 +1,6 @@
-// TS: 2026-08-20 07:57 ET
+// TS: 2026-08-21 15:16 UTC
+
+import { isProtectedStock } from "./protected-stocks.mjs";
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -20,12 +22,6 @@ function validateTargets() {
 
 validateTargets();
 
-const mustResolve = new Set([
-  "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
-  "DECK", "WING", "META", "APP", "MSFT", "GOOGL", "GOOG", "AVGO", "PLTR", "CRDO",
-  "RKLB", "QCOM", "MU", "ARM", "DELL", "INTC", "MRVL", "HOOD", "COIN", "UBER",
-]);
-
 function asNonnegativeInteger(value, name) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
@@ -44,8 +40,7 @@ function roundUp(value, increment) {
 }
 
 function isProtectedCompany(company) {
-  const ticker = String(company?.ticker || "").toUpperCase();
-  return company?.isPilot === true || mustResolve.has(ticker);
+  return isProtectedStock(company);
 }
 
 function isSecEvidenceReady(company) {
@@ -102,6 +97,10 @@ async function requestJson(url) {
 const status = await requestJson(`${apiBaseUrl}/api/universe/status?limit=${candidateTarget}`);
 const universeSize = asNonnegativeInteger(status.universeSize, "universeSize");
 const examinedCount = asNonnegativeInteger(status.examinedCount, "examinedCount");
+const candidatesExaminedCount = asNonnegativeInteger(
+  status.candidatesExaminedCount,
+  "candidatesExaminedCount",
+);
 const secCompleteCount = asNonnegativeInteger(status.secCompleteCount, "secCompleteCount");
 const unresolvedCount = asNonnegativeInteger(status.unresolvedCount, "unresolvedCount");
 const failedCount = asNonnegativeInteger(status.failedCount, "failedCount");
@@ -117,12 +116,20 @@ if (status.secEvidenceReadyCount !== undefined && secEvidenceReadyCount !== loca
   );
 }
 const usableShortfall = Math.max(usableTarget - secEvidenceReadyCount, 0);
-const preparedCandidateHeadroom = Math.max(candidateTarget - examinedCount, 0);
-const loadedCandidateHeadroom = Math.max(Math.min(universeSize, candidateTarget) - examinedCount, 0);
+const preparedCandidateHeadroom = Math.max(candidateTarget - candidatesExaminedCount, 0);
+const loadedCandidateHeadroom = Math.max(
+  Math.min(universeSize, candidateTarget) - candidatesExaminedCount,
+  0,
+);
 const candidateImportShortfall = Math.max(candidateTarget - universeSize, 0);
 const candidateTargetLoaded = candidateImportShortfall === 0;
-const observedSecCompletionRate = examinedCount > 0 ? secEvidenceReadyCount / examinedCount : 0;
-const observedSecCompletionRatePercent = roundedPercent(secEvidenceReadyCount, examinedCount);
+const observedSecCompletionRate = candidatesExaminedCount > 0
+  ? secEvidenceReadyCount / candidatesExaminedCount
+  : 0;
+const observedSecCompletionRatePercent = roundedPercent(
+  secEvidenceReadyCount,
+  candidatesExaminedCount,
+);
 const minimumLoadedSuccessRatePercent =
   usableShortfall === 0 ? 0 : roundedPercent(usableShortfall, loadedCandidateHeadroom);
 const minimumPreparedSuccessRatePercent =
@@ -145,10 +152,10 @@ const estimatedAdditionalCandidatesNeededAtObservedRate =
 const estimatedTotalCandidatesNeededAtObservedRate =
   estimatedAdditionalCandidatesNeededAtObservedRate === null
     ? null
-    : examinedCount + estimatedAdditionalCandidatesNeededAtObservedRate;
+    : candidatesExaminedCount + estimatedAdditionalCandidatesNeededAtObservedRate;
 const observedRateProjectsTargetSuccess = projectedSecCompleteAtCandidateTarget >= usableTarget;
 const secCountTargetSatisfied = secEvidenceReadyCount >= usableTarget;
-const candidatePoolExhausted = examinedCount >= candidateTarget;
+const candidatePoolExhausted = candidatesExaminedCount >= candidateTarget;
 
 const recommendedCandidateTarget = (() => {
   if (secCountTargetSatisfied || observedRateProjectsTargetSuccess) return candidateTarget;
@@ -164,8 +171,23 @@ const expansionCeilingReached =
 const unresolved = companies.filter((company) => company?.secStage === "unresolved");
 const failed = companies.filter((company) => company?.secStage === "failed");
 const exceptions = [...unresolved, ...failed];
+const protectedMissingTickers = Array.isArray(status?.protectedMissingTickers)
+  ? status.protectedMissingTickers.map((ticker) => String(ticker).toUpperCase())
+  : [];
 
-const mustFix = companies
+const mustFix = [
+  ...protectedMissingTickers.map((ticker) => ({
+    ticker,
+    companyName: null,
+    secStage: "missing",
+    isPilot: false,
+    hasSecIdentity: false,
+    hasFilings: false,
+    hasFacts: false,
+    reason: "protected_ticker_missing",
+    lastError: "Protected ticker is absent from the active candidate universe.",
+  })),
+  ...companies
   .filter((company) => isProtectedCompany(company) && !isSecEvidenceReady(company))
   .map((company) => ({
     ticker: company.ticker,
@@ -177,10 +199,42 @@ const mustFix = companies
     hasFacts: company.hasFacts === true,
     reason: exceptionReason(company),
     lastError: company.lastError ?? null,
-  }));
+  })),
+];
 const replaceableCompanies = exceptions.filter((company) => !isProtectedCompany(company));
 const replaceableVisible = replaceableCompanies.map((company) => company.ticker);
-const targetSatisfied = secCountTargetSatisfied && mustFix.length === 0 && failedCount === 0;
+const apiProtectedMustRepairCount = asNonnegativeInteger(
+  status.protectedMustRepairCount,
+  "protectedMustRepairCount",
+);
+const apiReplaceableFailureCount = asNonnegativeInteger(
+  status.replaceableFailureCount,
+  "replaceableFailureCount",
+);
+const replacementsAttemptedCount = asNonnegativeInteger(
+  status.replacementsAttemptedCount,
+  "replacementsAttemptedCount",
+);
+const finalUsableUniverseCount = asNonnegativeInteger(
+  status.finalUsableUniverseCount,
+  "finalUsableUniverseCount",
+);
+if (apiProtectedMustRepairCount !== mustFix.length) {
+  throw new Error(
+    `Protected must-repair count mismatch: API=${apiProtectedMustRepairCount}, derived=${mustFix.length}.`,
+  );
+}
+if (apiReplaceableFailureCount !== replaceableCompanies.length) {
+  throw new Error(
+    `Replaceable failure count mismatch: API=${apiReplaceableFailureCount}, derived=${replaceableCompanies.length}.`,
+  );
+}
+if (finalUsableUniverseCount !== secEvidenceReadyCount) {
+  throw new Error(
+    `Final usable count mismatch: API=${finalUsableUniverseCount}, evidence-ready=${secEvidenceReadyCount}.`,
+  );
+}
+const targetSatisfied = secCountTargetSatisfied && mustFix.length === 0;
 
 const exceptionReasonBuckets = new Map();
 const exceptionExchangeBuckets = new Map();
@@ -198,8 +252,10 @@ const report = {
   candidateTargetLoaded,
   candidateImportShortfall,
   examinedCount,
+  candidatesExaminedCount,
   secCompleteCount,
   secEvidenceReadyCount,
+  finalUsableUniverseCount,
   unresolvedCount,
   failedCount,
   usableShortfall,
@@ -227,6 +283,12 @@ const report = {
   mustFix,
   replaceableVisibleCount: replaceableVisible.length,
   replaceableVisible,
+  replaceableFailureCount: apiReplaceableFailureCount,
+  replacementsAttemptedCount,
+  reserveCandidatesRemainingCount: asNonnegativeInteger(
+    status.reserveCandidatesRemainingCount,
+    "reserveCandidatesRemainingCount",
+  ),
   exceptionReasonBuckets: Object.fromEntries([...exceptionReasonBuckets.entries()].sort((a, b) => b[1] - a[1])),
   exceptionExchangeBuckets: Object.fromEntries([...exceptionExchangeBuckets.entries()].sort((a, b) => b[1] - a[1])),
   sampleReplaceable: replaceableCompanies.slice(0, 50).map((company) => ({
@@ -240,17 +302,15 @@ const report = {
   note:
     !candidateTargetLoaded
       ? `Production currently has ${universeSize} active candidates loaded of the prepared ${candidateTarget} target. Only ${loadedCandidateHeadroom} additional loaded candidates are executable now; ${candidateImportShortfall} more candidates still need to be imported. Prepared headroom is ${preparedCandidateHeadroom}, so do not treat the configured reserve as live capacity yet.`
-      : examinedCount < candidateTarget
+      : candidatesExaminedCount < candidateTarget
         ? observedRateProjectsTargetSuccess
           ? `At the observed ${observedSecCompletionRatePercent}% SEC-evidence-ready rate, production needs about ${estimatedAdditionalCandidatesNeededAtObservedRate} more candidates (${estimatedTotalCandidatesNeededAtObservedRate} total examined) to reach ${usableTarget}. Filling all ${preparedCandidateHeadroom} remaining slots projects roughly ${projectedSecCompleteAtCandidateTarget} evidence-ready stocks, a ${projectedUsableSurplusAtCandidateTarget}-stock cushion.`
           : expansionRecommended
             ? `The current ${candidateTarget}-candidate pool does not project reaching ${usableTarget} SEC-evidence-ready stocks. Expand to at least ${recommendedCandidateTarget} candidates instead of retrying unchanged lower-priority unresolved names.`
             : `Production has ${preparedCandidateHeadroom} unused candidate slots for a ${usableShortfall}-stock SEC-evidence-ready shortfall.`
         : targetSatisfied
-          ? `Production has at least ${usableTarget} SEC-evidence-ready companies, every protected stock is evidence-ready, and no SEC records remain failed. The reserve milestone is complete.`
-          : secCountTargetSatisfied && failedCount > 0
-            ? `Production has at least ${usableTarget} SEC-evidence-ready companies, but ${failedCount} SEC record(s) remain failed. Keep cleanup running until those rows become complete or explicit nonblocking unresolved exceptions; do not call the reserve milestone complete yet.`
-            : secCountTargetSatisfied && mustFix.length > 0
+          ? `Production has at least ${usableTarget} SEC-evidence-ready companies and every protected stock is evidence-ready. Ordinary exceptions remain auditable and replaceable without blocking the reserve milestone.`
+          : secCountTargetSatisfied && mustFix.length > 0
               ? `Production has at least ${usableTarget} SEC-evidence-ready companies, but ${mustFix.length} protected stock(s) remain incomplete. Keep those names on the mandatory repair path; lower-priority unresolved names remain replaceable exceptions.`
               : expansionRecommended
                 ? `The ${candidateTarget}-candidate pool is exhausted and still needs ${usableShortfall} SEC-evidence-ready companies. Expand to ${recommendedCandidateTarget} candidates rather than retrying unchanged lower-priority unresolved names.`

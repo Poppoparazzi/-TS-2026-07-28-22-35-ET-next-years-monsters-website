@@ -1,6 +1,6 @@
 # Render Deployment Required
 
-<!-- TS: 2026-08-19 11:01 ET -->
+<!-- TS: 2026-08-21 15:16 UTC -->
 
 ## Confirmed production blocker
 
@@ -10,11 +10,11 @@ The production strategy is intentionally overfilled:
 
 - candidate universe: **5,000**
 - SEC startup batch capacity: **5,000**
-- usable SEC-complete target: **2,000 or more**
+- usable SEC evidence-ready target: **2,200 or more**
 - SEC worker concurrency: **8**
 - completed-record refresh age: **720 hours / 30 days**
 
-The purpose is to stop treating the original fixed 2,000 attempted stocks as the finish line. Low-priority unresolved names may remain exceptions while successful reserve candidates push the usable SEC-complete population above 2,000. Protected pilot stocks remain repair targets and must not be silently replaced.
+The purpose is to stop treating the original fixed 2,000 attempted stocks as the finish line. Ordinary failures become auditable replaceable exceptions while successful reserve candidates push the usable SEC evidence-ready population to at least 2,200. Protected pilot and strategic stocks remain mandatory repair targets and must not be silently replaced.
 
 ## Render dashboard steps
 
@@ -35,7 +35,7 @@ The purpose is to stop treating the original fixed 2,000 attempted stocks as the
    - `MARKET_DATA_PROVIDER=unconfigured`
    - `AUTO_IMPORT_UNIVERSE_LIMIT=5000`
    - `AUTO_SEC_BATCH_SIZE=5000`
-   - `SEC_USABLE_TARGET=2000`
+   - `SEC_USABLE_TARGET=2200`
    - `SEC_BATCH_CONCURRENCY=8`
    - `SEC_BATCH_MAX_AGE_HOURS=720`
    - `AUTO_REFRESH_PILOT_ON_START=true`
@@ -70,9 +70,9 @@ The deployment is complete only when all of these are true:
 - `/api/ratings/AAPL` exists and fails closed with `score: null` until real provider-backed rating inputs are connected
 - `/api/universe/status?limit=5000` can report the loaded reserve population without a hidden 2,000 or 2,500 ceiling
 - pipeline-state counts reconcile with the examined company count
-- SEC-complete reaches **at least 2,000** without requiring every low-priority unresolved candidate to resolve
-- remaining `failed` SEC rows are cleaned up or reclassified appropriately
-- protected pilot stocks are SEC-complete before the reserve worker declares the target satisfied
+- SEC evidence-ready reaches **at least 2,200** without requiring every ordinary exception to resolve
+- ordinary failures are retained in the replaceable roster and replaced from the reserve
+- protected pilot and strategic stocks are SEC evidence-ready before the reserve worker declares the target satisfied
 - `quoteCompleteCount` and `ratingCompleteCount` advance only from real provider data
 - `factory-status.html` displays production counts instead of an unavailable message
 - production smoke workflow passes

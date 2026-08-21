@@ -1,4 +1,4 @@
-// TS: 2026-08-21 07:01 ET
+// TS: 2026-08-21 15:16 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -51,11 +51,11 @@ class MemoryQueue implements SecBatchQueue {
   public readonly claimLimits: number[] = [];
   public closed = false;
   private readonly candidates: SecBatchCandidate[] = [
-    Object.freeze({ ticker: "AAPL", attemptCount: 1, isPilot: true }),
-    Object.freeze({ ticker: "FAIL", attemptCount: 2, isPilot: false }),
-    Object.freeze({ ticker: "EXHAUST", attemptCount: 3, isPilot: false }),
-    Object.freeze({ ticker: "NOSEC", attemptCount: 1, isPilot: false }),
-    Object.freeze({ ticker: "NVDA", attemptCount: 1, isPilot: true }),
+    Object.freeze({ ticker: "AAPL", attemptCount: 1, isPilot: true, isProtected: true }),
+    Object.freeze({ ticker: "FAIL", attemptCount: 2, isPilot: false, isProtected: false }),
+    Object.freeze({ ticker: "EXHAUST", attemptCount: 3, isPilot: false, isProtected: false }),
+    Object.freeze({ ticker: "NOSEC", attemptCount: 1, isPilot: false, isProtected: false }),
+    Object.freeze({ ticker: "NVDA", attemptCount: 1, isPilot: true, isProtected: true }),
   ];
 
   public async claim(
@@ -154,8 +154,9 @@ async function refreshOverride(
   });
 }
 
-test("protected unresolved pilots are eligible for a bounded daily SEC retry", () => {
+test("all protected unresolved stocks are eligible for a bounded daily SEC retry", () => {
   assert.match(SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL, /c\.is_pilot = true/);
+  assert.match(SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL, /c\.ticker IN \([^)]*MNST/);
   assert.match(SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL, /cps\.sec_status = 'unresolved'/);
   assert.match(SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL, /interval '24 hours'/);
   assert.match(
@@ -170,25 +171,27 @@ test("historic duplicate-CIK failures are cleaned by constraint identity, not on
   assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /ILIKE '%companies_sec_cik_unique%'/);
   assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /sec_status = 'unresolved'/);
   assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /next_retry_at = NULL/);
+  assert.match(CLEANUP_DUPLICATE_CIK_FAILURES_SQL, /AND NOT \(c\.is_pilot = true OR c\.ticker IN/);
 });
 
 test("ordinary SEC failures stop retrying after three attempts and become replaceable", () => {
-  assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /c\.is_pilot = false/);
+  assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /AND NOT \(c\.is_pilot = true OR c\.ticker IN/);
   assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /cps\.sec_status = 'failed'/);
   assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /cps\.sec_attempt_count >= 3/);
   assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /sec_status = 'unresolved'/);
   assert.match(PROMOTE_EXHAUSTED_FAILURES_SQL, /next_retry_at = NULL/);
 });
 
-test("third non-pilot SEC failure becomes replaceable immediately without another queue pass", () => {
-  assert.match(MARK_FAILED_SQL, /c\.is_pilot = false AND cps\.sec_attempt_count >= 3/);
+test("third ordinary SEC failure becomes replaceable while protected stocks stay failed", () => {
+  assert.match(MARK_FAILED_SQL, /WHEN NOT \(c\.is_pilot = true OR c\.ticker IN/);
+  assert.match(MARK_FAILED_SQL, /AND cps\.sec_attempt_count >= 3 THEN 'unresolved'/);
   assert.match(MARK_FAILED_SQL, /THEN 'unresolved'/);
   assert.match(MARK_FAILED_SQL, /ELSE 'failed'/);
   assert.match(MARK_FAILED_SQL, /THEN NULL/);
   assert.match(MARK_FAILED_SQL, /make_interval/);
 });
 
-test("bulk SEC workers report exhausted non-pilot failures as unresolved, matching final database state", async () => {
+test("bulk SEC workers replace ordinary failures immediately and continue through reserve", async () => {
   const queue = new MemoryQueue();
   const persistenceStore = new MemoryPersistence();
 
@@ -208,26 +211,29 @@ test("bulk SEC workers report exhausted non-pilot failures as unresolved, matchi
   assert.equal(summary.requestedBatchSize, 5_000);
   assert.equal(summary.claimedCount, 5);
   assert.equal(summary.succeededCount, 2);
-  assert.equal(summary.unresolvedCount, 2);
-  assert.equal(summary.failedCount, 1);
-  assert.deepEqual([...summary.unresolvedTickers].sort(), ["EXHAUST", "NOSEC"]);
+  assert.equal(summary.unresolvedCount, 3);
+  assert.equal(summary.failedCount, 0);
+  assert.equal(summary.protectedMustRepairCount, 0);
+  assert.equal(summary.replaceableFailureCount, 3);
+  assert.equal(summary.replacementsAttemptedCount, 2);
+  assert.deepEqual([...summary.unresolvedTickers].sort(), ["EXHAUST", "FAIL", "NOSEC"]);
   assert.deepEqual(queue.completed.sort(), ["AAPL", "NVDA"]);
-  assert.deepEqual(queue.unresolved, [
-    { ticker: "NOSEC", message: "SEC EDGAR request failed with HTTP 404." },
-  ]);
-  assert.deepEqual(queue.failed, [
-    { ticker: "FAIL", message: "Synthetic SEC failure." },
-    { ticker: "EXHAUST", message: "Synthetic SEC failure." },
-  ]);
-  assert.equal(summary.failures.length, 1);
-  assert.equal(summary.failures[0]?.ticker, "FAIL");
-  assert.equal(summary.failures[0]?.attemptCount, 2);
+  assert.deepEqual(
+    queue.unresolved.sort((left, right) => left.ticker.localeCompare(right.ticker)),
+    [
+      { ticker: "EXHAUST", message: "Synthetic SEC failure." },
+      { ticker: "FAIL", message: "Synthetic SEC failure." },
+      { ticker: "NOSEC", message: "SEC EDGAR request failed with HTTP 404." },
+    ],
+  );
+  assert.deepEqual(queue.failed, []);
+  assert.equal(summary.failures.length, 0);
   assert.deepEqual(queue.claimLimits, [3, 3, 3]);
   assert.equal(queue.closed, true);
   assert.equal(persistenceStore.closed, true);
 });
 
-test("bulk SEC workers mark a duplicate active SEC identity unresolved", async () => {
+test("bulk SEC workers keep protected duplicate-identity failures on must-repair", async () => {
   const queue = new MemoryQueue();
   const persistenceStore = new MemoryPersistence();
 
@@ -257,19 +263,22 @@ test("bulk SEC workers mark a duplicate active SEC identity unresolved", async (
   );
 
   assert.equal(summary.succeededCount, 0);
-  assert.equal(summary.failedCount, 0);
-  assert.equal(summary.unresolvedCount, 1);
-  assert.deepEqual(summary.unresolvedTickers, ["AAPL"]);
-  assert.deepEqual(queue.failed, []);
-  assert.deepEqual(queue.unresolved, [
+  assert.equal(summary.failedCount, 1);
+  assert.equal(summary.unresolvedCount, 0);
+  assert.equal(summary.protectedMustRepairCount, 1);
+  assert.equal(summary.replaceableFailureCount, 0);
+  assert.deepEqual(summary.unresolvedTickers, []);
+  assert.deepEqual(queue.failed, [
     {
       ticker: "AAPL",
       message: 'duplicate key value violates unique constraint "companies_sec_cik_unique"',
     },
   ]);
+  assert.deepEqual(queue.unresolved, []);
+  assert.equal(summary.failures[0]?.disposition, "must_repair");
 });
 
-test("bulk SEC workers recover a wrapped duplicate SEC identity from the exact constraint message", async () => {
+test("wrapped protected duplicate-identity failures also remain must-repair", async () => {
   const queue = new MemoryQueue();
   const persistenceStore = new MemoryPersistence();
 
@@ -296,14 +305,15 @@ test("bulk SEC workers recover a wrapped duplicate SEC identity from the exact c
   );
 
   assert.equal(summary.succeededCount, 0);
-  assert.equal(summary.failedCount, 0);
-  assert.equal(summary.unresolvedCount, 1);
-  assert.deepEqual(summary.unresolvedTickers, ["AAPL"]);
-  assert.deepEqual(queue.failed, []);
-  assert.deepEqual(queue.unresolved, [
+  assert.equal(summary.failedCount, 1);
+  assert.equal(summary.unresolvedCount, 0);
+  assert.equal(summary.protectedMustRepairCount, 1);
+  assert.deepEqual(summary.unresolvedTickers, []);
+  assert.deepEqual(queue.failed, [
     {
       ticker: "AAPL",
       message: 'duplicate key value violates unique constraint "companies_sec_cik_unique"',
     },
   ]);
+  assert.deepEqual(queue.unresolved, []);
 });

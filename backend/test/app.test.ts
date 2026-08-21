@@ -1,4 +1,4 @@
-// TS: 2026-08-01 21:19 ET
+// TS: 2026-08-21 15:16 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -17,6 +17,7 @@ import type {
 import type {
   SecCompany,
   SecCompanyFactsSummary,
+  SecDataProvider,
   SecFilingSummary,
 } from "../src/sec/types.js";
 
@@ -132,6 +133,70 @@ class MemoryPersistenceStore implements PersistenceStore {
   public async close(): Promise<void> {}
 }
 
+class StaticSecDataProvider implements SecDataProvider {
+  public readonly name = "static-test-sec";
+  public readonly configured = true;
+
+  public async getCompany(symbol: string): Promise<SecCompany> {
+    return Object.freeze({
+      ticker: symbol,
+      cik: 320193,
+      cikPadded: "0000320193",
+      companyName: "Apple Inc.",
+      exchange: "Nasdaq",
+      sourceUrl: "https://www.sec.gov/edgar/browse/?CIK=320193",
+    });
+  }
+
+  public async getRecentFilings(symbol: string): Promise<readonly SecFilingSummary[]> {
+    return Object.freeze([
+      Object.freeze({
+        ticker: symbol,
+        cik: 320193,
+        companyName: "Apple Inc.",
+        accessionNumber: "0000320193-26-000001",
+        filingDate: "2026-08-20",
+        reportDate: "2026-06-30",
+        acceptanceDateTime: "2026-08-20T20:00:00.000Z",
+        form: "10-Q",
+        fileNumber: "001-36743",
+        primaryDocument: "aapl-20260630.htm",
+        primaryDocumentUrl: "https://www.sec.gov/Archives/edgar/data/320193/aapl-20260630.htm",
+      }),
+    ]);
+  }
+
+  public async getCompanyFacts(symbol: string): Promise<SecCompanyFactsSummary> {
+    return Object.freeze({
+      ticker: symbol,
+      cik: 320193,
+      companyName: "Apple Inc.",
+      retrievedAt: "2026-08-21T15:00:00.000Z",
+      sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+      disclosure: "Test SEC facts.",
+      facts: Object.freeze({
+        revenue: Object.freeze({
+          key: "revenue",
+          taxonomy: "us-gaap",
+          tag: "RevenueFromContractWithCustomerExcludingAssessedTax",
+          label: "Revenue",
+          description: "Quarterly revenue.",
+          unit: "USD",
+          value: 100,
+          form: "10-Q",
+          fiscalYear: 2026,
+          fiscalPeriod: "Q3",
+          periodStart: "2026-04-01",
+          periodEnd: "2026-06-30",
+          filed: "2026-08-20",
+          accessionNumber: "0000320193-26-000001",
+          sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+        }),
+      }),
+    });
+  }
+}
+
 test("health and provider status never expose configured secrets", async (t) => {
   const provider = new StaticMarketDataProvider();
   const app = await buildApp({ config: testConfig(), provider, logger: false });
@@ -179,6 +244,30 @@ test("quote route normalizes valid symbols and rejects unsupported characters", 
   assert.equal(invalid.statusCode, 400);
   assert.equal(invalid.json().error, "invalid_symbol");
   assert.equal(provider.quoteCalls, 1);
+});
+
+test("production rating route resolves a ticker with a stable fail-closed contract", async (t) => {
+  const app = await buildApp({
+    config: testConfig(),
+    provider: new StaticMarketDataProvider(),
+    secProvider: new StaticSecDataProvider(),
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({ method: "GET", url: "/api/ratings/aapl" });
+  const rating = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(rating.symbol, "AAPL");
+  assert.equal(rating.engineVersion, "nym-current-stock-rating-v0.1-readiness-only");
+  assert.equal(rating.eligible, false);
+  assert.equal(rating.score, null);
+  assert.equal(rating.tier, "NOT YET RATED");
+  assert.equal(Array.isArray(rating.evidenceInputs), true);
+  assert.equal(Array.isArray(rating.components), true);
+  assert.equal(Array.isArray(rating.reasons), true);
+  assert.ok(rating.reasons.length > 0);
 });
 
 test("quote retrieval persists a snapshot that can be read later", async (t) => {

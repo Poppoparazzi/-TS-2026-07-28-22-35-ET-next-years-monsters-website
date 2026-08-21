@@ -1,4 +1,4 @@
-// TS: 2026-08-21 07:01 ET
+// TS: 2026-08-21 15:16 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -19,6 +19,8 @@ function company(
     exchange: "NASDAQ",
     secCik: secStage === "complete" ? "0000000001" : null,
     isPilot,
+    isProtected: isPilot || ["AAPL", "NVDA", "MNST"].includes(ticker),
+    isReplacement: false,
     secStage,
     secAttemptCount: 1,
     lastError: null,
@@ -44,6 +46,7 @@ function status(
     requestedLimit: 5_000,
     universeSize: 5_000,
     examinedCount: 5_000,
+    candidatesExaminedCount: 5_000,
     queuedCount: 0,
     processingCount: 0,
     secCompleteCount: 2_200,
@@ -58,13 +61,28 @@ function status(
     quoteCompleteCount: 0,
     ratingCompleteCount: 0,
     fullyCompleteCount: 0,
+    finalUsableUniverseCount: 2_200,
     incompleteCount: 2_800,
+    protectedTickerCount: 30,
+    protectedPresentCount: companies.filter((item) => item.isProtected).length,
+    protectedMissingCount: 0,
+    protectedMissingTickers: Object.freeze([]),
+    protectedMustRepairCount: companies.filter(
+      (item) => item.isProtected && item.secStage !== "complete",
+    ).length,
+    protectedMustRepairTickers: Object.freeze(
+      companies.filter((item) => item.isProtected && item.secStage !== "complete").map((item) => item.ticker),
+    ),
+    replaceableFailureCount: 2_800,
+    replaceableFailureTickers: Object.freeze([]),
+    replacementsAttemptedCount: 2_800,
+    reserveCandidatesRemainingCount: 0,
     companies,
     ...overrides,
   });
 }
 
-test("SEC backfill stops only after the 2200 evidence-ready target, zero failures, and all protected stocks are complete", () => {
+test("SEC backfill stops after the 2200 target and all protected stocks are complete", () => {
   const completeProtected = status([
     company("AAPL", true, "complete"),
     company("NVDA", true, "complete"),
@@ -117,7 +135,21 @@ test("SEC backfill stops only after the 2200 evidence-ready target, zero failure
 
   assert.equal(
     shouldSkipSecBackfill(status(completeProtected.companies, { failedCount: 1 }), 2_200),
+    true,
+    "replaceable ordinary failures must not block a completed broad reserve",
+  );
+
+  assert.equal(
+    shouldSkipSecBackfill(
+      status(completeProtected.companies, {
+        protectedMissingCount: 1,
+        protectedMissingTickers: Object.freeze(["GOOG"]),
+        protectedMustRepairCount: 1,
+        protectedMustRepairTickers: Object.freeze(["GOOG"]),
+      }),
+      2_200,
+    ),
     false,
-    "remaining failed SEC records must keep cleanup running",
+    "a protected ticker missing from the candidate universe must block completion",
   );
 });

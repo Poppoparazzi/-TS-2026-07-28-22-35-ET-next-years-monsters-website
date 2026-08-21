@@ -1,4 +1,4 @@
-// TS: 2026-08-21 07:01 ET
+// TS: 2026-08-21 15:16 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -12,12 +12,18 @@ import type {
 } from "../src/universe/types.js";
 
 function company(overrides: Partial<UniverseCompanyStatus> = {}): UniverseCompanyStatus {
+  const ticker = overrides.ticker ?? "TEST";
+  const isPilot = overrides.isPilot ?? false;
   return Object.freeze({
-    ticker: "TEST",
+    ticker,
     companyName: "Test Company",
     exchange: "NASDAQ",
     secCik: "0000000001",
-    isPilot: false,
+    isPilot,
+    isProtected:
+      overrides.isProtected ??
+      (isPilot || ["AAPL", "NVDA", "MNST", "MSFT"].includes(ticker)),
+    isReplacement: false,
     secStage: "complete",
     secAttemptCount: 1,
     lastError: null,
@@ -50,6 +56,7 @@ function status(companies: readonly UniverseCompanyStatus[], failedCount = 0): U
     requestedLimit: 5_000,
     universeSize: companies.length,
     examinedCount: companies.length,
+    candidatesExaminedCount: companies.length,
     queuedCount: 0,
     processingCount: 0,
     secCompleteCount,
@@ -64,7 +71,22 @@ function status(companies: readonly UniverseCompanyStatus[], failedCount = 0): U
     quoteCompleteCount: 0,
     ratingCompleteCount: 0,
     fullyCompleteCount: 0,
+    finalUsableUniverseCount: evidenceReadyCount,
     incompleteCount: companies.length,
+    protectedTickerCount: 30,
+    protectedPresentCount: companies.filter((item) => item.isProtected).length,
+    protectedMissingCount: 0,
+    protectedMissingTickers: Object.freeze([]),
+    protectedMustRepairCount: companies.filter(
+      (item) =>
+        item.isProtected &&
+        !(item.secStage === "complete" && item.hasSecIdentity && item.hasFilings && item.hasFacts),
+    ).length,
+    protectedMustRepairTickers: Object.freeze([]),
+    replaceableFailureCount: 0,
+    replaceableFailureTickers: Object.freeze([]),
+    replacementsAttemptedCount: 0,
+    reserveCandidatesRemainingCount: 0,
     companies: Object.freeze([...companies]),
   });
 }
@@ -97,10 +119,10 @@ test("incomplete protected pilot blocks completion even when broad evidence targ
   assert.equal(shouldSkipSecBackfill(snapshot, 2), false);
 });
 
-test("remaining failed SEC rows still block completion", () => {
+test("replaceable ordinary failed rows do not block an evidence-ready universe", () => {
   const companies = [company({ ticker: "AAPL", isPilot: true }), company({ ticker: "MSFT" })];
   const snapshot = status(companies, 1);
 
   assert.equal(secEvidenceReadyCount(snapshot), 2);
-  assert.equal(shouldSkipSecBackfill(snapshot, 2), false);
+  assert.equal(shouldSkipSecBackfill(snapshot, 2), true);
 });

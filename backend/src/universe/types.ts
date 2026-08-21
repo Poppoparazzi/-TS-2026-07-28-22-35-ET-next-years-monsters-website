@@ -1,4 +1,4 @@
-// TS: 2026-08-20 07:57 ET
+// TS: 2026-08-21 15:16 UTC
 
 export type PipelineStatus =
   | "queued"
@@ -32,6 +32,8 @@ export interface UniverseCompanyStatus {
   readonly exchange: string | null;
   readonly secCik: string | null;
   readonly isPilot: boolean;
+  readonly isProtected: boolean;
+  readonly isReplacement: boolean;
   readonly secStage: PipelineStatus;
   readonly secAttemptCount: number;
   readonly lastError: string | null;
@@ -52,6 +54,7 @@ export interface UniverseStatusSummary {
   readonly requestedLimit: number;
   readonly universeSize: number;
   readonly examinedCount: number;
+  readonly candidatesExaminedCount: number;
   readonly queuedCount: number;
   readonly processingCount: number;
   readonly secCompleteCount: number;
@@ -66,7 +69,18 @@ export interface UniverseStatusSummary {
   readonly quoteCompleteCount: number;
   readonly ratingCompleteCount: number;
   readonly fullyCompleteCount: number;
+  readonly finalUsableUniverseCount: number;
   readonly incompleteCount: number;
+  readonly protectedTickerCount: number;
+  readonly protectedPresentCount: number;
+  readonly protectedMissingCount: number;
+  readonly protectedMissingTickers: readonly string[];
+  readonly protectedMustRepairCount: number;
+  readonly protectedMustRepairTickers: readonly string[];
+  readonly replaceableFailureCount: number;
+  readonly replaceableFailureTickers: readonly string[];
+  readonly replacementsAttemptedCount: number;
+  readonly reserveCandidatesRemainingCount: number;
   readonly companies: readonly UniverseCompanyStatus[];
 }
 

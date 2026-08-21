@@ -1,7 +1,12 @@
-// TS: 2026-08-20 07:57 ET
+// TS: 2026-08-21 15:16 UTC
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
+import {
+  isProtectedCompany,
+  PROTECTED_COMPANY_SQL_PREDICATE,
+  PROTECTED_STRATEGIC_TICKERS,
+} from "../policy/protected-stocks.js";
 import { ProviderNotConfiguredError } from "../providers/types.js";
 import type {
   PipelineStatus,
@@ -16,19 +21,10 @@ const { Pool } = pg;
 type DatabasePool = InstanceType<typeof Pool>;
 
 export const DEACTIVATE_UNIVERSE_SQL = `
-  UPDATE companies
+  UPDATE companies c
   SET is_active = false
-  WHERE is_active = true
-`;
-
-export const RELEASE_INACTIVE_CIK_SQL = `
-  UPDATE companies
-  SET
-    sec_cik = NULL,
-    updated_at = clock_timestamp()
-  WHERE sec_cik = $1::varchar(10)
-    AND ticker <> $2::varchar(15)
-    AND is_active = false
+  WHERE c.is_active = true
+    AND NOT ${PROTECTED_COMPANY_SQL_PREDICATE}
 `;
 
 export const UPSERT_UNIVERSE_COMPANY_SQL = `
@@ -46,22 +42,13 @@ export const UPSERT_UNIVERSE_COMPANY_SQL = `
     $2::text,
     $3::text,
     'USD',
-    CASE
-      WHEN EXISTS (
-        SELECT 1
-        FROM companies existing
-        WHERE existing.sec_cik = $4::varchar(10)
-          AND existing.ticker <> $1::varchar(15)
-          AND existing.is_active = true
-      ) THEN NULL::varchar(10)
-      ELSE $4::varchar(10)
-    END,
+    $4::varchar(10),
     true,
     clock_timestamp()
   ON CONFLICT (ticker) DO UPDATE SET
     company_name = EXCLUDED.company_name,
     exchange = COALESCE(EXCLUDED.exchange, companies.exchange),
-    sec_cik = COALESCE(EXCLUDED.sec_cik, companies.sec_cik),
+    sec_cik = EXCLUDED.sec_cik,
     is_active = true,
     updated_at = EXCLUDED.updated_at
   RETURNING id
@@ -73,6 +60,7 @@ interface UniverseStatusRow {
   readonly exchange: string | null;
   readonly sec_cik: string | null;
   readonly is_pilot: boolean;
+  readonly replacement_attempted: boolean;
   readonly sec_status: PipelineStatus;
   readonly sec_attempt_count: string | number;
   readonly last_error: string | null;
@@ -143,8 +131,6 @@ export class PostgresUniverseStore implements UniverseStore {
       await client.query(DEACTIVATE_UNIVERSE_SQL);
 
       for (const company of companies) {
-        await client.query(RELEASE_INACTIVE_CIK_SQL, [company.cikPadded, company.ticker]);
-
         const companyResult = await client.query<{ id: string | number }>(
           UPSERT_UNIVERSE_COMPANY_SQL,
           [company.ticker, company.companyName, company.exchange, company.cikPadded],
@@ -206,6 +192,7 @@ export class PostgresUniverseStore implements UniverseStore {
               c.exchange,
               c.sec_cik,
               c.is_pilot,
+              COALESCE(cps.replacement_attempted, false) AS replacement_attempted,
               COALESCE(cps.sec_status, 'queued') AS sec_status,
               COALESCE(cps.sec_attempt_count, 0) AS sec_attempt_count,
               cps.last_error,
@@ -225,7 +212,7 @@ export class PostgresUniverseStore implements UniverseStore {
             LEFT JOIN company_pipeline_status cps ON cps.company_id = c.id
             WHERE c.is_active = true
             ORDER BY
-              c.is_pilot DESC,
+              CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
               CASE WHEN COALESCE(cps.sec_status, 'queued') = 'complete' THEN 0 ELSE 1 END,
               c.updated_at ASC,
               c.ticker
@@ -244,6 +231,8 @@ export class PostgresUniverseStore implements UniverseStore {
           exchange: row.exchange,
           secCik: row.sec_cik,
           isPilot: row.is_pilot,
+          isProtected: isProtectedCompany(row.ticker, row.is_pilot),
+          isReplacement: row.replacement_attempted,
           secStage: row.sec_status,
           secAttemptCount: count(row.sec_attempt_count),
           lastError: row.last_error,
@@ -269,6 +258,9 @@ export class PostgresUniverseStore implements UniverseStore {
           company.hasFilings &&
           company.hasFacts,
       ).length;
+      const candidatesExaminedCount = companies.filter(
+        (company) => company.secAttemptCount > 0,
+      ).length;
       const partialCount = companies.filter((company) => company.secStage === "partial").length;
       const failedCount = companies.filter((company) => company.secStage === "failed").length;
       const staleCount = companies.filter((company) => company.secStage === "stale").length;
@@ -286,6 +278,39 @@ export class PostgresUniverseStore implements UniverseStore {
           company.hasQuote &&
           company.hasRating,
       ).length;
+      const protectedPresentTickers = new Set(
+        companies
+          .filter((company) => company.isProtected)
+          .map((company) => company.ticker),
+      );
+      const protectedMissingTickers = PROTECTED_STRATEGIC_TICKERS.filter(
+        (ticker) => !protectedPresentTickers.has(ticker),
+      );
+      const protectedMustRepairTickers = [
+        ...protectedMissingTickers,
+        ...companies
+          .filter(
+            (company) =>
+              company.isProtected &&
+              !(
+                company.secStage === "complete" &&
+                company.hasSecIdentity &&
+                company.hasFilings &&
+                company.hasFacts
+              ),
+          )
+          .map((company) => company.ticker),
+      ];
+      const replaceableFailureTickers = companies
+        .filter(
+          (company) =>
+            !company.isProtected &&
+            (company.secStage === "failed" || company.secStage === "unresolved"),
+        )
+        .map((company) => company.ticker);
+      const replacementsAttemptedCount = companies.filter(
+        (company) => company.isReplacement,
+      ).length;
 
       return Object.freeze({
         configured: true,
@@ -293,6 +318,7 @@ export class PostgresUniverseStore implements UniverseStore {
         requestedLimit: safeLimit,
         universeSize: Number(totalResult.rows[0]?.universe_size ?? 0),
         examinedCount: companies.length,
+        candidatesExaminedCount,
         queuedCount,
         processingCount,
         secCompleteCount,
@@ -307,7 +333,18 @@ export class PostgresUniverseStore implements UniverseStore {
         quoteCompleteCount,
         ratingCompleteCount,
         fullyCompleteCount,
+        finalUsableUniverseCount: secEvidenceReadyCount,
         incompleteCount: companies.length - fullyCompleteCount,
+        protectedTickerCount: PROTECTED_STRATEGIC_TICKERS.length,
+        protectedPresentCount: protectedPresentTickers.size,
+        protectedMissingCount: protectedMissingTickers.length,
+        protectedMissingTickers: Object.freeze(protectedMissingTickers),
+        protectedMustRepairCount: protectedMustRepairTickers.length,
+        protectedMustRepairTickers: Object.freeze(protectedMustRepairTickers),
+        replaceableFailureCount: replaceableFailureTickers.length,
+        replaceableFailureTickers: Object.freeze(replaceableFailureTickers),
+        replacementsAttemptedCount,
+        reserveCandidatesRemainingCount: companies.length - candidatesExaminedCount,
         companies: Object.freeze(companies),
       });
     } catch (error) {

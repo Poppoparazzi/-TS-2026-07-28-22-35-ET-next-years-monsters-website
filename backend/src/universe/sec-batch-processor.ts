@@ -1,4 +1,4 @@
-// TS: 2026-08-18 22:59 ET
+// TS: 2026-08-21 15:16 UTC
 
 import type { AppConfig } from "../config.js";
 import {
@@ -26,6 +26,7 @@ export interface SecBatchFailure {
   readonly ticker: string;
   readonly attemptCount: number;
   readonly message: string;
+  readonly disposition: "must_repair" | "replaceable";
 }
 
 export interface SecBatchRunSummary {
@@ -35,6 +36,9 @@ export interface SecBatchRunSummary {
   readonly succeededCount: number;
   readonly unresolvedCount: number;
   readonly failedCount: number;
+  readonly protectedMustRepairCount: number;
+  readonly replaceableFailureCount: number;
+  readonly replacementsAttemptedCount: number;
   readonly concurrency: number;
   readonly maxAgeHours: number;
   readonly unresolvedTickers: readonly string[];
@@ -115,6 +119,9 @@ export async function runSecUniverseBatch(
         succeededCount: 0,
         unresolvedCount: 0,
         failedCount: 0,
+        protectedMustRepairCount: 0,
+        replaceableFailureCount: 0,
+        replacementsAttemptedCount: 0,
         concurrency,
         maxAgeHours,
         unresolvedTickers: Object.freeze([]),
@@ -130,6 +137,10 @@ export async function runSecUniverseBatch(
     let succeededCount = 0;
     let unresolvedCount = 0;
     let failedCount = 0;
+    let protectedMustRepairCount = 0;
+    let replaceableFailureCount = 0;
+    let replacementsAttemptedCount = 0;
+    let outstandingReplaceableFailures = 0;
 
     while (claimedCount < batchSize) {
       const remainingCount = batchSize - claimedCount;
@@ -138,6 +149,12 @@ export async function runSecUniverseBatch(
 
       if (candidates.length === 0) break;
       claimedCount += candidates.length;
+      const replacementSlots = Math.min(
+        candidates.length,
+        outstandingReplaceableFailures,
+      );
+      replacementsAttemptedCount += replacementSlots;
+      outstandingReplaceableFailures -= replacementSlots;
 
       await Promise.all(
         candidates.map(async (candidate) => {
@@ -153,30 +170,50 @@ export async function runSecUniverseBatch(
             const message = safeMessage(error);
 
             if (isPermanentSecNotFound(error) || isDuplicateSecIdentity(error)) {
+              if (candidate.isProtected) {
+                protectedMustRepairCount += 1;
+                failedCount += 1;
+                failures.push(
+                  Object.freeze({
+                    ticker: candidate.ticker,
+                    attemptCount: candidate.attemptCount,
+                    message,
+                    disposition: "must_repair",
+                  }),
+                );
+                await queue.markFailed(candidate.ticker, message);
+                return;
+              }
+
               unresolvedCount += 1;
+              replaceableFailureCount += 1;
+              outstandingReplaceableFailures += 1;
               unresolvedTickers.push(candidate.ticker);
               await queue.markUnresolved(candidate.ticker, message);
               return;
             }
 
-            // markFailed() converts a non-pilot third attempt directly to unresolved.
-            // Mirror that final database state in the run summary so watchdogs do not
-            // emit a false "failed" signal for a stock that is already replaceable.
-            const becomesReplaceable = !candidate.isPilot && candidate.attemptCount >= 3;
-            await queue.markFailed(candidate.ticker, message);
-
-            if (becomesReplaceable) {
+            // Ordinary candidates never block the broad reserve. Preserve their exact
+            // failure reason as an unresolved/replaceable exception and immediately
+            // continue with the next candidate. Protected stocks stay on must-repair.
+            if (!candidate.isProtected) {
+              await queue.markUnresolved(candidate.ticker, message);
               unresolvedCount += 1;
+              replaceableFailureCount += 1;
+              outstandingReplaceableFailures += 1;
               unresolvedTickers.push(candidate.ticker);
               return;
             }
 
+            await queue.markFailed(candidate.ticker, message);
             failedCount += 1;
+            protectedMustRepairCount += 1;
             failures.push(
               Object.freeze({
                 ticker: candidate.ticker,
                 attemptCount: candidate.attemptCount,
                 message,
+                disposition: "must_repair",
               }),
             );
           }
@@ -191,6 +228,9 @@ export async function runSecUniverseBatch(
       succeededCount,
       unresolvedCount,
       failedCount,
+      protectedMustRepairCount,
+      replaceableFailureCount,
+      replacementsAttemptedCount,
       concurrency,
       maxAgeHours,
       unresolvedTickers: Object.freeze(unresolvedTickers),

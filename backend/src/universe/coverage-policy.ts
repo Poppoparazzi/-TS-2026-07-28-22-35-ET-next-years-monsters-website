@@ -1,13 +1,14 @@
-// TS: 2026-08-17 09:01 ET
+// TS: 2026-08-21 15:16 UTC
 
-export const ACTIVE_SEC_TARGET = 2_000;
-export const CANDIDATE_POOL_TARGET = 2_500;
+export const ACTIVE_SEC_TARGET = 2_200;
+export const CANDIDATE_POOL_TARGET = 5_000;
 
 export interface CoverageSnapshot {
   readonly universeSize: number;
-  readonly secCompleteCount: number;
-  readonly unresolvedCount: number;
-  readonly failedCount: number;
+  readonly candidatesExaminedCount: number;
+  readonly secEvidenceReadyCount: number;
+  readonly protectedMustRepairCount: number;
+  readonly replaceableFailureCount: number;
 }
 
 export interface CoverageDecision {
@@ -17,6 +18,8 @@ export interface CoverageDecision {
   readonly usableShortfall: number;
   readonly reserveCandidateCount: number;
   readonly substitutionEligibleCount: number;
+  readonly replacementsAttemptedCount: number;
+  readonly finalUsableUniverseCount: number;
 }
 
 function nonnegativeInteger(value: number): number {
@@ -26,16 +29,23 @@ function nonnegativeInteger(value: number): number {
 
 export function evaluateCoverage(snapshot: CoverageSnapshot): CoverageDecision {
   const universeSize = nonnegativeInteger(snapshot.universeSize);
-  const secCompleteCount = nonnegativeInteger(snapshot.secCompleteCount);
-  const unresolvedCount = nonnegativeInteger(snapshot.unresolvedCount);
-  const failedCount = nonnegativeInteger(snapshot.failedCount);
+  const candidatesExaminedCount = nonnegativeInteger(snapshot.candidatesExaminedCount);
+  const secEvidenceReadyCount = nonnegativeInteger(snapshot.secEvidenceReadyCount);
+  const protectedMustRepairCount = nonnegativeInteger(snapshot.protectedMustRepairCount);
+  const replaceableFailureCount = nonnegativeInteger(snapshot.replaceableFailureCount);
 
   return Object.freeze({
     activeSecTarget: ACTIVE_SEC_TARGET,
     candidatePoolTarget: CANDIDATE_POOL_TARGET,
-    targetSatisfied: secCompleteCount >= ACTIVE_SEC_TARGET,
-    usableShortfall: Math.max(ACTIVE_SEC_TARGET - secCompleteCount, 0),
-    reserveCandidateCount: Math.max(universeSize - ACTIVE_SEC_TARGET, 0),
-    substitutionEligibleCount: unresolvedCount + failedCount,
+    targetSatisfied:
+      secEvidenceReadyCount >= ACTIVE_SEC_TARGET && protectedMustRepairCount === 0,
+    usableShortfall: Math.max(ACTIVE_SEC_TARGET - secEvidenceReadyCount, 0),
+    reserveCandidateCount: Math.max(universeSize - candidatesExaminedCount, 0),
+    substitutionEligibleCount: replaceableFailureCount,
+    replacementsAttemptedCount: Math.min(
+      replaceableFailureCount,
+      Math.max(candidatesExaminedCount - ACTIVE_SEC_TARGET, 0),
+    ),
+    finalUsableUniverseCount: secEvidenceReadyCount,
   });
 }
