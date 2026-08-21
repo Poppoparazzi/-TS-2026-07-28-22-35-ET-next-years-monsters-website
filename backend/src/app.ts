@@ -1,4 +1,4 @@
-// TS: 2026-08-17 19:02 ET
+// TS: 2026-08-21 15:47 UTC
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -17,6 +17,7 @@ import {
   ProviderNotConfiguredError,
 } from "./providers/types.js";
 import { QuoteService } from "./quotes/service.js";
+import { installFailClosedRatingErrorHandler } from "./ratings/install-fail-closed-handler.js";
 import { evaluatePublicRatingReadiness } from "./ratings/public-rating-readiness.js";
 import { createSecDataProvider } from "./sec/index.js";
 import type { SecDataProvider } from "./sec/types.js";
@@ -456,38 +457,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     return summary;
   });
 
-  app.setErrorHandler((error, request, reply) => {
-    const errorStatusCode =
-      typeof error === "object" &&
-      error !== null &&
-      "statusCode" in error &&
-      typeof error.statusCode === "number"
-        ? error.statusCode
-        : null;
-    const errorMessage = error instanceof Error ? error.message : "Request failed.";
-    const statusCode =
-      error instanceof ProviderNotConfiguredError
-        ? 503
-        : errorStatusCode !== null
-          ? errorStatusCode
-          : 500;
-
-    request.log.error({ error, statusCode }, "API request failed");
-
-    return reply.code(statusCode).send({
-      error:
-        error instanceof ProviderNotConfiguredError
-          ? "provider_not_configured"
-          : statusCode === 404
-            ? "not_found"
-            : "request_failed",
-      message:
-        statusCode >= 500 && !(error instanceof ProviderNotConfiguredError)
-          ? "The data service could not complete the request."
-          : errorMessage,
-      timestamp: new Date().toISOString(),
-    });
-  });
+  installFailClosedRatingErrorHandler(app);
 
   return app;
 }

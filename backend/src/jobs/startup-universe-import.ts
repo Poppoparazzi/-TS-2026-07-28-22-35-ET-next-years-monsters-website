@@ -1,4 +1,4 @@
-// TS: 2026-08-20 00:58 ET
+// TS: 2026-08-21 15:47 UTC
 
 import type { AppConfig } from "../config.js";
 import { loadSecUniverse } from "../universe/sec-source.js";
@@ -25,7 +25,9 @@ export function configuredUniverseImportLimit(
     throw new Error("AUTO_IMPORT_UNIVERSE_LIMIT must be an integer from 0 to 5000.");
   }
 
-  return value;
+  return productionFallback > 0
+    ? Math.max(value, productionFallback)
+    : value;
 }
 
 export async function importUniverseOnStartup(
