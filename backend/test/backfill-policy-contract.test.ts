@@ -1,4 +1,4 @@
-// TS: 2026-08-20 02:04 ET
+// TS: 2026-08-21 07:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -11,6 +11,7 @@ function readRepositoryFile(relativePath: string): string {
 test("production reserve policy stays deliberately overfilled and observable", () => {
   const renderYaml = readRepositoryFile("../../render.yaml");
   const serverSource = readRepositoryFile("../src/server.ts");
+  const deploymentPolicySource = readRepositoryFile("../src/deployment-policy.ts");
 
   assert.match(renderYaml, /key:\s*AUTO_IMPORT_UNIVERSE_LIMIT[\s\S]*?value:\s*"5000"/);
   assert.match(renderYaml, /key:\s*AUTO_SEC_BATCH_SIZE[\s\S]*?value:\s*"5000"/);
@@ -18,11 +19,16 @@ test("production reserve policy stays deliberately overfilled and observable", (
   assert.match(renderYaml, /key:\s*SEC_BATCH_CONCURRENCY[\s\S]*?value:\s*"8"/);
   assert.match(renderYaml, /key:\s*SEC_BATCH_MAX_AGE_HOURS[\s\S]*?value:\s*"720"/);
 
-  assert.match(serverSource, /candidateTarget:\s*safeEnvironmentInteger\("AUTO_IMPORT_UNIVERSE_LIMIT"\)/);
-  assert.match(serverSource, /secBatchSize:\s*safeEnvironmentInteger\("AUTO_SEC_BATCH_SIZE"\)/);
-  assert.match(serverSource, /usableTarget:\s*safeEnvironmentInteger\("SEC_USABLE_TARGET"\)/);
-  assert.match(serverSource, /concurrency:\s*safeEnvironmentInteger\("SEC_BATCH_CONCURRENCY"\)/);
-  assert.match(serverSource, /maxAgeHours:\s*safeEnvironmentInteger\("SEC_BATCH_MAX_AGE_HOURS"\)/);
+  assert.match(
+    serverSource,
+    /backfillPolicy:\s*getBackfillPolicySnapshot\(config\.nodeEnv\)/,
+    "startup status must expose the effective centralized backfill policy",
+  );
+  assert.match(deploymentPolicySource, /"AUTO_IMPORT_UNIVERSE_LIMIT"[\s\S]*?5_000\s*:\s*null/);
+  assert.match(deploymentPolicySource, /"AUTO_SEC_BATCH_SIZE"[\s\S]*?5_000\s*:\s*null/);
+  assert.match(deploymentPolicySource, /"SEC_USABLE_TARGET"[\s\S]*?2_200\s*:\s*null/);
+  assert.match(deploymentPolicySource, /"SEC_BATCH_CONCURRENCY"[\s\S]*?8\s*:\s*null/);
+  assert.match(deploymentPolicySource, /"SEC_BATCH_MAX_AGE_HOURS"[\s\S]*?720\s*:\s*null/);
 
   const candidateTarget = Number(renderYaml.match(/key:\s*AUTO_IMPORT_UNIVERSE_LIMIT[\s\S]*?value:\s*"(\d+)"/)?.[1]);
   const usableTarget = Number(renderYaml.match(/key:\s*SEC_USABLE_TARGET[\s\S]*?value:\s*"(\d+)"/)?.[1]);
