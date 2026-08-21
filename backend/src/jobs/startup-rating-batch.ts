@@ -1,14 +1,24 @@
-// TS: 2026-08-21 17:39 UTC
+// TS: 2026-08-21 15:00 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
+import { isServerlessRuntime } from "../deployment-policy.js";
 import { createMarketDataProvider } from "../providers/index.js";
 import { createRatingBatchStore } from "../ratings/batch-store.js";
 import { createSecDataProvider } from "../sec/index.js";
 import { runRatingBatch } from "./rating-batch.js";
 
-function enabled(environment: NodeJS.ProcessEnv): boolean {
-  return (environment.AUTO_REFRESH_RATINGS_ON_START ?? "").trim().toLowerCase() === "true";
+export function ratingRefreshEnabled(
+  environment: NodeJS.ProcessEnv,
+  nodeEnv: string,
+): boolean {
+  const configured = (environment.AUTO_REFRESH_RATINGS_ON_START ?? "").trim().toLowerCase();
+  if (configured) return configured === "true";
+
+  // Persistent production should keep the audited rating recovery alive even if
+  // the Render Blueprint value drifts or is temporarily absent. Serverless
+  // collateral stays opt-in so it never launches a startup batch unexpectedly.
+  return nodeEnv === "production" && !isServerlessRuntime(environment);
 }
 
 function boundedInteger(value: string | undefined, fallback: number, maximum: number): number {
@@ -26,7 +36,7 @@ export async function runRatingBatchOnStartup(
   const batchStore = createRatingBatchStore(config);
 
   try {
-    if (!enabled(environment)) {
+    if (!ratingRefreshEnabled(environment, config.nodeEnv)) {
       return Object.freeze({
         status: "disabled",
         targetCount: boundedInteger(environment.RATING_TARGET_COUNT, 500, 1_000),
