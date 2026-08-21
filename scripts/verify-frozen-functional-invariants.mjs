@@ -1,6 +1,7 @@
-// TS: 2026-08-17 11:00 UTC
+// TS: 2026-08-21 05:02 ET
 
 import { readFileSync } from "node:fs";
+import { protectedTickers } from "./protected-stocks.mjs";
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -58,6 +59,19 @@ function verifyMonsterCheckQuickPicks() {
   }
 }
 
+function verifyProtectedVclPolicy() {
+  const protectedSet = new Set(protectedTickers.map((ticker) => String(ticker).toUpperCase()));
+  const missing = expectedVcl.filter((ticker) => !protectedSet.has(ticker));
+  const duplicates = protectedTickers.filter((ticker, index) => protectedTickers.indexOf(ticker) !== index);
+
+  if (missing.length > 0) {
+    fail(`Approved VCL stocks are no longer protected from SEC replacement policy: ${missing.join(", ")}`);
+  }
+  if (duplicates.length > 0) {
+    fail(`Protected stock policy contains duplicate tickers: ${[...new Set(duplicates)].join(", ")}`);
+  }
+}
+
 function verifyMonsterHuntConsistency() {
   const source = read("assets/monster-check-rating-trio.js");
 
@@ -84,6 +98,7 @@ function verifyMonsterHuntConsistency() {
 
 verifyHomepageSearch();
 verifyMonsterCheckQuickPicks();
+verifyProtectedVclPolicy();
 verifyMonsterHuntConsistency();
 
 if (failures.length) {
@@ -91,5 +106,5 @@ if (failures.length) {
   failures.forEach((message) => console.error(`- ${message}`));
   process.exitCode = 1;
 } else {
-  console.log("Frozen functional invariant verification passed: Apple/AAPL routing, 15 unique VCL quick picks, direct chart routing, selected-ticker-first status panel, and shared Monster Hunt score/rank source are intact.");
+  console.log("Frozen functional invariant verification passed: Apple/AAPL routing, 15 unique VCL quick picks, VCL replacement protection, direct chart routing, selected-ticker-first status panel, and shared Monster Hunt score/rank source are intact.");
 }
