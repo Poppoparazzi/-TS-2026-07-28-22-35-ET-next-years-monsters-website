@@ -1,4 +1,4 @@
-# TS: 2026-08-21 17:08 UTC
+# TS: 2026-08-21 19:57 UTC
 
 databases:
   - name: next-years-monsters-db
@@ -30,7 +30,7 @@ services:
           name: next-years-monsters-db
           property: connectionString
       - key: MARKET_DATA_PROVIDER
-        value: unconfigured
+        value: twelve-data
       - key: TWELVE_DATA_API_KEY
         sync: false
       - key: SEC_USER_AGENT
@@ -55,3 +55,5 @@ services:
         value: "500"
       - key: RATING_CANDIDATE_LIMIT
         value: "1000"
+      - key: RATING_MARKET_REQUEST_DELAY_MS
+        value: "9000"
