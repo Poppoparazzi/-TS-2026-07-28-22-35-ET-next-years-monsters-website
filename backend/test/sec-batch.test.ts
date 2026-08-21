@@ -1,4 +1,4 @@
-// TS: 2026-08-18 22:59 ET
+// TS: 2026-08-21 07:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -210,7 +210,7 @@ test("bulk SEC workers report exhausted non-pilot failures as unresolved, matchi
   assert.equal(summary.succeededCount, 2);
   assert.equal(summary.unresolvedCount, 2);
   assert.equal(summary.failedCount, 1);
-  assert.deepEqual(summary.unresolvedTickers.sort(), ["EXHAUST", "NOSEC"]);
+  assert.deepEqual([...summary.unresolvedTickers].sort(), ["EXHAUST", "NOSEC"]);
   assert.deepEqual(queue.completed.sort(), ["AAPL", "NVDA"]);
   assert.deepEqual(queue.unresolved, [
     { ticker: "NOSEC", message: "SEC EDGAR request failed with HTTP 404." },
