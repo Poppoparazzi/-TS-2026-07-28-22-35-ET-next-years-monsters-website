@@ -1,4 +1,4 @@
-// TS: 2026-08-14 09:02 ET
+// TS: 2026-08-21 14:33 ET
 
 import type { FastifyInstance } from "fastify";
 import { ProviderNotConfiguredError } from "../providers/types.js";
@@ -38,8 +38,12 @@ export function installFailClosedRatingErrorHandler(app: FastifyInstance): void 
     if (request.url.startsWith("/api/ratings/")) {
       const symbol = request.url.split("?")[0]?.split("/").filter(Boolean).at(-1) ?? "UNKNOWN";
       const reason = ratingFailureReason(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
-      request.log.error({ error, symbol, reason: reason.code }, "Rating evidence retrieval failed closed");
+      request.log.error(
+        { err: error, errorMessage, symbol, reason: reason.code },
+        "Rating evidence retrieval failed closed",
+      );
       return reply.code(200).send(
         buildFailClosedRatingResponse(symbol, new Date().toISOString(), [reason]),
       );
@@ -60,7 +64,7 @@ export function installFailClosedRatingErrorHandler(app: FastifyInstance): void 
           ? errorStatusCode
           : 500;
 
-    request.log.error({ error, statusCode }, "API request failed");
+    request.log.error({ err: error, errorMessage, statusCode }, "API request failed");
 
     return reply.code(statusCode).send({
       error:
