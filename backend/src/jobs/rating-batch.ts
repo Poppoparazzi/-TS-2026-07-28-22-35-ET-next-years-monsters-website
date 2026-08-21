@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:47 UTC
+// TS: 2026-08-21 15:16 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -24,6 +24,7 @@ export interface RatingBatchDependencies {
 export interface RatingBatchOptions {
   readonly targetCount?: number;
   readonly candidateLimit?: number;
+  readonly marketRequestDelayMs?: number;
 }
 
 function reason(error: unknown): string {
@@ -32,6 +33,16 @@ function reason(error: unknown): string {
 
 function providerLimitReached(message: string): boolean {
   return /rate limit|api credits|credit limit|too many requests|quota/i.test(message);
+}
+
+function boundedDelay(value: number | undefined): number {
+  const parsed = Math.trunc(value ?? 0);
+  return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 60_000) : 0;
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  if (milliseconds <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export async function runRatingBatch(
@@ -43,6 +54,7 @@ export async function runRatingBatch(
     Math.max(Math.trunc(options.candidateLimit ?? Math.max(targetCount * 2, 1_000)), targetCount),
     5_000,
   );
+  const marketRequestDelayMs = boundedDelay(options.marketRequestDelayMs);
   const { marketProvider, secProvider, persistenceStore, batchStore } = dependencies;
   if (!marketProvider.configured || !marketProvider.getDailyHistory) {
     throw new Error("The licensed historical market-data provider is not configured.");
@@ -50,6 +62,15 @@ export async function runRatingBatch(
   if (!secProvider.configured || !persistenceStore.configured || !batchStore.configured) {
     throw new Error("The SEC provider and production database are required for rating batches.");
   }
+
+  let lastMarketRequestStartedAt = 0;
+  const getPacedHistory = async (symbol: string, outputSize: number): Promise<DailyMarketHistory> => {
+    const elapsed = Date.now() - lastMarketRequestStartedAt;
+    const waitMs = lastMarketRequestStartedAt === 0 ? 0 : Math.max(0, marketRequestDelayMs - elapsed);
+    if (waitMs > 0) await sleep(waitMs);
+    lastMarketRequestStartedAt = Date.now();
+    return marketProvider.getDailyHistory!(symbol, outputSize);
+  };
 
   const candidates = await batchStore.listCandidates(candidateLimit);
   const runId = await batchStore.startRun(targetCount, marketProvider.name);
@@ -61,7 +82,7 @@ export async function runRatingBatch(
   let benchmarkHistory: DailyMarketHistory;
 
   try {
-    benchmarkHistory = await marketProvider.getDailyHistory("SPY", 300);
+    benchmarkHistory = await getPacedHistory("SPY", 300);
   } catch (error) {
     const accounting: RatingBatchAccounting = Object.freeze({
       targetCount,
@@ -90,7 +111,7 @@ export async function runRatingBatch(
         secProvider.getCompany(candidate.ticker),
         secProvider.getCompanyFacts(candidate.ticker),
         secProvider.getRecentFilings(candidate.ticker, 1),
-        marketProvider.getDailyHistory(candidate.ticker, 300),
+        getPacedHistory(candidate.ticker, 300),
       ]);
       const calculatedAt = new Date().toISOString();
       const rating = calculateMonsterRatingV1(buildProductionRatingInput({
