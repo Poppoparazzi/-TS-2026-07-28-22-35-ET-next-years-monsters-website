@@ -12,6 +12,9 @@ import type {
   PipelineStatus,
   UniverseCompany,
   UniverseCompanyStatus,
+  UniverseDirectoryCompany,
+  UniverseDirectorySearch,
+  UniverseDirectoryStatus,
   UniverseImportSummary,
   UniverseStatusSummary,
   UniverseStore,
@@ -75,6 +78,26 @@ interface UniverseStatusRow {
   readonly updated_at: Date | string;
 }
 
+interface UniverseDirectoryRow {
+  readonly ticker: string;
+  readonly company_name: string;
+  readonly exchange: string | null;
+  readonly sec_cik: string | null;
+  readonly is_pilot: boolean;
+  readonly sec_status: PipelineStatus;
+  readonly has_filings: boolean;
+  readonly has_facts: boolean;
+  readonly has_rating: boolean;
+}
+
+interface UniverseDirectoryCountRow {
+  readonly universe_size: string | number;
+  readonly sec_evidence_ready_count: string | number;
+  readonly protected_present_count: string | number;
+  readonly protected_incomplete_count: string | number;
+  readonly replaceable_failure_count: string | number;
+}
+
 function isoTimestamp(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) throw new Error("Database returned an invalid timestamp.");
@@ -90,6 +113,20 @@ function count(value: string | number): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+export function classifyUniverseDirectoryStatus(input: {
+  readonly secEvidenceReady: boolean;
+  readonly isProtected: boolean;
+  readonly secStage: PipelineStatus;
+}): UniverseDirectoryStatus {
+  if (input.secEvidenceReady) return "evidence_ready";
+  if (input.isProtected) return "protected_must_repair";
+  if (input.secStage === "failed" || input.secStage === "unresolved") {
+    return "replaceable_exception";
+  }
+  if (input.secStage === "processing") return "processing";
+  return "reserve";
+}
+
 export class UnconfiguredUniverseStore implements UniverseStore {
   public readonly name = "unconfigured-database";
   public readonly configured = false;
@@ -101,6 +138,14 @@ export class UnconfiguredUniverseStore implements UniverseStore {
   }
 
   public async getStatus(_limit: number): Promise<UniverseStatusSummary> {
+    throw new ProviderNotConfiguredError("Bulk universe database");
+  }
+
+  public async searchCompanies(
+    _query: string,
+    _limit: number,
+    _evidenceReadyOnly: boolean,
+  ): Promise<UniverseDirectorySearch> {
     throw new ProviderNotConfiguredError("Bulk universe database");
   }
 
@@ -346,6 +391,139 @@ export class PostgresUniverseStore implements UniverseStore {
         replacementsAttemptedCount,
         reserveCandidatesRemainingCount: companies.length - candidatesExaminedCount,
         companies: Object.freeze(companies),
+      });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  public async searchCompanies(
+    query: string,
+    limit: number,
+    evidenceReadyOnly: boolean,
+  ): Promise<UniverseDirectorySearch> {
+    const normalizedQuery = query.trim().replace(/\s+/g, " ").slice(0, 100);
+    const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 25);
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("BEGIN READ ONLY");
+
+      const evidenceReadySql = `
+        COALESCE(cps.sec_status, 'queued') = 'complete'
+        AND c.sec_cik IS NOT NULL
+        AND EXISTS (SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id)
+        AND EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id)
+      `;
+      const [countResult, companyResult] = await Promise.all([
+        client.query<UniverseDirectoryCountRow>(
+          `
+            SELECT
+              count(*) AS universe_size,
+              count(*) FILTER (WHERE ${evidenceReadySql}) AS sec_evidence_ready_count,
+              count(*) FILTER (WHERE ${PROTECTED_COMPANY_SQL_PREDICATE}) AS protected_present_count,
+              count(*) FILTER (
+                WHERE ${PROTECTED_COMPANY_SQL_PREDICATE}
+                  AND NOT (${evidenceReadySql})
+              ) AS protected_incomplete_count,
+              count(*) FILTER (
+                WHERE NOT ${PROTECTED_COMPANY_SQL_PREDICATE}
+                  AND COALESCE(cps.sec_status, 'queued') IN ('failed', 'unresolved')
+              ) AS replaceable_failure_count
+            FROM companies c
+            LEFT JOIN company_pipeline_status cps ON cps.company_id = c.id
+            WHERE c.is_active = true
+          `,
+        ),
+        client.query<UniverseDirectoryRow>(
+          `
+            SELECT
+              c.ticker,
+              c.company_name,
+              c.exchange,
+              c.sec_cik,
+              c.is_pilot,
+              COALESCE(cps.sec_status, 'queued') AS sec_status,
+              EXISTS (SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id) AS has_filings,
+              EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id) AS has_facts,
+              EXISTS (
+                SELECT 1 FROM monster_rating_runs mr
+                WHERE mr.company_id = c.id AND mr.status = 'complete'
+              ) AS has_rating
+            FROM companies c
+            LEFT JOIN company_pipeline_status cps ON cps.company_id = c.id
+            WHERE c.is_active = true
+              AND $1::text <> ''
+              AND (
+                upper(c.ticker) = upper($1)
+                OR position(upper($1) in upper(c.ticker)) = 1
+                OR position(lower($1) in lower(c.company_name)) > 0
+              )
+              AND (
+                $3::boolean = false
+                OR (${evidenceReadySql})
+              )
+            ORDER BY
+              CASE
+                WHEN upper(c.ticker) = upper($1) THEN 0
+                WHEN lower(c.company_name) = lower($1) THEN 1
+                WHEN position(upper($1) in upper(c.ticker)) = 1 THEN 2
+                WHEN position(lower($1) in lower(c.company_name)) = 1 THEN 3
+                ELSE 4
+              END,
+              CASE WHEN ${evidenceReadySql} THEN 0 ELSE 1 END,
+              c.ticker
+            LIMIT $2
+          `,
+          [normalizedQuery, safeLimit, evidenceReadyOnly],
+        ),
+      ]);
+
+      await client.query("COMMIT");
+
+      const results = companyResult.rows.map<UniverseDirectoryCompany>((row) => {
+        const secEvidenceReady =
+          row.sec_status === "complete" &&
+          row.sec_cik !== null &&
+          row.has_filings &&
+          row.has_facts;
+        const isProtected = isProtectedCompany(row.ticker, row.is_pilot);
+        const status = classifyUniverseDirectoryStatus({
+          secEvidenceReady,
+          isProtected,
+          secStage: row.sec_status,
+        });
+
+        return Object.freeze({
+          ticker: row.ticker,
+          companyName: row.company_name,
+          exchange: row.exchange,
+          secCik: row.sec_cik,
+          isProtected,
+          secEvidenceReady,
+          ratingAvailable: row.has_rating,
+          status,
+        });
+      });
+      const counts = countResult.rows[0];
+      const protectedPresentCount = count(counts?.protected_present_count ?? 0);
+      const protectedMissingCount = Math.max(
+        PROTECTED_STRATEGIC_TICKERS.length - protectedPresentCount,
+        0,
+      );
+
+      return Object.freeze({
+        query: normalizedQuery,
+        universeSize: count(counts?.universe_size ?? 0),
+        secEvidenceReadyCount: count(counts?.sec_evidence_ready_count ?? 0),
+        protectedTickerCount: PROTECTED_STRATEGIC_TICKERS.length,
+        protectedMustRepairCount:
+          count(counts?.protected_incomplete_count ?? 0) + protectedMissingCount,
+        replaceableFailureCount: count(counts?.replaceable_failure_count ?? 0),
+        results: Object.freeze(results),
       });
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);

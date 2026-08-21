@@ -1,4 +1,42 @@
-// TS: 2026-08-14 12:17 ET
+// TS: 2026-08-21 16:32 UTC
+
+function homeStockFinderApiBaseUrl() {
+  const raw = window.NYM_CONFIG?.apiBaseUrl;
+  if (typeof raw !== "string" || !raw.trim()) return "";
+
+  try {
+    const url = new URL(raw.trim());
+    const localDevelopment = ["localhost", "127.0.0.1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localDevelopment) return "";
+    return url.href.replace(/\/$/, "");
+  } catch (_error) {
+    return "";
+  }
+}
+
+function comparableCompanyName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[.,]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+async function searchProductionUniverse(query) {
+  const apiBaseUrl = homeStockFinderApiBaseUrl();
+  if (!apiBaseUrl) return [];
+
+  const url = new URL(`${apiBaseUrl}/api/universe/search`);
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", "12");
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(65_000),
+  });
+  if (!response.ok) throw new Error("The production stock directory is unavailable.");
+  const payload = await response.json();
+  return Array.isArray(payload.results) ? payload.results : [];
+}
 
 async function resolveHomeStockQuery(query) {
   const normalized = String(query || "").trim().toLowerCase();
@@ -31,8 +69,26 @@ async function resolveHomeStockQuery(query) {
   }
 
   const raw = String(query || "").trim();
-  const looksLikeTicker = raw === raw.toUpperCase() && /^[A-Z0-9.-]{1,15}$/.test(raw);
-  return looksLikeTicker ? raw : "";
+  try {
+    const matches = await searchProductionUniverse(raw);
+    const normalizedTicker = raw.toUpperCase();
+    const exactTicker = matches.find(
+      (company) => String(company.ticker || "").toUpperCase() === normalizedTicker,
+    );
+    if (exactTicker) return String(exactTicker.ticker).toUpperCase();
+
+    const normalizedName = comparableCompanyName(raw);
+    const exactName = matches.find(
+      (company) => comparableCompanyName(company.companyName) === normalizedName,
+    );
+    if (exactName) return String(exactName.ticker).toUpperCase();
+    if (matches.length === 1) return String(matches[0].ticker || "").toUpperCase();
+  } catch (_error) {
+    // Exact ticker entry still works if the broad production directory is waking.
+  }
+
+  const normalizedTicker = raw.toUpperCase();
+  return /^[A-Z0-9.-]{1,15}$/.test(normalizedTicker) ? normalizedTicker : "";
 }
 
 function startHomeStockFinder() {
@@ -46,7 +102,11 @@ function startHomeStockFinder() {
     if (!query) return;
 
     const submitButton = form.querySelector('button[type="submit"]');
-    if (submitButton) submitButton.disabled = true;
+    const originalButtonText = submitButton?.textContent || "SEARCH STOCKS";
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "SEARCHING…";
+    }
 
     try {
       const ticker = await resolveHomeStockQuery(query);
@@ -65,7 +125,10 @@ function startHomeStockFinder() {
 
       window.location.href = url.toString();
     } finally {
-      if (submitButton) submitButton.disabled = false;
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalButtonText;
+      }
     }
   });
 }

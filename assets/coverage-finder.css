@@ -1,4 +1,4 @@
-/* TS: 2026-07-30 09:17 ET */
+/* TS: 2026-08-21 16:32 UTC */
 
 .coverage-finder {
   margin-top: 34px;
@@ -208,6 +208,23 @@
 .coverage-finder-status {
   border: 1px dashed rgba(255, 255, 255, .35);
   color: #aeb5af;
+}
+
+.coverage-finder-status-evidence_ready {
+  border-color: #b8f34a;
+  background: rgba(184, 243, 74, .12);
+  color: #d9ff91;
+}
+
+.coverage-finder-status-protected_must_repair {
+  border-color: #d9aa31;
+  background: rgba(217, 170, 49, .12);
+  color: #f0c95a;
+}
+
+.coverage-finder-status-replaceable_exception {
+  border-color: #c98686;
+  color: #efb4b4;
 }
 
 .coverage-finder-actions a:hover,

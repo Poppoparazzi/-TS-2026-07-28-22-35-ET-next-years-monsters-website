@@ -6,11 +6,13 @@ import { buildApp } from "../src/app.js";
 import type { AppConfig } from "../src/config.js";
 import { parseSecUniversePayload } from "../src/universe/sec-source.js";
 import {
+  classifyUniverseDirectoryStatus,
   DEACTIVATE_UNIVERSE_SQL,
   UPSERT_UNIVERSE_COMPANY_SQL,
 } from "../src/universe/store.js";
 import type {
   UniverseCompany,
+  UniverseDirectorySearch,
   UniverseImportSummary,
   UniverseStatusSummary,
   UniverseStore,
@@ -33,6 +35,9 @@ class MemoryUniverseStore implements UniverseStore {
   public readonly name = "memory-universe";
   public readonly configured = true;
   public requestedLimit = 0;
+  public searchQuery = "";
+  public searchLimit = 0;
+  public evidenceReadyOnly = false;
 
   public async importCompanies(
     companies: readonly UniverseCompany[],
@@ -82,6 +87,36 @@ class MemoryUniverseStore implements UniverseStore {
       replacementsAttemptedCount: 0,
       reserveCandidatesRemainingCount: 1,
       companies: Object.freeze([]),
+    });
+  }
+
+  public async searchCompanies(
+    query: string,
+    limit: number,
+    evidenceReadyOnly: boolean,
+  ): Promise<UniverseDirectorySearch> {
+    this.searchQuery = query;
+    this.searchLimit = limit;
+    this.evidenceReadyOnly = evidenceReadyOnly;
+    return Object.freeze({
+      query,
+      universeSize: 5_000,
+      secEvidenceReadyCount: 3_355,
+      protectedTickerCount: 30,
+      protectedMustRepairCount: 0,
+      replaceableFailureCount: 281,
+      results: Object.freeze([
+        Object.freeze({
+          ticker: "AAPL",
+          companyName: "Apple Inc.",
+          exchange: "Nasdaq",
+          secCik: "0000320193",
+          isProtected: true,
+          secEvidenceReady: true,
+          ratingAvailable: false,
+          status: "evidence_ready" as const,
+        }),
+      ]),
     });
   }
 
@@ -148,6 +183,33 @@ test("bulk universe import preserves protected candidates and supports shared is
   assert.match(UPSERT_UNIVERSE_COMPANY_SQL, /clock_timestamp\(\)/);
 });
 
+test("public directory keeps protected failures on repair and ordinary failures replaceable", () => {
+  assert.equal(
+    classifyUniverseDirectoryStatus({
+      secEvidenceReady: false,
+      isProtected: true,
+      secStage: "failed",
+    }),
+    "protected_must_repair",
+  );
+  assert.equal(
+    classifyUniverseDirectoryStatus({
+      secEvidenceReady: false,
+      isProtected: false,
+      secStage: "unresolved",
+    }),
+    "replaceable_exception",
+  );
+  assert.equal(
+    classifyUniverseDirectoryStatus({
+      secEvidenceReady: true,
+      isProtected: true,
+      secStage: "complete",
+    }),
+    "evidence_ready",
+  );
+});
+
 test("bulk universe status endpoint caps the requested company count", async (t) => {
   const universeStore = new MemoryUniverseStore();
   const app = await buildApp({
@@ -174,4 +236,89 @@ test("bulk universe status endpoint caps the requested company count", async (t)
   assert.equal(response.json().quoteCompleteCount, 0);
   assert.equal(response.json().finalUsableUniverseCount, 1);
   assert.equal(response.json().replaceableFailureCount, 0);
+});
+
+test("public universe search exposes broad evidence-ready directory results", async (t) => {
+  const universeStore = new MemoryUniverseStore();
+  const app = await buildApp({
+    config: testConfig(),
+    universeStore,
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/universe/search?q=Apple&limit=999&evidenceReady=true",
+  });
+
+  const payload = response.json();
+  assert.equal(response.statusCode, 200);
+  assert.equal(universeStore.searchQuery, "Apple");
+  assert.equal(universeStore.searchLimit, 25);
+  assert.equal(universeStore.evidenceReadyOnly, true);
+  assert.equal(response.headers["cache-control"], "public, max-age=30, stale-while-revalidate=120");
+  assert.deepEqual(payload, {
+    query: "Apple",
+    count: 1,
+    evidenceReadyOnly: true,
+    results: [
+      {
+        ticker: "AAPL",
+        companyName: "Apple Inc.",
+        exchange: "Nasdaq",
+        secCik: "0000320193",
+        isProtected: true,
+        secEvidenceReady: true,
+        ratingAvailable: false,
+        status: "evidence_ready",
+      },
+    ],
+    universe: {
+      candidateCount: 5_000,
+      secEvidenceReadyCount: 3_355,
+      protectedTickerCount: 30,
+      protectedMustRepairCount: 0,
+      replaceableFailureCount: 281,
+    },
+    retrievedAt: payload.retrievedAt,
+  });
+});
+
+test("public universe search permits an empty query for lightweight live totals", async (t) => {
+  const universeStore = new MemoryUniverseStore();
+  const app = await buildApp({
+    config: testConfig(),
+    universeStore,
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/universe/search?limit=12",
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(universeStore.searchQuery, "");
+  assert.equal(response.json().universe.secEvidenceReadyCount, 3_355);
+});
+
+test("public universe search rejects oversized queries before database work", async (t) => {
+  const universeStore = new MemoryUniverseStore();
+  const app = await buildApp({
+    config: testConfig(),
+    universeStore,
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: `/api/universe/search?q=${"A".repeat(101)}`,
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "query_too_long");
+  assert.equal(universeStore.searchQuery, "");
 });
