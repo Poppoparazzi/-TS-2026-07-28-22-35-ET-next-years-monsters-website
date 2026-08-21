@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:00 ET
+// TS: 2026-08-21 15:19 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -24,6 +24,11 @@ export function ratingRefreshEnabled(
 function boundedInteger(value: string | undefined, fallback: number, maximum: number): number {
   const parsed = Number(value ?? fallback);
   return Number.isInteger(parsed) ? Math.min(Math.max(parsed, 1), maximum) : fallback;
+}
+
+function boundedNonNegativeInteger(value: string | undefined, fallback: number, maximum: number): number {
+  const parsed = Number(value ?? fallback);
+  return Number.isInteger(parsed) ? Math.min(Math.max(parsed, 0), maximum) : fallback;
 }
 
 export async function runRatingBatchOnStartup(
@@ -55,11 +60,17 @@ export async function runRatingBatchOnStartup(
       });
     }
 
+    const defaultMarketDelayMs = marketProvider.name === "twelve-data" ? 9_000 : 0;
     const accounting = await runRatingBatch(
       { marketProvider, secProvider, persistenceStore, batchStore },
       {
         targetCount: boundedInteger(environment.RATING_TARGET_COUNT, 500, 1_000),
         candidateLimit: boundedInteger(environment.RATING_CANDIDATE_LIMIT, 1_000, 5_000),
+        marketRequestDelayMs: boundedNonNegativeInteger(
+          environment.RATING_MARKET_REQUEST_DELAY_MS,
+          defaultMarketDelayMs,
+          60_000,
+        ),
       },
     );
     return Object.freeze({
