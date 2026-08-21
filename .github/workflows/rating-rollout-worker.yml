@@ -1,0 +1,158 @@
+# TS: 2026-08-21 17:02 ET
+
+name: Monster Rating rollout worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/rating-rollout-worker.yml"
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monster-rating-rollout
+  cancel-in-progress: false
+
+jobs:
+  advance-ratings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Advance production Monster Ratings
+        env:
+          API_BASE: https://next-years-monsters-api.onrender.com
+          TARGET_COUNT: "500"
+          MAX_CANDIDATES_PER_RUN: "360"
+          REQUEST_DELAY_MS: "20000"
+        run: |
+          node --input-type=module <<'NODE'
+          const base = process.env.API_BASE;
+          const target = Number(process.env.TARGET_COUNT || 500);
+          const maxCandidates = Number(process.env.MAX_CANDIDATES_PER_RUN || 360);
+          const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+          async function getJson(url, timeoutMs = 70000) {
+            const response = await fetch(url, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(timeoutMs),
+            });
+            const body = await response.json().catch(() => null);
+            return { response, body };
+          }
+
+          async function getStatus() {
+            const { response, body } = await getJson(`${base}/api/universe/status?limit=1000`);
+            if (!response.ok || !body) {
+              throw new Error(`Universe status failed with HTTP ${response.status}`);
+            }
+            return body;
+          }
+
+          const first = await getStatus();
+          let liveCount = Number(first.ratingCompleteCount || 0);
+          console.log(`Initial ratingCompleteCount=${liveCount}; target=${target}`);
+          if (liveCount >= target) {
+            console.log("500-rating target already reached.");
+            process.exit(0);
+          }
+
+          // Before taking over, make sure the Render startup batch is not already
+          // advancing on its own. This prevents two workers from wasting free-plan credits.
+          console.log("Watching production for five minutes before taking over...");
+          await sleep(300000);
+          const second = await getStatus();
+          const secondCount = Number(second.ratingCompleteCount || 0);
+          if (secondCount > liveCount) {
+            console.log(`Render is already advancing ratings: ${liveCount} -> ${secondCount}. Exiting to avoid duplicate provider usage.`);
+            process.exit(0);
+          }
+          liveCount = secondCount;
+
+          const companies = Array.isArray(second.companies) ? second.companies : [];
+          const candidates = companies
+            .filter((company) =>
+              company &&
+              company.ticker &&
+              company.hasRating !== true &&
+              company.hasSecIdentity === true &&
+              company.hasFilings === true &&
+              company.hasFacts === true
+            )
+            .slice(0, maxCandidates);
+
+          console.log(`GitHub worker taking over with ${candidates.length} candidates.`);
+
+          let attempted = 0;
+          let ratedThisRun = 0;
+          let skipped = 0;
+          let consecutiveProviderStops = 0;
+
+          for (const company of candidates) {
+            if (liveCount >= target) break;
+            const ticker = String(company.ticker).trim().toUpperCase();
+            if (!ticker) continue;
+
+            attempted += 1;
+            let result;
+            try {
+              result = await getJson(`${base}/api/ratings/${encodeURIComponent(ticker)}`);
+            } catch (error) {
+              console.log(`[network] ${ticker}: ${error instanceof Error ? error.message : String(error)}`);
+              consecutiveProviderStops += 1;
+              if (consecutiveProviderStops >= 3) {
+                console.log("Three consecutive provider/network stops. Ending this run safely; the next scheduled run will resume.");
+                break;
+              }
+              await sleep(65000);
+              continue;
+            }
+
+            const { response, body } = result;
+            if (response.ok && body?.eligible === true && Number.isFinite(Number(body?.score))) {
+              ratedThisRun += 1;
+              liveCount += 1;
+              consecutiveProviderStops = 0;
+              console.log(`[rated] ${ticker} score=${body.score} estimatedComplete=${liveCount}`);
+            } else if (response.status === 429 || response.status === 503) {
+              consecutiveProviderStops += 1;
+              console.log(`[provider-stop] ${ticker} HTTP ${response.status}; consecutive=${consecutiveProviderStops}`);
+              if (consecutiveProviderStops >= 3) {
+                console.log("Provider appears rate- or daily-quota-limited. Ending this run safely; the hourly schedule will resume automatically.");
+                break;
+              }
+              await sleep(65000);
+              continue;
+            } else {
+              skipped += 1;
+              consecutiveProviderStops = 0;
+              console.log(`[skip] ${ticker} HTTP ${response.status} eligible=${body?.eligible ?? null} code=${body?.eligibilityCode ?? body?.error ?? "unknown"}`);
+            }
+
+            if (attempted % 20 === 0) {
+              const checkpoint = await getStatus().catch(() => null);
+              if (checkpoint) {
+                liveCount = Number(checkpoint.ratingCompleteCount || liveCount);
+                console.log(`[checkpoint] live ratingCompleteCount=${liveCount}`);
+              }
+            }
+
+            if (liveCount < target) await sleep(requestDelayMs);
+          }
+
+          const final = await getStatus();
+          const finalCount = Number(final.ratingCompleteCount || 0);
+          console.log(JSON.stringify({
+            initialRatingCompleteCount: Number(first.ratingCompleteCount || 0),
+            finalRatingCompleteCount: finalCount,
+            target,
+            attempted,
+            ratedThisRun,
+            skipped,
+          }, null, 2));
+          NODE
