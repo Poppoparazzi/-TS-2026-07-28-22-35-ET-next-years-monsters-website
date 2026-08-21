@@ -1,4 +1,4 @@
-// TS: 2026-08-21 13:00 ET
+// TS: 2026-08-21 18:02 ET
 
 import { appendFileSync, writeFileSync } from "node:fs";
 
@@ -64,6 +64,8 @@ console.log(JSON.stringify(status, null, 2));
 console.log(`Deployment authority state written to ${authorityStateFile}.`);
 
 if (process.env.GITHUB_OUTPUT) {
+  // `method` preserves compatibility with the existing consolidated recovery workflow.
+  appendFileSync(process.env.GITHUB_OUTPUT, `method=${renderMethod}\n`);
   appendFileSync(process.env.GITHUB_OUTPUT, `render_method=${renderMethod}\n`);
   appendFileSync(process.env.GITHUB_OUTPUT, `render_authorized=${renderAuthorized}\n`);
   appendFileSync(process.env.GITHUB_OUTPUT, `render_deploy_hook_available=${renderDeployHook}\n`);
