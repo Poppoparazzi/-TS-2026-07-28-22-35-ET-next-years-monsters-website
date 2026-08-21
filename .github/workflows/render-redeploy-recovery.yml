@@ -1,4 +1,4 @@
-# TS: 2026-08-20 13:00 ET
+# TS: 2026-08-20 20:05 ET
 
 name: Render deploy recovery
 
@@ -288,6 +288,15 @@ jobs:
           NYM_UNIVERSE_STATUS_LIMIT: "5000"
           NYM_EXPECTED_USABLE_TARGET: "2200"
         run: node scripts/verify-sec-evidence-readiness.mjs
+
+      - name: Persist SEC evidence-ready recovery state artifact
+        if: steps.evidence_ready.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nym-sec-evidence-ready-state
+          path: ${{ steps.evidence_ready.outputs.recovery_state_file || 'nym-recovery-state.json' }}
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Report 5,000-candidate reserve/backfill progress toward 2,200 usable
         if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
