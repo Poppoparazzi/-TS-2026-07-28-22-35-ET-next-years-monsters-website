@@ -1,4 +1,4 @@
-// TS: 2026-08-20 07:00 ET
+// TS: 2026-08-21 06:02 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -7,6 +7,12 @@ import {
 } from "../universe/sec-batch-processor.js";
 import { createUniverseStore } from "../universe/store.js";
 import type { UniverseStatusSummary } from "../universe/types.js";
+
+const PROTECTED_STRATEGIC_TICKERS = new Set([
+  "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
+  "DECK", "WING", "META", "APP", "MSFT", "GOOGL", "GOOG", "AVGO", "PLTR", "CRDO",
+  "RKLB", "QCOM", "MU", "ARM", "DELL", "INTC", "MRVL", "HOOD", "COIN", "UBER",
+]);
 
 function environmentInteger(
   environment: NodeJS.ProcessEnv,
@@ -52,24 +58,32 @@ export function secEvidenceReadyCount(status: UniverseStatusSummary): number {
   ).length;
 }
 
+function isProtectedCompany(company: UniverseStatusSummary["companies"][number]): boolean {
+  return company.isPilot || PROTECTED_STRATEGIC_TICKERS.has(company.ticker.toUpperCase());
+}
+
+function isSecEvidenceReady(company: UniverseStatusSummary["companies"][number]): boolean {
+  return (
+    company.secStage === "complete" &&
+    company.hasSecIdentity &&
+    company.hasFilings &&
+    company.hasFacts
+  );
+}
+
 export function shouldSkipSecBackfill(
   status: UniverseStatusSummary,
   usableTarget: number,
 ): boolean {
-  const hasIncompleteProtectedPilot = status.companies.some(
-    (company) =>
-      company.isPilot &&
-      (company.secStage !== "complete" ||
-        !company.hasSecIdentity ||
-        !company.hasFilings ||
-        !company.hasFacts),
+  const hasIncompleteProtectedCompany = status.companies.some(
+    (company) => isProtectedCompany(company) && !isSecEvidenceReady(company),
   );
   const evidenceReadyCount = secEvidenceReadyCount(status);
 
   return (
     evidenceReadyCount >= usableTarget &&
     status.failedCount === 0 &&
-    !hasIncompleteProtectedPilot
+    !hasIncompleteProtectedCompany
   );
 }
 
@@ -118,7 +132,7 @@ export async function runSecUniverseBatchOnStartup(
   // "Usable" now means a company has completed SEC processing plus an SEC identity,
   // at least one filing, and company facts. A green pipeline stage alone is not enough
   // to stop the reserve worker. Ordinary unresolved names remain nonblocking once the
-  // evidence-ready target is satisfied, but failed rows and protected pilots still
+  // evidence-ready target is satisfied, but failed rows and protected companies still
   // receive cleanup/repair attention.
   const universeStore = createUniverseStore(config);
   try {
@@ -129,7 +143,7 @@ export async function runSecUniverseBatchOnStartup(
       if (shouldSkipSecBackfill(status, usableTarget)) {
         return skippedSummary(
           batchSize,
-          `SEC usable target already satisfied: ${evidenceReadyCount} evidence-ready >= ${usableTarget}, with no remaining failed SEC records and all protected pilot stocks evidence-ready. Unresolved names are nonblocking exceptions.`,
+          `SEC usable target already satisfied: ${evidenceReadyCount} evidence-ready >= ${usableTarget}, with no remaining failed SEC records and all protected pilot/strategic stocks evidence-ready. Unresolved lower-priority names are nonblocking exceptions.`,
         );
       }
     }
