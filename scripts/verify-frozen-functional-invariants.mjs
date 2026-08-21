@@ -1,4 +1,4 @@
-// TS: 2026-08-21 05:02 ET
+// TS: 2026-08-21 09:03 ET
 
 import { readFileSync } from "node:fs";
 import { protectedTickers } from "./protected-stocks.mjs";
@@ -72,6 +72,38 @@ function verifyProtectedVclPolicy() {
   }
 }
 
+function verifyBackendAndRecoveryProtectionPoliciesMatch() {
+  const backendSource = read("backend/src/policy/protected-stocks.ts");
+  const backendTickers = parseQuotedArray(backendSource, "PROTECTED_STRATEGIC_TICKERS");
+
+  if (!backendTickers) {
+    fail("Backend protected-stock policy could not be parsed for consistency verification.");
+    return;
+  }
+
+  const recoveryTickers = protectedTickers.map((ticker) => String(ticker).toUpperCase());
+  const normalizedBackendTickers = backendTickers.map((ticker) => String(ticker).toUpperCase());
+  const backendDuplicates = normalizedBackendTickers.filter(
+    (ticker, index) => normalizedBackendTickers.indexOf(ticker) !== index,
+  );
+
+  if (backendDuplicates.length > 0) {
+    fail(`Backend protected-stock policy contains duplicate tickers: ${[...new Set(backendDuplicates)].join(", ")}`);
+  }
+
+  if (normalizedBackendTickers.join(",") !== recoveryTickers.join(",")) {
+    const backendSet = new Set(normalizedBackendTickers);
+    const recoverySet = new Set(recoveryTickers);
+    const missingFromBackend = recoveryTickers.filter((ticker) => !backendSet.has(ticker));
+    const missingFromRecovery = normalizedBackendTickers.filter((ticker) => !recoverySet.has(ticker));
+    fail(
+      "Backend and recovery protected-stock policies drifted apart. " +
+        `Missing from backend: ${missingFromBackend.join(", ") || "none"}; ` +
+        `missing from recovery: ${missingFromRecovery.join(", ") || "none"}.`,
+    );
+  }
+}
+
 function verifyMonsterHuntConsistency() {
   const source = read("assets/monster-check-rating-trio.js");
 
@@ -99,6 +131,7 @@ function verifyMonsterHuntConsistency() {
 verifyHomepageSearch();
 verifyMonsterCheckQuickPicks();
 verifyProtectedVclPolicy();
+verifyBackendAndRecoveryProtectionPoliciesMatch();
 verifyMonsterHuntConsistency();
 
 if (failures.length) {
@@ -106,5 +139,5 @@ if (failures.length) {
   failures.forEach((message) => console.error(`- ${message}`));
   process.exitCode = 1;
 } else {
-  console.log("Frozen functional invariant verification passed: Apple/AAPL routing, 15 unique VCL quick picks, VCL replacement protection, direct chart routing, selected-ticker-first status panel, and shared Monster Hunt score/rank source are intact.");
+  console.log("Frozen functional invariant verification passed: Apple/AAPL routing, 15 unique VCL quick picks, synchronized backend/recovery VCL replacement protection, direct chart routing, selected-ticker-first status panel, and shared Monster Hunt score/rank source are intact.");
 }
