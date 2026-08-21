@@ -1,4 +1,4 @@
-# TS: 2026-08-21 02:08 ET
+# TS: 2026-08-21 10:02 ET
 
 name: Render deploy recovery
 
@@ -251,18 +251,21 @@ jobs:
           throw new Error("Authorized Render recovery did not expose the repaired /api/ratings/AAPL route within the verification window.");
           NODE
 
-      - name: Record unreachable production blocker without duplicate failures
-        if: steps.render_state.outputs.classification == 'render_unreachable' && steps.render_auth.outputs.method == 'none'
+      - name: Record blocked production verification without duplicate failures
+        if: steps.render_state.outputs.classification != 'current_for_backend' && steps.render_auth.outputs.method == 'none'
+        env:
+          RENDER_CLASSIFICATION: ${{ steps.render_state.outputs.classification }}
         run: |
           {
             echo "### Production verification deferred"
             echo
-            echo "Render was unreachable during this run and no deployment authority exists."
-            echo "The live rating smoke, production accounting, evidence-ready gate, and reserve/backfill report are deferred rather than generating duplicate failure notifications for the same unreachable backend."
+            echo "Render classification: **$RENDER_CLASSIFICATION**."
+            echo "No deployment authority exists, so production-only smoke/accounting/backfill checks are deferred rather than repeatedly failing on the same known stale or unreachable backend."
+            echo "Frozen functional invariants still run every hour, and the recovery will resume production checks immediately when Render becomes current or deployment authority appears."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run Current Stock Rating production smoke in the same hourly job
-        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
+        if: steps.render_state.outputs.classification == 'current_for_backend' || steps.render_auth.outputs.method != 'none'
         env:
           NYM_RATING_SMOKE_SYMBOLS: "AAPL,CRDO,RKLB,MSFT"
           NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v0.1-readiness-only"
@@ -277,13 +280,13 @@ jobs:
           node scripts/verify-frozen-functional-invariants.mjs
 
       - name: Verify production accounting and provider truth
-        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
+        if: steps.render_state.outputs.classification == 'current_for_backend' || steps.render_auth.outputs.method != 'none'
         run: node scripts/verify-production.mjs
 
       - name: Verify 2,200 SEC evidence-ready production target
         id: evidence_ready
         continue-on-error: true
-        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
+        if: steps.render_state.outputs.classification == 'current_for_backend' || steps.render_auth.outputs.method != 'none'
         env:
           NYM_UNIVERSE_STATUS_LIMIT: "5000"
           NYM_EXPECTED_USABLE_TARGET: "2200"
@@ -299,7 +302,7 @@ jobs:
           retention-days: 30
 
       - name: Report 5,000-candidate reserve/backfill progress toward 2,200 usable
-        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
+        if: steps.render_state.outputs.classification == 'current_for_backend' || steps.render_auth.outputs.method != 'none'
         env:
           NYM_CANDIDATE_TARGET: "5000"
           NYM_USABLE_TARGET: "2200"
@@ -307,7 +310,7 @@ jobs:
 
       - name: Classify SEC exceptions for repair versus replacement
         id: sec_exceptions
-        if: steps.render_state.outputs.classification != 'render_unreachable' || steps.render_auth.outputs.method != 'none'
+        if: steps.render_state.outputs.classification == 'current_for_backend' || steps.render_auth.outputs.method != 'none'
         env:
           NYM_CANDIDATE_TARGET: "5000"
           NYM_USABLE_TARGET: "2200"
