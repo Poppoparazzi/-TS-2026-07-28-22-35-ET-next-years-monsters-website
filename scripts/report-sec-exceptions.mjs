@@ -1,6 +1,7 @@
-// TS: 2026-08-21 01:03 ET
+// TS: 2026-08-21 04:01 ET
 
 import fs from "node:fs";
+import { isProtectedStock } from "./protected-stocks.mjs";
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -17,16 +18,6 @@ if (!Number.isInteger(usableTarget) || usableTarget < 1 || usableTarget > candid
 }
 if (!exceptionStateFile) {
   throw new Error("NYM_SEC_EXCEPTION_STATE_FILE must not be empty.");
-}
-
-const protectedTickers = new Set([
-  "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
-  "DECK", "WING", "META", "APP", "MSFT", "GOOGL", "GOOG", "AVGO", "PLTR", "CRDO",
-  "RKLB", "QCOM", "MU", "ARM", "DELL", "INTC", "MRVL", "HOOD", "COIN", "UBER",
-]);
-
-function isProtected(company) {
-  return company?.isPilot === true || protectedTickers.has(String(company?.ticker || "").toUpperCase());
 }
 
 function reasonBucket(company) {
@@ -103,8 +94,8 @@ if (!exceptionVisibilityComplete) {
   );
 }
 
-const protectedExceptions = exceptions.filter(isProtected);
-const replaceableExceptions = exceptions.filter((company) => !isProtected(company));
+const protectedExceptions = exceptions.filter(isProtectedStock);
+const replaceableExceptions = exceptions.filter((company) => !isProtectedStock(company));
 const prioritizedReplaceableExceptions = [...replaceableExceptions].sort((a, b) => {
   const priorityDifference = replacementPriority(a) - replacementPriority(b);
   if (priorityDifference !== 0) return priorityDifference;
@@ -114,10 +105,10 @@ const prioritizedReplaceableExceptions = [...replaceableExceptions].sort((a, b) 
 });
 const failedExceptions = exceptions.filter((company) => company?.secStage === "failed");
 const unresolvedExceptions = exceptions.filter((company) => company?.secStage === "unresolved");
-const protectedFailedExceptions = failedExceptions.filter(isProtected);
-const replaceableFailedExceptions = failedExceptions.filter((company) => !isProtected(company));
-const protectedUnresolvedExceptions = unresolvedExceptions.filter(isProtected);
-const replaceableUnresolvedExceptions = unresolvedExceptions.filter((company) => !isProtected(company));
+const protectedFailedExceptions = failedExceptions.filter(isProtectedStock);
+const replaceableFailedExceptions = failedExceptions.filter((company) => !isProtectedStock(company));
+const protectedUnresolvedExceptions = unresolvedExceptions.filter(isProtectedStock);
+const replaceableUnresolvedExceptions = unresolvedExceptions.filter((company) => !isProtectedStock(company));
 
 const byReason = new Map();
 const byExchange = new Map();
@@ -131,10 +122,10 @@ const exactExceptionRoster = exceptions.map((company) => ({
   companyName: company.companyName,
   exchange: company.exchange ?? null,
   secStage: company.secStage,
-  protected: isProtected(company),
-  disposition: isProtected(company) ? "must_repair" : "replaceable",
+  protected: isProtectedStock(company),
+  disposition: isProtectedStock(company) ? "must_repair" : "replaceable",
   reason: reasonBucket(company),
-  replacementPriority: isProtected(company) ? null : replacementPriority(company),
+  replacementPriority: isProtectedStock(company) ? null : replacementPriority(company),
   secAttemptCount: Number(company.secAttemptCount || 0),
   lastError: company.lastError ?? null,
 }));
