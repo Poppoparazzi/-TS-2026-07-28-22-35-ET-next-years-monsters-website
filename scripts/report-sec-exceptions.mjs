@@ -1,4 +1,4 @@
-// TS: 2026-08-20 21:03 ET
+// TS: 2026-08-20 23:03 ET
 
 import fs from "node:fs";
 
@@ -147,6 +147,19 @@ if (process.env.GITHUB_OUTPUT) {
 }
 
 if (process.env.GITHUB_STEP_SUMMARY) {
+  const protectedSummary = protectedExceptions.length > 0
+    ? protectedExceptions.map((company) => `${company.ticker} (${reasonBucket(company)})`).join(", ")
+    : "none";
+  const topReasons = [...byReason.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([reason, count]) => `${reason}: ${count}`)
+    .join(", ") || "none";
+  const replaceableSample = replaceableExceptions
+    .slice(0, 20)
+    .map((company) => `${company.ticker} (${reasonBucket(company)})`)
+    .join(", ") || "none";
+
   fs.appendFileSync(
     process.env.GITHUB_STEP_SUMMARY,
     [
@@ -155,6 +168,9 @@ if (process.env.GITHUB_STEP_SUMMARY) {
       `- Visible unresolved/failed records: **${exceptions.length}**`,
       `- Must repair: **${protectedExceptions.length}**`,
       `- Replaceable: **${replaceableExceptions.length}**`,
+      `- Protected tickers requiring repair: ${protectedSummary}`,
+      `- Top exception reasons: ${topReasons}`,
+      `- Replaceable sample: ${replaceableSample}`,
       `- Exact roster file: \`${exceptionStateFile}\``,
       "",
     ].join("\n"),
