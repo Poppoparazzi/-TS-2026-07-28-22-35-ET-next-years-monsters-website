@@ -1,11 +1,11 @@
-<!-- TS: 2026-07-30 11:15 ET -->
+<!-- TS: 2026-08-21 16:32 UTC -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Stock Directory | Next Year’s Monsters™</title>
-  <meta name="description" content="Search the current 25-stock market directory by ticker, company, or industry, then open the available Monster Check, chart, or current stories.">
+  <meta name="description" content="Search the live 5,000-candidate production stock universe by ticker or company and see which companies are SEC evidence-ready.">
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/editorial-type.css">
   <link rel="stylesheet" href="assets/coverage-universe.css">
@@ -37,34 +37,34 @@
     <div class="coverage-shell">
       <p class="coverage-kicker">SEARCH THE MARKET UNIVERSE</p>
       <h1>STOCK<br><strong>DIRECTORY</strong></h1>
-      <p class="coverage-intro">Find a company by ticker, name, or industry. The directory tells you exactly what is available, then opens its Monster Check, full chart, or latest available stories without making you tour the entire website first.</p>
+      <p class="coverage-intro">Search the live production universe by ticker or company name. The directory identifies SEC evidence-ready companies, clearly marks incomplete evidence, and opens the correct Stock Check or chart without making you tour the entire website first.</p>
     </div>
   </section>
 
   <div class="coverage-main">
     <section class="coverage-trust-strip" aria-label="Stock directory status">
-      <article><strong data-coverage-market-count>25</strong><span>SEARCHABLE MARKET STOCKS</span></article>
-      <article><strong data-coverage-demo-count>15</strong><span>DEMONSTRATION PROFILES</span></article>
-      <article><strong data-coverage-external-count>10</strong><span>CHARTS &amp; STORIES ONLY</span></article>
-      <article><strong>0</strong><span>INTERNALLY VERIFIED LIVE</span></article>
-      <article><strong data-coverage-status>LOADING</strong><span>DIRECTORY STATUS</span></article>
+      <article><strong data-coverage-candidate-count>5,000</strong><span>PRODUCTION CANDIDATES</span></article>
+      <article><strong data-coverage-evidence-count>CHECKING</strong><span>SEC EVIDENCE-READY</span></article>
+      <article><strong data-coverage-protected-count>30</strong><span>PROTECTED STRATEGIC STOCKS</span></article>
+      <article><strong data-coverage-exception-count>CHECKING</strong><span>ORDINARY REPLACEABLE EXCEPTIONS</span></article>
+      <article><strong data-coverage-status>LOADING</strong><span>LIVE DIRECTORY STATUS</span></article>
     </section>
 
     <div class="coverage-notice">
-      <strong>SEARCHABLE DOES NOT AUTOMATICALLY MEAN RATED.</strong>
-      TradingView supplies the visible external prices, charts, and stories, which may be delayed. A Monster Rating™ requires saved evidence, sources, rating versions, and genuine update timestamps inside the production system.
+      <strong>SEC EVIDENCE-READY DOES NOT AUTOMATICALLY MEAN RATED.</strong>
+      The production directory confirms usable SEC identity, filings, and company facts. A Current Stock Rating™ also requires verified market data, risks, source freshness, and a versioned calculation; the site will not invent those missing inputs.
     </div>
 
     <section class="coverage-finder" aria-labelledby="coverage-finder-title">
       <div class="coverage-finder-head">
         <h2 id="coverage-finder-title">SEARCH BY<br><strong>STOCK OR INDUSTRY.</strong></h2>
-        <p>Enter a ticker such as RKLB, a company such as Apple, or an industry such as semiconductors. Every result identifies what exists and provides the correct next action.</p>
+        <p>Enter a ticker such as RKLB or IBM, a company such as Apple or Palantir, or a curated industry such as semiconductors. Every result identifies what exists and provides the correct next action.</p>
       </div>
 
       <div class="coverage-finder-how" aria-label="How to use the Stock Directory">
-        <article><strong>1 · TYPE</strong><span>Use a ticker, company name, sector, or industry.</span></article>
-        <article><strong>2 · SEE THE STATUS</strong><span>Learn whether a Monster Check exists or only charts and stories are available.</span></article>
-        <article><strong>3 · OPEN THE TOOL</strong><span>Go directly to the Check, Chart, or Current Stories.</span></article>
+        <article><strong>1 · TYPE</strong><span>Use an exact ticker, company name, or curated industry.</span></article>
+        <article><strong>2 · SEE THE STATUS</strong><span>Learn whether SEC evidence is ready, pending, protected, or replaceable.</span></article>
+        <article><strong>3 · OPEN THE TOOL</strong><span>Go directly to the Stock Check, chart, or available current stories.</span></article>
       </div>
 
       <p class="coverage-finder-example-label">TRY AN EXAMPLE</p>
@@ -81,9 +81,9 @@
       </div>
 
       <div class="coverage-finder-filters" role="group" aria-label="Filter stock availability">
-        <button class="coverage-finder-filter is-active" data-coverage-finder-filter="all" type="button" aria-pressed="true">ALL 25</button>
-        <button class="coverage-finder-filter" data-coverage-finder-filter="monster" type="button" aria-pressed="false">MONSTER CHECK AVAILABLE</button>
-        <button class="coverage-finder-filter" data-coverage-finder-filter="market" type="button" aria-pressed="false">CHARTS &amp; STORIES ONLY</button>
+        <button class="coverage-finder-filter is-active" data-coverage-finder-filter="all" type="button" aria-pressed="true"><span data-coverage-all-label>ALL 5,000</span></button>
+        <button class="coverage-finder-filter" data-coverage-finder-filter="evidence" type="button" aria-pressed="false">SEC EVIDENCE-READY</button>
+        <button class="coverage-finder-filter" data-coverage-finder-filter="monster" type="button" aria-pressed="false">DEMONSTRATION CHECKS</button>
       </div>
 
       <p class="coverage-finder-summary" data-coverage-finder-summary aria-live="polite">LOADING STOCK DIRECTORY</p>
@@ -113,14 +113,14 @@
     <section class="coverage-section" aria-labelledby="scale-roadmap-title">
       <div class="coverage-section-head">
         <h2 id="scale-roadmap-title">THE SCALE<br>ROADMAP.</h2>
-        <p>The searchable directory can grow much faster than verified Monster Ratings. Each larger verified stage still depends on the backend, database, reliable refresh jobs, source tracking, and failure handling.</p>
+        <p>The broad directory is now connected to production. Evidence-ready coverage can grow faster than verified Current Stock Ratings because ratings still require a licensed market-data feed and versioned scoring evidence.</p>
       </div>
       <div class="coverage-stage-grid">
-        <article><strong>25</strong><span>MARKET TOOLS</span><small>Completed for charts, ticker tape, Market Pulse, and News Radar. Ratings remain limited to demonstrations.</small></article>
-        <article><strong>50</strong><span>SECTOR BREADTH</span><small>Next external expansion after the current 25-stock tools are tested and cleaned up.</small></article>
-        <article><strong>100</strong><span>DIRECTORY DEPTH</span><small>Requires stronger filtering, sorting, and search behavior.</small></article>
-        <article><strong>200</strong><span>ACTIVE MONITORING</span><small>Requires provider capacity, monitoring, retries, evidence rules, and database performance.</small></article>
-        <article><strong>2,000</strong><span>SEARCHABLE UNIVERSE</span><small>Planned coverage of active U.S.-listed common stocks. Not currently built or internally live.</small></article>
+        <article><strong>5,000</strong><span>CANDIDATE RESERVE</span><small>The production database maintains a broad reserve instead of repeatedly retrying the same ordinary failures.</small></article>
+        <article><strong>2,200</strong><span>READINESS FLOOR</span><small>Production must retain at least 2,200 companies with usable SEC identity, filings, and company facts.</small></article>
+        <article><strong>30</strong><span>PROTECTED STOCKS</span><small>Strategic tickers stay on the mandatory repair path and are never silently discarded.</small></article>
+        <article><strong>HOURLY</strong><span>WATCHDOG</span><small>The scheduled recovery verifies production at minute seven of every hour.</small></article>
+        <article><strong>25</strong><span>CURATED MARKET TOOLS</span><small>The original chart, ticker-tape, Market Pulse, and News Radar collection remains available alongside the broad directory.</small></article>
       </div>
     </section>
   </div>
@@ -131,8 +131,9 @@
   <p><strong>Educational Use Only:</strong> Demonstration profiles and external market widgets are not recommendations. Investing involves risk, including possible loss of principal.</p>
 </footer>
 
-<script src="assets/coverage-universe.js"></script>
-<script src="assets/coverage-finder.js"></script>
+<script src="assets/runtime-config.js"></script>
+<script src="assets/coverage-universe.js?v=20260821b"></script>
+<script src="assets/coverage-finder.js?v=20260821b"></script>
 <script src="assets/coverage-finder-guide.js"></script>
 <script src="assets/market-ticker-strip.js"></script>
 </body>

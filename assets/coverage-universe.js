@@ -1,8 +1,9 @@
-// TS: 2026-07-30 09:43 ET
+// TS: 2026-08-21 16:32 UTC
 
 function coverageText(selector, value) {
-  const node = document.querySelector(selector);
-  if (node) node.textContent = value;
+  document.querySelectorAll(selector).forEach((node) => {
+    node.textContent = value;
+  });
 }
 
 function createCoverageCard(stock, mode) {
@@ -60,9 +61,8 @@ async function startCoverageUniverse() {
     renderCoverageGrid("[data-coverage-expansion-grid]", externalOnly, "external");
 
     coverageText("[data-coverage-demo-count]", String(demonstrations.length));
-    coverageText("[data-coverage-market-count]", String(ordered.length));
     coverageText("[data-coverage-external-count]", String(externalOnly.length));
-    coverageText("[data-coverage-status]", `${ordered.length} EXTERNAL MARKET STOCKS LOADED`);
+    coverageText("[data-coverage-status]", `${ordered.length} MARKET TOOLS LOADED · CHECKING PRODUCTION DIRECTORY`);
   } catch (_error) {
     coverageText("[data-coverage-status]", "COVERAGE UNIVERSE COULD NOT LOAD");
     document.querySelectorAll("[data-coverage-stock-grid], [data-coverage-expansion-grid]").forEach((grid) => {

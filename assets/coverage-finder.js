@@ -1,4 +1,4 @@
-// TS: 2026-07-30 11:43 ET
+// TS: 2026-08-21 16:32 UTC
 
 function coverageFinderNormalize(value) {
   return String(value ?? "").trim().toUpperCase();
@@ -13,12 +13,68 @@ function coverageFinderMatches(stock, query) {
     .some((value) => value.includes(normalized));
 }
 
+function coverageFinderApiBaseUrl() {
+  const raw = window.NYM_CONFIG?.apiBaseUrl;
+  if (typeof raw !== "string" || !raw.trim()) return "";
+
+  try {
+    const url = new URL(raw.trim());
+    const localDevelopment = ["localhost", "127.0.0.1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localDevelopment) return "";
+    return url.href.replace(/\/$/, "");
+  } catch (_error) {
+    return "";
+  }
+}
+
+async function loadProductionDirectory(query, evidenceReadyOnly = false) {
+  const apiBaseUrl = coverageFinderApiBaseUrl();
+  if (!apiBaseUrl) throw new Error("The production directory is not configured.");
+
+  const url = new URL(`${apiBaseUrl}/api/universe/search`);
+  if (query) url.searchParams.set("q", query);
+  url.searchParams.set("limit", "25");
+  if (evidenceReadyOnly) url.searchParams.set("evidenceReady", "true");
+
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(65_000),
+  });
+  if (!response.ok) throw new Error("The production directory did not respond.");
+  return response.json();
+}
+
 function createCoverageFinderAction(className, href, label) {
   const link = document.createElement("a");
   link.className = className;
   link.href = href;
   link.textContent = label;
   return link;
+}
+
+function productionStatusLabel(stock) {
+  if (stock.status === "evidence_ready" || stock.secEvidenceReady) return "SEC EVIDENCE READY";
+  if (stock.status === "protected_must_repair") return "PROTECTED · REPAIRING";
+  if (stock.status === "replaceable_exception") return "ORDINARY EXCEPTION";
+  if (stock.status === "processing") return "EVIDENCE PROCESSING";
+  return stock.production ? "EVIDENCE PENDING" : "MARKET TOOLS";
+}
+
+function productionDetail(stock) {
+  const location = stock.exchange || stock.sector || "Official SEC company";
+  if (stock.monsterCheck) {
+    return `${stock.sector} · Educational Monster Check demonstration available`;
+  }
+  if (stock.secEvidenceReady) {
+    return `${location} · Required SEC evidence is ready · Current rating awaits market data`;
+  }
+  if (stock.status === "protected_must_repair") {
+    return `${location} · Strategic ticker remains on the mandatory evidence-repair path`;
+  }
+  if (stock.status === "replaceable_exception") {
+    return `${location} · Ordinary SEC exception · No rating will be invented`;
+  }
+  return `${location} · Official production-universe candidate · Evidence is not complete`;
 }
 
 function createCoverageFinderCard(stock) {
@@ -35,43 +91,100 @@ function createCoverageFinderCard(stock) {
   company.textContent = stock.name;
 
   const detail = document.createElement("small");
-  detail.textContent = stock.monsterCheck
-    ? `${stock.sector} · Monster Check demonstration available · Not internally live`
-    : `${stock.sector} · Charts and stories available · No Monster Rating yet`;
+  detail.textContent = productionDetail(stock);
 
   identity.append(ticker, company, detail);
 
   const actions = document.createElement("div");
   actions.className = "coverage-finder-actions";
 
-  if (stock.monsterCheck) {
-    actions.append(createCoverageFinderAction(
-      "coverage-finder-check",
-      `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`,
-      "MONSTER CHECK",
-    ));
-  } else {
-    const status = document.createElement("span");
-    status.className = "coverage-finder-status";
-    status.textContent = "NO RATING YET";
-    actions.append(status);
-  }
+  const status = document.createElement("span");
+  status.className = `coverage-finder-status coverage-finder-status-${stock.status || "market"}`;
+  status.textContent = productionStatusLabel(stock);
+  actions.append(status);
 
   actions.append(
     createCoverageFinderAction(
-      "coverage-finder-chart",
-      `market-explorer.html?left=${encodeURIComponent(stock.ticker)}&mode=single`,
-      "CHART",
+      "coverage-finder-check",
+      `monster-check.html?ticker=${encodeURIComponent(stock.ticker)}`,
+      stock.monsterCheck ? "MONSTER CHECK" : "STOCK CHECK",
     ),
     createCoverageFinderAction(
-      "coverage-finder-news",
-      `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}#current-stories`,
-      "CURRENT STORIES",
+      "coverage-finder-chart",
+      `market-explorer.html?left=${encodeURIComponent(stock.ticker)}&mode=single&direct=1`,
+      "CHART",
     ),
   );
 
+  if (stock.marketTools) {
+    actions.append(createCoverageFinderAction(
+      "coverage-finder-news",
+      `news-radar.html?ticker=${encodeURIComponent(stock.ticker)}#current-stories`,
+      "CURRENT STORIES",
+    ));
+  }
+
   card.append(identity, actions);
   return card;
+}
+
+function localDirectoryStock(stock) {
+  return {
+    ...stock,
+    name: stock.name,
+    exchange: stock.exchange || "",
+    production: false,
+    secEvidenceReady: false,
+    ratingAvailable: false,
+    status: "market",
+    marketTools: true,
+  };
+}
+
+function productionDirectoryStock(company, localStock) {
+  return {
+    ticker: company.ticker,
+    name: company.companyName,
+    exchange: company.exchange || "",
+    sector: localStock?.sector || company.exchange || "Official SEC company",
+    monsterCheck: Boolean(localStock?.monsterCheck),
+    marketTools: Boolean(localStock),
+    production: true,
+    secEvidenceReady: Boolean(company.secEvidenceReady),
+    ratingAvailable: Boolean(company.ratingAvailable),
+    isProtected: Boolean(company.isProtected),
+    status: company.status || "reserve",
+  };
+}
+
+function coverageFinderRank(stock, query) {
+  const normalized = coverageFinderNormalize(query);
+  const ticker = coverageFinderNormalize(stock.ticker);
+  const name = coverageFinderNormalize(stock.name);
+  if (ticker === normalized) return 0;
+  if (name === normalized) return 1;
+  if (ticker.startsWith(normalized)) return 2;
+  if (name.startsWith(normalized)) return 3;
+  return 4;
+}
+
+function updateProductionDirectoryTotals(universe) {
+  if (!universe) return;
+
+  coverageText("[data-coverage-candidate-count]", Number(universe.candidateCount || 0).toLocaleString());
+  coverageText("[data-coverage-evidence-count]", Number(universe.secEvidenceReadyCount || 0).toLocaleString());
+  coverageText("[data-coverage-protected-count]", Number(universe.protectedTickerCount || 0).toLocaleString());
+  coverageText("[data-coverage-exception-count]", Number(universe.replaceableFailureCount || 0).toLocaleString());
+  coverageText(
+    "[data-coverage-status]",
+    Number(universe.protectedMustRepairCount || 0) === 0
+      ? "LIVE · PROTECTED STOCKS READY"
+      : `${Number(universe.protectedMustRepairCount).toLocaleString()} PROTECTED REPAIRS ACTIVE`,
+  );
+
+  document.querySelectorAll("[data-coverage-all-label]").forEach((node) => {
+    node.textContent = `ALL ${Number(universe.candidateCount || 0).toLocaleString()}`;
+  });
 }
 
 async function startCoverageFinder() {
@@ -86,18 +199,22 @@ async function startCoverageFinder() {
   const initialParams = new URLSearchParams(window.location.search);
   input.value = initialParams.get("q") || "";
 
-  let stocks = [];
+  let localStocks = [];
   let activeFilter = "all";
+  let requestGeneration = 0;
+  let searchTimer = null;
 
   try {
     const response = await fetch("data/market-universe.json");
     if (!response.ok) throw new Error("Unable to load market universe");
-    stocks = await response.json();
+    localStocks = (await response.json()).map(localDirectoryStock);
   } catch (_error) {
-    summary.textContent = "STOCK DIRECTORY COULD NOT LOAD";
-    results.innerHTML = '<p class="coverage-finder-empty">The market list could not be loaded. No company was invented.</p>';
-    return;
+    localStocks = [];
   }
+
+  const byLocalTicker = new Map(
+    localStocks.map((stock) => [coverageFinderNormalize(stock.ticker), stock]),
+  );
 
   const syncQueryToUrl = () => {
     const url = new URL(window.location.href);
@@ -107,59 +224,107 @@ async function startCoverageFinder() {
     window.history.replaceState({}, "", url);
   };
 
-  const render = () => {
-    const query = input.value.trim();
-    const filtered = stocks
-      .filter((stock) => {
-        if (activeFilter === "monster") return stock.monsterCheck;
-        if (activeFilter === "market") return !stock.monsterCheck;
-        return true;
-      })
-      .filter((stock) => coverageFinderMatches(stock, query))
-      .sort((left, right) => {
-        const normalized = coverageFinderNormalize(query);
-        const leftTicker = coverageFinderNormalize(left.ticker);
-        const rightTicker = coverageFinderNormalize(right.ticker);
-        const leftRank = leftTicker === normalized ? 0 : leftTicker.startsWith(normalized) ? 1 : 2;
-        const rightRank = rightTicker === normalized ? 0 : rightTicker.startsWith(normalized) ? 1 : 2;
-        return leftRank - rightRank || leftTicker.localeCompare(rightTicker);
-      })
-      .slice(0, 12);
-
+  const emptyResults = (message) => {
     results.replaceChildren();
+    const node = document.createElement("p");
+    node.className = "coverage-finder-empty";
+    node.textContent = message;
+    results.append(node);
+  };
+
+  const renderSearch = async () => {
+    const query = input.value.trim();
+    const generation = ++requestGeneration;
 
     if (!query) {
       summary.textContent = "TYPE A TICKER, COMPANY, OR INDUSTRY";
-      const message = document.createElement("p");
-      message.className = "coverage-finder-empty";
-      message.textContent = "Try AAPL, Apple, RKLB, software, semiconductors, or financial technology. The finder is designed to scale without placing thousands of ticker buttons on the page.";
-      results.append(message);
+      emptyResults("Search the live production universe by ticker or company name. Industry searches continue to use the curated market-tool collection.");
       return;
     }
 
-    summary.textContent = `${filtered.length} MATCH${filtered.length === 1 ? "" : "ES"} SHOWN`;
-
-    if (!filtered.length) {
-      const message = document.createElement("p");
-      message.className = "coverage-finder-empty";
-      message.textContent = `No current Market 25 company matches “${query}.” The directory will expand as the searchable universe grows.`;
-      results.append(message);
+    if (activeFilter === "monster") {
+      const demonstrations = localStocks
+        .filter((stock) => stock.monsterCheck && coverageFinderMatches(stock, query))
+        .sort((left, right) => coverageFinderRank(left, query) - coverageFinderRank(right, query));
+      summary.textContent = `${demonstrations.length} DEMONSTRATION MATCH${demonstrations.length === 1 ? "" : "ES"}`;
+      results.replaceChildren();
+      if (!demonstrations.length) {
+        emptyResults(`No educational Monster Check demonstration matches “${query}.” Try the All 5,000 filter for the production universe.`);
+      } else {
+        demonstrations.forEach((stock) => results.append(createCoverageFinderCard(stock)));
+      }
       return;
     }
 
-    filtered.forEach((stock) => results.append(createCoverageFinderCard(stock)));
+    summary.textContent = activeFilter === "evidence"
+      ? "SEARCHING SEC EVIDENCE-READY COMPANIES…"
+      : "SEARCHING THE 5,000-CANDIDATE PRODUCTION UNIVERSE…";
+
+    const localMatches = activeFilter === "all"
+      ? localStocks.filter((stock) => coverageFinderMatches(stock, query))
+      : [];
+
+    try {
+      const payload = await loadProductionDirectory(query, activeFilter === "evidence");
+      if (generation !== requestGeneration) return;
+      updateProductionDirectoryTotals(payload.universe);
+
+      const merged = new Map();
+      (payload.results || []).forEach((company) => {
+        const key = coverageFinderNormalize(company.ticker);
+        merged.set(key, productionDirectoryStock(company, byLocalTicker.get(key)));
+      });
+      localMatches.forEach((stock) => {
+        const key = coverageFinderNormalize(stock.ticker);
+        if (!merged.has(key)) merged.set(key, stock);
+      });
+
+      const matches = [...merged.values()]
+        .sort((left, right) => {
+          return coverageFinderRank(left, query) - coverageFinderRank(right, query)
+            || coverageFinderNormalize(left.ticker).localeCompare(coverageFinderNormalize(right.ticker));
+        })
+        .slice(0, 12);
+
+      results.replaceChildren();
+      summary.textContent = matches.length
+        ? `${matches.length} BEST MATCH${matches.length === 1 ? "" : "ES"} SHOWN`
+        : "NO MATCHES FOUND";
+
+      if (!matches.length) {
+        emptyResults(`No active production-universe company matches “${query}.” Try an exact U.S. ticker or a shorter company name.`);
+      } else {
+        matches.forEach((stock) => results.append(createCoverageFinderCard(stock)));
+      }
+    } catch (_error) {
+      if (generation !== requestGeneration) return;
+      const fallback = localMatches
+        .sort((left, right) => coverageFinderRank(left, query) - coverageFinderRank(right, query))
+        .slice(0, 12);
+      results.replaceChildren();
+      summary.textContent = fallback.length
+        ? `${fallback.length} CURATED MATCH${fallback.length === 1 ? "" : "ES"} · PRODUCTION DIRECTORY WAKING`
+        : "PRODUCTION DIRECTORY IS WAKING · PLEASE TRY AGAIN SHORTLY";
+      if (fallback.length) fallback.forEach((stock) => results.append(createCoverageFinderCard(stock)));
+      else emptyResults("The production directory is temporarily unavailable. Please try the ticker or company again shortly; no result was invented.");
+    }
+  };
+
+  const scheduleSearch = (immediate = false) => {
+    if (searchTimer) window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => void renderSearch(), immediate ? 0 : 300);
   };
 
   input.addEventListener("input", () => {
     syncQueryToUrl();
-    render();
+    scheduleSearch();
   });
 
   clearButton.addEventListener("click", () => {
     input.value = "";
     input.focus();
     syncQueryToUrl();
-    render();
+    scheduleSearch(true);
   });
 
   filters.forEach((button) => {
@@ -170,14 +335,19 @@ async function startCoverageFinder() {
         item.classList.toggle("is-active", active);
         item.setAttribute("aria-pressed", String(active));
       });
-      render();
+      scheduleSearch(true);
     });
   });
 
-  render();
-  if (input.value) {
-    window.setTimeout(() => input.scrollIntoView({ block: "center" }), 100);
+  try {
+    const payload = await loadProductionDirectory("");
+    updateProductionDirectoryTotals(payload.universe);
+  } catch (_error) {
+    coverageText("[data-coverage-status]", "PRODUCTION DIRECTORY WAKING");
   }
+
+  scheduleSearch(true);
+  if (input.value) window.setTimeout(() => input.scrollIntoView({ block: "center" }), 100);
 }
 
 if (document.readyState === "loading") {

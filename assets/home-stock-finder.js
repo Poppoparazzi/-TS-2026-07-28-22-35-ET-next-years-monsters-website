@@ -1,212 +1,135 @@
-// TS: 2026-08-16 09:05 ET
+// TS: 2026-08-21 16:32 UTC
 
-function installHomeCheckDetective() {
-  const heading = document.querySelector(".home-check-heading");
-  if (!heading) return;
+function homeStockFinderApiBaseUrl() {
+  const raw = window.NYM_CONFIG?.apiBaseUrl;
+  if (typeof raw !== "string" || !raw.trim()) return "";
 
-  // The direct HTML fallback may still contain the older Captain Breakout block.
-  // Remove that stale mascot before installing the current approved Detective Break artwork.
-  heading.querySelectorAll(".home-check-captain-direct").forEach((node) => node.remove());
-  if (heading.querySelector(".home-check-detective")) return;
-
-  const style = document.createElement("style");
-  style.id = "home-check-detective-styles";
-  style.textContent = `
-    .home-check-heading{position:relative;overflow:hidden}
-    .home-check-detective{margin:20px 0 0;display:flex;align-items:flex-end;justify-content:center;min-height:690px}
-    .home-check-detective img{display:block;width:min(470px,100%);height:690px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 24px 36px rgba(0,0,0,.52))}
-    @media(max-width:1050px){.home-check-detective{min-height:500px}.home-check-detective img{width:min(360px,86%);height:500px}}
-    @media(max-width:650px){.home-check-detective{margin-top:18px;min-height:390px}.home-check-detective img{width:min(290px,82%);height:390px}}
-  `;
-  document.head.appendChild(style);
-
-  const figure = document.createElement("figure");
-  figure.className = "home-check-detective";
-  figure.setAttribute("aria-label", "Detective Break investigating the Monster Check evidence");
-  figure.innerHTML = `
-    <img src="assets/detective-break-actual.svg" alt="Detective Break, the tall green financial investigator, examining stock evidence">
-  `;
-  heading.appendChild(figure);
+  try {
+    const url = new URL(raw.trim());
+    const localDevelopment = ["localhost", "127.0.0.1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localDevelopment) return "";
+    return url.href.replace(/\/$/, "");
+  } catch (_error) {
+    return "";
+  }
 }
 
-function installHomeCheckReadability() {
-  if (document.getElementById("home-check-readability-styles")) return;
-
-  const style = document.createElement("style");
-  style.id = "home-check-readability-styles";
-  style.textContent = `
-    .home-page .monster-rating-trio-card strong{
-      font-size:clamp(21px,1.65vw,28px)!important;
-      line-height:.98!important;
-      word-break:normal!important;
-      overflow-wrap:normal!important;
-      hyphens:none!important;
-    }
-    .home-page .monster-rating-trio-card:nth-child(3) strong{
-      font-size:clamp(20px,1.5vw,26px)!important;
-    }
-    .home-page .home-suggestions{
-      display:grid!important;
-      grid-template-columns:repeat(8,minmax(0,1fr));
-      gap:8px!important;
-      align-items:stretch;
-    }
-    .home-page .home-suggestions .chip{
-      width:100%;
-      min-width:0;
-      margin:0!important;
-      text-align:center;
-    }
-    .home-page .home-quick-pick-note{
-      grid-column:1/-1;
-      color:#9da69f;
-      font-size:9px;
-      font-weight:900;
-      letter-spacing:.04em;
-      padding-top:2px;
-    }
-    @media(max-width:1250px){
-      .home-page .home-suggestions{grid-template-columns:repeat(6,minmax(0,1fr))}
-    }
-    @media(max-width:850px){
-      .home-page .home-suggestions{grid-template-columns:repeat(4,minmax(0,1fr))}
-      .home-page .monster-rating-trio-card strong{font-size:28px!important}
-    }
-    @media(max-width:520px){
-      .home-page .home-suggestions{grid-template-columns:repeat(3,minmax(0,1fr))}
-    }
-  `;
-  document.head.appendChild(style);
+function comparableCompanyName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[.,]/g, "")
+    .replace(/\s+/g, " ");
 }
 
-function expandHomeQuickPicks() {
-  const suggestions = document.querySelector(".home-suggestions[data-suggestions]");
-  const input = document.querySelector("[data-ticker-input]");
-  const button = document.querySelector("[data-rate-button]");
-  if (!suggestions || !input || !button) return;
+async function searchProductionUniverse(query) {
+  const apiBaseUrl = homeStockFinderApiBaseUrl();
+  if (!apiBaseUrl) return [];
 
-  const tickers = [
-    "AAPL", "CRDO", "NVDA", "TSLA", "AMZN", "MSFT", "META", "AMD",
-    "COST", "NFLX", "MNST", "VRT", "AXON", "DECK", "WING", "APP"
-  ];
+  const url = new URL(`${apiBaseUrl}/api/universe/search`);
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", "12");
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(65_000),
+  });
+  if (!response.ok) throw new Error("The production stock directory is unavailable.");
+  const payload = await response.json();
+  return Array.isArray(payload.results) ? payload.results : [];
+}
 
-  const build = () => {
-    if (suggestions.dataset.expandedQuickPicks === "true") return true;
-    if (!suggestions.querySelector(".chip")) return false;
+async function resolveHomeStockQuery(query) {
+  const normalized = String(query || "").trim().toLowerCase();
+  if (!normalized) return "";
 
-    suggestions.dataset.expandedQuickPicks = "true";
-    suggestions.innerHTML = "";
+  try {
+    const response = await fetch("data/market-universe.json", { cache: "no-store" });
+    if (response.ok) {
+      const stocks = await response.json();
+      const exactTicker = stocks.find(
+        (stock) => String(stock.ticker || "").toLowerCase() === normalized,
+      );
+      if (exactTicker) return String(exactTicker.ticker).toUpperCase();
 
-    tickers.forEach((ticker) => {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "chip";
-      chip.textContent = ticker;
-      chip.addEventListener("click", () => {
-        input.value = ticker;
-        button.click();
+      const exactName = stocks.find(
+        (stock) => String(stock.name || "").toLowerCase() === normalized,
+      );
+      if (exactName) return String(exactName.ticker).toUpperCase();
+
+      const nameMatches = stocks.filter((stock) => {
+        const name = String(stock.name || "").toLowerCase();
+        return name.startsWith(normalized) || normalized.startsWith(name);
       });
-      suggestions.appendChild(chip);
-    });
-
-    const note = document.createElement("span");
-    note.className = "home-quick-pick-note";
-    note.textContent = "QUICK PICKS ONLY · ENTER ANY COVERED U.S. TICKER ABOVE";
-    suggestions.appendChild(note);
-    return true;
-  };
-
-  if (build()) return;
-
-  const observer = new MutationObserver(() => {
-    if (build()) observer.disconnect();
-  });
-  observer.observe(suggestions, { childList: true, subtree: true });
-
-  let attempts = 0;
-  const timer = window.setInterval(() => {
-    attempts += 1;
-    if (build() || attempts >= 100) {
-      window.clearInterval(timer);
-      observer.disconnect();
+      if (nameMatches.length === 1) {
+        return String(nameMatches[0].ticker).toUpperCase();
+      }
     }
-  }, 100);
-}
+  } catch (_error) {
+    // Fall through to ticker-only handling if the local stock list is unavailable.
+  }
 
-function restoreHomeMonsterCheckData() {
-  const result = document.querySelector(".home-result-card[data-result]");
-  const suggestions = document.querySelector(".home-suggestions[data-suggestions]");
-  if (!result || !suggestions) return;
+  const raw = String(query || "").trim();
+  try {
+    const matches = await searchProductionUniverse(raw);
+    const normalizedTicker = raw.toUpperCase();
+    const exactTicker = matches.find(
+      (company) => String(company.ticker || "").toUpperCase() === normalizedTicker,
+    );
+    if (exactTicker) return String(exactTicker.ticker).toUpperCase();
 
-  const hasVisibleResult = () =>
-    result.style.display !== "none" && result.innerHTML.trim().length > 0;
+    const normalizedName = comparableCompanyName(raw);
+    const exactName = matches.find(
+      (company) => comparableCompanyName(company.companyName) === normalizedName,
+    );
+    if (exactName) return String(exactName.ticker).toUpperCase();
+    if (matches.length === 1) return String(matches[0].ticker || "").toUpperCase();
+  } catch (_error) {
+    // Exact ticker entry still works if the broad production directory is waking.
+  }
 
-  const clickNvdaIfReady = () => {
-    if (hasVisibleResult()) return true;
-
-    const nvda = Array.from(suggestions.querySelectorAll(".chip"))
-      .find((chip) => chip.textContent.trim().toUpperCase() === "NVDA");
-    if (!nvda) return false;
-
-    // Do not mark restoration complete just because the click fired.
-    // app.js can still clear the result later in the same setup cycle.
-    // Keep checking until the NVIDIA card is actually visible and populated.
-    nvda.click();
-    return false;
-  };
-
-  const observer = new MutationObserver(() => {
-    clickNvdaIfReady();
-  });
-  observer.observe(suggestions, { childList: true, subtree: true });
-
-  let attempts = 0;
-  const timer = window.setInterval(() => {
-    attempts += 1;
-
-    if (hasVisibleResult()) {
-      window.clearInterval(timer);
-      observer.disconnect();
-      return;
-    }
-
-    clickNvdaIfReady();
-
-    if (attempts >= 100) {
-      window.clearInterval(timer);
-      observer.disconnect();
-    }
-  }, 100);
+  const normalizedTicker = raw.toUpperCase();
+  return /^[A-Z0-9.-]{1,15}$/.test(normalizedTicker) ? normalizedTicker : "";
 }
 
 function startHomeStockFinder() {
-  installHomeCheckDetective();
-  installHomeCheckReadability();
-  expandHomeQuickPicks();
-  restoreHomeMonsterCheckData();
-
   const form = document.querySelector("[data-home-stock-finder]");
   const input = document.querySelector("[data-home-stock-finder-input]");
   if (!form || !input) return;
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const query = input.value.trim();
-    const exactTicker = query.toUpperCase();
-    const knownCompanyTicker = exactTicker === "APPLE" ? "AAPL" : null;
-    const isExactTicker = /^[A-Z0-9.-]{1,15}$/.test(query) && !query.includes(" ");
-    const directTicker = knownCompanyTicker || (isExactTicker ? exactTicker : null);
-    const url = new URL(
-      directTicker ? "market-explorer.html" : "coverage-universe.html",
-      window.location.href,
-    );
-    if (directTicker) {
-      url.searchParams.set("left", directTicker);
-      url.searchParams.set("mode", "single");
-    } else if (query) {
-      url.searchParams.set("q", query);
+    if (!query) return;
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton?.textContent || "SEARCH STOCKS";
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "SEARCHING…";
     }
-    window.location.href = url.toString();
+
+    try {
+      const ticker = await resolveHomeStockQuery(query);
+      const url = new URL(
+        ticker ? "market-explorer.html" : "coverage-universe.html",
+        window.location.href,
+      );
+
+      if (ticker) {
+        url.searchParams.set("left", ticker);
+        url.searchParams.set("mode", "single");
+        url.searchParams.set("direct", "1");
+      } else {
+        url.searchParams.set("q", query);
+      }
+
+      window.location.href = url.toString();
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalButtonText;
+      }
+    }
   });
 }
 
