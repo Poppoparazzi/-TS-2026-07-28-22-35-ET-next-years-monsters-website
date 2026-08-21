@@ -73,10 +73,9 @@ export function shouldSkipSecBackfill(
   const hasIncompleteProtectedCompany = status.companies.some(
     (company) => isProtectedCompany(company) && !isSecEvidenceReady(company),
   );
-  const evidenceReadyCount = secEvidenceReadyCount(status);
 
   return (
-    evidenceReadyCount >= usableTarget &&
+    status.secEvidenceReadyCount >= usableTarget &&
     status.failedCount === 0 &&
     !hasIncompleteProtectedCompany
   );
@@ -133,7 +132,7 @@ export async function runSecUniverseBatchOnStartup(
   try {
     if (universeStore.configured) {
       const status = await universeStore.getStatus(5_000);
-      const evidenceReadyCount = secEvidenceReadyCount(status);
+      const evidenceReadyCount = status.secEvidenceReadyCount;
 
       if (shouldSkipSecBackfill(status, usableTarget)) {
         return skippedSummary(
