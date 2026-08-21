@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:19 ET
+// TS: 2026-08-21 16:34 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -60,7 +60,10 @@ export async function runRatingBatchOnStartup(
       });
     }
 
-    const defaultMarketDelayMs = marketProvider.name === "twelve-data" ? 9_000 : 0;
+    const isTwelveData = marketProvider.name === "twelve-data";
+    const defaultMarketDelayMs = isTwelveData ? 9_000 : 0;
+    const defaultLimitRetryMs = isTwelveData ? 65_000 : 0;
+    const defaultLimitMaxRetries = isTwelveData ? 480 : 0;
     const accounting = await runRatingBatch(
       { marketProvider, secProvider, persistenceStore, batchStore },
       {
@@ -70,6 +73,16 @@ export async function runRatingBatchOnStartup(
           environment.RATING_MARKET_REQUEST_DELAY_MS,
           defaultMarketDelayMs,
           60_000,
+        ),
+        marketLimitRetryMs: boundedNonNegativeInteger(
+          environment.RATING_MARKET_LIMIT_RETRY_MS,
+          defaultLimitRetryMs,
+          15 * 60_000,
+        ),
+        marketLimitMaxRetries: boundedNonNegativeInteger(
+          environment.RATING_MARKET_LIMIT_MAX_RETRIES,
+          defaultLimitMaxRetries,
+          1_000,
         ),
       },
     );
