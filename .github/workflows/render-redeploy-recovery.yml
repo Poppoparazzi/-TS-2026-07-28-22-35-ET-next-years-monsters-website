@@ -1,4 +1,4 @@
-# TS: 2026-08-21 17:39 UTC
+# TS: 2026-08-21 18:02 ET
 
 name: Render deploy recovery
 
@@ -142,30 +142,22 @@ jobs:
           }
           NODE
 
-      - name: Detect available Render recovery credentials
+      - name: Detect exact Render and Vercel deployment authority
         id: render_auth
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
-        run: |
-          if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "method=deploy_hook" >> "$GITHUB_OUTPUT"
-            echo "Render deploy hook is available."
-          elif [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID" ]; then
-            echo "method=api" >> "$GITHUB_OUTPUT"
-            echo "Render API credentials are available."
-          else
-            echo "method=none" >> "$GITHUB_OUTPUT"
-            echo "No Render deploy hook or API credential pair is configured."
-            {
-              echo "### Render recovery blocked"
-              echo
-              echo "No deployment was attempted because deployment authority is still missing."
-              echo
-              echo "Provide either **RENDER_DEPLOY_HOOK_URL** or both **RENDER_API_KEY** and **RENDER_SERVICE_ID**."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: node scripts/report-deployment-authority.mjs
+
+      - name: Persist exact deployment authority state artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nym-deployment-authority-state
+          path: ${{ steps.render_auth.outputs.authority_state_file || 'nym-deployment-authority.json' }}
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Trigger Render deployment through deploy hook
         if: steps.render_auth.outputs.method == 'deploy_hook' && steps.render_state.outputs.classification != 'current_for_backend'
