@@ -1,4 +1,4 @@
-// TS: 2026-08-19 14:01 ET
+// TS: 2026-08-21 07:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -27,32 +27,33 @@ function company(ticker: string, secStage: PipelineStatus, isPilot = false): Uni
     hasFacts: secStage === "complete",
     hasQuote: false,
     hasRating: false,
-    updatedAt: "2026-08-19T18:01:00.000Z",
+    updatedAt: "2026-08-21T11:01:00.000Z",
   });
 }
 
 function status(
-  secCompleteCount: number,
+  secEvidenceReadyCount: number,
   failedCount: number,
   companies: readonly UniverseCompanyStatus[],
 ): UniverseStatusSummary {
-  const examinedCount = secCompleteCount + failedCount;
+  const examinedCount = secEvidenceReadyCount + failedCount;
   return Object.freeze({
     configured: true,
-    generatedAt: "2026-08-19T18:01:00.000Z",
+    generatedAt: "2026-08-21T11:01:00.000Z",
     requestedLimit: 5_000,
     universeSize: 5_000,
     examinedCount,
     queuedCount: 0,
     processingCount: 0,
-    secCompleteCount,
+    secCompleteCount: secEvidenceReadyCount,
+    secEvidenceReadyCount,
     partialCount: 0,
     failedCount,
     staleCount: 0,
     unresolvedCount: 0,
-    secIdentityCount: secCompleteCount,
-    filingCompleteCount: secCompleteCount,
-    factsCompleteCount: secCompleteCount,
+    secIdentityCount: secEvidenceReadyCount,
+    filingCompleteCount: secEvidenceReadyCount,
+    factsCompleteCount: secEvidenceReadyCount,
     quoteCompleteCount: 0,
     ratingCompleteCount: 0,
     fullyCompleteCount: 0,
@@ -61,16 +62,16 @@ function status(
   });
 }
 
-test("SEC reserve backfill does not stop below the 2200 usable-stock target", () => {
+test("SEC reserve backfill does not stop below the 2200 evidence-ready target", () => {
   const snapshot = status(2_199, 0, [company("AAPL", "complete", true)]);
   assert.equal(shouldSkipSecBackfill(snapshot, 2_200), false);
 });
 
-test("SEC reserve backfill may stop once 2200 usable stocks are complete with no failures and protected pilots complete", () => {
+test("SEC reserve backfill may stop once 2200 evidence-ready stocks are complete with no failures and protected stocks complete", () => {
   const snapshot = status(2_200, 0, [
     company("AAPL", "complete", true),
     company("NVDA", "complete", true),
-    company("MNST", "complete", true),
+    company("MNST", "complete"),
   ]);
   assert.equal(shouldSkipSecBackfill(snapshot, 2_200), true);
 });
@@ -84,6 +85,14 @@ test("SEC reserve backfill keeps running above target while a protected pilot is
   const snapshot = status(2_350, 0, [
     company("AAPL", "complete", true),
     company("NVDA", "unresolved", true),
+  ]);
+  assert.equal(shouldSkipSecBackfill(snapshot, 2_200), false);
+});
+
+test("SEC reserve backfill keeps running above target while a strategic non-pilot is incomplete", () => {
+  const snapshot = status(2_350, 0, [
+    company("AAPL", "complete", true),
+    company("MNST", "unresolved", false),
   ]);
   assert.equal(shouldSkipSecBackfill(snapshot, 2_200), false);
 });
