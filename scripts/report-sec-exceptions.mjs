@@ -1,4 +1,4 @@
-// TS: 2026-08-21 04:01 ET
+// TS: 2026-08-21 15:16 UTC
 
 import fs from "node:fs";
 import { isProtectedStock } from "./protected-stocks.mjs";
@@ -61,6 +61,15 @@ function replacementPriority(company) {
   return priorities[reason] ?? 80;
 }
 
+function isSecEvidenceReady(company) {
+  return (
+    company?.secStage === "complete" &&
+    company?.hasSecIdentity === true &&
+    company?.hasFilings === true &&
+    company?.hasFacts === true
+  );
+}
+
 function increment(map, key) {
   map.set(key, (map.get(key) || 0) + 1);
 }
@@ -94,7 +103,30 @@ if (!exceptionVisibilityComplete) {
   );
 }
 
-const protectedExceptions = exceptions.filter(isProtectedStock);
+const protectedMissingTickers = Array.isArray(status?.protectedMissingTickers)
+  ? status.protectedMissingTickers.map((ticker) => String(ticker).toUpperCase())
+  : [];
+const protectedExceptions = companies.filter(
+  (company) => isProtectedStock(company) && !isSecEvidenceReady(company),
+);
+const protectedMustRepairRoster = [
+  ...protectedMissingTickers.map((ticker) => ({
+    ticker,
+    companyName: null,
+    exchange: null,
+    secStage: "missing",
+    reason: "protected_ticker_missing",
+    lastError: "Protected ticker is absent from the active candidate universe.",
+  })),
+  ...protectedExceptions.map((company) => ({
+    ticker: company.ticker,
+    companyName: company.companyName,
+    exchange: company.exchange ?? null,
+    secStage: company.secStage,
+    reason: reasonBucket(company),
+    lastError: company.lastError ?? null,
+  })),
+];
 const replaceableExceptions = exceptions.filter((company) => !isProtectedStock(company));
 const prioritizedReplaceableExceptions = [...replaceableExceptions].sort((a, b) => {
   const priorityDifference = replacementPriority(a) - replacementPriority(b);
@@ -109,6 +141,25 @@ const protectedFailedExceptions = failedExceptions.filter(isProtectedStock);
 const replaceableFailedExceptions = failedExceptions.filter((company) => !isProtectedStock(company));
 const protectedUnresolvedExceptions = unresolvedExceptions.filter(isProtectedStock);
 const replaceableUnresolvedExceptions = unresolvedExceptions.filter((company) => !isProtectedStock(company));
+const apiProtectedMustRepairCount = Number(
+  status?.protectedMustRepairCount ?? protectedMustRepairRoster.length,
+);
+const apiReplaceableFailureCount = Number(
+  status?.replaceableFailureCount ?? replaceableExceptions.length,
+);
+
+if (apiProtectedMustRepairCount !== protectedMustRepairRoster.length) {
+  throw new Error(
+    `Protected must-repair accounting mismatch: API=${apiProtectedMustRepairCount}, ` +
+      `derived=${protectedMustRepairRoster.length}.`,
+  );
+}
+if (apiReplaceableFailureCount !== replaceableExceptions.length) {
+  throw new Error(
+    `Replaceable-failure accounting mismatch: API=${apiReplaceableFailureCount}, ` +
+      `derived=${replaceableExceptions.length}.`,
+  );
+}
 
 const byReason = new Map();
 const byExchange = new Map();
@@ -143,12 +194,12 @@ const replacementQueue = prioritizedReplaceableExceptions.map((company, index) =
 }));
 
 const recommendedAction = evidenceReadyShortfall === 0
-  ? protectedExceptions.length > 0 || failedCount > 0
+  ? protectedMustRepairRoster.length > 0 || failedCount > 0
     ? "repair_protected_and_clear_failed_rows"
     : "usable_target_satisfied"
   : replaceableExceptions.length > 0
     ? "backfill_from_reserve_and_replace_low_priority_exceptions"
-    : protectedExceptions.length > 0
+    : protectedMustRepairRoster.length > 0
       ? "repair_protected_exceptions_while_expanding_reserve"
       : "expand_reserve_pool";
 
@@ -157,24 +208,25 @@ const report = {
   candidateTarget,
   usableTarget,
   examinedCount: Number(status?.examinedCount || 0),
+  candidatesExaminedCount: Number(status?.candidatesExaminedCount || 0),
   secCompleteCount: Number(status?.secCompleteCount || 0),
   secEvidenceReadyCount,
+  finalUsableUniverseCount: Number(status?.finalUsableUniverseCount ?? secEvidenceReadyCount),
   evidenceReadyShortfall,
   unresolvedCount,
   failedCount,
   expectedExceptionCount,
   exceptionCountVisible: exceptions.length,
   exceptionVisibilityComplete,
-  protectedExceptionCount: protectedExceptions.length,
-  protectedExceptions: protectedExceptions.map((company) => ({
-    ticker: company.ticker,
-    companyName: company.companyName,
-    exchange: company.exchange ?? null,
-    secStage: company.secStage,
-    reason: reasonBucket(company),
-    lastError: company.lastError ?? null,
-  })),
+  protectedMissingCount: protectedMissingTickers.length,
+  protectedMissingTickers,
+  protectedExceptionCount: protectedMustRepairRoster.length,
+  protectedMustRepairCount: protectedMustRepairRoster.length,
+  protectedMustRepairRoster,
   replaceableExceptionCount: replaceableExceptions.length,
+  replaceableFailureCount: replaceableExceptions.length,
+  replacementsAttemptedCount: Number(status?.replacementsAttemptedCount || 0),
+  reserveCandidatesRemainingCount: Number(status?.reserveCandidatesRemainingCount || 0),
   recommendedAction,
   replacementQueue,
   failedDecision: {
@@ -208,7 +260,7 @@ fs.writeFileSync(exceptionStateFile, `${JSON.stringify(report, null, 2)}\n`, "ut
 
 if (process.env.GITHUB_OUTPUT) {
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `exception_state_file=${exceptionStateFile}\n`);
-  fs.appendFileSync(process.env.GITHUB_OUTPUT, `protected_exception_count=${protectedExceptions.length}\n`);
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `protected_exception_count=${protectedMustRepairRoster.length}\n`);
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `replaceable_exception_count=${replaceableExceptions.length}\n`);
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `protected_failed_count=${protectedFailedExceptions.length}\n`);
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `replaceable_failed_count=${replaceableFailedExceptions.length}\n`);
@@ -217,8 +269,8 @@ if (process.env.GITHUB_OUTPUT) {
 }
 
 if (process.env.GITHUB_STEP_SUMMARY) {
-  const protectedSummary = protectedExceptions.length > 0
-    ? protectedExceptions.map((company) => `${company.ticker} (${reasonBucket(company)})`).join(", ")
+  const protectedSummary = protectedMustRepairRoster.length > 0
+    ? protectedMustRepairRoster.map((company) => `${company.ticker} (${company.reason})`).join(", ")
     : "none";
   const topReasons = [...byReason.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -244,8 +296,10 @@ if (process.env.GITHUB_STEP_SUMMARY) {
       `- Evidence-ready stocks: **${secEvidenceReadyCount} / ${usableTarget}**`,
       `- Evidence-ready shortfall: **${evidenceReadyShortfall}**`,
       `- Visible unresolved/failed records: **${exceptions.length}**`,
-      `- Must repair: **${protectedExceptions.length}**`,
+      `- Candidates examined by SEC: **${Number(status?.candidatesExaminedCount || 0)}**`,
+      `- Must repair: **${protectedMustRepairRoster.length}**`,
       `- Replaceable: **${replaceableExceptions.length}**`,
+      `- Replacements attempted: **${Number(status?.replacementsAttemptedCount || 0)}**`,
       `- Recommended action: **${recommendedAction}**`,
       `- Failed rows requiring repair: **${protectedFailedExceptions.length}** (${failedRepairSummary})`,
       `- Failed rows safe to replace: **${replaceableFailedExceptions.length}** (${failedReplaceSummary})`,

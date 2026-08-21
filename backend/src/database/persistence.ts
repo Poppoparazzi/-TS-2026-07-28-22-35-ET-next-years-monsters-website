@@ -1,4 +1,4 @@
-// TS: 2026-08-01 21:10 ET
+// TS: 2026-08-21 15:16 UTC
 
 import pg, { type PoolClient } from "pg";
 import type { AppConfig } from "../config.js";
@@ -299,8 +299,7 @@ export class PostgresPersistenceStore implements PersistenceStore {
               primary_document_url
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            ON CONFLICT (accession_number) DO UPDATE SET
-              company_id = EXCLUDED.company_id,
+            ON CONFLICT (company_id, accession_number) DO UPDATE SET
               form_type = EXCLUDED.form_type,
               filing_date = EXCLUDED.filing_date,
               report_date = EXCLUDED.report_date,

@@ -1,4 +1,4 @@
-// TS: 2026-08-21 07:01 ET
+// TS: 2026-08-21 15:16 UTC
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -12,6 +12,7 @@ test("production reserve policy stays deliberately overfilled and observable", (
   const renderYaml = readRepositoryFile("../../render.yaml");
   const serverSource = readRepositoryFile("../src/server.ts");
   const deploymentPolicySource = readRepositoryFile("../src/deployment-policy.ts");
+  const coveragePolicySource = readRepositoryFile("../src/universe/coverage-policy.ts");
 
   assert.match(renderYaml, /key:\s*AUTO_IMPORT_UNIVERSE_LIMIT[\s\S]*?value:\s*"5000"/);
   assert.match(renderYaml, /key:\s*AUTO_SEC_BATCH_SIZE[\s\S]*?value:\s*"5000"/);
@@ -29,6 +30,8 @@ test("production reserve policy stays deliberately overfilled and observable", (
   assert.match(deploymentPolicySource, /"SEC_USABLE_TARGET"[\s\S]*?2_200\s*:\s*null/);
   assert.match(deploymentPolicySource, /"SEC_BATCH_CONCURRENCY"[\s\S]*?8\s*:\s*null/);
   assert.match(deploymentPolicySource, /"SEC_BATCH_MAX_AGE_HOURS"[\s\S]*?720\s*:\s*null/);
+  assert.match(coveragePolicySource, /ACTIVE_SEC_TARGET = 2_200/);
+  assert.match(coveragePolicySource, /CANDIDATE_POOL_TARGET = 5_000/);
 
   const candidateTarget = Number(renderYaml.match(/key:\s*AUTO_IMPORT_UNIVERSE_LIMIT[\s\S]*?value:\s*"(\d+)"/)?.[1]);
   const usableTarget = Number(renderYaml.match(/key:\s*SEC_USABLE_TARGET[\s\S]*?value:\s*"(\d+)"/)?.[1]);
@@ -36,6 +39,44 @@ test("production reserve policy stays deliberately overfilled and observable", (
   assert.ok(candidateTarget >= 5000, "candidate target must preserve the 5,000-stock reserve strategy");
   assert.ok(usableTarget > 2000, "usable target must retain a cushion above 2,000");
   assert.ok(candidateTarget > usableTarget, "candidate pool must remain larger than the usable-stock target");
+});
+
+test("scheduled recovery and production closeout use the broad reserve", () => {
+  const watchdog = readRepositoryFile("../../.github/workflows/render-redeploy-recovery.yml");
+  const productionSmoke = readRepositoryFile("../../.github/workflows/production-smoke.yml");
+  const productionVerifier = readRepositoryFile("../../scripts/verify-production.mjs");
+
+  assert.match(watchdog, /cron:\s*"7 \* \* \* \*"/);
+  assert.match(watchdog, /node scripts\/verify-production\.mjs/);
+  assert.match(watchdog, /NYM_UNIVERSE_STATUS_LIMIT:\s*"5000"/);
+  assert.match(productionSmoke, /NYM_EXPECTED_UNIVERSE_MIN:\s*"5000"/);
+  assert.match(productionSmoke, /NYM_EXPECTED_USABLE_TARGET:\s*"2200"/);
+  assert.doesNotMatch(productionSmoke, /expectedCount\s*=\s*2_000/);
+  assert.match(productionVerifier, /api\/ratings\/AAPL/);
+  assert.match(productionVerifier, /market-explorer\.html\?left=AAPL/);
+  assert.match(productionVerifier, /monster-check\.html\?ticker=AAPL/);
+});
+
+test("ordinary SEC failures are replaceable while protected failures stay must-repair", () => {
+  const processor = readRepositoryFile("../src/universe/sec-batch-processor.ts");
+  const queue = readRepositoryFile("../src/universe/sec-batch-queue.ts");
+  const store = readRepositoryFile("../src/universe/store.ts");
+  const replacementMigration = readRepositoryFile(
+    "../database/migrations/1002_track_reserve_replacements.sql",
+  );
+
+  assert.match(
+    processor,
+    /if \(!candidate\.isProtected\)[\s\S]*?queue\.markUnresolved/,
+  );
+  assert.match(processor, /disposition:\s*"must_repair"/);
+  assert.match(queue, /PROTECTED_COMPANY_SQL_PREDICATE/);
+  assert.match(store, /protectedMustRepairCount/);
+  assert.match(store, /replaceableFailureCount/);
+  assert.match(store, /replacementsAttemptedCount/);
+  assert.match(store, /finalUsableUniverseCount/);
+  assert.match(queue, /replacement_attempted = cps\.replacement_attempted OR/);
+  assert.match(replacementMigration, /replacement_attempted boolean NOT NULL DEFAULT false/);
 });
 
 test("production fallbacks cannot silently disable or shrink the reserve strategy", () => {
@@ -67,4 +108,21 @@ test("production fallbacks cannot silently disable or shrink the reserve strateg
     /"SEC_BATCH_MAX_AGE_HOURS",\s*720,\s*1,\s*720/,
     "production SEC stale-window fallback must remain 720 hours",
   );
+});
+
+test("protected share-class tickers can retain shared SEC issuer evidence", () => {
+  const migration = readRepositoryFile(
+    "../database/migrations/1001_support_sec_share_classes.sql",
+  );
+  const persistenceSource = readRepositoryFile("../src/database/persistence.ts");
+  const universeSource = readRepositoryFile("../src/universe/sec-source.ts");
+
+  assert.match(migration, /DROP CONSTRAINT IF EXISTS companies_sec_cik_unique/);
+  assert.match(migration, /UNIQUE \(company_id, accession_number\)/);
+  assert.match(
+    persistenceSource,
+    /ON CONFLICT \(company_id, accession_number\) DO UPDATE SET/,
+  );
+  assert.match(universeSource, /PROTECTED_STRATEGIC_TICKERS/);
+  assert.doesNotMatch(universeSource, /usedCiks/);
 });

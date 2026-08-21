@@ -1,4 +1,4 @@
-// TS: 2026-08-21 04:00 ET
+// TS: 2026-08-21 15:16 UTC
 
 import fs from "node:fs";
 import { isProtectedStock } from "./protected-stocks.mjs";
@@ -46,6 +46,7 @@ const status = await requestJson(`${apiBaseUrl}/api/universe/status?limit=${stat
 const requiredCounts = [
   "universeSize",
   "examinedCount",
+  "candidatesExaminedCount",
   "secIdentityCount",
   "secCompleteCount",
   "secEvidenceReadyCount",
@@ -53,6 +54,12 @@ const requiredCounts = [
   "factsCompleteCount",
   "failedCount",
   "unresolvedCount",
+  "finalUsableUniverseCount",
+  "protectedMissingCount",
+  "protectedMustRepairCount",
+  "replaceableFailureCount",
+  "replacementsAttemptedCount",
+  "reserveCandidatesRemainingCount",
 ];
 const problems = [];
 
@@ -70,6 +77,12 @@ const evidenceReady = Number(status?.secEvidenceReadyCount);
 const filings = Number(status?.filingCompleteCount);
 const facts = Number(status?.factsCompleteCount);
 const failed = Number(status?.failedCount);
+const candidatesExamined = Number(status?.candidatesExaminedCount);
+const protectedMissing = Number(status?.protectedMissingCount);
+const protectedMustRepair = Number(status?.protectedMustRepairCount);
+const replaceableFailures = Number(status?.replaceableFailureCount);
+const replacementsAttempted = Number(status?.replacementsAttemptedCount);
+const finalUsable = Number(status?.finalUsableUniverseCount);
 
 for (const [field, value] of [
   ["secIdentityCount", secIdentity],
@@ -98,10 +111,12 @@ if (Number.isInteger(evidenceReady)) {
   }
 }
 
-if (Number.isInteger(failed) && failed > 0) {
-  problems.push(`failedCount=${failed}; failed SEC records must be cleaned before reserve completion`);
+if (Number.isInteger(candidatesExamined) && Number.isInteger(examined) && candidatesExamined > examined) {
+  problems.push(`candidatesExaminedCount=${candidatesExamined} exceeds examinedCount=${examined}`);
 }
-
+if (Number.isInteger(finalUsable) && Number.isInteger(evidenceReady) && finalUsable !== evidenceReady) {
+  problems.push(`finalUsableUniverseCount=${finalUsable} does not equal secEvidenceReadyCount=${evidenceReady}`);
+}
 const companies = Array.isArray(status?.companies) ? status.companies : [];
 const incompleteProtected = companies.filter((company) =>
   isProtectedStock(company) && !(
@@ -111,9 +126,26 @@ const incompleteProtected = companies.filter((company) =>
     company?.hasFacts === true
   ),
 );
-if (incompleteProtected.length > 0) {
+const protectedMissingTickers = Array.isArray(status?.protectedMissingTickers)
+  ? status.protectedMissingTickers.map((ticker) => String(ticker).toUpperCase())
+  : [];
+const derivedProtectedMustRepairCount = incompleteProtected.length + protectedMissingTickers.length;
+if (Number.isInteger(protectedMissing) && protectedMissing !== protectedMissingTickers.length) {
   problems.push(
-    `protected SEC evidence incomplete: ${incompleteProtected.map((company) => company.ticker).join(", ")}`,
+    `protectedMissingCount=${protectedMissing} does not match roster length=${protectedMissingTickers.length}`,
+  );
+}
+if (Number.isInteger(protectedMustRepair) && protectedMustRepair !== derivedProtectedMustRepairCount) {
+  problems.push(
+    `protectedMustRepairCount=${protectedMustRepair} does not match derived=${derivedProtectedMustRepairCount}`,
+  );
+}
+if (derivedProtectedMustRepairCount > 0) {
+  problems.push(
+    `protected SEC evidence incomplete or missing: ${[
+      ...protectedMissingTickers,
+      ...incompleteProtected.map((company) => company.ticker),
+    ].join(", ")}`,
   );
 }
 
@@ -124,13 +156,21 @@ if (Number.isInteger(evidenceReady) && evidenceReady < usableTarget) {
 const summary = {
   universeSize: status.universeSize,
   examinedCount: status.examinedCount,
+  candidatesExaminedCount: status.candidatesExaminedCount,
   secCompleteCount: status.secCompleteCount,
   secEvidenceReadyCount: status.secEvidenceReadyCount,
+  finalUsableUniverseCount: status.finalUsableUniverseCount,
   usableTarget,
   failedCount: status.failedCount,
   unresolvedCount: status.unresolvedCount,
-  protectedIncompleteCount: incompleteProtected.length,
-  protectedIncompleteTickers: incompleteProtected.map((company) => company.ticker),
+  protectedIncompleteCount: derivedProtectedMustRepairCount,
+  protectedIncompleteTickers: [
+    ...protectedMissingTickers,
+    ...incompleteProtected.map((company) => company.ticker),
+  ],
+  replaceableFailureCount: status.replaceableFailureCount,
+  replacementsAttemptedCount: status.replacementsAttemptedCount,
+  reserveCandidatesRemainingCount: status.reserveCandidatesRemainingCount,
   generatedAt: status.generatedAt,
 };
 const result = problems.length === 0 ? "pass" : "blocked";
@@ -147,20 +187,26 @@ appendOutput("result", result);
 appendOutput("evidence_ready_count", summary.secEvidenceReadyCount);
 appendOutput("usable_target", usableTarget);
 appendOutput("examined_count", summary.examinedCount);
+appendOutput("candidates_examined_count", summary.candidatesExaminedCount);
 appendOutput("failed_count", summary.failedCount);
 appendOutput("unresolved_count", summary.unresolvedCount);
 appendOutput("protected_incomplete_count", summary.protectedIncompleteCount);
 appendOutput("protected_incomplete_tickers", summary.protectedIncompleteTickers.join(","));
+appendOutput("replaceable_failure_count", summary.replaceableFailureCount);
+appendOutput("replacements_attempted_count", summary.replacementsAttemptedCount);
 appendOutput("recovery_state_file", recoveryStateFile);
 
 appendStepSummary([
   "### SEC evidence-ready production gate",
   "",
   `- Evidence-ready: **${String(summary.secEvidenceReadyCount)} / ${usableTarget}**`,
+  `- Candidates examined by SEC: **${String(summary.candidatesExaminedCount)}**`,
   `- SEC complete: **${String(summary.secCompleteCount)}**`,
   `- Failed SEC rows: **${String(summary.failedCount)}**`,
   `- Unresolved SEC rows: **${String(summary.unresolvedCount)}**`,
   `- Incomplete protected stocks: **${summary.protectedIncompleteCount}**`,
+  `- Replaceable failures: **${String(summary.replaceableFailureCount)}**`,
+  `- Replacements attempted: **${String(summary.replacementsAttemptedCount)}**`,
   ...(summary.protectedIncompleteTickers.length === 0
     ? []
     : [`- Protected stocks needing repair: **${summary.protectedIncompleteTickers.join(", ")}**`]),

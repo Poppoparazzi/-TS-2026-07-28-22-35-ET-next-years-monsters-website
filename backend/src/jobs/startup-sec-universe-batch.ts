@@ -1,4 +1,4 @@
-// TS: 2026-08-21 07:01 ET
+// TS: 2026-08-21 15:16 UTC
 
 import type { AppConfig } from "../config.js";
 import { isProtectedStrategicTicker } from "../policy/protected-stocks.js";
@@ -34,6 +34,9 @@ function skippedSummary(batchSize: number, reason: string): SecBatchRunSummary {
     succeededCount: 0,
     unresolvedCount: 0,
     failedCount: 0,
+    protectedMustRepairCount: 0,
+    replaceableFailureCount: 0,
+    replacementsAttemptedCount: 0,
     concurrency: 0,
     maxAgeHours: 0,
     unresolvedTickers: Object.freeze([]),
@@ -72,11 +75,10 @@ export function shouldSkipSecBackfill(
 ): boolean {
   const hasIncompleteProtectedCompany = status.companies.some(
     (company) => isProtectedCompany(company) && !isSecEvidenceReady(company),
-  );
+  ) || status.protectedMissingCount > 0;
 
   return (
     status.secEvidenceReadyCount >= usableTarget &&
-    status.failedCount === 0 &&
     !hasIncompleteProtectedCompany
   );
 }
@@ -126,8 +128,8 @@ export async function runSecUniverseBatchOnStartup(
   // "Usable" now means a company has completed SEC processing plus an SEC identity,
   // at least one filing, and company facts. A green pipeline stage alone is not enough
   // to stop the reserve worker. Ordinary unresolved names remain nonblocking once the
-  // evidence-ready target is satisfied, but failed rows and protected companies still
-  // receive cleanup/repair attention.
+  // evidence-ready target is satisfied. Ordinary exceptions are replaceable and do
+  // not block completion; protected companies remain mandatory repair work.
   const universeStore = createUniverseStore(config);
   try {
     if (universeStore.configured) {
@@ -137,7 +139,7 @@ export async function runSecUniverseBatchOnStartup(
       if (shouldSkipSecBackfill(status, usableTarget)) {
         return skippedSummary(
           batchSize,
-          `SEC usable target already satisfied: ${evidenceReadyCount} evidence-ready >= ${usableTarget}, with no remaining failed SEC records and all protected pilot/strategic stocks evidence-ready. Unresolved lower-priority names are nonblocking exceptions.`,
+          `SEC usable target already satisfied: ${evidenceReadyCount} evidence-ready >= ${usableTarget}, with all protected pilot/strategic stocks evidence-ready. Ordinary failed or unresolved names are nonblocking replaceable exceptions.`,
         );
       }
     }

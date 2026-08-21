@@ -1,4 +1,4 @@
-// TS: 2026-08-20 06:02 ET
+// TS: 2026-08-21 15:16 UTC
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -6,8 +6,11 @@ const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters
 const factoryPageUrl = (process.env.NYM_FACTORY_PAGE_URL ||
   "https://poppoparazzi.github.io/-TS-2026-07-28-22-35-ET-next-years-monsters-website/factory-status.html")
   .trim();
+const siteBaseUrl = (process.env.NYM_SITE_BASE_URL || "https://nextyearsmonsters.com")
+  .trim()
+  .replace(/\/$/, "");
 const expectedVersion = (process.env.NYM_EXPECTED_VERSION || "0.6.0").trim();
-const expectedUniverseMinimum = Number(process.env.NYM_EXPECTED_UNIVERSE_MIN || "2000");
+const expectedUniverseMinimum = Number(process.env.NYM_EXPECTED_UNIVERSE_MIN || "5000");
 const statusLimit = Number(process.env.NYM_UNIVERSE_STATUS_LIMIT || "5000");
 const attemptCount = Number(process.env.NYM_SMOKE_ATTEMPTS || "10");
 const delayMs = Number(process.env.NYM_SMOKE_DELAY_MS || "30000");
@@ -57,7 +60,7 @@ async function optionalJson(url) {
   }
 }
 
-async function requestPage(url) {
+async function requestPage(url, markers) {
   const response = await fetch(url, {
     headers: { Accept: "text/html" },
     signal: AbortSignal.timeout(30_000),
@@ -65,8 +68,10 @@ async function requestPage(url) {
   const html = await response.text();
 
   if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}.`);
-  if (!html.includes("STOCK FACTORY") || !html.includes("data-factory-body")) {
-    throw new Error("The deployed factory page does not contain the expected dashboard content.");
+  for (const marker of markers) {
+    if (!html.includes(marker)) {
+      throw new Error(`${url} does not contain expected customer-journey marker ${marker}.`);
+    }
   }
 }
 
@@ -141,9 +146,11 @@ function validateUniverse(status, startup) {
   const countFields = [
     "universeSize",
     "examinedCount",
+    "candidatesExaminedCount",
     "queuedCount",
     "processingCount",
     "secCompleteCount",
+    "secEvidenceReadyCount",
     "partialCount",
     "failedCount",
     "staleCount",
@@ -152,6 +159,12 @@ function validateUniverse(status, startup) {
     "factsCompleteCount",
     "quoteCompleteCount",
     "ratingCompleteCount",
+    "finalUsableUniverseCount",
+    "protectedMissingCount",
+    "protectedMustRepairCount",
+    "replaceableFailureCount",
+    "replacementsAttemptedCount",
+    "reserveCandidatesRemainingCount",
   ];
 
   for (const field of countFields) {
@@ -168,8 +181,18 @@ function validateUniverse(status, startup) {
   if (Number(status?.examinedCount || 0) < expectedUniverseMinimum) {
     problems.push(`only ${status?.examinedCount || 0} companies were returned`);
   }
+  if (Number(status?.requestedLimit) !== statusLimit) {
+    problems.push(`requestedLimit=${String(status?.requestedLimit)}, expected ${statusLimit}`);
+  }
 
   const examinedCount = Number(status?.examinedCount);
+  const candidatesExaminedCount = Number(status?.candidatesExaminedCount);
+  const secEvidenceReadyCount = Number(status?.secEvidenceReadyCount);
+  const finalUsableUniverseCount = Number(status?.finalUsableUniverseCount);
+  const protectedMissingCount = Number(status?.protectedMissingCount);
+  const protectedMustRepairCount = Number(status?.protectedMustRepairCount);
+  const replaceableFailureCount = Number(status?.replaceableFailureCount);
+  const replacementsAttemptedCount = Number(status?.replacementsAttemptedCount);
   const completionFields = [
     "filingCompleteCount",
     "factsCompleteCount",
@@ -184,6 +207,35 @@ function validateUniverse(status, startup) {
         problems.push(`${field}=${value} exceeds examinedCount=${examinedCount}`);
       }
     }
+  }
+
+  if (candidatesExaminedCount > examinedCount) {
+    problems.push(
+      `candidatesExaminedCount=${candidatesExaminedCount} exceeds examinedCount=${examinedCount}`,
+    );
+  }
+  if (secEvidenceReadyCount < expectedBackfillPolicy.usableTarget) {
+    problems.push(
+      `secEvidenceReadyCount=${secEvidenceReadyCount}, expected at least ${expectedBackfillPolicy.usableTarget}`,
+    );
+  }
+  if (finalUsableUniverseCount !== secEvidenceReadyCount) {
+    problems.push(
+      `finalUsableUniverseCount=${finalUsableUniverseCount}, secEvidenceReadyCount=${secEvidenceReadyCount}`,
+    );
+  }
+  if (protectedMissingCount !== 0 || protectedMustRepairCount !== 0) {
+    problems.push(
+      `protected recovery incomplete: missing=${protectedMissingCount}, mustRepair=${protectedMustRepairCount}`,
+    );
+  }
+  if (Array.isArray(status?.protectedMustRepairTickers) &&
+      status.protectedMustRepairTickers.length !== protectedMustRepairCount) {
+    problems.push("protectedMustRepairTickers roster length does not match its count");
+  }
+  if (Array.isArray(status?.replaceableFailureTickers) &&
+      status.replaceableFailureTickers.length !== replaceableFailureCount) {
+    problems.push("replaceableFailureTickers roster length does not match its count");
   }
 
   const pipelineTotal = [
@@ -206,6 +258,22 @@ function validateUniverse(status, startup) {
     problems.push(startupDiagnostic(startup));
     throw new Error(problems.join("; "));
   }
+}
+
+function validateRating(rating) {
+  const problems = [];
+  if (rating?.symbol !== "AAPL") problems.push(`symbol=${String(rating?.symbol)}`);
+  if (rating?.engineVersion !== "nym-current-stock-rating-v0.1-readiness-only") {
+    problems.push(`engineVersion=${String(rating?.engineVersion)}`);
+  }
+  if (rating?.eligible !== false || rating?.score !== null || rating?.tier !== "NOT YET RATED") {
+    problems.push("rating endpoint did not return the truthful fail-closed production contract");
+  }
+  if (!Array.isArray(rating?.evidenceInputs) || !Array.isArray(rating?.reasons) ||
+      rating.reasons.length === 0) {
+    problems.push("rating evidence/reason arrays are incomplete");
+  }
+  if (problems.length) throw new Error(problems.join("; "));
 }
 
 function validateProviderBackedProgress(status, health) {
@@ -251,15 +319,28 @@ async function verifyOnce() {
   const health = await requestJson(`${apiBaseUrl}/api/health`);
   validateHealth(health);
 
-  const [universe, startup] = await Promise.all([
+  const [universe, startup, rating] = await Promise.all([
     requestJson(`${apiBaseUrl}/api/universe/status?limit=${statusLimit}`),
     optionalJson(`${apiBaseUrl}/api/startup-status`),
+    requestJson(`${apiBaseUrl}/api/ratings/AAPL`),
   ]);
   validateBackfillPolicy(startup);
   validateUniverse(universe, startup);
   validateProviderBackedProgress(universe, health);
+  validateRating(rating);
 
-  await requestPage(factoryPageUrl);
+  await Promise.all([
+    requestPage(factoryPageUrl, ["STOCK FACTORY", "data-factory-body"]),
+    requestPage(`${siteBaseUrl}/`, ["data-home-stock-finder", "RUN A MONSTER CHECK"]),
+    requestPage(
+      `${siteBaseUrl}/market-explorer.html?left=AAPL&mode=single&direct=1`,
+      ["MARKET", "data-explorer-ticker-form"],
+    ),
+    requestPage(
+      `${siteBaseUrl}/monster-check.html?ticker=AAPL`,
+      ["MONSTER", "data-ticker-input"],
+    ),
+  ]);
 
   return {
     apiVersion: health.version,
@@ -272,17 +353,29 @@ async function verifyOnce() {
     requestedStatusLimit: statusLimit,
     universeSize: universe.universeSize,
     examinedCount: universe.examinedCount,
+    candidatesExaminedCount: universe.candidatesExaminedCount,
     queuedCount: universe.queuedCount,
     processingCount: universe.processingCount,
     secCompleteCount: universe.secCompleteCount,
+    secEvidenceReadyCount: universe.secEvidenceReadyCount,
+    finalUsableUniverseCount: universe.finalUsableUniverseCount,
     partialCount: universe.partialCount,
     failedCount: universe.failedCount,
     staleCount: universe.staleCount,
     unresolvedCount: universe.unresolvedCount,
+    protectedMustRepairCount: universe.protectedMustRepairCount,
+    replaceableFailureCount: universe.replaceableFailureCount,
+    replacementsAttemptedCount: universe.replacementsAttemptedCount,
+    reserveCandidatesRemainingCount: universe.reserveCandidatesRemainingCount,
     filingCompleteCount: universe.filingCompleteCount,
     factsCompleteCount: universe.factsCompleteCount,
     quoteCompleteCount: universe.quoteCompleteCount,
     ratingCompleteCount: universe.ratingCompleteCount,
+    ratingRoute: {
+      symbol: rating.symbol,
+      engineVersion: rating.engineVersion,
+      eligibilityCode: rating.eligibilityCode,
+    },
     startupJobs: startup?.jobs ?? null,
     generatedAt: universe.generatedAt,
   };

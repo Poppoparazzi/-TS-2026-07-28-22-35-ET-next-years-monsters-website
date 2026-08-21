@@ -1,4 +1,4 @@
-// TS: 2026-08-02 21:48 ET
+// TS: 2026-08-21 15:16 UTC
 
 import { loadConfig } from "../config.js";
 import { runSecUniverseBatch } from "../universe/sec-batch-processor.js";
@@ -31,7 +31,7 @@ function integerArgument(
 async function run(): Promise<void> {
   const arguments_ = process.argv.slice(2);
   const summary = await runSecUniverseBatch(loadConfig(), {
-    batchSize: integerArgument(arguments_, "--limit", 100, 1, 2_500),
+    batchSize: integerArgument(arguments_, "--limit", 100, 1, 5_000),
     concurrency: integerArgument(arguments_, "--concurrency", 3, 1, 8),
     maxAgeHours: integerArgument(arguments_, "--max-age-hours", 24, 1, 720),
   });

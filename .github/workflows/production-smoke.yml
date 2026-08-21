@@ -1,4 +1,4 @@
-# TS: 2026-08-17 10:01 ET
+# TS: 2026-08-21 15:16 UTC
 
 name: Production smoke
 
@@ -21,115 +21,18 @@ jobs:
         with:
           node-version: 22
 
-      - name: Confirm completed 2,000-company SEC batch
-        run: |
-          node --input-type=module <<'NODE'
-          const expectedCount = 2_000;
-          const url = `https://next-years-monsters-api.onrender.com/api/universe/status?limit=${expectedCount}`;
-          const response = await fetch(url, {
-            headers: { Accept: "application/json" },
-            signal: AbortSignal.timeout(70_000),
-          });
-          const status = await response.json();
+      - name: Verify 5,000-candidate reserve and 2,200 SEC evidence-ready target
+        env:
+          NYM_UNIVERSE_STATUS_LIMIT: "5000"
+          NYM_EXPECTED_USABLE_TARGET: "2200"
+        run: node scripts/verify-sec-evidence-readiness.mjs
 
-          if (!response.ok) {
-            throw new Error(`Universe endpoint returned HTTP ${response.status}.`);
-          }
-
-          const summary = {
-            universeSize: Number(status.universeSize || 0),
-            examinedCount: Number(status.examinedCount || 0),
-            queuedCount: Number(status.queuedCount || 0),
-            processingCount: Number(status.processingCount || 0),
-            secCompleteCount: Number(status.secCompleteCount || 0),
-            unresolvedCount: Number(status.unresolvedCount || 0),
-            failedCount: Number(status.failedCount || 0),
-            partialCount: Number(status.partialCount || 0),
-            staleCount: Number(status.staleCount || 0),
-            filingCompleteCount: Number(status.filingCompleteCount || 0),
-            factsCompleteCount: Number(status.factsCompleteCount || 0),
-            quoteCompleteCount: Number(status.quoteCompleteCount || 0),
-            ratingCompleteCount: Number(status.ratingCompleteCount || 0),
-            generatedAt: status.generatedAt || null,
-          };
-
-          console.log("Final 2,000-company universe status:");
-          console.log(JSON.stringify(summary, null, 2));
-
-          const failedRecords = Array.isArray(status.companies)
-            ? status.companies
-                .filter((company) => company?.secStage === "failed")
-                .map((company) => ({
-                  ticker: company.ticker ?? null,
-                  companyName: company.companyName ?? null,
-                  exchange: company.exchange ?? null,
-                  secCik: company.secCik ?? null,
-                  secAttemptCount: company.secAttemptCount ?? null,
-                  lastError: company.lastError ?? null,
-                  lastStartedAt: company.lastStartedAt ?? null,
-                  lastCompletedAt: company.lastCompletedAt ?? null,
-                  nextRetryAt: company.nextRetryAt ?? null,
-                }))
-            : [];
-
-          console.log("Failed SEC records:");
-          console.log(JSON.stringify(failedRecords, null, 2));
-
-          const knownBlockedTickers = new Set(["ABBNY", "ALFUU"]);
-          const duplicateCikSignature = 'duplicate key value violates unique constraint "companies_sec_cik_unique"';
-          const knownBlockedFailures = failedRecords.filter(
-            (record) => knownBlockedTickers.has(record.ticker) && String(record.lastError || "").includes(duplicateCikSignature),
-          );
-          const unexpectedFailures = failedRecords.filter(
-            (record) => !knownBlockedFailures.some((known) => known.ticker === record.ticker),
-          );
-
-          if (knownBlockedFailures.length) {
-            console.log("Known stale-deployment SEC blockers:");
-            console.log(JSON.stringify(knownBlockedFailures, null, 2));
-            const fs = await import("node:fs");
-            if (process.env.GITHUB_STEP_SUMMARY) {
-              fs.appendFileSync(
-                process.env.GITHUB_STEP_SUMMARY,
-                `### Known SEC blockers\n\n${knownBlockedFailures.map((record) => `- ${record.ticker}: duplicate SEC CIK collision awaiting the prepared backend deployment`).join("\n")}\n\n`,
-              );
-            }
-          }
-
-          const accountedCount = summary.secCompleteCount + summary.unresolvedCount + knownBlockedFailures.length;
-          const problems = [];
-          if (summary.examinedCount !== expectedCount) {
-            problems.push(`examinedCount is ${summary.examinedCount}, expected ${expectedCount}`);
-          }
-          if (summary.queuedCount !== 0) {
-            problems.push(`queuedCount is ${summary.queuedCount}, expected 0 for a completed batch`);
-          }
-          if (summary.processingCount !== 0) {
-            problems.push(`processingCount is ${summary.processingCount}, expected 0`);
-          }
-          if (summary.failedCount !== failedRecords.length) {
-            problems.push(`failedCount is ${summary.failedCount}, but ${failedRecords.length} failed records were returned`);
-          }
-          if (unexpectedFailures.length > 0) {
-            problems.push(`unexpected failed SEC tickers: ${unexpectedFailures.map((record) => record.ticker).join(", ")}`);
-          }
-          if (accountedCount !== expectedCount) {
-            problems.push(`SEC accounted count is ${accountedCount}, expected ${expectedCount}`);
-          }
-
-          if (problems.length) {
-            throw new Error(problems.join("; "));
-          }
-
-          if (knownBlockedFailures.length > 0) {
-            console.log("The 2,000-company SEC batch is fully accounted for. Known duplicate-CIK rows remain blocked only by the stale Render deployment.");
-          }
-          NODE
-
-      - name: Verify Render API, 2,000-company database, and public factory page
+      - name: Verify Render API, broad reserve accounting, rating route, and customer journey
         env:
           NYM_EXPECTED_VERSION: "0.6.0"
-          NYM_EXPECTED_UNIVERSE_MIN: "2000"
+          NYM_EXPECTED_UNIVERSE_MIN: "5000"
+          NYM_UNIVERSE_STATUS_LIMIT: "5000"
+          NYM_EXPECTED_USABLE_TARGET: "2200"
           NYM_SMOKE_ATTEMPTS: "1"
           NYM_SMOKE_DELAY_MS: "0"
         run: node scripts/verify-production.mjs

@@ -1,5 +1,9 @@
-// TS: 2026-08-03 13:39 ET
+// TS: 2026-08-21 15:16 UTC
 
+import {
+  isProtectedStrategicTicker,
+  PROTECTED_STRATEGIC_TICKERS,
+} from "../policy/protected-stocks.js";
 import type { UniverseCompany } from "./types.js";
 
 const SEC_UNIVERSE_URL = "https://www.sec.gov/files/company_tickers_exchange.json";
@@ -22,6 +26,14 @@ function normalizedTicker(value: unknown): string | null {
   return ticker && /^[A-Z0-9.-]{1,15}$/.test(ticker) ? ticker : null;
 }
 
+function lastReplaceableIndex(companies: readonly UniverseCompany[]): number {
+  for (let index = companies.length - 1; index >= 0; index -= 1) {
+    const company = companies[index];
+    if (company && !isProtectedStrategicTicker(company.ticker)) return index;
+  }
+  return -1;
+}
+
 export function parseSecUniversePayload(
   payload: SecTickerExchangeResponse,
   limit: number,
@@ -39,7 +51,6 @@ export function parseSecUniversePayload(
   }
 
   const byTicker = new Map<string, UniverseCompany>();
-  const usedCiks = new Set<number>();
 
   for (const row of payload.data ?? []) {
     const cik = safeNumber(row[cikIndex]);
@@ -51,13 +62,11 @@ export function parseSecUniversePayload(
       cik === null ||
       !companyName ||
       !ticker ||
-      byTicker.has(ticker) ||
-      usedCiks.has(cik)
+      byTicker.has(ticker)
     ) {
       continue;
     }
 
-    usedCiks.add(cik);
     byTicker.set(ticker, {
       ticker,
       companyName,
@@ -68,9 +77,29 @@ export function parseSecUniversePayload(
     });
   }
 
-  // Preserve the SEC file's upstream priority order. Alphabetically sorting here
-  // previously discarded the useful large-company-first ordering before limiting.
-  return Object.freeze([...byTicker.values()].slice(0, safeLimit));
+  // Preserve the SEC file's upstream priority order while guaranteeing that any
+  // protected strategic ticker present in the source survives the 5,000-row cap.
+  // Multiple share classes may legitimately share one CIK and remain separate
+  // customer lookup symbols (for example GOOGL and GOOG).
+  const selected = [...byTicker.values()].slice(0, safeLimit);
+  const selectedTickers = new Set(selected.map((company) => company.ticker));
+
+  for (const protectedTicker of PROTECTED_STRATEGIC_TICKERS) {
+    const protectedCompany = byTicker.get(protectedTicker);
+    if (!protectedCompany || selectedTickers.has(protectedTicker)) continue;
+
+    if (selected.length >= safeLimit) {
+      const replaceIndex = lastReplaceableIndex(selected);
+      if (replaceIndex < 0) break;
+      selectedTickers.delete(selected[replaceIndex]!.ticker);
+      selected[replaceIndex] = protectedCompany;
+    } else {
+      selected.push(protectedCompany);
+    }
+    selectedTickers.add(protectedTicker);
+  }
+
+  return Object.freeze(selected);
 }
 
 export async function loadSecUniverse(

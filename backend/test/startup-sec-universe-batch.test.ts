@@ -1,4 +1,4 @@
-// TS: 2026-08-21 07:01 ET
+// TS: 2026-08-21 15:16 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -16,6 +16,8 @@ function company(ticker: string, secStage: PipelineStatus, isPilot = false): Uni
     exchange: "NASDAQ",
     secCik: secStage === "complete" ? "0000000001" : null,
     isPilot,
+    isProtected: isPilot || ["AAPL", "NVDA", "MNST"].includes(ticker),
+    isReplacement: false,
     secStage,
     secAttemptCount: 1,
     lastError: null,
@@ -43,6 +45,7 @@ function status(
     requestedLimit: 5_000,
     universeSize: 5_000,
     examinedCount,
+    candidatesExaminedCount: examinedCount,
     queuedCount: 0,
     processingCount: 0,
     secCompleteCount: secEvidenceReadyCount,
@@ -57,7 +60,22 @@ function status(
     quoteCompleteCount: 0,
     ratingCompleteCount: 0,
     fullyCompleteCount: 0,
+    finalUsableUniverseCount: secEvidenceReadyCount,
     incompleteCount: failedCount,
+    protectedTickerCount: 30,
+    protectedPresentCount: companies.filter((item) => item.isProtected).length,
+    protectedMissingCount: 0,
+    protectedMissingTickers: Object.freeze([]),
+    protectedMustRepairCount: companies.filter(
+      (item) => item.isProtected && item.secStage !== "complete",
+    ).length,
+    protectedMustRepairTickers: Object.freeze(
+      companies.filter((item) => item.isProtected && item.secStage !== "complete").map((item) => item.ticker),
+    ),
+    replaceableFailureCount: failedCount,
+    replaceableFailureTickers: Object.freeze([]),
+    replacementsAttemptedCount: Math.min(failedCount, Math.max(examinedCount - 2_200, 0)),
+    reserveCandidatesRemainingCount: 5_000 - examinedCount,
     companies: Object.freeze([...companies]),
   });
 }
@@ -76,9 +94,9 @@ test("SEC reserve backfill may stop once 2200 evidence-ready stocks are complete
   assert.equal(shouldSkipSecBackfill(snapshot, 2_200), true);
 });
 
-test("SEC reserve backfill keeps running above target while any failed SEC record remains", () => {
+test("SEC reserve backfill may finish above target with replaceable ordinary failures", () => {
   const snapshot = status(2_350, 1, [company("AAPL", "complete", true)]);
-  assert.equal(shouldSkipSecBackfill(snapshot, 2_200), false);
+  assert.equal(shouldSkipSecBackfill(snapshot, 2_200), true);
 });
 
 test("SEC reserve backfill keeps running above target while a protected pilot is incomplete", () => {
