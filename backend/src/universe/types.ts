@@ -84,10 +84,43 @@ export interface UniverseStatusSummary {
   readonly companies: readonly UniverseCompanyStatus[];
 }
 
+export type UniverseDirectoryStatus =
+  | "evidence_ready"
+  | "protected_must_repair"
+  | "replaceable_exception"
+  | "processing"
+  | "reserve";
+
+export interface UniverseDirectoryCompany {
+  readonly ticker: string;
+  readonly companyName: string;
+  readonly exchange: string | null;
+  readonly secCik: string | null;
+  readonly isProtected: boolean;
+  readonly secEvidenceReady: boolean;
+  readonly ratingAvailable: boolean;
+  readonly status: UniverseDirectoryStatus;
+}
+
+export interface UniverseDirectorySearch {
+  readonly query: string;
+  readonly universeSize: number;
+  readonly secEvidenceReadyCount: number;
+  readonly protectedTickerCount: number;
+  readonly protectedMustRepairCount: number;
+  readonly replaceableFailureCount: number;
+  readonly results: readonly UniverseDirectoryCompany[];
+}
+
 export interface UniverseStore {
   readonly name: string;
   readonly configured: boolean;
   importCompanies(companies: readonly UniverseCompany[]): Promise<UniverseImportSummary>;
   getStatus(limit: number): Promise<UniverseStatusSummary>;
+  searchCompanies(
+    query: string,
+    limit: number,
+    evidenceReadyOnly: boolean,
+  ): Promise<UniverseDirectorySearch>;
   close(): Promise<void>;
 }

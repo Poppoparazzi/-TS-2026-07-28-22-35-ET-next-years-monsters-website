@@ -1,4 +1,4 @@
-// TS: 2026-08-21 10:05 ET
+// TS: 2026-08-21 16:32 UTC
 
 import { readFileSync } from "node:fs";
 import { protectedTickers } from "./protected-stocks.mjs";
@@ -34,12 +34,45 @@ function verifyHomepageSearch() {
   if (!source.includes("const exactName = stocks.find")) {
     fail("Homepage search no longer resolves exact company names before fallback handling.");
   }
+  if (!source.includes("/api/universe/search")) {
+    fail("Homepage search is no longer connected to the broad production directory.");
+  }
   for (const required of [
     'url.searchParams.set("left", ticker)',
     'url.searchParams.set("mode", "single")',
     'url.searchParams.set("direct", "1")',
   ]) {
     if (!source.includes(required)) fail(`Homepage direct-stock routing lost required behavior: ${required}`);
+  }
+}
+
+function verifyBroadProductionDirectory() {
+  const html = read("coverage-universe.html");
+  const source = read("assets/coverage-finder.js");
+
+  for (const marker of [
+    "data-coverage-candidate-count",
+    "data-coverage-evidence-count",
+    "data-coverage-protected-count",
+    "data-coverage-exception-count",
+    "data-coverage-finder-results",
+  ]) {
+    if (!html.includes(marker)) fail(`Production directory page is missing required hook: ${marker}`);
+  }
+  if (!html.includes('src="assets/runtime-config.js"')) {
+    fail("Production directory page does not load the public API runtime configuration.");
+  }
+  if (!source.includes("/api/universe/search")) {
+    fail("Stock Directory no longer searches the broad production universe endpoint.");
+  }
+  for (const status of [
+    "evidence_ready",
+    "protected_must_repair",
+    "replaceable_exception",
+  ]) {
+    if (!source.includes(status)) {
+      fail(`Stock Directory no longer presents production status ${status}.`);
+    }
   }
 }
 
@@ -133,6 +166,7 @@ function verifyMonsterHuntConsistency() {
 }
 
 verifyHomepageSearch();
+verifyBroadProductionDirectory();
 verifyMonsterCheckQuickPicks();
 verifyProtectedVclPolicy();
 verifyBackendAndRecoveryProtectionPoliciesMatch();

@@ -33,6 +33,10 @@ interface LimitQuery {
   readonly limit?: string;
 }
 
+interface UniverseSearchQuery extends TickerQuery {
+  readonly evidenceReady?: string;
+}
+
 interface SymbolParams {
   readonly symbol: string;
 }
@@ -188,6 +192,45 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     const limit = parseLimit(request.query.limit, 100, 5_000);
     return universeStore.getStatus(limit);
   });
+
+  app.get<{ Querystring: UniverseSearchQuery }>(
+    "/api/universe/search",
+    async (request, reply) => {
+      const query = request.query.q?.trim().replace(/\s+/g, " ") ?? "";
+      if (query.length > 100) {
+        return reply.code(400).send({
+          error: "query_too_long",
+          message: "Stock-directory searches may contain no more than 100 characters.",
+        });
+      }
+
+      const limit = parseLimit(request.query.limit, 12, 25);
+      const evidenceReadyOnly = ["1", "true", "yes"].includes(
+        String(request.query.evidenceReady ?? "").trim().toLowerCase(),
+      );
+      const directory = await universeStore.searchCompanies(
+        query,
+        limit,
+        evidenceReadyOnly,
+      );
+
+      reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=120");
+      return {
+        query: directory.query,
+        count: directory.results.length,
+        evidenceReadyOnly,
+        results: directory.results,
+        universe: {
+          candidateCount: directory.universeSize,
+          secEvidenceReadyCount: directory.secEvidenceReadyCount,
+          protectedTickerCount: directory.protectedTickerCount,
+          protectedMustRepairCount: directory.protectedMustRepairCount,
+          replaceableFailureCount: directory.replaceableFailureCount,
+        },
+        retrievedAt: new Date().toISOString(),
+      };
+    },
+  );
 
   app.get<{ Params: SymbolParams }>("/api/stored/:symbol", async (request, reply) => {
     const symbol = normalizeTickerSymbol(request.params.symbol);

@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-08-21 16:32 UTC
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -276,6 +276,41 @@ function validateRating(rating) {
   if (problems.length) throw new Error(problems.join("; "));
 }
 
+function validateProductionDirectory(directory, universe) {
+  const problems = [];
+  const apple = Array.isArray(directory?.results)
+    ? directory.results.find((company) => company?.ticker === "AAPL")
+    : null;
+
+  if (directory?.query !== "Apple") problems.push(`directory query=${String(directory?.query)}`);
+  if (Number(directory?.universe?.candidateCount) !== Number(universe?.universeSize)) {
+    problems.push(
+      `directory candidateCount=${String(directory?.universe?.candidateCount)}, ` +
+      `universeSize=${String(universe?.universeSize)}`,
+    );
+  }
+  if (Number(directory?.universe?.secEvidenceReadyCount) !== Number(universe?.secEvidenceReadyCount)) {
+    problems.push(
+      `directory evidenceReady=${String(directory?.universe?.secEvidenceReadyCount)}, ` +
+      `universe evidenceReady=${String(universe?.secEvidenceReadyCount)}`,
+    );
+  }
+  if (Number(directory?.universe?.protectedMustRepairCount) !== 0) {
+    problems.push(
+      `directory protectedMustRepairCount=${String(directory?.universe?.protectedMustRepairCount)}`,
+    );
+  }
+  if (!apple) problems.push("directory search for Apple did not return AAPL");
+  if (apple && apple.secEvidenceReady !== true) {
+    problems.push("directory returned AAPL without its SEC evidence-ready status");
+  }
+  if (apple && apple.status !== "evidence_ready") {
+    problems.push(`directory returned AAPL status=${String(apple.status)}`);
+  }
+
+  if (problems.length) throw new Error(problems.join("; "));
+}
+
 function validateProviderBackedProgress(status, health) {
   const examinedCount = Number(status?.examinedCount);
   const quoteCompleteCount = Number(status?.quoteCompleteCount);
@@ -319,19 +354,25 @@ async function verifyOnce() {
   const health = await requestJson(`${apiBaseUrl}/api/health`);
   validateHealth(health);
 
-  const [universe, startup, rating] = await Promise.all([
+  const [universe, startup, rating, directory] = await Promise.all([
     requestJson(`${apiBaseUrl}/api/universe/status?limit=${statusLimit}`),
     optionalJson(`${apiBaseUrl}/api/startup-status`),
     requestJson(`${apiBaseUrl}/api/ratings/AAPL`),
+    requestJson(`${apiBaseUrl}/api/universe/search?q=Apple&limit=12&evidenceReady=true`),
   ]);
   validateBackfillPolicy(startup);
   validateUniverse(universe, startup);
   validateProviderBackedProgress(universe, health);
   validateRating(rating);
+  validateProductionDirectory(directory, universe);
 
   await Promise.all([
     requestPage(factoryPageUrl, ["STOCK FACTORY", "data-factory-body"]),
-    requestPage(`${siteBaseUrl}/`, ["data-home-stock-finder", "RUN A MONSTER CHECK"]),
+    requestPage(`${siteBaseUrl}/`, ["data-home-stock-finder", "live 5,000-candidate production directory"]),
+    requestPage(
+      `${siteBaseUrl}/coverage-universe.html?q=Apple`,
+      ["data-coverage-evidence-count", "ALL 5,000", "assets/runtime-config.js"],
+    ),
     requestPage(
       `${siteBaseUrl}/market-explorer.html?left=AAPL&mode=single&direct=1`,
       ["MARKET", "data-explorer-ticker-form"],
@@ -375,6 +416,12 @@ async function verifyOnce() {
       symbol: rating.symbol,
       engineVersion: rating.engineVersion,
       eligibilityCode: rating.eligibilityCode,
+    },
+    productionDirectory: {
+      query: directory.query,
+      candidateCount: directory.universe.candidateCount,
+      secEvidenceReadyCount: directory.universe.secEvidenceReadyCount,
+      appleStatus: directory.results.find((company) => company.ticker === "AAPL")?.status ?? null,
     },
     startupJobs: startup?.jobs ?? null,
     generatedAt: universe.generatedAt,
