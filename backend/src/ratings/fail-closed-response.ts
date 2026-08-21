@@ -1,4 +1,4 @@
-// TS: 2026-08-14 03:59 UTC
+// TS: 2026-08-21 17:08 UTC
 
 export interface RatingEvidenceFailure {
   readonly code: string;
@@ -24,6 +24,11 @@ export interface FailClosedRatingResponse {
     readonly sourceTimestamp: null;
   }[];
   readonly reasons: readonly RatingEvidenceFailure[];
+  readonly rollout: {
+    readonly cohort: "top_500";
+    readonly status: "rating_in_progress";
+    readonly message: "Not Yet Rated — Stay Tuned. Coming Soon.";
+  };
 }
 
 function normalizeSymbol(symbol: string): string {
@@ -52,8 +57,7 @@ export function buildFailClosedRatingResponse(
     score: null,
     tier: "NOT YET RATED",
     eligibilityCode: "required_evidence_incomplete",
-    summary:
-      "Current Stock Rating™ remains withheld because one or more required evidence sources are unavailable or incomplete.",
+    summary: "Not Yet Rated — Stay Tuned. Coming Soon. One or more required production evidence sources are unavailable or incomplete.",
     evidenceInputs: Object.freeze([]),
     components: Object.freeze([
       Object.freeze({
@@ -66,5 +70,10 @@ export function buildFailClosedRatingResponse(
       }),
     ]),
     reasons: Object.freeze([...safeReasons]),
+    rollout: Object.freeze({
+      cohort: "top_500",
+      status: "rating_in_progress",
+      message: "Not Yet Rated — Stay Tuned. Coming Soon.",
+    }),
   });
 }

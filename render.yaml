@@ -1,4 +1,4 @@
-# TS: 2026-08-19 12:00 ET
+# TS: 2026-08-21 17:08 UTC
 
 databases:
   - name: next-years-monsters-db
@@ -31,6 +31,8 @@ services:
           property: connectionString
       - key: MARKET_DATA_PROVIDER
         value: unconfigured
+      - key: TWELVE_DATA_API_KEY
+        sync: false
       - key: SEC_USER_AGENT
         sync: false
       - key: AUTO_IMPORT_UNIVERSE_LIMIT
@@ -47,3 +49,9 @@ services:
         value: "true"
       - key: PILOT_REFRESH_MAX_AGE_HOURS
         value: "24"
+      - key: AUTO_REFRESH_RATINGS_ON_START
+        value: "true"
+      - key: RATING_TARGET_COUNT
+        value: "500"
+      - key: RATING_CANDIDATE_LIMIT
+        value: "1000"

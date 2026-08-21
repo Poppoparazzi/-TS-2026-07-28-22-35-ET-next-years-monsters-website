@@ -19,7 +19,8 @@
     "db:verify": "tsx src/database/verify.ts",
     "pilot:refresh": "tsx src/jobs/run-pilot-refresh.ts",
     "universe:import": "tsx src/jobs/import-sec-universe.ts",
-    "universe:refresh-sec": "tsx src/jobs/run-sec-universe-batch.ts"
+    "universe:refresh-sec": "tsx src/jobs/run-sec-universe-batch.ts",
+    "ratings:refresh": "tsx src/jobs/run-rating-batch.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",

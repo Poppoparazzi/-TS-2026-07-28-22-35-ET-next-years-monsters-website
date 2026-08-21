@@ -1,4 +1,4 @@
-// TS: 2026-08-20 04:03 ET
+// TS: 2026-08-21 17:08 UTC
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
@@ -10,6 +10,7 @@ import {
   isServerlessRuntime,
 } from "./deployment-policy.js";
 import { refreshStalePilotOnStartup } from "./jobs/startup-pilot-refresh.js";
+import { runRatingBatchOnStartup } from "./jobs/startup-rating-batch.js";
 import { runSecUniverseBatchOnStartup } from "./jobs/startup-sec-universe-batch.js";
 import { importUniverseOnStartup } from "./jobs/startup-universe-import.js";
 import { installFailClosedRatingErrorHandler } from "./ratings/install-fail-closed-handler.js";
@@ -62,6 +63,19 @@ async function runStartupJobs(
       "Startup pilot refresh failed without stopping the public API",
     );
   }
+
+  markStartupJobRunning("ratingBatch");
+  try {
+    const ratingSummary = await runRatingBatchOnStartup(config);
+    markStartupJobCompleted("ratingBatch", ratingSummary);
+    app.log.info({ ratingBatch: ratingSummary }, "Startup Monster Rating batch completed");
+  } catch (error: unknown) {
+    markStartupJobFailed("ratingBatch", error);
+    app.log.error(
+      { error },
+      "Startup Monster Rating batch failed without stopping the public API",
+    );
+  }
 }
 
 async function start(): Promise<void> {
@@ -89,7 +103,7 @@ async function start(): Promise<void> {
 
     if (isServerlessRuntime()) {
       app.log.info(
-        "Serverless runtime detected; startup universe, SEC batch, and pilot refresh jobs are disabled",
+        "Serverless runtime detected; startup universe, SEC batch, pilot refresh, and rating jobs are disabled",
       );
     } else {
       void runStartupJobs(config, app);

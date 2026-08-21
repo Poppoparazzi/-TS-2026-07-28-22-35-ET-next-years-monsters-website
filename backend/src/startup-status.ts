@@ -1,6 +1,6 @@
-// TS: 2026-08-02 16:06 ET
+// TS: 2026-08-21 17:08 UTC
 
-export type StartupJobName = "universeImport" | "secUniverseBatch" | "pilotRefresh";
+export type StartupJobName = "universeImport" | "secUniverseBatch" | "pilotRefresh" | "ratingBatch";
 export type StartupJobState = "pending" | "running" | "completed" | "failed";
 
 export interface StartupJobSnapshot {
@@ -35,6 +35,13 @@ const records: Record<StartupJobName, MutableStartupJobRecord> = {
     error: null,
   },
   pilotRefresh: {
+    state: "pending",
+    startedAt: null,
+    completedAt: null,
+    summary: null,
+    error: null,
+  },
+  ratingBatch: {
     state: "pending",
     startedAt: null,
     completedAt: null,
@@ -95,6 +102,7 @@ export function getStartupStatusSnapshot(): {
     universeImport: Object.freeze({ ...records.universeImport }),
     secUniverseBatch: Object.freeze({ ...records.secUniverseBatch }),
     pilotRefresh: Object.freeze({ ...records.pilotRefresh }),
+    ratingBatch: Object.freeze({ ...records.ratingBatch }),
   });
 
   return Object.freeze({

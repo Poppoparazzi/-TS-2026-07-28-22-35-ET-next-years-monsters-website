@@ -1,6 +1,6 @@
 # Next Year’s Monsters™ API
 
-<!-- TS: 2026-08-01 21:52 ET -->
+<!-- TS: 2026-08-21 17:43 UTC -->
 
 This folder contains the provider-neutral TypeScript backend for the live-data phase of Monster Check™.
 
@@ -22,6 +22,7 @@ Implemented:
 - Secure environment-variable configuration.
 - Provider-neutral market-data and SEC-data contracts.
 - Twelve Data quote and symbol-search adapter.
+- Twelve Data daily-history adapter for versioned rating calculations.
 - Provider-neutral quote cache, concurrent batch loading, request deduplication, and per-symbol failure containment.
 - Official SEC ticker mapping, submissions, filing links, and selected XBRL company-facts adapter.
 - PostgreSQL schema, pilot seed data, live-readiness views, and checksum-protected migration runner.
@@ -38,16 +39,17 @@ Implemented:
 - Landing-page and dedicated Monster Check™ live quote and latest-filing client.
 - Live Data Rollout Board prepared to read saved readiness directly from the API.
 - Automatic retention of clearly labeled demonstration data when the live API is absent or unavailable.
+- A 5,000-candidate reserve with protected strategic tickers and separate must-repair versus replaceable failure accounting.
+- Monster Rating™ Version 1: a deterministic 0–100 engine using comparable annual SEC evidence, daily price/volume history, SPY-relative strength, liquidity, risk, and freshness.
+- `GET /api/ratings/:ticker` with saved-rating reuse and an honest `Not Yet Rated — Stay Tuned. Coming Soon.` fallback.
+- A database-backed top-500 rating job that replaces ordinary failures from the reserve while retaining protected failures on the repair roster.
+- Startup and hourly-watchdog recovery for an incomplete, aging, or protected-failure rating rollout.
 
-Not completed or confirmed yet:
+Still requires production authority or credentials:
 
-- Confirmed creation and successful migration of the declared Render PostgreSQL service.
-- A genuine production AAPL record saved, followed by an API restart and successful retrieval.
-- Saved production Monster Rating™ records.
-- Licensed raw market-data feed for public redistribution. TradingView's free public widgets remain the visible chart-and-price source until one is selected.
-- News provider.
-- Monster Rating™ Version 1 engine.
-- Rating history refresh jobs.
+- Set `MARKET_DATA_PROVIDER=twelve-data` and provide a valid `TWELVE_DATA_API_KEY` with public-display rights before numerical ratings can be generated in production.
+- Let the first top-500 rating batch finish, then run `scripts/verify-production.mjs` to confirm the live count and customer journey.
+- A news provider remains optional and is not used as a substitute for required SEC or market evidence.
 
 ## Local setup
 
@@ -85,6 +87,14 @@ npm run pilot:refresh -- --all
 ```
 
 The command requires `DATABASE_URL` and `SEC_USER_AGENT`. It saves SEC identity, recent filings, and selected company facts. It saves a quote only when an approved market-data provider is configured. A missing or failed quote provider does not erase successful SEC progress, and the command fails if the saved company cannot be read back from PostgreSQL.
+
+Generate the top 500 ratings from the production reserve:
+
+```bash
+RATING_TARGET_COUNT=500 RATING_CANDIDATE_LIMIT=1000 npm run ratings:refresh
+```
+
+The rating job requires `DATABASE_URL`, `SEC_USER_AGENT`, `MARKET_DATA_PROVIDER=twelve-data`, and `TWELVE_DATA_API_KEY`. Protected failures remain in `must_repair`; ordinary failures are recorded as replaceable and the job continues with reserve candidates.
 
 ## Safety rules
 
@@ -132,6 +142,7 @@ With Twelve Data configured:
 - `/api/tickers?q=apple` returns supported U.S. common-stock matches.
 - `/api/quotes/AAPL` returns a normalized timestamped quote with provider and feed-disclosure fields.
 - `/api/quotes?symbols=AAPL,NVDA,MSFT` returns independent per-symbol results, summary counts, retrieval time, and cache policy without exposing the provider key.
+- `/api/ratings/AAPL` returns a saved or newly calculated numerical rating when every SEC, history, liquidity, freshness, risk, and version gate passes.
 
 With a valid SEC user agent configured:
 
@@ -152,11 +163,10 @@ With a verified public API address configured:
 - The Live Data Rollout Board displays saved readiness from `/api/readiness`.
 - If a request fails, the page explicitly retains the demonstration or static fallback instead of substituting a false value.
 
-## Next implementation
+## Production closeout
 
-1. Confirm Render synchronized the Blueprint, created PostgreSQL, ran migrations, and passed `db:verify`.
-2. Run `npm run pilot:refresh -- AAPL` inside the configured Render service.
-3. Restart or redeploy the API.
-4. Confirm `/api/stored/AAPL` returns the same saved records after restart.
-5. Repeat the persistence proof once more.
-6. Begin Monster Rating™ Version 1 only after the live-data path passes twice.
+1. Configure the licensed historical market feed in Render.
+2. Redeploy so migrations run and the startup top-500 batch begins.
+3. Confirm `/api/startup-status` reports `ratingBatch.summary.ratedCount >= 500`.
+4. Run `node scripts/verify-production.mjs` from the repository root.
+5. Keep the hourly `7 * * * *` watchdog enabled so incomplete or aging ratings are retried without discarding protected tickers.
