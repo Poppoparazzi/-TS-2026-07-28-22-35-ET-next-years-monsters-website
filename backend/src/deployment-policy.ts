@@ -1,4 +1,4 @@
-// TS: 2026-08-20 04:02 ET
+// TS: 2026-08-21 15:47 UTC
 
 export type DeploymentProvider = "vercel" | "render" | "unknown";
 
@@ -47,6 +47,29 @@ function safeEnvironmentInteger(
   return Number.isInteger(value) && value >= 0 ? value : null;
 }
 
+export function effectiveBackfillInteger(
+  nodeEnv: string,
+  configuredValue: number,
+  productionMinimum: number,
+): number {
+  return nodeEnv === "production"
+    ? Math.max(configuredValue, productionMinimum)
+    : configuredValue;
+}
+
+function effectiveSnapshotInteger(
+  explicitValue: number | null,
+  useProductionFallbacks: boolean,
+  productionMinimum: number,
+): number | null {
+  if (!useProductionFallbacks) return explicitValue;
+  return effectiveBackfillInteger(
+    "production",
+    explicitValue ?? productionMinimum,
+    productionMinimum,
+  );
+}
+
 export function getBackfillPolicySnapshot(
   nodeEnv: string,
   environment: NodeJS.ProcessEnv = process.env,
@@ -57,20 +80,30 @@ export function getBackfillPolicySnapshot(
   const useProductionFallbacks = nodeEnv === "production" && !isServerlessRuntime(environment);
 
   return Object.freeze({
-    candidateTarget:
-      safeEnvironmentInteger(environment, "AUTO_IMPORT_UNIVERSE_LIMIT") ??
-      (useProductionFallbacks ? 5_000 : null),
-    secBatchSize:
-      safeEnvironmentInteger(environment, "AUTO_SEC_BATCH_SIZE") ??
-      (useProductionFallbacks ? 5_000 : null),
-    usableTarget:
-      safeEnvironmentInteger(environment, "SEC_USABLE_TARGET") ??
-      (useProductionFallbacks ? 2_200 : null),
-    concurrency:
-      safeEnvironmentInteger(environment, "SEC_BATCH_CONCURRENCY") ??
-      (useProductionFallbacks ? 8 : null),
-    maxAgeHours:
-      safeEnvironmentInteger(environment, "SEC_BATCH_MAX_AGE_HOURS") ??
-      (useProductionFallbacks ? 720 : null),
+    candidateTarget: effectiveSnapshotInteger(
+      safeEnvironmentInteger(environment, "AUTO_IMPORT_UNIVERSE_LIMIT"),
+      useProductionFallbacks,
+      5_000,
+    ),
+    secBatchSize: effectiveSnapshotInteger(
+      safeEnvironmentInteger(environment, "AUTO_SEC_BATCH_SIZE"),
+      useProductionFallbacks,
+      5_000,
+    ),
+    usableTarget: effectiveSnapshotInteger(
+      safeEnvironmentInteger(environment, "SEC_USABLE_TARGET"),
+      useProductionFallbacks,
+      2_200,
+    ),
+    concurrency: effectiveSnapshotInteger(
+      safeEnvironmentInteger(environment, "SEC_BATCH_CONCURRENCY"),
+      useProductionFallbacks,
+      8,
+    ),
+    maxAgeHours: effectiveSnapshotInteger(
+      safeEnvironmentInteger(environment, "SEC_BATCH_MAX_AGE_HOURS"),
+      useProductionFallbacks,
+      720,
+    ),
   });
 }

@@ -1,6 +1,7 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-08-21 15:49 UTC
 
 import type { AppConfig } from "../config.js";
+import { effectiveBackfillInteger } from "../deployment-policy.js";
 import { isProtectedStrategicTicker } from "../policy/protected-stocks.js";
 import {
   runSecUniverseBatch,
@@ -91,11 +92,15 @@ export async function runSecUniverseBatchOnStartup(
   // loses the Blueprint values. Local/test environments remain opt-in so development
   // never launches a large SEC batch unexpectedly.
   const productionCandidateFallback = config.nodeEnv === "production" ? 5_000 : 0;
-  const batchSize = environmentInteger(
-    environment,
-    "AUTO_SEC_BATCH_SIZE",
-    productionCandidateFallback,
-    0,
+  const batchSize = effectiveBackfillInteger(
+    config.nodeEnv,
+    environmentInteger(
+      environment,
+      "AUTO_SEC_BATCH_SIZE",
+      productionCandidateFallback,
+      0,
+      5_000,
+    ),
     5_000,
   );
 
@@ -103,18 +108,26 @@ export async function runSecUniverseBatchOnStartup(
     return skippedSummary(0, "Automatic SEC universe processing is disabled.");
   }
 
-  const usableTarget = environmentInteger(
-    environment,
-    "SEC_USABLE_TARGET",
+  const usableTarget = effectiveBackfillInteger(
+    config.nodeEnv,
+    environmentInteger(
+      environment,
+      "SEC_USABLE_TARGET",
+      2_200,
+      1,
+      5_000,
+    ),
     2_200,
-    1,
-    5_000,
   );
-  const importLimit = environmentInteger(
-    environment,
-    "AUTO_IMPORT_UNIVERSE_LIMIT",
-    productionCandidateFallback,
-    0,
+  const importLimit = effectiveBackfillInteger(
+    config.nodeEnv,
+    environmentInteger(
+      environment,
+      "AUTO_IMPORT_UNIVERSE_LIMIT",
+      productionCandidateFallback,
+      0,
+      5_000,
+    ),
     5_000,
   );
 
@@ -149,18 +162,26 @@ export async function runSecUniverseBatchOnStartup(
 
   return runSecUniverseBatch(config, {
     batchSize,
-    concurrency: environmentInteger(
-      environment,
-      "SEC_BATCH_CONCURRENCY",
-      8,
-      1,
+    concurrency: effectiveBackfillInteger(
+      config.nodeEnv,
+      environmentInteger(
+        environment,
+        "SEC_BATCH_CONCURRENCY",
+        8,
+        1,
+        8,
+      ),
       8,
     ),
-    maxAgeHours: environmentInteger(
-      environment,
-      "SEC_BATCH_MAX_AGE_HOURS",
-      720,
-      1,
+    maxAgeHours: effectiveBackfillInteger(
+      config.nodeEnv,
+      environmentInteger(
+        environment,
+        "SEC_BATCH_MAX_AGE_HOURS",
+        720,
+        1,
+        720,
+      ),
       720,
     ),
   });

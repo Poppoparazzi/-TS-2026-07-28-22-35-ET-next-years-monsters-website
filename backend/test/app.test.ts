@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-08-21 15:49 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -268,6 +268,30 @@ test("production rating route resolves a ticker with a stable fail-closed contra
   assert.equal(Array.isArray(rating.components), true);
   assert.equal(Array.isArray(rating.reasons), true);
   assert.ok(rating.reasons.length > 0);
+});
+
+test("production rating route stays usable when market data is unconfigured", async (t) => {
+  const app = await buildApp({
+    config: {
+      ...testConfig(),
+      marketDataProvider: "unconfigured",
+      twelveDataApiKey: null,
+    },
+    provider: new UnconfiguredMarketDataProvider(),
+    secProvider: new StaticSecDataProvider(),
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const response = await app.inject({ method: "GET", url: "/api/ratings/aapl" });
+  const rating = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(rating.symbol, "AAPL");
+  assert.equal(rating.score, null);
+  assert.equal(rating.tier, "NOT YET RATED");
+  assert.equal(rating.eligibilityCode, "required_evidence_incomplete");
+  assert.equal(rating.reasons[0]?.code, "gate_marketQuote");
 });
 
 test("quote retrieval persists a snapshot that can be read later", async (t) => {

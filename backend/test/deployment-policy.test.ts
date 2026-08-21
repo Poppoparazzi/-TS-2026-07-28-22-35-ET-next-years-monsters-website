@@ -1,14 +1,16 @@
-// TS: 2026-08-20 04:04 ET
+// TS: 2026-08-21 15:49 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  effectiveBackfillInteger,
   getBackfillPolicySnapshot,
   getDeploymentBranch,
   getDeploymentCommit,
   getDeploymentProvider,
   isServerlessRuntime,
 } from "../src/deployment-policy.js";
+import { configuredUniverseImportLimit } from "../src/jobs/startup-universe-import.js";
 
 function emptyEnvironment(): NodeJS.ProcessEnv {
   return {};
@@ -40,7 +42,7 @@ test("serverless production does not inherit persistent-worker SEC backfill fall
   });
 });
 
-test("explicit backfill environment values override production fallbacks", () => {
+test("stale explicit production values cannot shrink the agreed reserve policy", () => {
   const environment: NodeJS.ProcessEnv = {
     AUTO_IMPORT_UNIVERSE_LIMIT: "4800",
     AUTO_SEC_BATCH_SIZE: "4700",
@@ -50,12 +52,25 @@ test("explicit backfill environment values override production fallbacks", () =>
   };
 
   assert.deepEqual(getBackfillPolicySnapshot("production", environment), {
-    candidateTarget: 4_800,
-    secBatchSize: 4_700,
+    candidateTarget: 5_000,
+    secBatchSize: 5_000,
     usableTarget: 2_300,
-    concurrency: 6,
-    maxAgeHours: 360,
+    concurrency: 8,
+    maxAgeHours: 720,
   });
+});
+
+test("production startup promotes stale candidate limits while local jobs remain opt-in", () => {
+  assert.equal(effectiveBackfillInteger("production", 2_000, 5_000), 5_000);
+  assert.equal(effectiveBackfillInteger("test", 2_000, 5_000), 2_000);
+  assert.equal(
+    configuredUniverseImportLimit({ AUTO_IMPORT_UNIVERSE_LIMIT: "2000" }, 5_000),
+    5_000,
+  );
+  assert.equal(
+    configuredUniverseImportLimit({ AUTO_IMPORT_UNIVERSE_LIMIT: "2000" }, 0),
+    2_000,
+  );
 });
 
 test("deployment metadata prefers Vercel when both provider environments are present", () => {

@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-08-21 15:49 UTC
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -25,11 +25,11 @@ test("production reserve policy stays deliberately overfilled and observable", (
     /backfillPolicy:\s*getBackfillPolicySnapshot\(config\.nodeEnv\)/,
     "startup status must expose the effective centralized backfill policy",
   );
-  assert.match(deploymentPolicySource, /"AUTO_IMPORT_UNIVERSE_LIMIT"[\s\S]*?5_000\s*:\s*null/);
-  assert.match(deploymentPolicySource, /"AUTO_SEC_BATCH_SIZE"[\s\S]*?5_000\s*:\s*null/);
-  assert.match(deploymentPolicySource, /"SEC_USABLE_TARGET"[\s\S]*?2_200\s*:\s*null/);
-  assert.match(deploymentPolicySource, /"SEC_BATCH_CONCURRENCY"[\s\S]*?8\s*:\s*null/);
-  assert.match(deploymentPolicySource, /"SEC_BATCH_MAX_AGE_HOURS"[\s\S]*?720\s*:\s*null/);
+  assert.match(deploymentPolicySource, /"AUTO_IMPORT_UNIVERSE_LIMIT"\),\s*useProductionFallbacks,\s*5_000/);
+  assert.match(deploymentPolicySource, /"AUTO_SEC_BATCH_SIZE"\),\s*useProductionFallbacks,\s*5_000/);
+  assert.match(deploymentPolicySource, /"SEC_USABLE_TARGET"\),\s*useProductionFallbacks,\s*2_200/);
+  assert.match(deploymentPolicySource, /"SEC_BATCH_CONCURRENCY"\),\s*useProductionFallbacks,\s*8/);
+  assert.match(deploymentPolicySource, /"SEC_BATCH_MAX_AGE_HOURS"\),\s*useProductionFallbacks,\s*720/);
   assert.match(coveragePolicySource, /ACTIVE_SEC_TARGET = 2_200/);
   assert.match(coveragePolicySource, /CANDIDATE_POOL_TARGET = 5_000/);
 
@@ -92,6 +92,11 @@ test("production fallbacks cannot silently disable or shrink the reserve strateg
     batchSource,
     /productionCandidateFallback\s*=\s*config\.nodeEnv\s*===\s*"production"\s*\?\s*5_000\s*:\s*0/,
     "production SEC batch must fall back to 5,000 candidates",
+  );
+  assert.match(
+    batchSource,
+    /effectiveBackfillInteger\([\s\S]*?"AUTO_SEC_BATCH_SIZE"[\s\S]*?5_000/,
+    "stale production batch settings must be promoted to the 5,000-candidate policy",
   );
   assert.match(
     batchSource,
