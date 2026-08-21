@@ -1,4 +1,4 @@
-// TS: 2026-08-20 23:03 ET
+// TS: 2026-08-21 00:03 ET
 
 import fs from "node:fs";
 
@@ -84,6 +84,12 @@ if (!exceptionVisibilityComplete) {
 
 const protectedExceptions = exceptions.filter(isProtected);
 const replaceableExceptions = exceptions.filter((company) => !isProtected(company));
+const failedExceptions = exceptions.filter((company) => company?.secStage === "failed");
+const unresolvedExceptions = exceptions.filter((company) => company?.secStage === "unresolved");
+const protectedFailedExceptions = failedExceptions.filter(isProtected);
+const replaceableFailedExceptions = failedExceptions.filter((company) => !isProtected(company));
+const protectedUnresolvedExceptions = unresolvedExceptions.filter(isProtected);
+const replaceableUnresolvedExceptions = unresolvedExceptions.filter((company) => !isProtected(company));
 
 const byReason = new Map();
 const byExchange = new Map();
@@ -125,6 +131,19 @@ const report = {
     lastError: company.lastError ?? null,
   })),
   replaceableExceptionCount: replaceableExceptions.length,
+  failedDecision: {
+    total: failedExceptions.length,
+    mustRepair: protectedFailedExceptions.length,
+    replaceable: replaceableFailedExceptions.length,
+    allFailedAreReplaceable: failedExceptions.length > 0 && protectedFailedExceptions.length === 0,
+    mustRepairTickers: protectedFailedExceptions.map((company) => company.ticker),
+    replaceableTickers: replaceableFailedExceptions.map((company) => company.ticker),
+  },
+  unresolvedDecision: {
+    total: unresolvedExceptions.length,
+    mustRepair: protectedUnresolvedExceptions.length,
+    replaceable: replaceableUnresolvedExceptions.length,
+  },
   reasonBuckets: Object.fromEntries([...byReason.entries()].sort((a, b) => b[1] - a[1])),
   exchangeBuckets: Object.fromEntries([...byExchange.entries()].sort((a, b) => b[1] - a[1])),
   exactExceptionRoster,
@@ -144,6 +163,8 @@ if (process.env.GITHUB_OUTPUT) {
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `exception_state_file=${exceptionStateFile}\n`);
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `protected_exception_count=${protectedExceptions.length}\n`);
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `replaceable_exception_count=${replaceableExceptions.length}\n`);
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `protected_failed_count=${protectedFailedExceptions.length}\n`);
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `replaceable_failed_count=${replaceableFailedExceptions.length}\n`);
 }
 
 if (process.env.GITHUB_STEP_SUMMARY) {
@@ -159,6 +180,12 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     .slice(0, 20)
     .map((company) => `${company.ticker} (${reasonBucket(company)})`)
     .join(", ") || "none";
+  const failedRepairSummary = protectedFailedExceptions.length > 0
+    ? protectedFailedExceptions.map((company) => company.ticker).join(", ")
+    : "none";
+  const failedReplaceSummary = replaceableFailedExceptions.length > 0
+    ? replaceableFailedExceptions.map((company) => company.ticker).join(", ")
+    : "none";
 
   fs.appendFileSync(
     process.env.GITHUB_STEP_SUMMARY,
@@ -168,6 +195,8 @@ if (process.env.GITHUB_STEP_SUMMARY) {
       `- Visible unresolved/failed records: **${exceptions.length}**`,
       `- Must repair: **${protectedExceptions.length}**`,
       `- Replaceable: **${replaceableExceptions.length}**`,
+      `- Failed rows requiring repair: **${protectedFailedExceptions.length}** (${failedRepairSummary})`,
+      `- Failed rows safe to replace: **${replaceableFailedExceptions.length}** (${failedReplaceSummary})`,
       `- Protected tickers requiring repair: ${protectedSummary}`,
       `- Top exception reasons: ${topReasons}`,
       `- Replaceable sample: ${replaceableSample}`,
