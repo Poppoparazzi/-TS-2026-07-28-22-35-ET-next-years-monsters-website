@@ -1,6 +1,7 @@
-// TS: 2026-08-20 19:04 ET
+// TS: 2026-08-21 04:00 ET
 
 import fs from "node:fs";
+import { isProtectedStock } from "./protected-stocks.mjs";
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -8,16 +9,6 @@ const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters
 const statusLimit = Number(process.env.NYM_UNIVERSE_STATUS_LIMIT || "5000");
 const usableTarget = Number(process.env.NYM_EXPECTED_USABLE_TARGET || "2200");
 const recoveryStateFile = (process.env.NYM_RECOVERY_STATE_FILE || "nym-recovery-state.json").trim();
-
-const protectedTickers = new Set([
-  "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
-  "DECK", "WING", "META", "APP", "MSFT", "GOOGL", "GOOG", "AVGO", "PLTR", "CRDO",
-  "RKLB", "QCOM", "MU", "ARM", "DELL", "INTC", "MRVL", "HOOD", "COIN", "UBER",
-]);
-
-function isProtected(company) {
-  return company?.isPilot === true || protectedTickers.has(String(company?.ticker || "").toUpperCase());
-}
 
 if (!Number.isInteger(statusLimit) || statusLimit < usableTarget || statusLimit > 5_000) {
   throw new Error(`NYM_UNIVERSE_STATUS_LIMIT must be an integer from ${usableTarget} to 5000.`);
@@ -113,7 +104,7 @@ if (Number.isInteger(failed) && failed > 0) {
 
 const companies = Array.isArray(status?.companies) ? status.companies : [];
 const incompleteProtected = companies.filter((company) =>
-  isProtected(company) && !(
+  isProtectedStock(company) && !(
     company?.secStage === "complete" &&
     company?.hasSecIdentity === true &&
     company?.hasFilings === true &&
