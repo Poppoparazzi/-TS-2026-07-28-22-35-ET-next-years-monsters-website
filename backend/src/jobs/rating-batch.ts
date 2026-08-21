@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:19 ET
+// TS: 2026-08-21 16:33 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -25,6 +25,8 @@ export interface RatingBatchOptions {
   readonly targetCount?: number;
   readonly candidateLimit?: number;
   readonly marketRequestDelayMs?: number;
+  readonly marketLimitRetryMs?: number;
+  readonly marketLimitMaxRetries?: number;
 }
 
 function reason(error: unknown): string {
@@ -35,9 +37,14 @@ function providerLimitReached(message: string): boolean {
   return /rate limit|api credits|credit limit|too many requests|quota/i.test(message);
 }
 
-function boundedDelay(value: number | undefined): number {
+function boundedDelay(value: number | undefined, maximum = 60_000): number {
   const parsed = Math.trunc(value ?? 0);
-  return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 60_000) : 0;
+  return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), maximum) : 0;
+}
+
+function boundedRetryCount(value: number | undefined): number {
+  const parsed = Math.trunc(value ?? 0);
+  return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 1_000) : 0;
 }
 
 function sleep(milliseconds: number): Promise<void> {
@@ -55,6 +62,8 @@ export async function runRatingBatch(
     5_000,
   );
   const marketRequestDelayMs = boundedDelay(options.marketRequestDelayMs);
+  const marketLimitRetryMs = boundedDelay(options.marketLimitRetryMs, 15 * 60_000);
+  const marketLimitMaxRetries = boundedRetryCount(options.marketLimitMaxRetries);
   const { marketProvider, secProvider, persistenceStore, batchStore } = dependencies;
   if (!marketProvider.configured || !marketProvider.getDailyHistory) {
     throw new Error("The licensed historical market-data provider is not configured.");
@@ -65,11 +74,26 @@ export async function runRatingBatch(
 
   let lastMarketRequestStartedAt = 0;
   const getPacedHistory = async (symbol: string, outputSize: number): Promise<DailyMarketHistory> => {
-    const elapsed = Date.now() - lastMarketRequestStartedAt;
-    const waitMs = lastMarketRequestStartedAt === 0 ? 0 : Math.max(0, marketRequestDelayMs - elapsed);
-    if (waitMs > 0) await sleep(waitMs);
-    lastMarketRequestStartedAt = Date.now();
-    return marketProvider.getDailyHistory!(symbol, outputSize);
+    let providerLimitRetries = 0;
+
+    while (true) {
+      const elapsed = Date.now() - lastMarketRequestStartedAt;
+      const waitMs = lastMarketRequestStartedAt === 0 ? 0 : Math.max(0, marketRequestDelayMs - elapsed);
+      if (waitMs > 0) await sleep(waitMs);
+      lastMarketRequestStartedAt = Date.now();
+
+      try {
+        return await marketProvider.getDailyHistory!(symbol, outputSize);
+      } catch (error) {
+        const message = reason(error);
+        if (!providerLimitReached(message) || providerLimitRetries >= marketLimitMaxRetries) {
+          throw error;
+        }
+
+        providerLimitRetries += 1;
+        await sleep(marketLimitRetryMs);
+      }
+    }
   };
 
   const candidates = await batchStore.listCandidates(candidateLimit);
@@ -148,7 +172,7 @@ export async function runRatingBatch(
       if (candidate.isProtected) protectedMustRepair.push(failure);
       else replaceable.push(failure);
       if (providerLimitReached(message)) {
-        stoppedReason = `Market-data provider limit reached while processing ${candidate.ticker}: ${message}`;
+        stoppedReason = `Market-data provider limit remained unavailable after ${marketLimitMaxRetries} retries while processing ${candidate.ticker}: ${message}`;
         break;
       }
     }
