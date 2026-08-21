@@ -1,12 +1,18 @@
-// TS: 2026-08-19 08:04 ET
+// TS: 2026-08-20 21:03 ET
+
+import fs from "node:fs";
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
   .replace(/\/$/, "");
 const candidateTarget = Number(process.env.NYM_CANDIDATE_TARGET || "5000");
+const exceptionStateFile = (process.env.NYM_SEC_EXCEPTION_STATE_FILE || "nym-sec-exceptions.json").trim();
 
 if (!Number.isInteger(candidateTarget) || candidateTarget < 1 || candidateTarget > 5000) {
   throw new Error("NYM_CANDIDATE_TARGET must be an integer from 1 to 5000.");
+}
+if (!exceptionStateFile) {
+  throw new Error("NYM_SEC_EXCEPTION_STATE_FILE must not be empty.");
 }
 
 const protectedTickers = new Set([
@@ -86,11 +92,24 @@ for (const company of exceptions) {
   increment(byExchange, String(company?.exchange || "unknown").toUpperCase());
 }
 
+const exactExceptionRoster = exceptions.map((company) => ({
+  ticker: company.ticker,
+  companyName: company.companyName,
+  exchange: company.exchange ?? null,
+  secStage: company.secStage,
+  protected: isProtected(company),
+  disposition: isProtected(company) ? "must_repair" : "replaceable",
+  reason: reasonBucket(company),
+  secAttemptCount: Number(company.secAttemptCount || 0),
+  lastError: company.lastError ?? null,
+}));
+
 const report = {
   generatedAt: new Date().toISOString(),
   candidateTarget,
   examinedCount: Number(status?.examinedCount || 0),
   secCompleteCount: Number(status?.secCompleteCount || 0),
+  secEvidenceReadyCount: Number(status?.secEvidenceReadyCount || 0),
   unresolvedCount,
   failedCount,
   expectedExceptionCount,
@@ -102,11 +121,13 @@ const report = {
     companyName: company.companyName,
     exchange: company.exchange ?? null,
     secStage: company.secStage,
+    reason: reasonBucket(company),
     lastError: company.lastError ?? null,
   })),
   replaceableExceptionCount: replaceableExceptions.length,
   reasonBuckets: Object.fromEntries([...byReason.entries()].sort((a, b) => b[1] - a[1])),
   exchangeBuckets: Object.fromEntries([...byExchange.entries()].sort((a, b) => b[1] - a[1])),
+  exactExceptionRoster,
   sampleReplaceable: replaceableExceptions.slice(0, 50).map((company) => ({
     ticker: company.ticker,
     companyName: company.companyName,
@@ -117,5 +138,29 @@ const report = {
   })),
 };
 
+fs.writeFileSync(exceptionStateFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+
+if (process.env.GITHUB_OUTPUT) {
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `exception_state_file=${exceptionStateFile}\n`);
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `protected_exception_count=${protectedExceptions.length}\n`);
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `replaceable_exception_count=${replaceableExceptions.length}\n`);
+}
+
+if (process.env.GITHUB_STEP_SUMMARY) {
+  fs.appendFileSync(
+    process.env.GITHUB_STEP_SUMMARY,
+    [
+      "### SEC exception roster",
+      "",
+      `- Visible unresolved/failed records: **${exceptions.length}**`,
+      `- Must repair: **${protectedExceptions.length}**`,
+      `- Replaceable: **${replaceableExceptions.length}**`,
+      `- Exact roster file: \`${exceptionStateFile}\``,
+      "",
+    ].join("\n"),
+  );
+}
+
 console.log("Next Year's Monsters SEC exception classification:");
 console.log(JSON.stringify(report, null, 2));
+console.log(`Persisted exact SEC exception roster to ${exceptionStateFile}.`);
