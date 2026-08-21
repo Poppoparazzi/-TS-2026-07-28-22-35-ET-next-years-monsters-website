@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:47 UTC
+// TS: 2026-08-21 17:31 UTC
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -19,6 +19,15 @@ import {
 import { QuoteService } from "./quotes/service.js";
 import { installFailClosedRatingErrorHandler } from "./ratings/install-fail-closed-handler.js";
 import { evaluatePublicRatingReadiness } from "./ratings/public-rating-readiness.js";
+import {
+  calculateMonsterRatingV1,
+  MONSTER_RATING_ENGINE_VERSION,
+} from "./ratings/engine-v1.js";
+import {
+  buildPublishableRating,
+  buildProductionRatingInput,
+  quoteFromDailyHistory,
+} from "./ratings/input-builder.js";
 import { createSecDataProvider } from "./sec/index.js";
 import type { SecDataProvider } from "./sec/types.js";
 import { createUniverseStore } from "./universe/store.js";
@@ -349,53 +358,81 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     const symbol = normalizeTickerSymbol(request.params.symbol);
     if (!symbol) return sendInvalidSymbol(reply);
 
+    if (persistenceStore.configured && persistenceStore.getLatestRating) {
+      const storedRating = await persistenceStore.getLatestRating(symbol);
+      if (storedRating) {
+        reply.header("Cache-Control", "public, max-age=300, stale-while-revalidate=900");
+        return {
+          ...storedRating,
+          reasons: [],
+          rollout: {
+            cohort: "top_500",
+            status: "rated",
+            message: "Verified Monster Rating™ available.",
+          },
+        };
+      }
+    }
+
     const calculatedAt = new Date().toISOString();
-    const [quote, secCompany, filings, secFacts] = await Promise.all([
-      quoteService.getQuote(symbol),
+    if (!provider.configured || !provider.getDailyHistory) {
+      throw new ProviderNotConfiguredError("Licensed historical market-data provider");
+    }
+
+    const [secCompany, filings, secFacts, companyHistory, benchmarkHistory] = await Promise.all([
       secProvider.getCompany(symbol),
       secProvider.getRecentFilings(symbol, 1),
       secProvider.getCompanyFacts(symbol),
+      provider.getDailyHistory(symbol, 300),
+      provider.getDailyHistory("SPY", 300),
     ]);
+    const quote = quoteFromDailyHistory(secCompany, companyHistory);
+
+    const calculatedRating = calculateMonsterRatingV1(buildProductionRatingInput({
+      company: secCompany,
+      facts: secFacts,
+      companyHistory,
+      benchmarkHistory,
+      benchmarkSymbol: "SPY",
+      calculatedAt,
+    }));
+    const riskComponent = calculatedRating.components.find(
+      (component) => component.key === "risk_deterioration",
+    );
 
     const readiness = evaluatePublicRatingReadiness({
       symbol,
       quote,
       secCompany,
       secFacts,
+      riskEvidence: calculatedRating.eligible && riskComponent
+        ? {
+            symbol,
+            verified: true,
+            source: `${MONSTER_RATING_ENGINE_VERSION}: SEC-derived financial-risk component`,
+            retrievedAt: secFacts.retrievedAt,
+          }
+        : null,
+      calculation: calculatedRating.eligible
+        ? {
+            symbol,
+            score: calculatedRating.score,
+            modelVersion: calculatedRating.engineVersion,
+            calculatedAt: calculatedRating.calculatedAt,
+          }
+        : null,
       now: new Date(calculatedAt),
     });
-    const latestFiling = filings[0] ?? null;
-    const firstFact = Object.values(secFacts.facts)[0] ?? null;
-    const evidenceInputs = [
-      {
-        key: "market_price",
-        sourceType: "market-data",
-        value: quote.price,
-        provider: quote.provider,
-        sourceUrl: null,
-        sourceTimestamp: quote.providerTimestamp,
-      },
-      latestFiling
-        ? {
-            key: "latest_sec_filing",
-            sourceType: "sec-filing",
-            value: `${latestFiling.form} filed ${latestFiling.filingDate}`,
-            provider: secProvider.name,
-            sourceUrl: latestFiling.primaryDocumentUrl,
-            sourceTimestamp: latestFiling.acceptanceDateTime ?? latestFiling.filingDate,
-          }
-        : null,
-      firstFact
-        ? {
-            key: `company_fact_${firstFact.key}`,
-            sourceType: "company-fact",
-            value: firstFact.value,
-            provider: secProvider.name,
-            sourceUrl: firstFact.sourceUrl || secFacts.sourceUrl,
-            sourceTimestamp: secFacts.retrievedAt,
-          }
-        : null,
-    ].filter((item) => item !== null);
+    const publishableRating = calculatedRating.eligible
+      ? buildPublishableRating({
+          rating: calculatedRating,
+          facts: secFacts,
+          filings,
+          quote,
+          secProviderName: secProvider.name,
+        })
+      : null;
+    const evidenceInputs = publishableRating?.evidenceInputs ?? calculatedRating.evidenceInputs;
 
     const failedGates = Object.entries(readiness.gates)
       .filter(([, gate]) => !gate.ready)
@@ -403,46 +440,64 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
         code: `gate_${key}`,
         message: gate.reason,
       }));
-    const sourceEvidenceReady = [
-      readiness.gates.secIdentity,
-      readiness.gates.marketQuote,
-      readiness.gates.quoteFreshness,
-      readiness.gates.financialEvidence,
-    ].every((gate) => gate.ready);
+    if (!calculatedRating.eligible) {
+      return {
+        ...calculatedRating,
+        tier: "NOT YET RATED",
+        evidenceInputs,
+        rollout: {
+          cohort: "top_500",
+          status: "rating_in_progress",
+          message: "Not Yet Rated — Stay Tuned. Coming Soon.",
+        },
+      };
+    }
+
+    if (!readiness.ready) {
+      return {
+        symbol,
+        companyName: calculatedRating.companyName,
+        engineVersion: MONSTER_RATING_ENGINE_VERSION,
+        calculatedAt,
+        eligible: false,
+        score: null,
+        tier: "NOT YET RATED",
+        eligibilityCode: "required_evidence_incomplete",
+        summary: "Not Yet Rated — Stay Tuned. Coming Soon. One or more production evidence gates did not pass.",
+        evidenceInputs,
+        components: calculatedRating.components,
+        reasons: failedGates,
+        rollout: {
+          cohort: "top_500",
+          status: "rating_in_progress",
+          message: "Not Yet Rated — Stay Tuned. Coming Soon.",
+        },
+      };
+    }
+
+    if (persistenceStore.configured && persistenceStore.saveRating) {
+      try {
+        await persistenceStore.saveSecCompany(secCompany);
+        await Promise.all([
+          persistenceStore.saveQuote(quote),
+          persistenceStore.saveSecFilings(secCompany, filings),
+          persistenceStore.saveSecFacts(secFacts),
+        ]);
+        await persistenceStore.saveRating(publishableRating ?? calculatedRating);
+      } catch (error) {
+        request.log.error({ error, symbol }, "Unable to persist complete Monster Rating evidence");
+      }
+    }
 
     return {
-      symbol,
-      engineVersion: "nym-current-stock-rating-v0.1-readiness-only",
-      calculatedAt,
-      eligible: false,
-      score: null,
-      tier: "NOT YET RATED",
-      eligibilityCode: sourceEvidenceReady
-        ? "risk_and_versioned_calculation_not_connected"
-        : "required_evidence_incomplete",
-      summary: sourceEvidenceReady
-        ? "Verified market and SEC evidence are available, but Current Stock Rating™ remains withheld until verified risk evidence and a versioned scoring calculation are connected."
-        : "Current Stock Rating™ remains withheld because one or more required evidence gates are incomplete.",
+      ...(publishableRating ?? calculatedRating),
       evidenceInputs,
-      components: [
-        {
-          key: "risk_deterioration",
-          label: "Risk deterioration",
-          direction: "unavailable",
-          score: null,
-          sourceUrl: null,
-          sourceTimestamp: null,
-        },
-      ],
-      reasons:
-        failedGates.length > 0
-          ? failedGates
-          : [
-              {
-                code: "rating_model_not_connected",
-                message: "Verified risk evidence and a versioned Current Stock Rating™ calculation are not connected.",
-              },
-            ],
+      reasons: [],
+      rollout: {
+        cohort: "top_500",
+        status: "rated",
+        message: "Verified Monster Rating™ available.",
+      },
     };
   });
 

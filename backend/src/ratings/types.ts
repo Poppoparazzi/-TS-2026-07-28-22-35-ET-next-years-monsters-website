@@ -1,4 +1,4 @@
-// TS: 2026-08-13 17:06 ET
+// TS: 2026-08-21 17:31 UTC
 
 export type RatingTier =
   | "Platinum"
@@ -82,6 +82,7 @@ export interface RatingEvidenceValue {
   readonly value: number | string | boolean | null;
   readonly unit: string | null;
   readonly sourceType: "sec-filing" | "company-fact" | "market-data" | "derived";
+  readonly provider?: string;
   readonly sourceTimestamp: string | null;
   readonly sourceUrl: string | null;
 }

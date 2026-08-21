@@ -1,4 +1,4 @@
-// TS: 2026-08-10 06:03 ET
+// TS: 2026-08-21 17:08 UTC
 
 (function installCurrentRatingReadiness() {
   "use strict";
@@ -161,7 +161,7 @@
     const panel = ensurePanel(result);
     renderLoading(panel, ticker);
     if (!base) {
-      panel.innerHTML = `<div class="monster-current-readiness-head"><div><p class="monster-current-readiness-kicker">CURRENT STOCK RATING™ READINESS · $${safe(ticker)}</p><h3>DATA INCOMPLETE / NOT YET RATED</h3><p class="monster-current-readiness-summary">The public API base URL is not configured. A current rating cannot be calculated.</p></div><div class="monster-current-readiness-state">NOT YET RATED</div></div>`;
+      panel.innerHTML = `<div class="monster-current-readiness-head"><div><p class="monster-current-readiness-kicker">CURRENT STOCK RATING™ READINESS · $${safe(ticker)}</p><h3>NOT YET RATED — STAY TUNED</h3><p class="monster-current-readiness-summary">Coming Soon. The public API base URL is not configured, so a current rating cannot yet be calculated.</p></div><div class="monster-current-readiness-state">NOT YET RATED</div></div>`;
       return;
     }
 
@@ -203,8 +203,8 @@
       <div class="monster-current-readiness-head">
         <div>
           <p class="monster-current-readiness-kicker">CURRENT STOCK RATING™ READINESS · $${safe(ticker)}</p>
-          <h3>${requiredReady ? "VERIFIED CURRENT RATING" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
-          <p class="monster-current-readiness-summary">${requiredReady ? "Every required evidence gate passed the exact backend contract." : "The public API can now be checked against its exact supported fields. A numeric Current Stock Rating™ remains deliberately withheld until verified risk evidence and the versioned calculation endpoint are actually connected."}</p>
+          <h3>${requiredReady ? "VERIFIED CURRENT RATING" : "NOT YET RATED — STAY TUNED"}</h3>
+          <p class="monster-current-readiness-summary">${requiredReady ? "Every required evidence gate passed the exact backend contract." : "Coming Soon. The system is checking the supported evidence fields and will publish a number only after every required rating gate passes."}</p>
         </div>
         <div class="monster-current-readiness-state">${requiredReady ? "READY" : "NOT YET RATED"}</div>
       </div>

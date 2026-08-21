@@ -1,4 +1,4 @@
-# TS: 2026-08-21 10:02 ET
+# TS: 2026-08-21 17:39 UTC
 
 name: Render deploy recovery
 
@@ -44,6 +44,10 @@ jobs:
           let deployedCommit = null;
           let classification = "unknown";
           let relevantChangesAfterDeploy = null;
+          let marketConfigured = false;
+          let ratingCompleteCount = null;
+          let ratingBatchAgeHours = null;
+          let ratingProtectedMustRepairCount = null;
 
           try {
             const startupResponse = await fetch(`${base}/api/startup-status`, {
@@ -66,6 +70,41 @@ jobs:
                   .filter(Boolean);
                 relevantChangesAfterDeploy = changed.length;
                 classification = changed.length > 0 ? "stale_deployment" : "current_for_backend";
+
+                if (classification === "current_for_backend") {
+                  const [healthResponse, universeResponse] = await Promise.all([
+                    fetch(`${base}/api/health`, {
+                      headers: { Accept: "application/json" },
+                      signal: AbortSignal.timeout(70_000),
+                    }),
+                    fetch(`${base}/api/universe/status?limit=5000`, {
+                      headers: { Accept: "application/json" },
+                      signal: AbortSignal.timeout(70_000),
+                    }),
+                  ]);
+                  const health = await healthResponse.json().catch(() => null);
+                  const universe = await universeResponse.json().catch(() => null);
+                  marketConfigured = health?.marketData?.configured === true;
+                  ratingCompleteCount = Number.isInteger(Number(universe?.ratingCompleteCount))
+                    ? Number(universe.ratingCompleteCount)
+                    : null;
+                  const ratingJob = startup?.jobs?.ratingBatch;
+                  const ratingCompletedAt = Date.parse(String(ratingJob?.completedAt ?? ""));
+                  ratingBatchAgeHours = Number.isFinite(ratingCompletedAt)
+                    ? (Date.now() - ratingCompletedAt) / (60 * 60 * 1000)
+                    : null;
+                  ratingProtectedMustRepairCount = Number.isInteger(
+                    Number(ratingJob?.summary?.protectedMustRepairCount),
+                  ) ? Number(ratingJob.summary.protectedMustRepairCount) : null;
+
+                  if (marketConfigured && (
+                    ratingCompleteCount === null || ratingCompleteCount < 500 ||
+                    ratingBatchAgeHours === null || ratingBatchAgeHours >= 20 ||
+                    (ratingProtectedMustRepairCount ?? 0) > 0
+                  )) {
+                    classification = "rating_recovery_required";
+                  }
+                }
               } catch {
                 classification = "deployed_commit_not_in_repository_history";
               }
@@ -84,6 +123,10 @@ jobs:
             deployedCommit,
             latestRelevantCommit,
             relevantChangesAfterDeploy,
+            marketConfigured,
+            ratingCompleteCount,
+            ratingBatchAgeHours,
+            ratingProtectedMustRepairCount,
             classification,
           }, null, 2));
 
@@ -214,8 +257,14 @@ jobs:
                 ratingScore: rating?.score ?? null,
               }));
 
-              if (ratingResponse.ok && rating?.symbol === "AAPL" && rating?.score === null) {
-                console.log("Render rating route is live and failing closed as intended.");
+              const ratingIsTruthful = ratingResponse.ok && rating?.symbol === "AAPL" && (
+                (rating?.eligible === true && typeof rating?.score === "number" && rating.score >= 0 && rating.score <= 100) ||
+                (rating?.eligible === false && rating?.score === null && rating?.tier === "NOT YET RATED")
+              );
+              if (ratingIsTruthful) {
+                console.log(rating.eligible
+                  ? "Render rating route is live with a verified numeric Monster Rating."
+                  : "Render rating route is live and honestly marked Not Yet Rated.");
                 process.exit(0);
               }
             } catch (error) {
@@ -268,7 +317,7 @@ jobs:
         if: steps.render_state.outputs.classification == 'current_for_backend' || steps.render_auth.outputs.method != 'none'
         env:
           NYM_RATING_SMOKE_SYMBOLS: "AAPL,CRDO,RKLB,MSFT"
-          NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v0.1-readiness-only"
+          NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v1.0.0"
           NYM_ALLOW_KNOWN_STALE_BLOCKED: "1"
           NYM_RATING_SMOKE_ATTEMPTS: "1"
           NYM_RATING_SMOKE_DELAY_MS: "0"

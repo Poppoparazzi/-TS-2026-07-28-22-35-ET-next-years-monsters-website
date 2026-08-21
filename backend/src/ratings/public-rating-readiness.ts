@@ -1,9 +1,10 @@
-// TS: 2026-08-10 07:18 ET
+// TS: 2026-08-21 17:08 UTC
 
 import type { QuoteSnapshot } from "../providers/types.js";
 import type { SecCompany, SecCompanyFactsSummary } from "../sec/types.js";
 
 const MAX_QUOTE_AGE_MS = 36 * 60 * 60 * 1000;
+const MAX_END_OF_DAY_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_SEC_FACT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
@@ -104,7 +105,11 @@ export function evaluatePublicRatingReadiness(
     input.quote &&
     input.quote.freshness !== "unavailable" &&
     input.quote.freshness !== "stale" &&
-    timestampIsCurrent(input.quote.providerTimestamp, nowMs, MAX_QUOTE_AGE_MS) &&
+    timestampIsCurrent(
+      input.quote.providerTimestamp,
+      nowMs,
+      input.quote.freshness === "end-of-day" ? MAX_END_OF_DAY_AGE_MS : MAX_QUOTE_AGE_MS,
+    ) &&
     timestampIsCurrent(input.quote.retrievedAt, nowMs, MAX_QUOTE_AGE_MS) &&
     Date.parse(input.quote.providerTimestamp) <=
       Date.parse(input.quote.retrievedAt) + FUTURE_TOLERANCE_MS

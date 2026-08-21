@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-08-21 17:31 UTC
 
 import pg, { type PoolClient } from "pg";
 import type { AppConfig } from "../config.js";
@@ -8,6 +8,12 @@ import type {
   SecCompanyFactsSummary,
   SecFilingSummary,
 } from "../sec/types.js";
+import type {
+  EligibleProductionRating,
+  RatingComponentResult,
+  RatingEvidenceValue,
+  RatingTier,
+} from "../ratings/types.js";
 
 const { Pool } = pg;
 type DatabasePool = InstanceType<typeof Pool>;
@@ -55,6 +61,8 @@ export interface PersistenceStore {
   saveSecCompany(company: SecCompany): Promise<void>;
   saveSecFilings(company: SecCompany, filings: readonly SecFilingSummary[]): Promise<void>;
   saveSecFacts(summary: SecCompanyFactsSummary): Promise<void>;
+  saveRating?(rating: EligibleProductionRating): Promise<void>;
+  getLatestRating?(symbol: string): Promise<EligibleProductionRating | null>;
   getStoredCompany(symbol: string): Promise<StoredCompanySnapshot | null>;
   close(): Promise<void>;
 }
@@ -93,6 +101,39 @@ interface StoredCompanyRow {
   readonly filing_count: string | number;
   readonly fact_count: string | number;
   readonly rating_count: string | number;
+}
+
+interface StoredRatingRow {
+  readonly id: string | number;
+  readonly ticker: string;
+  readonly company_name: string;
+  readonly rating_version: string;
+  readonly score: string | number;
+  readonly tier: RatingTier;
+  readonly calculated_at: Date | string;
+  readonly data_as_of: Date | string;
+  readonly summary: string;
+  readonly risks: string;
+  readonly evidence_count: string | number;
+}
+
+interface StoredRatingComponentRow {
+  readonly component_key: RatingComponentResult["key"];
+  readonly component_label: string;
+  readonly normalized_score: string | number;
+  readonly weight: string | number;
+  readonly weighted_score: string | number;
+  readonly direction: RatingComponentResult["direction"];
+  readonly explanation: string;
+}
+
+interface StoredRatingSourceRow {
+  readonly source_type: RatingEvidenceValue["sourceType"];
+  readonly source_name: string;
+  readonly source_url: string | null;
+  readonly source_timestamp: Date | string | null;
+  readonly supports_components: string[];
+  readonly notes: string | null;
 }
 
 function isoTimestamp(value: Date | string): string {
@@ -341,7 +382,26 @@ export class PostgresPersistenceStore implements PersistenceStore {
         secCik: String(summary.cik).padStart(10, "0"),
       });
 
-      for (const fact of Object.values(summary.facts)) {
+      const factCandidates = summary.history
+        ? Object.values(summary.history).flat()
+        : Object.values(summary.facts);
+      const uniqueFacts = new Map<string, (typeof factCandidates)[number]>();
+      for (const fact of factCandidates) {
+        const identity = [
+          fact.taxonomy,
+          fact.tag,
+          fact.unit,
+          fact.periodStart ?? "",
+          fact.periodEnd,
+          fact.fiscalYear ?? "",
+          fact.fiscalPeriod ?? "",
+          fact.form,
+          fact.accessionNumber,
+        ].join("|");
+        uniqueFacts.set(identity, fact);
+      }
+
+      for (const fact of uniqueFacts.values()) {
         await client.query(
           `
             INSERT INTO company_facts (
@@ -407,6 +467,274 @@ export class PostgresPersistenceStore implements PersistenceStore {
     } finally {
       client.release();
     }
+  }
+
+  public async saveRating(rating: EligibleProductionRating): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const companyId = await upsertCompany(client, {
+        ticker: rating.symbol,
+        companyName: rating.companyName,
+        exchange: null,
+        currency: "USD",
+        secCik: null,
+      });
+      const ratingResult = await client.query<{ id: string | number }>(
+        `
+          INSERT INTO monster_rating_runs (
+            company_id,
+            rating_version,
+            score,
+            tier,
+            status,
+            calculated_at,
+            data_as_of,
+            summary,
+            risks,
+            evidence_count,
+            source_count
+          )
+          VALUES ($1, $2, $3, $4, 'complete', $5, $6, $7, $8, $9, $10)
+          ON CONFLICT (company_id, rating_version, calculated_at) DO UPDATE SET
+            score = EXCLUDED.score,
+            tier = EXCLUDED.tier,
+            status = 'complete',
+            data_as_of = EXCLUDED.data_as_of,
+            summary = EXCLUDED.summary,
+            risks = EXCLUDED.risks,
+            evidence_count = EXCLUDED.evidence_count,
+            source_count = EXCLUDED.source_count
+          RETURNING id
+        `,
+        [
+          companyId,
+          rating.engineVersion,
+          rating.score,
+          rating.tier,
+          rating.calculatedAt,
+          rating.dataAsOf,
+          rating.summary,
+          rating.risks,
+          rating.evidenceInputs.length,
+          rating.evidenceInputs.length,
+        ],
+      );
+      const ratingId = ratingResult.rows[0]?.id;
+      if (ratingId === undefined) throw new Error(`Unable to save rating for ${rating.symbol}.`);
+
+      await client.query("DELETE FROM monster_rating_components WHERE rating_run_id = $1", [ratingId]);
+      await client.query("DELETE FROM monster_rating_sources WHERE rating_run_id = $1", [ratingId]);
+      for (const item of rating.components) {
+        await client.query(
+          `
+            INSERT INTO monster_rating_components (
+              rating_run_id,
+              component_key,
+              component_label,
+              normalized_score,
+              weight,
+              weighted_score,
+              direction,
+              explanation
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `,
+          [
+            ratingId,
+            item.key,
+            item.label,
+            item.score,
+            item.weight,
+            item.weightedScore,
+            item.direction,
+            item.explanation,
+          ],
+        );
+      }
+
+      for (const item of rating.evidenceInputs) {
+        await client.query(
+          `
+            INSERT INTO monster_rating_sources (
+              rating_run_id,
+              source_type,
+              source_name,
+              source_url,
+              source_timestamp,
+              supports_components,
+              notes
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `,
+          [
+            ratingId,
+            item.sourceType,
+            item.provider ?? (
+              item.sourceType === "market-data" ? "Licensed historical market provider" : "SEC EDGAR"
+            ),
+            item.sourceUrl,
+            item.sourceTimestamp,
+            rating.components
+              .filter((componentItem) => componentItem.evidence.some((value) => value.key === item.key))
+              .map((componentItem) => componentItem.key),
+            JSON.stringify({
+              key: item.key,
+              label: item.label,
+              value: item.value,
+              unit: item.unit,
+            }),
+          ],
+        );
+      }
+
+      await client.query(
+        `
+          UPDATE company_pipeline_status
+          SET rating_status = 'complete', last_completed_at = $2, last_error = NULL
+          WHERE company_id = $1
+        `,
+        [companyId, rating.calculatedAt],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  public async getLatestRating(symbol: string): Promise<EligibleProductionRating | null> {
+    const ratingResult = await this.pool.query<StoredRatingRow>(
+      `
+        SELECT
+          mrr.id,
+          c.ticker,
+          c.company_name,
+          mrr.rating_version,
+          mrr.score,
+          mrr.tier,
+          mrr.calculated_at,
+          mrr.data_as_of,
+          mrr.summary,
+          mrr.risks,
+          mrr.evidence_count
+        FROM monster_rating_runs mrr
+        JOIN companies c ON c.id = mrr.company_id
+        WHERE c.ticker = $1
+          AND mrr.status = 'complete'
+          AND mrr.calculated_at >= now() - interval '7 days'
+        ORDER BY mrr.calculated_at DESC, mrr.id DESC
+        LIMIT 1
+      `,
+      [symbol],
+    );
+    const rating = ratingResult.rows[0];
+    if (!rating) return null;
+
+    const [componentResult, sourceResult] = await Promise.all([
+      this.pool.query<StoredRatingComponentRow>(
+        `
+          SELECT
+            component_key,
+            component_label,
+            normalized_score,
+            weight,
+            weighted_score,
+            direction,
+            explanation
+          FROM monster_rating_components
+          WHERE rating_run_id = $1
+          ORDER BY id
+        `,
+        [rating.id],
+      ),
+      this.pool.query<StoredRatingSourceRow>(
+        `
+          SELECT
+            source_type,
+            source_name,
+            source_url,
+            source_timestamp,
+            supports_components,
+            notes
+          FROM monster_rating_sources
+          WHERE rating_run_id = $1
+          ORDER BY id
+        `,
+        [rating.id],
+      ),
+    ]);
+
+    const evidenceInputs = sourceResult.rows.flatMap<RatingEvidenceValue>((source, index) => {
+      try {
+        const parsed = JSON.parse(source.notes ?? "{}") as {
+          key?: unknown;
+          label?: unknown;
+          value?: unknown;
+          unit?: unknown;
+        };
+        return [Object.freeze({
+          key: typeof parsed.key === "string" ? parsed.key : `stored_source_${index + 1}`,
+          label: typeof parsed.label === "string" ? parsed.label : source.source_name,
+          value: typeof parsed.value === "number" || typeof parsed.value === "string" ||
+            typeof parsed.value === "boolean" || parsed.value === null
+            ? parsed.value
+            : null,
+          unit: typeof parsed.unit === "string" ? parsed.unit : null,
+          sourceType: source.source_type,
+          provider: source.source_name,
+          sourceTimestamp: nullableTimestamp(source.source_timestamp),
+          sourceUrl: source.source_url,
+        })];
+      } catch {
+        return [];
+      }
+    });
+    const components = componentResult.rows.map<RatingComponentResult>((item) => Object.freeze({
+      key: item.component_key,
+      label: item.component_label,
+      score: Number(item.normalized_score),
+      weight: Number(item.weight),
+      weightedScore: Number(item.weighted_score),
+      direction: item.direction,
+      explanation: item.explanation,
+      evidence: Object.freeze(evidenceInputs.filter((evidenceItem) =>
+        sourceResult.rows.some((source) =>
+          source.supports_components.includes(item.component_key) &&
+          source.notes?.includes(`\"key\":\"${evidenceItem.key}\"`),
+        ),
+      )),
+    }));
+    const positiveDrivers = components
+      .filter((item) => item.score >= 67)
+      .slice(0, 3)
+      .map((item) => `${item.label}: ${item.explanation}`);
+    const negativeDrivers = components
+      .filter((item) => item.score < 50)
+      .slice(0, 3)
+      .map((item) => `${item.label}: ${item.explanation}`);
+
+    return Object.freeze({
+      symbol: rating.ticker,
+      companyName: rating.company_name,
+      engineVersion: rating.rating_version,
+      calculatedAt: isoTimestamp(rating.calculated_at),
+      dataAsOf: isoTimestamp(rating.data_as_of).slice(0, 10),
+      dataCompletenessScore: Math.min(Math.max(count(rating.evidence_count) * 10, 0), 100),
+      evidenceInputs: Object.freeze(evidenceInputs),
+      eligible: true,
+      eligibilityCode: "eligible",
+      score: Number(rating.score),
+      tier: rating.tier,
+      confidence: components.length >= 8 ? "high" : "medium",
+      components: Object.freeze(components),
+      positiveDrivers: Object.freeze(positiveDrivers),
+      negativeDrivers: Object.freeze(negativeDrivers),
+      summary: rating.summary,
+      risks: rating.risks,
+    });
   }
 
   public async getStoredCompany(symbol: string): Promise<StoredCompanySnapshot | null> {

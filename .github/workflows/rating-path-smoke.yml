@@ -1,4 +1,4 @@
-# TS: 2026-08-16 21:31 ET
+# TS: 2026-08-21 17:08 UTC
 
 name: Current Stock Rating production smoke (manual only)
 
@@ -30,7 +30,7 @@ jobs:
       - name: Verify AAPL, CRDO, RKLB, and MSFT production rating path
         env:
           NYM_RATING_SMOKE_SYMBOLS: "AAPL,CRDO,RKLB,MSFT"
-          NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v0.1-readiness-only"
+          NYM_EXPECTED_RATING_ENGINE: "nym-current-stock-rating-v1.0.0"
           NYM_ALLOW_KNOWN_STALE_BLOCKED: "1"
           NYM_RATING_SMOKE_ATTEMPTS: "1"
           NYM_RATING_SMOKE_DELAY_MS: "0"

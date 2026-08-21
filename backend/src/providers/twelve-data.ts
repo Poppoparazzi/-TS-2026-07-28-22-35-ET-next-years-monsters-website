@@ -1,6 +1,8 @@
-// TS: 2026-07-29 10:44 ET
+// TS: 2026-08-21 17:08 UTC
 
 import {
+  type DailyMarketBar,
+  type DailyMarketHistory,
   type MarketDataProvider,
   type QuoteSnapshot,
   type TickerSearchResult,
@@ -39,6 +41,22 @@ interface TwelveDataSearchItem {
 
 interface TwelveDataSearchResponse extends TwelveDataErrorResponse {
   readonly data?: readonly TwelveDataSearchItem[];
+}
+
+interface TwelveDataTimeSeriesValue {
+  readonly datetime?: string;
+  readonly open?: string;
+  readonly high?: string;
+  readonly low?: string;
+  readonly close?: string;
+  readonly volume?: string;
+}
+
+interface TwelveDataTimeSeriesResponse extends TwelveDataErrorResponse {
+  readonly meta?: {
+    readonly symbol?: string;
+  };
+  readonly values?: readonly TwelveDataTimeSeriesValue[];
 }
 
 function parseFiniteNumber(value: string | number | undefined): number | null {
@@ -161,5 +179,56 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
       retrievedAt,
       feedDisclosure: FEED_DISCLOSURE,
     };
+  }
+
+  public async getDailyHistory(
+    symbol: string,
+    outputSize = 260,
+  ): Promise<DailyMarketHistory> {
+    const normalizedSymbol = normalizeSymbol(symbol);
+    const safeOutputSize = Math.min(Math.max(Math.trunc(outputSize), 60), 500);
+    const parameters = new URLSearchParams({
+      symbol: normalizedSymbol,
+      interval: "1day",
+      outputsize: String(safeOutputSize),
+      order: "ASC",
+    });
+    const payload = await this.request<TwelveDataTimeSeriesResponse>(
+      "/time_series",
+      parameters,
+    );
+    const bars = (payload.values ?? []).flatMap<DailyMarketBar>((value) => {
+      const open = parseFiniteNumber(value.open);
+      const high = parseFiniteNumber(value.high);
+      const low = parseFiniteNumber(value.low);
+      const close = parseFiniteNumber(value.close);
+      const volume = parseFiniteNumber(value.volume);
+      const date = value.datetime?.trim() ?? "";
+
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+        open === null || high === null || low === null || close === null || volume === null ||
+        open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0
+      ) {
+        return [];
+      }
+
+      return [{ date, open, high, low, close, volume }];
+    });
+
+    bars.sort((left, right) => left.date.localeCompare(right.date));
+    if (bars.length < 60) {
+      throw new Error(
+        `Insufficient daily market history was returned for ${normalizedSymbol}.`,
+      );
+    }
+
+    return Object.freeze({
+      symbol: payload.meta?.symbol?.toUpperCase() || normalizedSymbol,
+      bars: Object.freeze(bars),
+      provider: this.name,
+      retrievedAt: new Date().toISOString(),
+      feedDisclosure: FEED_DISCLOSURE,
+    });
   }
 }

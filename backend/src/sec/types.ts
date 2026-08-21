@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:09 ET
+// TS: 2026-08-21 17:08 UTC
 
 export interface SecCompany {
   readonly ticker: string;
@@ -47,6 +47,7 @@ export interface SecCompanyFactsSummary {
   readonly companyName: string;
   readonly retrievedAt: string;
   readonly facts: Readonly<Record<string, SecFactSnapshot>>;
+  readonly history?: Readonly<Record<string, readonly SecFactSnapshot[]>>;
   readonly sourceUrl: string;
   readonly disclosure: string;
 }

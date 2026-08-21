@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:49 UTC
+// TS: 2026-08-21 17:34 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -10,14 +10,17 @@ import type {
 } from "../src/database/persistence.js";
 import { UnconfiguredMarketDataProvider } from "../src/providers/unconfigured.js";
 import type {
+  DailyMarketHistory,
   MarketDataProvider,
   QuoteSnapshot,
   TickerSearchResult,
 } from "../src/providers/types.js";
+import type { EligibleProductionRating } from "../src/ratings/types.js";
 import type {
   SecCompany,
   SecCompanyFactsSummary,
   SecDataProvider,
+  SecFactSnapshot,
   SecFilingSummary,
 } from "../src/sec/types.js";
 
@@ -37,7 +40,7 @@ function testConfig(): AppConfig {
 }
 
 class StaticMarketDataProvider implements MarketDataProvider {
-  public readonly name = "static-test-provider";
+  public readonly name: string = "static-test-provider";
   public readonly configured = true;
   public quoteCalls = 0;
 
@@ -82,11 +85,45 @@ class StaticMarketDataProvider implements MarketDataProvider {
   }
 }
 
+function dailyHistory(symbol: string, dailyGrowth: number): DailyMarketHistory {
+  const end = new Date("2026-08-21T00:00:00.000Z");
+  return Object.freeze({
+    symbol,
+    provider: "historical-test-provider",
+    retrievedAt: "2026-08-21T15:00:00.000Z",
+    feedDisclosure: "Test end-of-day history.",
+    bars: Object.freeze(Array.from({ length: 300 }, (_, index) => {
+      const date = new Date(end.getTime() - (299 - index) * 24 * 60 * 60 * 1_000);
+      const close = 25 * (1 + dailyGrowth) ** index;
+      return Object.freeze({
+        date: date.toISOString().slice(0, 10),
+        open: close - 0.25,
+        high: close + 0.5,
+        low: close - 0.5,
+        close,
+        volume: 2_500_000 + index * 1_000,
+      });
+    })),
+  });
+}
+
+class HistoricalStaticMarketDataProvider extends StaticMarketDataProvider {
+  public override readonly name = "historical-test-provider";
+  public historyCalls = 0;
+
+  public async getDailyHistory(symbol: string): Promise<DailyMarketHistory> {
+    this.historyCalls += 1;
+    return dailyHistory(symbol, symbol === "SPY" ? 0.0004 : 0.0018);
+  }
+}
+
 class MemoryPersistenceStore implements PersistenceStore {
   public readonly name = "memory-test-database";
   public readonly configured = true;
   public quoteSaves = 0;
+  public ratingSaves = 0;
   private readonly snapshots = new Map<string, StoredCompanySnapshot>();
+  private readonly ratings = new Map<string, EligibleProductionRating>();
 
   public async saveQuote(quote: QuoteSnapshot): Promise<void> {
     this.quoteSaves += 1;
@@ -125,6 +162,14 @@ class MemoryPersistenceStore implements PersistenceStore {
     _filings: readonly SecFilingSummary[],
   ): Promise<void> {}
   public async saveSecFacts(_summary: SecCompanyFactsSummary): Promise<void> {}
+  public async saveRating(rating: EligibleProductionRating): Promise<void> {
+    this.ratingSaves += 1;
+    this.ratings.set(rating.symbol, rating);
+  }
+
+  public async getLatestRating(symbol: string): Promise<EligibleProductionRating | null> {
+    return this.ratings.get(symbol) ?? null;
+  }
 
   public async getStoredCompany(symbol: string): Promise<StoredCompanySnapshot | null> {
     return this.snapshots.get(symbol) ?? null;
@@ -192,6 +237,54 @@ class StaticSecDataProvider implements SecDataProvider {
           accessionNumber: "0000320193-26-000001",
           sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
         }),
+      }),
+    });
+  }
+}
+
+function annualFact(year: number, key: string, value: number): SecFactSnapshot {
+  return Object.freeze({
+    key,
+    taxonomy: "us-gaap",
+    tag: key,
+    label: key,
+    description: `Test ${key}.`,
+    unit: "USD",
+    value,
+    form: "10-K",
+    fiscalYear: year,
+    fiscalPeriod: "FY",
+    periodStart: `${year}-01-01`,
+    periodEnd: `${year}-12-31`,
+    filed: `${year + 1}-02-15`,
+    accessionNumber: `0000320193-${String(year).slice(-2)}-000001`,
+    sourceUrl: `https://www.sec.gov/Archives/edgar/data/320193/aapl-${year}.htm`,
+  });
+}
+
+class HistoricalStaticSecDataProvider extends StaticSecDataProvider {
+  public override async getCompanyFacts(symbol: string): Promise<SecCompanyFactsSummary> {
+    const years = [2023, 2024, 2025];
+    const revenues = years.map((year, index) => annualFact(year, "revenue", 100 + index * 30));
+    const metric = (key: string, ratio: number) => years.map((year, index) =>
+      annualFact(year, key, (100 + index * 30) * ratio));
+    return Object.freeze({
+      ticker: symbol,
+      cik: 320193,
+      companyName: "Apple Inc.",
+      retrievedAt: "2026-08-21T15:00:00.000Z",
+      sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+      disclosure: "Test SEC facts.",
+      facts: Object.freeze({ revenue: revenues.at(-1)! }),
+      history: Object.freeze({
+        revenue: Object.freeze(revenues),
+        grossProfit: Object.freeze(metric("grossProfit", 0.5)),
+        operatingIncome: Object.freeze(metric("operatingIncome", 0.2)),
+        netIncome: Object.freeze(metric("netIncome", 0.14)),
+        assets: Object.freeze(metric("assets", 1.5)),
+        liabilities: Object.freeze(metric("liabilities", 0.7)),
+        cash: Object.freeze(metric("cash", 0.2)),
+        operatingCashFlow: Object.freeze(metric("operatingCashFlow", 0.25)),
       }),
     });
   }
@@ -292,6 +385,39 @@ test("production rating route stays usable when market data is unconfigured", as
   assert.equal(rating.tier, "NOT YET RATED");
   assert.equal(rating.eligibilityCode, "required_evidence_incomplete");
   assert.equal(rating.reasons[0]?.code, "gate_marketQuote");
+});
+
+test("production rating route calculates, saves, and reuses a visible numeric rating", async (t) => {
+  const provider = new HistoricalStaticMarketDataProvider();
+  const persistenceStore = new MemoryPersistenceStore();
+  const app = await buildApp({
+    config: testConfig(),
+    provider,
+    secProvider: new HistoricalStaticSecDataProvider(),
+    persistenceStore,
+    logger: false,
+  });
+  t.after(async () => app.close());
+
+  const first = await app.inject({ method: "GET", url: "/api/ratings/AAPL" });
+  const firstRating = first.json();
+  const callsAfterCalculation = provider.historyCalls;
+  const second = await app.inject({ method: "GET", url: "/api/ratings/AAPL" });
+  const secondRating = second.json();
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(firstRating.eligible, true);
+  assert.equal(firstRating.engineVersion, "nym-current-stock-rating-v1.0.0");
+  assert.ok(Number.isFinite(firstRating.score));
+  assert.ok(firstRating.score >= 0 && firstRating.score <= 100);
+  assert.ok(firstRating.evidenceInputs.some((item: { key: string; provider?: string }) =>
+    item.key === "market_price" && item.provider === "historical-test-provider"));
+  assert.ok(firstRating.evidenceInputs.some((item: { key: string }) => item.key === "latest_sec_filing"));
+  assert.equal(persistenceStore.ratingSaves, 1);
+  assert.equal(callsAfterCalculation, 2);
+  assert.equal(second.statusCode, 200);
+  assert.equal(secondRating.score, firstRating.score);
+  assert.equal(provider.historyCalls, callsAfterCalculation);
 });
 
 test("quote retrieval persists a snapshot that can be read later", async (t) => {

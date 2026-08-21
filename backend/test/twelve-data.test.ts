@@ -1,4 +1,4 @@
-// TS: 2026-07-29 11:51 ET
+// TS: 2026-08-21 17:08 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -87,6 +87,50 @@ test("Twelve Data adapter refuses to invent a price when the provider omits one"
   try {
     const provider = new TwelveDataMarketDataProvider(API_KEY);
     await assert.rejects(provider.getQuote("AAPL"), /No usable quote was returned/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Twelve Data daily history is normalized, ordered, and keeps the key out of the URL", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = "";
+  let authorization = "";
+  const start = new Date("2025-12-05T00:00:00.000Z");
+  const values = Array.from({ length: 260 }, (_, index) => {
+    const date = new Date(start.getTime() + index * 24 * 60 * 60 * 1_000);
+    const close = 100 + index;
+    return {
+      datetime: date.toISOString().slice(0, 10),
+      open: String(close - 1),
+      high: String(close + 1),
+      low: String(close - 2),
+      close: String(close),
+      volume: String(1_000_000 + index),
+    };
+  }).reverse();
+
+  globalThis.fetch = (async (input, init) => {
+    requestedUrl = typeof input === "string" ? input : input.toString();
+    authorization = new Headers(init?.headers).get("authorization") ?? "";
+    return new Response(JSON.stringify({ meta: { symbol: "AAPL" }, values }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY);
+    const history = await provider.getDailyHistory("aapl", 260);
+
+    assert.equal(requestedUrl.includes(API_KEY), false);
+    assert.match(requestedUrl, /time_series/);
+    assert.match(requestedUrl, /interval=1day/);
+    assert.equal(authorization, `apikey ${API_KEY}`);
+    assert.equal(history.symbol, "AAPL");
+    assert.equal(history.bars.length, 260);
+    assert.ok(history.bars[0]!.date < history.bars.at(-1)!.date);
+    assert.equal(history.bars.at(-1)!.close, 359);
   } finally {
     globalThis.fetch = originalFetch;
   }

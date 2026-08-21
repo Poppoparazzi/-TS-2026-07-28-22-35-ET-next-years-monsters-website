@@ -1,4 +1,4 @@
-// TS: 2026-08-02 17:10 ET
+// TS: 2026-08-21 17:08 UTC
 
 import {
   type SecCompany,
@@ -209,6 +209,67 @@ function latestFact(
   };
 }
 
+function historicalFacts(
+  key: string,
+  taxonomy: string,
+  tag: string,
+  concept: SecFactConcept,
+  cik: number,
+): readonly SecFactSnapshot[] {
+  const candidates: { readonly unit: string; readonly entry: SecFactUnitEntry }[] = [];
+
+  for (const [unit, entries] of Object.entries(concept.units ?? {})) {
+    for (const entry of entries) {
+      if (
+        entry.end && entry.filed && entry.accn && entry.form &&
+        PERIODIC_FORMS.has(entry.form) &&
+        typeof entry.val === "number" && Number.isFinite(entry.val)
+      ) {
+        candidates.push({ unit, entry });
+      }
+    }
+  }
+
+  candidates.sort((left, right) => compareFactEntries(right.entry, left.entry));
+  const seen = new Set<string>();
+  const results: SecFactSnapshot[] = [];
+
+  for (const candidate of candidates) {
+    const entry = candidate.entry;
+    if (!entry.end || !entry.filed || !entry.accn || !entry.form) continue;
+    const identity = [
+      candidate.unit,
+      entry.start ?? "",
+      entry.end,
+      entry.fy ?? "",
+      entry.fp ?? "",
+      entry.form,
+    ].join("|");
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    results.push({
+      key,
+      taxonomy,
+      tag,
+      label: concept.label?.trim() || tag,
+      description: concept.description?.trim() || "",
+      unit: candidate.unit,
+      value: entry.val as number,
+      form: entry.form,
+      fiscalYear: typeof entry.fy === "number" ? entry.fy : null,
+      fiscalPeriod: entry.fp?.trim() || null,
+      periodStart: entry.start?.trim() || null,
+      periodEnd: entry.end,
+      filed: entry.filed,
+      accessionNumber: entry.accn,
+      sourceUrl: filingIndexUrl(cik, entry.accn),
+    });
+    if (results.length >= 24) break;
+  }
+
+  return Object.freeze(results);
+}
+
 export class SecEdgarDataProvider implements SecDataProvider {
   public readonly name = "sec-edgar";
   public readonly configured = true;
@@ -376,6 +437,7 @@ export class SecEdgarDataProvider implements SecDataProvider {
     const sourceUrl = `${SEC_DATA_BASE_URL}/api/xbrl/companyfacts/CIK${company.cikPadded}.json`;
     const payload = await this.requestJson<SecCompanyFactsResponse>(sourceUrl);
     const selectedFacts: Record<string, SecFactSnapshot> = {};
+    const selectedHistory: Record<string, readonly SecFactSnapshot[]> = {};
 
     for (const definition of FACT_DEFINITIONS) {
       const taxonomyFacts = payload.facts?.[definition.taxonomy];
@@ -392,6 +454,13 @@ export class SecEdgarDataProvider implements SecDataProvider {
         const fact = latestFact(definition.key, definition.taxonomy, tag, concept, company.cik);
         if (fact) {
           selectedFacts[definition.key] = fact;
+          selectedHistory[definition.key] = historicalFacts(
+            definition.key,
+            definition.taxonomy,
+            tag,
+            concept,
+            company.cik,
+          );
           break;
         }
       }
@@ -403,6 +472,7 @@ export class SecEdgarDataProvider implements SecDataProvider {
       companyName: payload.entityName?.trim() || company.companyName,
       retrievedAt: new Date().toISOString(),
       facts: Object.freeze(selectedFacts),
+      history: Object.freeze(selectedHistory),
       sourceUrl,
       disclosure: SEC_DISCLOSURE,
     };

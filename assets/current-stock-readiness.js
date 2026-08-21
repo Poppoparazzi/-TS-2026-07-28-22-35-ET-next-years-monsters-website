@@ -1,10 +1,10 @@
-// TS: 2026-08-10 15:09 ET
+// TS: 2026-08-21 17:31 UTC
 
 (() => {
   "use strict";
 
-  const MAX_QUOTE_AGE_MS = 36 * 60 * 60 * 1000;
-  const MAX_SEC_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  const MAX_QUOTE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  const MAX_SEC_AGE_MS = 550 * 24 * 60 * 60 * 1000;
   const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
   const REQUIRED_INPUTS = [
@@ -179,12 +179,12 @@
     value.textContent = "DATA INCOMPLETE";
     status.textContent = "CURRENT STOCK RATING™ · NOT YET RATED";
     const firstReason = Array.isArray(rating.reasons) ? rating.reasons[0]?.message : "";
-    copy.textContent = String(
+    copy.textContent = `Not Yet Rated — Stay Tuned. Coming Soon. ${String(
       firstReason ||
       (rating.eligible === true
         ? "A numeric production result was withheld because one or more required machine-readable evidence gates could not be independently verified in the returned payload."
         : "The production engine returned an explicit ineligible result, so no numeric Current Stock Rating™ is published.")
-    );
+    )}`;
     card.dataset.productionRatingStatus = "ineligible";
     card.dataset.productionRatingEngine = String(rating.engineVersion ?? "");
     card.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}`);

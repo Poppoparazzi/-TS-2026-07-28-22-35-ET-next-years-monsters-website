@@ -1,0 +1,205 @@
+// TS: 2026-08-21 17:08 UTC
+
+import pg from "pg";
+import type { AppConfig } from "../config.js";
+import {
+  isProtectedCompany,
+  PROTECTED_COMPANY_SQL_PREDICATE,
+} from "../policy/protected-stocks.js";
+import { ProviderNotConfiguredError } from "../providers/types.js";
+import { MONSTER_RATING_ENGINE_VERSION } from "./engine-v1.js";
+
+const { Pool } = pg;
+type DatabasePool = InstanceType<typeof Pool>;
+
+export interface RatingBatchCandidate {
+  readonly ticker: string;
+  readonly companyName: string;
+  readonly isPilot: boolean;
+  readonly isProtected: boolean;
+  readonly priorityMetric: number;
+}
+
+export interface RatingBatchAccounting {
+  readonly targetCount: number;
+  readonly candidateLimit: number;
+  readonly totalCandidatesExamined: number;
+  readonly ratedCount: number;
+  readonly protectedMustRepairCount: number;
+  readonly replaceableCount: number;
+  readonly replacementsAttempted: number;
+  readonly finalUsableUniverse: number;
+  readonly protectedMustRepair: readonly { readonly ticker: string; readonly reason: string }[];
+  readonly replaceable: readonly { readonly ticker: string; readonly reason: string }[];
+  readonly ratedTickers: readonly string[];
+  readonly stoppedReason: string | null;
+  readonly completedAt: string;
+}
+
+export interface RatingBatchStore {
+  readonly name: string;
+  readonly configured: boolean;
+  listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]>;
+  startRun(targetCount: number, provider: string): Promise<string>;
+  finishRun(runId: string, accounting: RatingBatchAccounting): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface CandidateRow {
+  readonly ticker: string;
+  readonly company_name: string;
+  readonly is_pilot: boolean;
+  readonly priority_metric: string | number | null;
+}
+
+export class UnconfiguredRatingBatchStore implements RatingBatchStore {
+  public readonly name = "unconfigured-database";
+  public readonly configured = false;
+
+  public async listCandidates(_limit: number): Promise<readonly RatingBatchCandidate[]> {
+    throw new ProviderNotConfiguredError("Rating batch database");
+  }
+
+  public async startRun(_targetCount: number, _provider: string): Promise<string> {
+    throw new ProviderNotConfiguredError("Rating batch database");
+  }
+
+  public async finishRun(_runId: string, _accounting: RatingBatchAccounting): Promise<void> {
+    throw new ProviderNotConfiguredError("Rating batch database");
+  }
+
+  public async close(): Promise<void> {}
+}
+
+export class PostgresRatingBatchStore implements RatingBatchStore {
+  public readonly name = "postgresql";
+  public readonly configured = true;
+  private readonly pool: DatabasePool;
+
+  public constructor(databaseUrl: string) {
+    this.pool = new Pool({
+      connectionString: databaseUrl,
+      max: 3,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+    });
+  }
+
+  public async listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]> {
+    const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 5_000);
+    const result = await this.pool.query<CandidateRow>(
+      `
+        SELECT
+          c.ticker,
+          c.company_name,
+          c.is_pilot,
+          COALESCE(size_metric.priority_metric, 0) AS priority_metric
+        FROM companies c
+        JOIN company_pipeline_status cps ON cps.company_id = c.id
+        LEFT JOIN LATERAL (
+          SELECT max(abs(cf.value_numeric)) AS priority_metric
+          FROM company_facts cf
+          WHERE cf.company_id = c.id
+            AND cf.value_numeric IS NOT NULL
+        ) size_metric ON true
+        WHERE c.is_active = true
+          AND cps.sec_status = 'complete'
+          AND c.sec_cik IS NOT NULL
+          AND EXISTS (SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id)
+          AND EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM monster_rating_runs mrr
+            WHERE mrr.company_id = c.id
+              AND mrr.rating_version = $2
+              AND mrr.status = 'complete'
+              AND mrr.calculated_at >= now() - interval '20 hours'
+          )
+        ORDER BY
+          CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
+          c.is_pilot DESC,
+          COALESCE(size_metric.priority_metric, 0) DESC,
+          c.ticker
+        LIMIT $1
+      `,
+      [safeLimit, MONSTER_RATING_ENGINE_VERSION],
+    );
+
+    return Object.freeze(result.rows.map((row) => Object.freeze({
+      ticker: row.ticker,
+      companyName: row.company_name,
+      isPilot: row.is_pilot,
+      isProtected: isProtectedCompany(row.ticker, row.is_pilot),
+      priorityMetric: Number(row.priority_metric ?? 0),
+    })));
+  }
+
+  public async startRun(targetCount: number, provider: string): Promise<string> {
+    const result = await this.pool.query<{ id: string | number }>(
+      `
+        INSERT INTO data_refresh_runs (
+          refresh_type,
+          provider,
+          status,
+          requested_count,
+          metadata
+        )
+        VALUES ('ratings', $1, 'running', $2, $3::jsonb)
+        RETURNING id
+      `,
+      [
+        provider,
+        targetCount,
+        JSON.stringify({
+          ratingVersion: MONSTER_RATING_ENGINE_VERSION,
+          rollout: "top_500_then_top_1000",
+          protectedPolicy: "must_repair",
+          ordinaryFailurePolicy: "replace_from_reserve",
+        }),
+      ],
+    );
+    const id = result.rows[0]?.id;
+    if (id === undefined) throw new Error("Unable to start rating refresh run.");
+    return String(id);
+  }
+
+  public async finishRun(runId: string, accounting: RatingBatchAccounting): Promise<void> {
+    const status = accounting.ratedCount >= accounting.targetCount
+      ? "completed"
+      : accounting.ratedCount > 0
+        ? "partial"
+        : "failed";
+    await this.pool.query(
+      `
+        UPDATE data_refresh_runs
+        SET
+          status = $2,
+          succeeded_count = $3,
+          failed_count = $4,
+          completed_at = $5,
+          failure_summary = $6,
+          metadata = metadata || $7::jsonb
+        WHERE id = $1
+      `,
+      [
+        runId,
+        status,
+        accounting.ratedCount,
+        accounting.protectedMustRepairCount + accounting.replaceableCount,
+        accounting.completedAt,
+        accounting.stoppedReason,
+        JSON.stringify(accounting),
+      ],
+    );
+  }
+
+  public async close(): Promise<void> {
+    await this.pool.end();
+  }
+}
+
+export function createRatingBatchStore(config: AppConfig): RatingBatchStore {
+  return config.databaseUrl
+    ? new PostgresRatingBatchStore(config.databaseUrl)
+    : new UnconfiguredRatingBatchStore();
+}

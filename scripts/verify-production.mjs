@@ -1,4 +1,4 @@
-// TS: 2026-08-21 16:32 UTC
+// TS: 2026-08-21 17:39 UTC
 
 const apiBaseUrl = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
   .trim()
@@ -260,18 +260,26 @@ function validateUniverse(status, startup) {
   }
 }
 
-function validateRating(rating) {
+function validateRating(rating, marketConfigured) {
   const problems = [];
   if (rating?.symbol !== "AAPL") problems.push(`symbol=${String(rating?.symbol)}`);
-  if (rating?.engineVersion !== "nym-current-stock-rating-v0.1-readiness-only") {
-    problems.push(`engineVersion=${String(rating?.engineVersion)}`);
+  if (marketConfigured) {
+    if (rating?.engineVersion !== "nym-current-stock-rating-v1.0.0") {
+      problems.push(`engineVersion=${String(rating?.engineVersion)}`);
+    }
+    if (rating?.eligible !== true || !Number.isFinite(Number(rating?.score)) ||
+        Number(rating.score) < 0 || Number(rating.score) > 100 ||
+        !rating?.tier || rating.tier === "NOT YET RATED") {
+      problems.push("configured production did not return a verified numeric AAPL Monster Rating");
+    }
+  } else if (rating?.eligible !== false || rating?.score !== null || rating?.tier !== "NOT YET RATED") {
+    problems.push("unconfigured production did not retain the truthful fail-closed contract");
   }
-  if (rating?.eligible !== false || rating?.score !== null || rating?.tier !== "NOT YET RATED") {
-    problems.push("rating endpoint did not return the truthful fail-closed production contract");
+  if (!Array.isArray(rating?.evidenceInputs) || !Array.isArray(rating?.reasons)) {
+    problems.push("rating evidence/reason arrays are missing");
   }
-  if (!Array.isArray(rating?.evidenceInputs) || !Array.isArray(rating?.reasons) ||
-      rating.reasons.length === 0) {
-    problems.push("rating evidence/reason arrays are incomplete");
+  if (!marketConfigured && rating?.rollout?.message !== "Not Yet Rated — Stay Tuned. Coming Soon.") {
+    problems.push("unrated response is missing the approved coming-soon message");
   }
   if (problems.length) throw new Error(problems.join("; "));
 }
@@ -350,6 +358,57 @@ function validateProviderBackedProgress(status, health) {
   if (problems.length) throw new Error(problems.join("; "));
 }
 
+function validateRatingBatch(startup, health, universe) {
+  if (!health?.marketData?.configured) return;
+
+  const job = startup?.jobs?.ratingBatch;
+  const accounting = job?.summary;
+  const problems = [];
+  const countFields = [
+    "targetCount",
+    "candidateLimit",
+    "totalCandidatesExamined",
+    "ratedCount",
+    "protectedMustRepairCount",
+    "replaceableCount",
+    "replacementsAttempted",
+    "finalUsableUniverse",
+  ];
+
+  if (job?.state !== "completed") problems.push(`ratingBatch state=${String(job?.state)}`);
+  if (accounting?.status !== "completed") {
+    problems.push(`ratingBatch status=${String(accounting?.status)}`);
+  }
+  for (const field of countFields) {
+    const value = Number(accounting?.[field]);
+    if (!Number.isInteger(value) || value < 0) {
+      problems.push(`ratingBatch.${field}=${String(accounting?.[field])}`);
+    }
+  }
+  if (Number(accounting?.targetCount) !== 500) {
+    problems.push(`ratingBatch.targetCount=${String(accounting?.targetCount)}, expected 500`);
+  }
+  if (Number(accounting?.ratedCount) < 500 || Number(accounting?.finalUsableUniverse) < 500) {
+    problems.push(`only ${String(accounting?.ratedCount)} verified ratings were produced`);
+  }
+  if (Number(universe?.ratingCompleteCount) < 500) {
+    problems.push(`production exposes only ${String(universe?.ratingCompleteCount)} completed ratings`);
+  }
+  if (Array.isArray(accounting?.protectedMustRepair) &&
+      accounting.protectedMustRepair.length !== Number(accounting?.protectedMustRepairCount)) {
+    problems.push("protected must-repair rating roster does not match its count");
+  }
+  if (Array.isArray(accounting?.replaceable) &&
+      accounting.replaceable.length !== Number(accounting?.replaceableCount)) {
+    problems.push("replaceable rating roster does not match its count");
+  }
+  if (Number(accounting?.replacementsAttempted) !== Number(accounting?.replaceableCount)) {
+    problems.push("rating replacements-attempted accounting is inconsistent");
+  }
+
+  if (problems.length) throw new Error(problems.join("; "));
+}
+
 async function verifyOnce() {
   const health = await requestJson(`${apiBaseUrl}/api/health`);
   validateHealth(health);
@@ -363,7 +422,8 @@ async function verifyOnce() {
   validateBackfillPolicy(startup);
   validateUniverse(universe, startup);
   validateProviderBackedProgress(universe, health);
-  validateRating(rating);
+  validateRatingBatch(startup, health, universe);
+  validateRating(rating, Boolean(health.marketData?.configured));
   validateProductionDirectory(directory, universe);
 
   await Promise.all([
