@@ -1,4 +1,4 @@
-// TS: 2026-08-20 07:00 ET
+// TS: 2026-08-21 07:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -21,30 +21,39 @@ function company(overrides: Partial<UniverseCompanyStatus> = {}): UniverseCompan
     secStage: "complete",
     secAttemptCount: 1,
     lastError: null,
-    lastStartedAt: "2026-08-20T10:00:00.000Z",
-    lastCompletedAt: "2026-08-20T10:01:00.000Z",
+    lastStartedAt: "2026-08-21T10:00:00.000Z",
+    lastCompletedAt: "2026-08-21T10:01:00.000Z",
     nextRetryAt: null,
     hasSecIdentity: true,
     hasFilings: true,
     hasFacts: true,
     hasQuote: false,
     hasRating: false,
-    updatedAt: "2026-08-20T10:01:00.000Z",
+    updatedAt: "2026-08-21T10:01:00.000Z",
     ...overrides,
   });
 }
 
 function status(companies: readonly UniverseCompanyStatus[], failedCount = 0): UniverseStatusSummary {
   const secCompleteCount = companies.filter((item) => item.secStage === "complete").length;
+  const evidenceReadyCount = companies.filter(
+    (item) =>
+      item.secStage === "complete" &&
+      item.hasSecIdentity &&
+      item.hasFilings &&
+      item.hasFacts,
+  ).length;
+
   return Object.freeze({
     configured: true,
-    generatedAt: "2026-08-20T11:00:00.000Z",
+    generatedAt: "2026-08-21T11:00:00.000Z",
     requestedLimit: 5_000,
     universeSize: companies.length,
     examinedCount: companies.length,
     queuedCount: 0,
     processingCount: 0,
     secCompleteCount,
+    secEvidenceReadyCount: evidenceReadyCount,
     partialCount: 0,
     failedCount,
     staleCount: 0,
@@ -70,6 +79,7 @@ test("SEC reserve target counts only evidence-ready companies as usable", () => 
   const snapshot = status(companies);
 
   assert.equal(snapshot.secCompleteCount, 4);
+  assert.equal(snapshot.secEvidenceReadyCount, 2);
   assert.equal(secEvidenceReadyCount(snapshot), 2);
   assert.equal(shouldSkipSecBackfill(snapshot, 4), false);
   assert.equal(shouldSkipSecBackfill(snapshot, 2), true);
