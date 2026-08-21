@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:49 UTC
+// TS: 2026-08-21 19:58 UTC
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -39,6 +39,30 @@ test("production reserve policy stays deliberately overfilled and observable", (
   assert.ok(candidateTarget >= 5000, "candidate target must preserve the 5,000-stock reserve strategy");
   assert.ok(usableTarget > 2000, "usable target must retain a cushion above 2,000");
   assert.ok(candidateTarget > usableTarget, "candidate pool must remain larger than the usable-stock target");
+});
+
+test("production rating recovery stays on the real licensed market-data path", () => {
+  const renderYaml = readRepositoryFile("../../render.yaml");
+  const startupRatingSource = readRepositoryFile("../src/jobs/startup-rating-batch.ts");
+
+  assert.match(
+    renderYaml,
+    /key:\s*MARKET_DATA_PROVIDER[\s\S]*?value:\s*twelve-data/,
+    "production rating recovery must use Twelve Data rather than the unconfigured provider",
+  );
+  assert.match(renderYaml, /key:\s*TWELVE_DATA_API_KEY[\s\S]*?sync:\s*false/);
+  assert.match(renderYaml, /key:\s*RATING_TARGET_COUNT[\s\S]*?value:\s*"500"/);
+  assert.match(renderYaml, /key:\s*RATING_CANDIDATE_LIMIT[\s\S]*?value:\s*"1000"/);
+  assert.match(
+    renderYaml,
+    /key:\s*RATING_MARKET_REQUEST_DELAY_MS[\s\S]*?value:\s*"9000"/,
+    "free-plan rating recovery must preserve safe request pacing",
+  );
+  assert.match(
+    startupRatingSource,
+    /marketProvider\.name\s*===\s*"twelve-data"\s*\?\s*9_000\s*:\s*0/,
+    "Twelve Data startup batches must retain the safe 9-second fallback pacing",
+  );
 });
 
 test("scheduled recovery and production closeout use the broad reserve", () => {
