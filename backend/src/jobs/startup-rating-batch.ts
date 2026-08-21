@@ -1,4 +1,4 @@
-// TS: 2026-08-21 16:34 ET
+// TS: 2026-08-21 16:36 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -61,7 +61,7 @@ export async function runRatingBatchOnStartup(
     }
 
     const isTwelveData = marketProvider.name === "twelve-data";
-    const defaultMarketDelayMs = isTwelveData ? 9_000 : 0;
+    const defaultMarketDelayMs = marketProvider.name === "twelve-data" ? 9_000 : 0;
     const defaultLimitRetryMs = isTwelveData ? 65_000 : 0;
     const defaultLimitMaxRetries = isTwelveData ? 480 : 0;
     const accounting = await runRatingBatch(
