@@ -1,18 +1,13 @@
-// TS: 2026-08-21 06:02 ET
+// TS: 2026-08-21 07:01 ET
 
 import type { AppConfig } from "../config.js";
+import { isProtectedStrategicTicker } from "../policy/protected-stocks.js";
 import {
   runSecUniverseBatch,
   type SecBatchRunSummary,
 } from "../universe/sec-batch-processor.js";
 import { createUniverseStore } from "../universe/store.js";
 import type { UniverseStatusSummary } from "../universe/types.js";
-
-const PROTECTED_STRATEGIC_TICKERS = new Set([
-  "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST", "VRT", "AXON",
-  "DECK", "WING", "META", "APP", "MSFT", "GOOGL", "GOOG", "AVGO", "PLTR", "CRDO",
-  "RKLB", "QCOM", "MU", "ARM", "DELL", "INTC", "MRVL", "HOOD", "COIN", "UBER",
-]);
 
 function environmentInteger(
   environment: NodeJS.ProcessEnv,
@@ -59,7 +54,7 @@ export function secEvidenceReadyCount(status: UniverseStatusSummary): number {
 }
 
 function isProtectedCompany(company: UniverseStatusSummary["companies"][number]): boolean {
-  return company.isPilot || PROTECTED_STRATEGIC_TICKERS.has(company.ticker.toUpperCase());
+  return company.isPilot || isProtectedStrategicTicker(company.ticker);
 }
 
 function isSecEvidenceReady(company: UniverseStatusSummary["companies"][number]): boolean {
