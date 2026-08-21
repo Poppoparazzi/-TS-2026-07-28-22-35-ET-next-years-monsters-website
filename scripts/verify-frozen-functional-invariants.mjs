@@ -1,4 +1,4 @@
-// TS: 2026-08-21 09:03 ET
+// TS: 2026-08-21 10:05 ET
 
 import { readFileSync } from "node:fs";
 import { protectedTickers } from "./protected-stocks.mjs";
@@ -13,7 +13,11 @@ const expectedVcl = [
 ];
 
 function parseQuotedArray(source, constantName) {
-  const match = source.match(new RegExp(`const\\s+${constantName}\\s*=\\s*Object\\.freeze\\(\\[([\\s\\S]*?)\\]\\)`));
+  const match = source.match(
+    new RegExp(
+      `const\\s+${constantName}\\s*=\\s*Object\\.freeze\\(\\[([\\s\\S]*?)\\]\\s*(?:as\\s+const\\s*)?\\)`,
+    ),
+  );
   if (!match) return null;
   return [...match[1].matchAll(/["']([A-Z0-9.-]+)["']/g)].map((item) => item[1]);
 }
