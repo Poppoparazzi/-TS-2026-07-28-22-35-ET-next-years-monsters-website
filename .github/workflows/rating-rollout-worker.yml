@@ -1,4 +1,4 @@
-# TS: 2026-08-22 07:04 ET
+# TS: 2026-08-22 13:22 UTC
 
 name: Monster Rating rollout worker
 
@@ -164,8 +164,8 @@ jobs:
           // repeatedly diagnosing the same stall. Five candidates every 20 minutes
           // caps the fallback near 360 candidates/day; even at roughly two market-data
           // credits per unrated candidate, that stays below the 800-credit free allowance.
-          // Rotate through the eligible universe so a permanently ineligible first cohort
-          // cannot monopolize every fallback run.
+          // Spread each five-attempt batch across the whole eligible universe instead of
+          // burning a run on five adjacent symbols that may share the same ineligibility pattern.
           const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
           const eligibleCandidates = companies.filter((company) =>
             company &&
@@ -176,17 +176,21 @@ jobs:
             company.hasFacts === true
           );
           const cohortNumber = Math.floor(Date.now() / (20 * 60 * 1000));
+          const attemptCount = Math.min(maxDirectFallbackPerRun, eligibleCandidates.length);
           const startIndex = eligibleCandidates.length > 0
             ? (cohortNumber * maxDirectFallbackPerRun) % eligibleCandidates.length
             : 0;
+          const stride = attemptCount > 0
+            ? Math.max(Math.floor(eligibleCandidates.length / attemptCount), 1)
+            : 1;
           const candidates = Array.from(
-            { length: Math.min(maxDirectFallbackPerRun, eligibleCandidates.length) },
-            (_, index) => eligibleCandidates[(startIndex + index) % eligibleCandidates.length],
+            { length: attemptCount },
+            (_, index) => eligibleCandidates[(startIndex + index * stride) % eligibleCandidates.length],
           );
 
           console.log(
-            `No Render deployment authority. Using rotating direct quota-safe fallback for ${candidates.length} candidates ` +
-            `(eligible=${eligibleCandidates.length}, startIndex=${startIndex}) at ${count}/${target}.`,
+            `No Render deployment authority. Using spread direct quota-safe fallback for ${candidates.length} candidates ` +
+            `(eligible=${eligibleCandidates.length}, startIndex=${startIndex}, stride=${stride}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -199,7 +203,9 @@ jobs:
                 rated += 1;
                 console.log(`[direct-rated] ${ticker} score=${result.body.score}`);
               } else {
-                console.log(`[direct-skip] ${ticker} HTTP ${result.response.status} eligible=${result.body?.eligible ?? null}`);
+                const code = result.body?.eligibilityCode ?? result.body?.reasons?.[0]?.code ?? "unknown";
+                const missing = result.body?.reasons?.[0]?.missingEvidence ?? [];
+                console.log(`[direct-skip] ${ticker} HTTP ${result.response.status} eligible=${result.body?.eligible ?? null} code=${code} missing=${JSON.stringify(missing)}`);
               }
             } catch (error) {
               console.log(`[direct-error] ${ticker}: ${error instanceof Error ? error.message : String(error)}`);
@@ -214,6 +220,7 @@ jobs:
             directFallbackRated: rated,
             directFallbackEligibleCount: eligibleCandidates.length,
             directFallbackStartIndex: startIndex,
+            directFallbackStride: stride,
             initialRatingCompleteCount: count,
             finalRatingCompleteCount: final ? Number(final.body?.ratingCompleteCount || count) : count,
           }, null, 2));
