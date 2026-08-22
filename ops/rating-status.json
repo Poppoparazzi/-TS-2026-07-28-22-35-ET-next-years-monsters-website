@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-08-22T15:34:21.622Z",
+  "recordedAt": "2026-08-22T15:53:32.559Z",
   "healthStatus": 200,
   "universeStatus": 200,
   "startupStatus": 200,
@@ -16,14 +16,14 @@
   "ratingCompleteCount": 350,
   "fullyCompleteCount": 350,
   "deployedCommit": "3356910a73c6d43ec10d0af911105f7fb024718c",
-  "currentMainCommit": "cb1e7359aed30da0e9c00873f4d960f72fffc548",
+  "currentMainCommit": "f2a1dc30b76658d9fd200c6469256ccddc4c03e5",
   "staleDeployment": true,
   "ratingRecoveryDisabled": true,
   "needsRecovery": true,
   "ratingJob": {
     "state": "completed",
-    "startedAt": "2026-08-22T15:00:19.682Z",
-    "completedAt": "2026-08-22T15:00:19.683Z",
+    "startedAt": "2026-08-22T15:50:26.557Z",
+    "completedAt": "2026-08-22T15:50:26.558Z",
     "summary": {
       "status": "disabled",
       "targetCount": 500,
