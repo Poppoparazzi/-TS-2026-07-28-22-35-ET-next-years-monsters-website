@@ -1,4 +1,4 @@
-# TS: 2026-08-21 23:25 ET
+# TS: 2026-08-21 23:27 ET
 
 name: Phase 3 Backend Checks
 
@@ -36,7 +36,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Probe live production rating count and one real candidate
+      - name: Probe live production rating count and HOOD failed gates
         run: |
           node --input-type=module <<'NODE'
           const base = "https://next-years-monsters-api.onrender.com";
@@ -50,24 +50,7 @@ jobs:
           console.log(`LIVE_RETRIEVED_AT=${status.retrievedAt ?? new Date().toISOString()}`);
           if (!statusResponse.ok) process.exit(1);
 
-          const companies = Array.isArray(status.companies) ? status.companies : [];
-          const candidate = companies.find((company) =>
-            company &&
-            company.ticker &&
-            company.hasRating !== true &&
-            company.hasSecIdentity === true &&
-            company.hasFilings === true &&
-            company.hasFacts === true
-          );
-
-          if (!candidate) {
-            console.log("DIAGNOSTIC=no_eligible_unrated_candidate_returned");
-            process.exit(0);
-          }
-
-          const ticker = String(candidate.ticker).trim().toUpperCase();
-          console.log(`DIAGNOSTIC_CANDIDATE=${ticker}`);
-          const ratingResponse = await fetch(`${base}/api/ratings/${encodeURIComponent(ticker)}`, {
+          const ratingResponse = await fetch(`${base}/api/ratings/HOOD`, {
             headers: { Accept: "application/json" },
             signal: AbortSignal.timeout(90000),
           });
@@ -76,7 +59,8 @@ jobs:
           console.log(`DIAGNOSTIC_ELIGIBLE=${rating?.eligible ?? "null"}`);
           console.log(`DIAGNOSTIC_SCORE=${rating?.score ?? "null"}`);
           console.log(`DIAGNOSTIC_CODE=${rating?.eligibilityCode ?? rating?.error ?? "none"}`);
-          console.log(`DIAGNOSTIC_MESSAGE=${rating?.message ?? rating?.summary ?? "none"}`);
+          console.log(`DIAGNOSTIC_REASONS=${JSON.stringify(rating?.reasons ?? [])}`);
+          console.log(`DIAGNOSTIC_EVIDENCE=${JSON.stringify(rating?.evidenceInputs ?? {})}`);
           NODE
 
       - name: Use Node.js 20
