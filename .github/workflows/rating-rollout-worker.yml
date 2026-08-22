@@ -1,4 +1,4 @@
-# TS: 2026-08-22 11:00 ET
+# TS: 2026-08-22 12:01 ET
 
 name: Monster Rating rollout worker
 
@@ -46,6 +46,12 @@ jobs:
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
+          const protectedVclTickers = Object.freeze([
+            "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
+            "NFLX", "AMD", "COST", "VRT", "AXON",
+            "DECK", "WING", "META", "APP", "MSFT",
+          ]);
+          const protectedVclSet = new Set(protectedVclTickers);
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
           async function getJson(url, timeoutMs = 70_000) {
@@ -165,8 +171,9 @@ jobs:
           // caps the fallback at 384 candidates/day; at the conservative two market-data
           // credits per unrated candidate, that is 768 credits/day and stays below the
           // 800-credit free allowance while modestly improving throughput over 5 every 20 minutes.
-          // Spread each eight-attempt batch across the whole eligible universe instead of
-          // burning a run on adjacent symbols that may share the same ineligibility pattern.
+          // Always service currently-unrated protected VCL names first, then spread the
+          // remaining attempts across the wider eligible universe so structurally
+          // ineligible ordinary stocks cannot monopolize the front of the line.
           const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
           const eligibleCandidates = companies.filter((company) =>
             company &&
@@ -176,22 +183,40 @@ jobs:
             company.hasFilings === true &&
             company.hasFacts === true
           );
-          const cohortNumber = Math.floor(Date.now() / (30 * 60 * 1000));
-          const attemptCount = Math.min(maxDirectFallbackPerRun, eligibleCandidates.length);
-          const startIndex = eligibleCandidates.length > 0
-            ? (cohortNumber * maxDirectFallbackPerRun) % eligibleCandidates.length
-            : 0;
-          const stride = attemptCount > 0
-            ? Math.max(Math.floor(eligibleCandidates.length / attemptCount), 1)
-            : 1;
-          const candidates = Array.from(
-            { length: attemptCount },
-            (_, index) => eligibleCandidates[(startIndex + index * stride) % eligibleCandidates.length],
+          const protectedCandidates = eligibleCandidates
+            .filter((company) => protectedVclSet.has(String(company.ticker).trim().toUpperCase()))
+            .sort((left, right) =>
+              protectedVclTickers.indexOf(String(left.ticker).trim().toUpperCase()) -
+              protectedVclTickers.indexOf(String(right.ticker).trim().toUpperCase())
+            );
+          const ordinaryCandidates = eligibleCandidates.filter(
+            (company) => !protectedVclSet.has(String(company.ticker).trim().toUpperCase()),
           );
+          const cohortNumber = Math.floor(Date.now() / (30 * 60 * 1000));
+          const protectedAttemptCount = Math.min(protectedCandidates.length, maxDirectFallbackPerRun);
+          const ordinaryAttemptCount = Math.min(
+            Math.max(maxDirectFallbackPerRun - protectedAttemptCount, 0),
+            ordinaryCandidates.length,
+          );
+          const startIndex = ordinaryCandidates.length > 0
+            ? (cohortNumber * Math.max(ordinaryAttemptCount, 1)) % ordinaryCandidates.length
+            : 0;
+          const stride = ordinaryAttemptCount > 0
+            ? Math.max(Math.floor(ordinaryCandidates.length / ordinaryAttemptCount), 1)
+            : 1;
+          const spreadOrdinaryCandidates = Array.from(
+            { length: ordinaryAttemptCount },
+            (_, index) => ordinaryCandidates[(startIndex + index * stride) % ordinaryCandidates.length],
+          );
+          const candidates = [
+            ...protectedCandidates.slice(0, protectedAttemptCount),
+            ...spreadOrdinaryCandidates,
+          ];
 
           console.log(
-            `No Render deployment authority. Using spread direct quota-safe fallback for ${candidates.length} candidates ` +
-            `(eligible=${eligibleCandidates.length}, startIndex=${startIndex}, stride=${stride}) at ${count}/${target}.`,
+            `No Render deployment authority. Using VCL-priority direct quota-safe fallback for ${candidates.length} candidates ` +
+            `(eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, ordinary=${ordinaryCandidates.length}, ` +
+            `startIndex=${startIndex}, stride=${stride}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -220,6 +245,8 @@ jobs:
             directFallbackAttempted: candidates.length,
             directFallbackRated: rated,
             directFallbackEligibleCount: eligibleCandidates.length,
+            directFallbackProtectedCount: protectedCandidates.length,
+            directFallbackOrdinaryCount: ordinaryCandidates.length,
             directFallbackStartIndex: startIndex,
             directFallbackStride: stride,
             initialRatingCompleteCount: count,
