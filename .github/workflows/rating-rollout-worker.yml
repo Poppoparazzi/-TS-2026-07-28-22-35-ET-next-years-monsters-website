@@ -1,4 +1,4 @@
-# TS: 2026-08-21 22:01 ET
+# TS: 2026-08-21 22:53 ET
 
 name: Monster Rating rollout worker
 
@@ -8,7 +8,7 @@ on:
     paths:
       - ".github/workflows/rating-rollout-worker.yml"
   schedule:
-    - cron: "23 * * * *"
+    - cron: "8,38 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -121,10 +121,10 @@ jobs:
             process.exit(0);
           }
 
-          // Before taking over, make sure the Render startup batch is not already
-          // advancing on its own. This prevents two workers from wasting provider credits.
-          console.log("Watching production for five minutes before taking over...");
-          await sleep(300000);
+          // Give Render one minute to prove it is already advancing before GitHub
+          // takes over. This avoids duplicate provider usage without wasting five minutes.
+          console.log("Watching production for one minute before taking over...");
+          await sleep(60000);
           const second = await getStatus().catch((error) => {
             console.log(
               `Rating rollout deferred: universe status became unavailable during the takeover watch ` +
@@ -188,7 +188,7 @@ jobs:
               console.log(`[network] ${ticker}: ${error instanceof Error ? error.message : String(error)}`);
               consecutiveProviderStops += 1;
               if (consecutiveProviderStops >= 3) {
-                console.log("Three consecutive provider/network stops. Ending this run safely; the next scheduled run will resume.");
+                console.log("Three consecutive provider/network stops. Ending this run safely; the next 30-minute run will resume.");
                 break;
               }
               await sleep(65000);
@@ -215,7 +215,7 @@ jobs:
               consecutiveRouteMisses = 0;
               console.log(`[provider-stop] ${ticker} HTTP ${response.status}; consecutive=${consecutiveProviderStops}`);
               if (consecutiveProviderStops >= 3) {
-                console.log("Provider appears rate- or daily-quota-limited. Ending this run safely; the hourly schedule will resume automatically.");
+                console.log("Provider appears rate- or daily-quota-limited. Ending this run safely; the next 30-minute run will resume automatically.");
                 break;
               }
               await sleep(65000);
