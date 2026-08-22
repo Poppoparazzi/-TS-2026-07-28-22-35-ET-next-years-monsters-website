@@ -1,4 +1,4 @@
-# TS: 2026-08-22 00:27 ET
+# TS: 2026-08-22 09:27 UTC
 
 name: Monster Rating rollout worker
 
@@ -29,6 +29,8 @@ jobs:
           API_BASE: https://next-years-monsters-api.onrender.com
           TARGET_COUNT: "500"
           STATUS_LIMIT: "5000"
+          MAX_DIRECT_FALLBACK_PER_RUN: "5"
+          REQUEST_DELAY_MS: "20000"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
@@ -37,6 +39,9 @@ jobs:
           const base = process.env.API_BASE;
           const target = Number(process.env.TARGET_COUNT || 500);
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
+          const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 5);
+          const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
           async function getJson(url, timeoutMs = 70_000) {
             const response = await fetch(url, {
@@ -149,5 +154,51 @@ jobs:
             process.exit(0);
           }
 
-          console.log(`Bulk rating job is not running and the count is ${count}/${target}, but this workflow has no Render deployment authority.`);
+          // No Render deployment authority exists in GitHub. Keep making bounded,
+          // quota-safe progress through the already-live rating route instead of
+          // repeatedly diagnosing the same stall. Five candidates every 20 minutes
+          // caps the fallback near 360 candidates/day; even at roughly two market-data
+          // credits per unrated candidate, that stays below the 800-credit free allowance.
+          const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
+          const candidates = companies
+            .filter((company) =>
+              company &&
+              company.ticker &&
+              company.hasRating !== true &&
+              company.hasSecIdentity === true &&
+              company.hasFilings === true &&
+              company.hasFacts === true
+            )
+            .slice(0, maxDirectFallbackPerRun);
+
+          console.log(
+            `No Render deployment authority. Using direct quota-safe fallback for ${candidates.length} candidates at ${count}/${target}.`,
+          );
+
+          let rated = 0;
+          for (const company of candidates) {
+            const ticker = String(company.ticker).trim().toUpperCase();
+            if (!ticker) continue;
+            try {
+              const result = await getJson(`${base}/api/ratings/${encodeURIComponent(ticker)}`);
+              if (result.response.ok && result.body?.eligible === true && Number.isFinite(Number(result.body?.score))) {
+                rated += 1;
+                console.log(`[direct-rated] ${ticker} score=${result.body.score}`);
+              } else {
+                console.log(`[direct-skip] ${ticker} HTTP ${result.response.status} eligible=${result.body?.eligible ?? null}`);
+              }
+            } catch (error) {
+              console.log(`[direct-error] ${ticker}: ${error instanceof Error ? error.message : String(error)}`);
+              break;
+            }
+            await sleep(requestDelayMs);
+          }
+
+          const final = await getJson(`${base}/api/universe/status?limit=${statusLimit}`).catch(() => null);
+          console.log(JSON.stringify({
+            directFallbackAttempted: candidates.length,
+            directFallbackRated: rated,
+            initialRatingCompleteCount: count,
+            finalRatingCompleteCount: final ? Number(final.body?.ratingCompleteCount || count) : count,
+          }, null, 2));
           NODE
