@@ -1,0 +1,51 @@
+# TS: 2026-08-22 00:24 ET
+
+name: Live Monster Rating report probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/live-rating-report-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read live production rollout state
+        run: |
+          node --input-type=module <<'NODE'
+          const base = "https://next-years-monsters-api.onrender.com";
+          async function getJson(path) {
+            const response = await fetch(`${base}${path}`, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(90_000),
+            });
+            const body = await response.json().catch(() => null);
+            return { status: response.status, body };
+          }
+          const [health, universe, startup] = await Promise.all([
+            getJson("/api/health"),
+            getJson("/api/universe/status?limit=5000"),
+            getJson("/api/startup-status"),
+          ]);
+          console.log(JSON.stringify({
+            healthStatus: health.status,
+            universeStatus: universe.status,
+            startupStatus: startup.status,
+            ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
+            fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
+            secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
+            examinedCount: universe.body?.examinedCount ?? null,
+            marketConfigured: health.body?.marketData?.configured ?? null,
+            deploymentCommit: startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null,
+            ratingJob: startup.body?.jobs?.ratingBatch ?? null,
+            retrievedAt: new Date().toISOString(),
+          }, null, 2));
+          if (!health.status || !universe.status || !startup.status) process.exit(1);
+          NODE
