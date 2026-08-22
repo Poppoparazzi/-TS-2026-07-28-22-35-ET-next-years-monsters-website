@@ -1,4 +1,4 @@
-# TS: 2026-08-22 13:02 ET
+# TS: 2026-08-22 14:01 ET
 
 name: Monster Rating rollout worker
 
@@ -35,6 +35,7 @@ jobs:
           TARGET_COUNT: "500"
           STATUS_LIMIT: "5000"
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
+          MAX_PROTECTED_FALLBACK_PER_RUN: "2"
           REQUEST_DELAY_MS: "20000"
           PREFLIGHT_POOL_SIZE: "64"
           PREFLIGHT_CONCURRENCY: "8"
@@ -47,6 +48,10 @@ jobs:
           const target = Number(process.env.TARGET_COUNT || 500);
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
+          const maxProtectedFallbackPerRun = Math.max(
+            Math.min(Number(process.env.MAX_PROTECTED_FALLBACK_PER_RUN || 2), maxDirectFallbackPerRun),
+            0,
+          );
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 64);
           const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
@@ -192,12 +197,14 @@ jobs:
           // repeatedly diagnosing the same stall. Eight candidates every 30 minutes
           // caps the fallback at 384 candidates/day; at the conservative two market-data
           // credits per unrated candidate, that is 768 credits/day and stays below the
-          // 800-credit free allowance while modestly improving throughput over 5 every 20 minutes.
-          // Before spending any market-data calls, cheaply preflight a wider rotating pool using
-          // persisted database metadata. Prefer companies with more SEC facts/filings and
-          // no stored rating, which makes the eight paid attempts materially more likely to
-          // satisfy the engine's two-annual-period financial-history requirement. Throttle
-          // those cheap lookups so the broader search does not hammer the Render/Postgres path.
+          // 800-credit free allowance. Protected/VCL stocks keep first priority, but cap
+          // their retry share so a few persistently ineligible strategic names cannot
+          // consume all eight paid attempts forever. Rotate those protected retries and
+          // reserve the remaining slots for fresh ordinary evidence-ready candidates.
+          // Before spending market-data calls, cheaply preflight a wider rotating ordinary
+          // pool using persisted database metadata. Prefer companies with more SEC facts/
+          // filings and no stored rating, then throttle those cheap lookups so the broader
+          // search does not hammer the Render/Postgres path.
           const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
           const eligibleCandidates = companies.filter((company) =>
             company &&
@@ -217,7 +224,18 @@ jobs:
             (company) => !protectedVclSet.has(String(company.ticker).trim().toUpperCase()),
           );
           const cohortNumber = Math.floor(Date.now() / (30 * 60 * 1000));
-          const protectedAttemptCount = Math.min(protectedCandidates.length, maxDirectFallbackPerRun);
+          const protectedAttemptCount = Math.min(
+            protectedCandidates.length,
+            maxProtectedFallbackPerRun,
+            maxDirectFallbackPerRun,
+          );
+          const protectedStartIndex = protectedCandidates.length > 0
+            ? cohortNumber % protectedCandidates.length
+            : 0;
+          const selectedProtectedCandidates = Array.from(
+            { length: protectedAttemptCount },
+            (_, index) => protectedCandidates[(protectedStartIndex + index) % protectedCandidates.length],
+          );
           const ordinaryAttemptCount = Math.min(
             Math.max(maxDirectFallbackPerRun - protectedAttemptCount, 0),
             ordinaryCandidates.length,
@@ -261,15 +279,15 @@ jobs:
             .slice(0, ordinaryAttemptCount)
             .map((item) => item.company);
           const candidates = [
-            ...protectedCandidates.slice(0, protectedAttemptCount),
+            ...selectedProtectedCandidates,
             ...rankedOrdinaryCandidates,
           ];
 
           console.log(
-            `No Render deployment authority. Using VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
-            `(eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, ordinary=${ordinaryCandidates.length}, ` +
-            `preflighted=${preflightPool.length}, preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, ` +
-            `preflightStride=${preflightStride}) at ${count}/${target}.`,
+            `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
+            `(eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, ` +
+            `protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, ` +
+            `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -299,6 +317,8 @@ jobs:
             directFallbackRated: rated,
             directFallbackEligibleCount: eligibleCandidates.length,
             directFallbackProtectedCount: protectedCandidates.length,
+            directFallbackProtectedAttemptedCount: selectedProtectedCandidates.length,
+            directFallbackProtectedStartIndex: protectedStartIndex,
             directFallbackOrdinaryCount: ordinaryCandidates.length,
             directFallbackPreflightedCount: preflightPool.length,
             directFallbackPreflightConcurrency: preflightConcurrency,
