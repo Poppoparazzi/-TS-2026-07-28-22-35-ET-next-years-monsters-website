@@ -1,4 +1,4 @@
-# TS: 2026-08-22 22:57 UTC
+# TS: 2026-08-22 23:20 UTC
 
 name: Monster Rating rollout worker
 
@@ -35,10 +35,8 @@ jobs:
           TARGET_COUNT: "500"
           STATUS_LIMIT: "5000"
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
-          MAX_PROTECTED_FALLBACK_PER_RUN: "2"
-          REQUEST_DELAY_MS: "20000"
           PREFLIGHT_POOL_SIZE: "64"
-          PREFLIGHT_CONCURRENCY: "8"
+          REQUEST_DELAY_MS: "20000"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
@@ -48,19 +46,8 @@ jobs:
           const target = Number(process.env.TARGET_COUNT || 500);
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
-          const maxProtectedFallbackPerRun = Math.max(
-            Math.min(Number(process.env.MAX_PROTECTED_FALLBACK_PER_RUN || 2), maxDirectFallbackPerRun),
-            0,
-          );
-          const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 64);
-          const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
-          const protectedVclTickers = Object.freeze([
-            "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
-            "NFLX", "AMD", "COST", "VRT", "AXON",
-            "DECK", "WING", "META", "APP", "MSFT",
-          ]);
-          const protectedVclSet = new Set(protectedVclTickers);
+          const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
           async function getJson(url, timeoutMs = 70_000) {
@@ -70,24 +57,6 @@ jobs:
             });
             const body = await response.json().catch(() => null);
             return { response, body };
-          }
-
-          async function mapWithConcurrency(items, concurrency, mapper) {
-            const results = new Array(items.length);
-            let nextIndex = 0;
-            const workers = Array.from(
-              { length: Math.min(concurrency, Math.max(items.length, 1)) },
-              async () => {
-                while (true) {
-                  const index = nextIndex;
-                  nextIndex += 1;
-                  if (index >= items.length) return;
-                  results[index] = await mapper(items[index], index);
-                }
-              },
-            );
-            await Promise.all(workers);
-            return results;
           }
 
           let health;
@@ -201,80 +170,33 @@ jobs:
             company.hasFilings === true &&
             company.hasFacts === true
           );
-          const protectedCandidates = eligibleCandidates
-            .filter((company) => protectedVclSet.has(String(company.ticker).trim().toUpperCase()))
-            .sort((left, right) =>
-              protectedVclTickers.indexOf(String(left.ticker).trim().toUpperCase()) -
-              protectedVclTickers.indexOf(String(right.ticker).trim().toUpperCase())
-            );
-          const ordinaryCandidates = eligibleCandidates.filter(
-            (company) => !protectedVclSet.has(String(company.ticker).trim().toUpperCase()),
-          );
           const cohortNumber = Math.floor(Date.now() / (30 * 60 * 1000));
-          const protectedAttemptCount = Math.min(
-            protectedCandidates.length,
-            maxProtectedFallbackPerRun,
-            maxDirectFallbackPerRun,
-          );
-          const protectedStartIndex = protectedCandidates.length > 0
-            ? cohortNumber % protectedCandidates.length
+          const poolSize = Math.min(preflightPoolSize, eligibleCandidates.length);
+          const poolStart = eligibleCandidates.length > 0
+            ? (cohortNumber * Math.max(1, poolSize)) % eligibleCandidates.length
             : 0;
-          const selectedProtectedCandidates = Array.from(
-            { length: protectedAttemptCount },
-            (_, index) => protectedCandidates[(protectedStartIndex + index) % protectedCandidates.length],
-          );
-          const ordinaryAttemptCount = Math.min(
-            Math.max(maxDirectFallbackPerRun - protectedAttemptCount, 0),
-            ordinaryCandidates.length,
-          );
-          const startIndex = ordinaryCandidates.length > 0
-            ? (cohortNumber * Math.max(preflightPoolSize, 1)) % ordinaryCandidates.length
-            : 0;
-          const preflightStride = ordinaryCandidates.length > 0
-            ? Math.max(Math.floor(ordinaryCandidates.length / Math.max(preflightPoolSize, 1)), 1)
-            : 1;
           const preflightPool = Array.from(
-            { length: Math.min(preflightPoolSize, ordinaryCandidates.length) },
-            (_, index) => ordinaryCandidates[(startIndex + index * preflightStride) % ordinaryCandidates.length],
+            { length: poolSize },
+            (_, index) => eligibleCandidates[(poolStart + index) % eligibleCandidates.length],
           );
-          const preflightResults = await mapWithConcurrency(
-            preflightPool,
-            preflightConcurrency,
-            async (company) => {
-              const ticker = String(company.ticker).trim().toUpperCase();
-              try {
-                const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
-                if (!stored.response.ok || !stored.body) return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
-                return {
-                  company,
-                  factCount: Number(stored.body.factCount || 0),
-                  filingCount: Number(stored.body.filingCount || 0),
-                  ratingCount: Number(stored.body.ratingCount || 0),
-                };
-              } catch {
-                return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
-              }
-            },
-          );
-          const rankedOrdinaryCandidates = preflightResults
-            .filter((item) => item.ratingCount === 0)
-            .sort((left, right) =>
-              right.factCount - left.factCount ||
-              right.filingCount - left.filingCount ||
-              String(left.company.ticker).localeCompare(String(right.company.ticker))
-            )
-            .slice(0, ordinaryAttemptCount)
+
+          const scoredPool = preflightPool.map((company) => {
+            const factCount = Number(company.factCount || company.secFactCount || 0);
+            const filingCount = Number(company.filingCount || company.secFilingCount || 0);
+            const annualFacts = Number(company.annualFactCount || company.annualFacts || 0);
+            return {
+              company,
+              evidenceScore: annualFacts * 10000 + factCount * 10 + filingCount,
+            };
+          }).sort((a, b) => b.evidenceScore - a.evidenceScore);
+
+          const candidates = scoredPool
+            .slice(0, Math.min(maxDirectFallbackPerRun, scoredPool.length))
             .map((item) => item.company);
-          const candidates = [
-            ...selectedProtectedCandidates,
-            ...rankedOrdinaryCandidates,
-          ];
 
           console.log(
-            `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
-            `(eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, ` +
-            `protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, ` +
-            `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
+            `No Render deployment authority. Using evidence-preflight direct fallback for ${candidates.length} candidates ` +
+            `(eligible=${eligibleCandidates.length}, poolStart=${poolStart}, poolSize=${poolSize}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -287,9 +209,12 @@ jobs:
                 rated += 1;
                 console.log(`[direct-rated] ${ticker} score=${result.body.score}`);
               } else {
-                const code = result.body?.eligibilityCode ?? result.body?.reasons?.[0]?.code ?? "unknown";
-                const missing = result.body?.reasons?.[0]?.missingEvidence ?? [];
-                console.log(`[direct-skip] ${ticker} HTTP ${result.response.status} eligible=${result.body?.eligible ?? null} code=${code} missing=${JSON.stringify(missing)}`);
+                console.log(
+                  `[direct-skip] ${ticker} HTTP ${result.response.status} ` +
+                  `eligible=${result.body?.eligible ?? null} ` +
+                  `code=${result.body?.eligibilityCode ?? result.body?.code ?? null} ` +
+                  `missing=${JSON.stringify(result.body?.missingEvidence ?? result.body?.missing ?? null)}`,
+                );
               }
             } catch (error) {
               console.log(`[direct-error] ${ticker}: ${error instanceof Error ? error.message : String(error)}`);
@@ -303,14 +228,8 @@ jobs:
             directFallbackAttempted: candidates.length,
             directFallbackRated: rated,
             directFallbackEligibleCount: eligibleCandidates.length,
-            directFallbackProtectedCount: protectedCandidates.length,
-            directFallbackProtectedAttemptedCount: selectedProtectedCandidates.length,
-            directFallbackProtectedStartIndex: protectedStartIndex,
-            directFallbackOrdinaryCount: ordinaryCandidates.length,
-            directFallbackPreflightedCount: preflightPool.length,
-            directFallbackPreflightConcurrency: preflightConcurrency,
-            directFallbackStartIndex: startIndex,
-            directFallbackPreflightStride: preflightStride,
+            directFallbackPoolStart: poolStart,
+            directFallbackPoolSize: poolSize,
             initialRatingCompleteCount: count,
             finalRatingCompleteCount: final ? Number(final.body?.ratingCompleteCount || count) : count,
           }, null, 2));
