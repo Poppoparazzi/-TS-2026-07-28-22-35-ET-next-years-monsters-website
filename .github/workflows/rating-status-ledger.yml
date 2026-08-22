@@ -1,4 +1,4 @@
-# TS: 2026-08-22 07:57 ET
+# TS: 2026-08-22 08:57 ET
 
 name: Monster Rating status ledger
 
@@ -31,6 +31,11 @@ jobs:
 
       - name: Fetch live production status
         id: live_status
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           mkdir -p ops
           node --input-type=module <<'NODE'
@@ -59,6 +64,18 @@ jobs:
             marketConfigured === true && ratingJob?.summary?.status === 'disabled'
           );
           const needsRecovery = staleDeployment || ratingRecoveryDisabled;
+
+          const hasDeployHook = Boolean(process.env.RENDER_DEPLOY_HOOK_URL?.trim());
+          const hasRenderApiKey = Boolean(process.env.RENDER_API_KEY?.trim());
+          const hasRenderServiceId = Boolean(process.env.RENDER_SERVICE_ID?.trim());
+          const hasRenderApiAuthority = hasRenderApiKey && hasRenderServiceId;
+          const hasRenderAuthority = hasDeployHook || hasRenderApiAuthority;
+          const hasVercelAuthority = Boolean(process.env.VERCEL_TOKEN?.trim());
+          const missingRenderCredentials = [];
+          if (!hasDeployHook) missingRenderCredentials.push('RENDER_DEPLOY_HOOK_URL');
+          if (!hasRenderApiKey) missingRenderCredentials.push('RENDER_API_KEY');
+          if (!hasRenderServiceId) missingRenderCredentials.push('RENDER_SERVICE_ID');
+
           const status = {
             recordedAt: new Date().toISOString(),
             healthStatus: health.status,
@@ -75,19 +92,34 @@ jobs:
             needsRecovery,
             ratingJob,
             marketConfigured,
+            deploymentAuthority: {
+              renderDeployHook: hasDeployHook,
+              renderApiKey: hasRenderApiKey,
+              renderServiceId: hasRenderServiceId,
+              renderApiAuthority: hasRenderApiAuthority,
+              renderAuthority: hasRenderAuthority,
+              vercelAuthority: hasVercelAuthority,
+              missingRenderCredentials,
+            },
           };
           fs.writeFileSync('ops/rating-status.json', JSON.stringify(status, null, 2) + '\n');
           console.log(JSON.stringify(status, null, 2));
           if (process.env.GITHUB_OUTPUT) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `needs_recovery=${needsRecovery}\n`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `render_authority=${hasRenderAuthority}\n`);
           }
           NODE
 
       - name: Dispatch Render recovery when live rating status proves stale
-        if: steps.live_status.outputs.needs_recovery == 'true'
+        if: steps.live_status.outputs.needs_recovery == 'true' && steps.live_status.outputs.render_authority == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run render-redeploy-recovery.yml --repo "${{ github.repository }}" --ref main
+
+      - name: Report blocked recovery authority
+        if: steps.live_status.outputs.needs_recovery == 'true' && steps.live_status.outputs.render_authority != 'true'
+        run: |
+          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials."
 
       - name: Commit status snapshot
         run: |
