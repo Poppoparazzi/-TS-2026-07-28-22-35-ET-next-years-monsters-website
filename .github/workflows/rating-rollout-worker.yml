@@ -1,4 +1,4 @@
-# TS: 2026-08-22 06:36 ET
+# TS: 2026-08-22 07:04 ET
 
 name: Monster Rating rollout worker
 
@@ -6,7 +6,12 @@ on:
   push:
     branches: [main]
     paths:
+      - "backend/src/ratings/**"
       - "backend/src/jobs/startup-rating-batch.ts"
+      - "backend/src/jobs/rating-batch.ts"
+      - "backend/src/database/persistence.ts"
+      - "backend/src/app.ts"
+      - "render.yaml"
       - ".github/workflows/rating-rollout-worker.yml"
   schedule:
     - cron: "8,28,48 * * * *"
