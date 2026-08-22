@@ -1,0 +1,52 @@
+# TS: 2026-08-22 03:24 ET
+
+name: Live rating count probe 0324
+
+on:
+  push:
+    branches:
+      - "chat/2026-08-22-0324-live-rating-probe"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Diagnose live production rating rollout
+        run: |
+          node --input-type=module <<'NODE'
+          const base = "https://next-years-monsters-api.onrender.com";
+          const getJson = async (url) => {
+            const response = await fetch(url, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(90000),
+            });
+            const body = await response.json().catch(() => null);
+            return { response, body };
+          };
+
+          const [health, status, startup] = await Promise.all([
+            getJson(`${base}/api/health`),
+            getJson(`${base}/api/universe/status?limit=5000`),
+            getJson(`${base}/api/startup-status`),
+          ]);
+
+          console.log(JSON.stringify({
+            healthStatus: health.response.status,
+            marketConfigured: health.body?.marketData?.configured ?? null,
+            statusHttp: status.response.status,
+            ratingCompleteCount: status.body?.ratingCompleteCount ?? null,
+            fullyCompleteCount: status.body?.fullyCompleteCount ?? null,
+            secEvidenceReadyCount: status.body?.secEvidenceReadyCount ?? null,
+            examinedCount: status.body?.examinedCount ?? null,
+            startupHttp: startup.response.status,
+            deployedCommit: startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null,
+            ratingJob: startup.body?.jobs?.ratingBatch ?? null,
+            retrievedAt: status.body?.retrievedAt ?? new Date().toISOString(),
+          }, null, 2));
+
+          if (!health.response.ok || !status.response.ok || !startup.response.ok) process.exit(1);
+          NODE
