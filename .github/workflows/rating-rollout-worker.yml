@@ -1,4 +1,4 @@
-# TS: 2026-08-22 00:05 ET
+# TS: 2026-08-22 00:06 ET
 
 name: Monster Rating rollout worker
 
@@ -9,7 +9,7 @@ on:
       - "backend/src/jobs/startup-rating-batch.ts"
       - ".github/workflows/rating-rollout-worker.yml"
   schedule:
-    - cron: "8,38 * * * *"
+    - cron: "8,28,48 * * * *"
   workflow_dispatch:
 
 permissions:
