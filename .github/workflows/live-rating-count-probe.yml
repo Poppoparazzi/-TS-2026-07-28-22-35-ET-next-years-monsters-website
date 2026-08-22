@@ -1,0 +1,36 @@
+# TS: 2026-08-21 22:46 ET
+
+name: Live rating count probe
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/live-rating-count-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read live production rating count
+        run: |
+          node --input-type=module <<'NODE'
+          const url = "https://next-years-monsters-api.onrender.com/api/universe/status?limit=1000";
+          const response = await fetch(url, {
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(90000),
+          });
+          const body = await response.json();
+          console.log(JSON.stringify({
+            httpStatus: response.status,
+            ratingCompleteCount: body.ratingCompleteCount ?? null,
+            fullyCompleteCount: body.fullyCompleteCount ?? null,
+            examinedCount: body.examinedCount ?? null,
+            secEvidenceReadyCount: body.secEvidenceReadyCount ?? null,
+            retrievedAt: body.retrievedAt ?? new Date().toISOString(),
+          }, null, 2));
+          if (!response.ok) process.exit(1);
+          NODE
