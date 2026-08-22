@@ -1,4 +1,4 @@
-# TS: 2026-08-22 08:57 ET
+# TS: 2026-08-22 08:59 ET
 
 name: Monster Rating status ledger
 
@@ -50,10 +50,11 @@ jobs:
             const body = await response.json().catch(() => null);
             return { status: response.status, body };
           }
-          const [health, universe, startup] = await Promise.all([
+          const [health, universe, startup, aaplRating] = await Promise.all([
             get('/api/health'),
             get('/api/universe/status?limit=5000'),
             get('/api/startup-status'),
+            get('/api/ratings/AAPL'),
           ]);
           const currentMainCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
           const deployedCommit = startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null;
@@ -63,7 +64,8 @@ jobs:
           const ratingRecoveryDisabled = Boolean(
             marketConfigured === true && ratingJob?.summary?.status === 'disabled'
           );
-          const needsRecovery = staleDeployment || ratingRecoveryDisabled;
+          const ratingRouteMissing = aaplRating.status === 404;
+          const needsRecovery = staleDeployment || ratingRecoveryDisabled || ratingRouteMissing;
 
           const hasDeployHook = Boolean(process.env.RENDER_DEPLOY_HOOK_URL?.trim());
           const hasRenderApiKey = Boolean(process.env.RENDER_API_KEY?.trim());
@@ -81,6 +83,10 @@ jobs:
             healthStatus: health.status,
             universeStatus: universe.status,
             startupStatus: startup.status,
+            aaplRatingStatus: aaplRating.status,
+            aaplRatingEligibilityCode: aaplRating.body?.eligibilityCode ?? null,
+            aaplRatingTier: aaplRating.body?.tier ?? null,
+            ratingRouteMissing,
             ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
             fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
             examinedCount: universe.body?.examinedCount ?? null,
@@ -119,7 +125,7 @@ jobs:
       - name: Report blocked recovery authority
         if: steps.live_status.outputs.needs_recovery == 'true' && steps.live_status.outputs.render_authority != 'true'
         run: |
-          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials."
+          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials and AAPL rating-route status."
 
       - name: Commit status snapshot
         run: |
