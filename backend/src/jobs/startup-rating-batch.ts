@@ -1,4 +1,4 @@
-// TS: 2026-08-22 01:58 ET
+// TS: 2026-08-22 05:17 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -65,11 +65,20 @@ export async function runRatingBatchOnStartup(
       });
     }
 
-    // The production target is cumulative. A restart at 364/500 should request
-    // only the remaining 136 ratings, not another 500 fresh ratings. This keeps
-    // recovery fast and avoids wasting licensed provider credits after redeploys.
-    const universeStatus = await universeStore.getStatus(5_000);
-    const alreadyRatedCount = universeStatus.ratingCompleteCount;
+    // Count only ratings completed by the current engine version. The universe
+    // status count intentionally answers the broader "has any rating" question,
+    // while listCandidates excludes only companies already completed by the
+    // current engine version. Subtracting current-version unrated evidence-ready
+    // candidates from the evidence-ready population gives the matching rollout
+    // count and prevents old-version ratings from prematurely satisfying 500.
+    const [universeStatus, currentVersionUnratedCandidates] = await Promise.all([
+      universeStore.getStatus(5_000),
+      batchStore.listCandidates(5_000),
+    ]);
+    const alreadyRatedCount = Math.max(
+      universeStatus.secEvidenceReadyCount - currentVersionUnratedCandidates.length,
+      0,
+    );
     const remainingTargetCount = Math.max(desiredTargetCount - alreadyRatedCount, 0);
 
     if (remainingTargetCount === 0) {
@@ -78,7 +87,7 @@ export async function runRatingBatchOnStartup(
         targetCount: desiredTargetCount,
         alreadyRatedCount,
         remainingTargetCount,
-        detail: `Monster Rating target already satisfied at ${alreadyRatedCount}/${desiredTargetCount}.`,
+        detail: `Monster Rating target already satisfied at ${alreadyRatedCount}/${desiredTargetCount} current-version ratings.`,
       });
     }
 
