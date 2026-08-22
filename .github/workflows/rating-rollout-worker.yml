@@ -1,4 +1,4 @@
-# TS: 2026-08-21 19:58 ET
+# TS: 2026-08-21 20:58 ET
 
 name: Monster Rating rollout worker
 
@@ -56,21 +56,25 @@ jobs:
             return body;
           }
 
-          const first = await getStatus();
-          let liveCount = Number(first.ratingCompleteCount || 0);
-          console.log(`Initial ratingCompleteCount=${liveCount}; target=${target}; statusLimit=${statusLimit}`);
-          if (liveCount >= target) {
-            console.log("500-rating target already reached.");
+          // Preflight before touching the universe endpoint or spending provider quota.
+          // An unreachable/stale backend is a deployment-recovery condition, not a
+          // reason for this independent rating worker to fail every scheduled run.
+          let healthResponse;
+          let health;
+          let ratingPreflight;
+          try {
+            [{ response: healthResponse, body: health }, ratingPreflight] = await Promise.all([
+              getJson(`${base}/api/health`),
+              getJson(`${base}/api/ratings/AAPL`),
+            ]);
+          } catch (error) {
+            console.log(
+              `Rating rollout deferred: production preflight is unreachable (${error instanceof Error ? error.message : String(error)}). ` +
+              "Render recovery owns deployment repair.",
+            );
             process.exit(0);
           }
 
-          // Do not spend a two-hour worker run against a stale rating route or an
-          // unconfigured provider. The recovery workflow owns deployment repair;
-          // this worker should only consume real provider quota when production is ready.
-          const [{ response: healthResponse, body: health }, ratingPreflight] = await Promise.all([
-            getJson(`${base}/api/health`),
-            getJson(`${base}/api/ratings/AAPL`),
-          ]);
           if (!healthResponse.ok || !health) {
             console.log(`Rating rollout deferred: /api/health returned HTTP ${healthResponse.status}.`);
             process.exit(0);
@@ -91,11 +95,37 @@ jobs:
             process.exit(0);
           }
 
+          let first;
+          try {
+            first = await getStatus();
+          } catch (error) {
+            console.log(
+              `Rating rollout deferred: universe status is unavailable after a healthy route preflight ` +
+              `(${error instanceof Error ? error.message : String(error)}).`,
+            );
+            process.exit(0);
+          }
+
+          let liveCount = Number(first.ratingCompleteCount || 0);
+          console.log(`Initial ratingCompleteCount=${liveCount}; target=${target}; statusLimit=${statusLimit}`);
+          if (liveCount >= target) {
+            console.log("500-rating target already reached.");
+            process.exit(0);
+          }
+
           // Before taking over, make sure the Render startup batch is not already
           // advancing on its own. This prevents two workers from wasting provider credits.
           console.log("Watching production for five minutes before taking over...");
           await sleep(300000);
-          const second = await getStatus();
+          const second = await getStatus().catch((error) => {
+            console.log(
+              `Rating rollout deferred: universe status became unavailable during the takeover watch ` +
+              `(${error instanceof Error ? error.message : String(error)}).`,
+            );
+            return null;
+          });
+          if (!second) process.exit(0);
+
           const secondCount = Number(second.ratingCompleteCount || 0);
           if (secondCount > liveCount) {
             console.log(`Render is already advancing ratings: ${liveCount} -> ${secondCount}. Exiting to avoid duplicate provider usage.`);
@@ -186,8 +216,14 @@ jobs:
             if (liveCount < target) await sleep(requestDelayMs);
           }
 
-          const final = await getStatus();
-          const finalCount = Number(final.ratingCompleteCount || 0);
+          const final = await getStatus().catch((error) => {
+            console.log(
+              `Final universe status unavailable; preserving this run's local accounting ` +
+              `(${error instanceof Error ? error.message : String(error)}).`,
+            );
+            return null;
+          });
+          const finalCount = final ? Number(final.ratingCompleteCount || liveCount) : liveCount;
           console.log(JSON.stringify({
             initialRatingCompleteCount: Number(first.ratingCompleteCount || 0),
             finalRatingCompleteCount: finalCount,
