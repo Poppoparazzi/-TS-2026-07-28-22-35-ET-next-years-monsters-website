@@ -1,4 +1,4 @@
-# TS: 2026-08-23 00:00 ET
+# TS: 2026-08-22 17:01 ET
 
 name: Monster Rating rollout worker
 
@@ -32,7 +32,7 @@ jobs:
       - name: Watch production and restart the real bulk rating job when needed
         env:
           API_BASE: https://next-years-monsters-api.onrender.com
-          TARGET_COUNT: "5000"
+          TARGET_COUNT: "500"
           STATUS_LIMIT: "5000"
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
           MAX_PROTECTED_FALLBACK_PER_RUN: "2"
@@ -45,7 +45,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           const base = process.env.API_BASE;
-          const target = Number(process.env.TARGET_COUNT || 5000);
+          const target = Number(process.env.TARGET_COUNT || 500);
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
           const maxProtectedFallbackPerRun = Math.max(
@@ -192,19 +192,6 @@ jobs:
             process.exit(0);
           }
 
-          // No Render deployment authority exists in GitHub. Keep making bounded,
-          // quota-safe progress through the already-live rating route instead of
-          // repeatedly diagnosing the same stall. Eight candidates every 30 minutes
-          // caps the fallback at 384 candidates/day; at the conservative two market-data
-          // credits per unrated candidate, that is 768 credits/day and stays below the
-          // 800-credit free allowance. Protected/VCL stocks keep first priority, but cap
-          // their retry share so a few persistently ineligible strategic names cannot
-          // consume all eight paid attempts forever. Rotate those protected retries and
-          // reserve the remaining slots for fresh ordinary evidence-ready candidates.
-          // Before spending market-data calls, cheaply preflight a wider rotating ordinary
-          // pool using persisted database metadata. Prefer companies with more SEC facts/
-          // filings and no stored rating, then throttle those cheap lookups so the broader
-          // search does not hammer the Render/Postgres path.
           const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
           const eligibleCandidates = companies.filter((company) =>
             company &&
