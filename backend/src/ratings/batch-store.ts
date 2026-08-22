@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:08 UTC
+// TS: 2026-08-22 02:58 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -11,6 +11,20 @@ import { MONSTER_RATING_ENGINE_VERSION } from "./engine-v1.js";
 
 const { Pool } = pg;
 type DatabasePool = InstanceType<typeof Pool>;
+
+// The initial rollout is cumulative: once a company has a completed rating for
+// the current engine version, it must not consume another first-500 slot merely
+// because that rating is older than a freshness window. Refreshing already-rated
+// companies belongs to a separate refresh policy after the milestone is reached.
+export const EXCLUDE_CURRENT_COMPLETED_RATING_SQL = `
+  NOT EXISTS (
+    SELECT 1
+    FROM monster_rating_runs mrr
+    WHERE mrr.company_id = c.id
+      AND mrr.rating_version = $2
+      AND mrr.status = 'complete'
+  )
+`;
 
 export interface RatingBatchCandidate {
   readonly ticker: string;
@@ -107,14 +121,7 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           AND c.sec_cik IS NOT NULL
           AND EXISTS (SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id)
           AND EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id)
-          AND NOT EXISTS (
-            SELECT 1
-            FROM monster_rating_runs mrr
-            WHERE mrr.company_id = c.id
-              AND mrr.rating_version = $2
-              AND mrr.status = 'complete'
-              AND mrr.calculated_at >= now() - interval '20 hours'
-          )
+          AND ${EXCLUDE_CURRENT_COMPLETED_RATING_SQL}
         ORDER BY
           CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
           c.is_pilot DESC,
