@@ -1,0 +1,59 @@
+# TS: 2026-08-22 11:24 UTC
+
+name: Rating status probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/rating-status-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe live production rating rollout
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          node --input-type=module <<'NODE'
+          const base = "https://next-years-monsters-api.onrender.com";
+          async function get(path) {
+            const response = await fetch(base + path, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(90000),
+            });
+            const body = await response.json().catch(() => null);
+            return { status: response.status, body };
+          }
+          const [health, universe, startup] = await Promise.all([
+            get("/api/health"),
+            get("/api/universe/status?limit=5000"),
+            get("/api/startup-status"),
+          ]);
+          console.log(JSON.stringify({
+            healthStatus: health.status,
+            universeStatus: universe.status,
+            startupStatus: startup.status,
+            ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
+            fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
+            examinedCount: universe.body?.examinedCount ?? null,
+            secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
+            deployedCommit: startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null,
+            ratingJob: startup.body?.jobs?.ratingBatch ?? null,
+            marketConfigured: health.body?.marketData?.configured ?? null,
+            deploymentAuthority: {
+              deployHook: Boolean(process.env.RENDER_DEPLOY_HOOK_URL),
+              apiKey: Boolean(process.env.RENDER_API_KEY),
+              serviceId: Boolean(process.env.RENDER_SERVICE_ID),
+              usable: Boolean(process.env.RENDER_DEPLOY_HOOK_URL) || Boolean(process.env.RENDER_API_KEY && process.env.RENDER_SERVICE_ID),
+            },
+            retrievedAt: universe.body?.retrievedAt ?? new Date().toISOString(),
+          }, null, 2));
+          NODE
