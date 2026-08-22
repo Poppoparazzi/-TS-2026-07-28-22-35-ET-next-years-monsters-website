@@ -1,4 +1,4 @@
-# TS: 2026-08-21 20:58 ET
+# TS: 2026-08-21 22:01 ET
 
 name: Monster Rating rollout worker
 
@@ -38,6 +38,14 @@ jobs:
           const maxCandidates = Number(process.env.MAX_CANDIDATES_PER_RUN || 360);
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+          // Keep the first real rollout focused on the strategic/VCL names before
+          // consuming quota on lower-priority reserve candidates.
+          const protectedPriority = Object.freeze([
+            "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST",
+            "VRT", "AXON", "DECK", "WING", "META", "APP", "MSFT", "CRDO", "RKLB",
+          ]);
+          const priorityRank = new Map(protectedPriority.map((ticker, index) => [ticker, index]));
 
           async function getJson(url, timeoutMs = 70000) {
             const response = await fetch(url, {
@@ -143,9 +151,23 @@ jobs:
               company.hasFilings === true &&
               company.hasFacts === true
             )
+            .sort((left, right) => {
+              const leftTicker = String(left.ticker).trim().toUpperCase();
+              const rightTicker = String(right.ticker).trim().toUpperCase();
+              const leftRank = priorityRank.get(leftTicker) ?? Number.MAX_SAFE_INTEGER;
+              const rightRank = priorityRank.get(rightTicker) ?? Number.MAX_SAFE_INTEGER;
+              if (leftRank !== rightRank) return leftRank - rightRank;
+              return 0;
+            })
             .slice(0, maxCandidates);
 
-          console.log(`GitHub worker taking over with ${candidates.length} candidates from ${companies.length} returned companies.`);
+          const priorityCandidates = candidates.filter((company) =>
+            priorityRank.has(String(company.ticker).trim().toUpperCase())
+          );
+          console.log(
+            `GitHub worker taking over with ${candidates.length} candidates from ${companies.length} returned companies; ` +
+            `${priorityCandidates.length} protected strategic candidates are scheduled first.`,
+          );
 
           let attempted = 0;
           let ratedThisRun = 0;
@@ -232,5 +254,6 @@ jobs:
             attempted,
             ratedThisRun,
             skipped,
+            protectedPriorityCandidatesScheduled: priorityCandidates.length,
           }, null, 2));
           NODE
