@@ -1,4 +1,4 @@
-# TS: 2026-08-22 09:27 UTC
+# TS: 2026-08-22 06:00 ET
 
 name: Monster Rating rollout worker
 
@@ -159,20 +159,29 @@ jobs:
           // repeatedly diagnosing the same stall. Five candidates every 20 minutes
           // caps the fallback near 360 candidates/day; even at roughly two market-data
           // credits per unrated candidate, that stays below the 800-credit free allowance.
+          // Rotate through the eligible universe so a permanently ineligible first cohort
+          // cannot monopolize every fallback run.
           const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
-          const candidates = companies
-            .filter((company) =>
-              company &&
-              company.ticker &&
-              company.hasRating !== true &&
-              company.hasSecIdentity === true &&
-              company.hasFilings === true &&
-              company.hasFacts === true
-            )
-            .slice(0, maxDirectFallbackPerRun);
+          const eligibleCandidates = companies.filter((company) =>
+            company &&
+            company.ticker &&
+            company.hasRating !== true &&
+            company.hasSecIdentity === true &&
+            company.hasFilings === true &&
+            company.hasFacts === true
+          );
+          const cohortNumber = Math.floor(Date.now() / (20 * 60 * 1000));
+          const startIndex = eligibleCandidates.length > 0
+            ? (cohortNumber * maxDirectFallbackPerRun) % eligibleCandidates.length
+            : 0;
+          const candidates = Array.from(
+            { length: Math.min(maxDirectFallbackPerRun, eligibleCandidates.length) },
+            (_, index) => eligibleCandidates[(startIndex + index) % eligibleCandidates.length],
+          );
 
           console.log(
-            `No Render deployment authority. Using direct quota-safe fallback for ${candidates.length} candidates at ${count}/${target}.`,
+            `No Render deployment authority. Using rotating direct quota-safe fallback for ${candidates.length} candidates ` +
+            `(eligible=${eligibleCandidates.length}, startIndex=${startIndex}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -198,6 +207,8 @@ jobs:
           console.log(JSON.stringify({
             directFallbackAttempted: candidates.length,
             directFallbackRated: rated,
+            directFallbackEligibleCount: eligibleCandidates.length,
+            directFallbackStartIndex: startIndex,
             initialRatingCompleteCount: count,
             finalRatingCompleteCount: final ? Number(final.body?.ratingCompleteCount || count) : count,
           }, null, 2));
