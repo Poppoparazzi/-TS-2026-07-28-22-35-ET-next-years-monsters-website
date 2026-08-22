@@ -1,4 +1,4 @@
-# TS: 2026-08-22 17:01 ET
+# TS: 2026-08-22 21:19 UTC
 
 name: Monster Rating rollout worker
 
@@ -32,7 +32,7 @@ jobs:
       - name: Watch production and restart the real bulk rating job when needed
         env:
           API_BASE: https://next-years-monsters-api.onrender.com
-          TARGET_COUNT: "500"
+          TARGET_COUNT: "5000"
           STATUS_LIMIT: "5000"
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
           MAX_PROTECTED_FALLBACK_PER_RUN: "2"
@@ -45,7 +45,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           const base = process.env.API_BASE;
-          const target = Number(process.env.TARGET_COUNT || 500);
+          const target = Number(process.env.TARGET_COUNT || 5000);
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
           const maxProtectedFallbackPerRun = Math.max(
