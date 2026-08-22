@@ -1,4 +1,4 @@
-# TS: 2026-08-01 21:26 ET
+# TS: 2026-08-21 22:48 ET
 
 name: Phase 3 Backend Checks
 
@@ -35,6 +35,20 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Probe live production rating count
+        run: |
+          node --input-type=module <<'NODE'
+          const response = await fetch("https://next-years-monsters-api.onrender.com/api/universe/status?limit=1000", {
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(90000),
+          });
+          const body = await response.json();
+          console.log(`LIVE_RATING_COMPLETE_COUNT=${body.ratingCompleteCount ?? "null"}`);
+          console.log(`LIVE_FULLY_COMPLETE_COUNT=${body.fullyCompleteCount ?? "null"}`);
+          console.log(`LIVE_RETRIEVED_AT=${body.retrievedAt ?? new Date().toISOString()}`);
+          if (!response.ok) process.exit(1);
+          NODE
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
