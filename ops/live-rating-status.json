@@ -1,0 +1,190 @@
+{
+  "probedAt": "2026-08-22T11:25:40.160Z",
+  "healthStatus": 200,
+  "universeStatus": 200,
+  "startupStatus": 200,
+  "ratingCompleteCount": 350,
+  "fullyCompleteCount": 350,
+  "examinedCount": 5000,
+  "secEvidenceReadyCount": 3315,
+  "marketConfigured": true,
+  "deployedCommit": "3356910a73c6d43ec10d0af911105f7fb024718c",
+  "ratingJob": {
+    "state": "completed",
+    "startedAt": "2026-08-22T11:23:08.355Z",
+    "completedAt": "2026-08-22T11:23:08.355Z",
+    "summary": {
+      "status": "disabled",
+      "targetCount": 500,
+      "detail": "Automatic Monster Rating refresh is disabled."
+    },
+    "error": null
+  },
+  "relevantRuns": [
+    {
+      "conclusion": null,
+      "created_at": "2026-08-22T11:25:29Z",
+      "event": "push",
+      "head_sha": "0297ad250984761aa74ffdd4e6092952313c5a7e",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32570237910",
+      "id": 32570237910,
+      "name": "Live rating ops probe",
+      "status": "in_progress",
+      "updated_at": "2026-08-22T11:25:34Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T11:24:52Z",
+      "event": "pull_request",
+      "head_sha": "7d5be85cd46c9d686194b1d719f396c5ba94da53",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32570209582",
+      "id": 32570209582,
+      "name": "Rating status probe",
+      "status": "completed",
+      "updated_at": "2026-08-22T11:25:00Z"
+    },
+    {
+      "conclusion": null,
+      "created_at": "2026-08-22T11:24:02Z",
+      "event": "workflow_dispatch",
+      "head_sha": "a92133d545edad54683902a1433171370d34112d",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32570172288",
+      "id": 32570172288,
+      "name": "Monster Rating rollout worker",
+      "status": "in_progress",
+      "updated_at": "2026-08-22T11:24:06Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T11:23:56Z",
+      "event": "push",
+      "head_sha": "a92133d545edad54683902a1433171370d34112d",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32570167887",
+      "id": 32570167887,
+      "name": "Monster Rating status ledger",
+      "status": "completed",
+      "updated_at": "2026-08-22T11:24:07Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T11:22:17Z",
+      "event": "pull_request",
+      "head_sha": "dd5fdf82a9c47e906fa086c1c0feda2b4c0e1d2d",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32570096213",
+      "id": 32570096213,
+      "name": "Rating status probe",
+      "status": "completed",
+      "updated_at": "2026-08-22T11:22:45Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T11:01:03Z",
+      "event": "push",
+      "head_sha": "d432f141a7554449b6af4d16f5a6c009bb9bd648",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32569152398",
+      "id": 32569152398,
+      "name": "Monster Rating rollout worker",
+      "status": "completed",
+      "updated_at": "2026-08-22T11:02:51Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:59:56Z",
+      "event": "schedule",
+      "head_sha": "f05002a138e1871016604e8a1a89a4279822799c",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32569093972",
+      "id": 32569093972,
+      "name": "Monster Rating rollout worker",
+      "status": "completed",
+      "updated_at": "2026-08-22T11:00:28Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:36:44Z",
+      "event": "schedule",
+      "head_sha": "f05002a138e1871016604e8a1a89a4279822799c",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32568058711",
+      "id": 32568058711,
+      "name": "Render deploy recovery",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:37:01Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:36:27Z",
+      "event": "push",
+      "head_sha": "f05002a138e1871016604e8a1a89a4279822799c",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32568045065",
+      "id": 32568045065,
+      "name": "Monster Rating rollout worker",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:38:22Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:33:43Z",
+      "event": "schedule",
+      "head_sha": "d4fb09eb759bbcb4e5f936cf9677b429caf040ef",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32567927489",
+      "id": 32567927489,
+      "name": "Monster Rating rollout worker",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:35:35Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:24:21Z",
+      "event": "workflow_dispatch",
+      "head_sha": "d4fb09eb759bbcb4e5f936cf9677b429caf040ef",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32567517110",
+      "id": 32567517110,
+      "name": "Render deploy recovery",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:24:38Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:24:20Z",
+      "event": "workflow_dispatch",
+      "head_sha": "d4fb09eb759bbcb4e5f936cf9677b429caf040ef",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32567516561",
+      "id": 32567516561,
+      "name": "Monster Rating rollout worker",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:26:19Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:24:16Z",
+      "event": "push",
+      "head_sha": "d4fb09eb759bbcb4e5f936cf9677b429caf040ef",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32567513723",
+      "id": 32567513723,
+      "name": "Trigger rating rollout after Render config changes",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:24:22Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:24:16Z",
+      "event": "push",
+      "head_sha": "d4fb09eb759bbcb4e5f936cf9677b429caf040ef",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32567513705",
+      "id": 32567513705,
+      "name": "Render recovery nudge",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:24:24Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-08-22T10:16:12Z",
+      "event": "workflow_dispatch",
+      "head_sha": "ed1384744f099c54b609190ac9a353c70286fa1e",
+      "html_url": "https://github.com/Poppoparazzi/-TS-2026-07-28-22-35-ET-next-years-monsters-website/actions/runs/32567171469",
+      "id": 32567171469,
+      "name": "Render deploy recovery",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:16:31Z"
+    }
+  ]
+}
