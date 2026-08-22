@@ -1,0 +1,23 @@
+{
+  "recordedAt": "2026-08-22T11:24:04.128Z",
+  "healthStatus": 200,
+  "universeStatus": 200,
+  "startupStatus": 200,
+  "ratingCompleteCount": 350,
+  "fullyCompleteCount": 350,
+  "examinedCount": 5000,
+  "secEvidenceReadyCount": 3315,
+  "deployedCommit": "3356910a73c6d43ec10d0af911105f7fb024718c",
+  "ratingJob": {
+    "state": "completed",
+    "startedAt": "2026-08-22T11:23:08.355Z",
+    "completedAt": "2026-08-22T11:23:08.355Z",
+    "summary": {
+      "status": "disabled",
+      "targetCount": 500,
+      "detail": "Automatic Monster Rating refresh is disabled."
+    },
+    "error": null
+  },
+  "marketConfigured": true
+}
