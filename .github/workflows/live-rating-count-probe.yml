@@ -1,4 +1,4 @@
-# TS: 2026-08-21 23:22 ET
+# TS: 2026-08-21 23:24 ET
 
 name: Live rating count probe
 
@@ -13,24 +13,64 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Read live production rating count
+      - name: Diagnose live production rating rollout
         run: |
           node --input-type=module <<'NODE'
-          const url = "https://next-years-monsters-api.onrender.com/api/universe/status?limit=1000";
-          const response = await fetch(url, {
-            headers: { Accept: "application/json" },
-            signal: AbortSignal.timeout(90000),
-          });
-          const body = await response.json();
+          const base = "https://next-years-monsters-api.onrender.com";
+          const getJson = async (url) => {
+            const response = await fetch(url, {
+              headers: { Accept: "application/json" },
+              signal: AbortSignal.timeout(90000),
+            });
+            const body = await response.json().catch(() => null);
+            return { response, body };
+          };
+
+          const first = await getJson(`${base}/api/universe/status?limit=5000`);
+          if (!first.response.ok || !first.body) {
+            console.log(JSON.stringify({ stage: "status", httpStatus: first.response.status, body: first.body }, null, 2));
+            process.exit(1);
+          }
+
+          const companies = Array.isArray(first.body.companies) ? first.body.companies : [];
+          const candidate = companies.find((company) =>
+            company &&
+            company.ticker &&
+            company.hasRating !== true &&
+            company.hasSecIdentity === true &&
+            company.hasFilings === true &&
+            company.hasFacts === true
+          );
+
           console.log(JSON.stringify({
-            httpStatus: response.status,
-            ratingCompleteCount: body.ratingCompleteCount ?? null,
-            fullyCompleteCount: body.fullyCompleteCount ?? null,
-            examinedCount: body.examinedCount ?? null,
-            secEvidenceReadyCount: body.secEvidenceReadyCount ?? null,
-            retrievedAt: body.retrievedAt ?? new Date().toISOString(),
+            stage: "before",
+            ratingCompleteCount: first.body.ratingCompleteCount ?? null,
+            candidate: candidate?.ticker ?? null,
+            companyCount: companies.length,
+            secEvidenceReadyCount: first.body.secEvidenceReadyCount ?? null,
           }, null, 2));
-          if (!response.ok) process.exit(1);
+
+          if (!candidate?.ticker) process.exit(0);
+
+          const ticker = String(candidate.ticker).trim().toUpperCase();
+          const rating = await getJson(`${base}/api/ratings/${encodeURIComponent(ticker)}`);
+          console.log(JSON.stringify({
+            stage: "rating_attempt",
+            ticker,
+            httpStatus: rating.response.status,
+            eligible: rating.body?.eligible ?? null,
+            score: rating.body?.score ?? null,
+            error: rating.body?.error ?? null,
+            eligibilityCode: rating.body?.eligibilityCode ?? null,
+            message: rating.body?.message ?? rating.body?.summary ?? null,
+          }, null, 2));
+
+          const after = await getJson(`${base}/api/universe/status?limit=5000`);
+          console.log(JSON.stringify({
+            stage: "after",
+            ratingCompleteCount: after.body?.ratingCompleteCount ?? null,
+            httpStatus: after.response.status,
+          }, null, 2));
           NODE
