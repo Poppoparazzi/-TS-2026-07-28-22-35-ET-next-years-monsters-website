@@ -1,4 +1,4 @@
-# TS: 2026-08-21 22:53 ET
+# TS: 2026-08-21 22:57 ET
 
 name: Monster Rating rollout worker
 
@@ -21,21 +21,21 @@ concurrency:
 jobs:
   advance-ratings:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 30
     steps:
       - name: Advance production Monster Ratings
         env:
           API_BASE: https://next-years-monsters-api.onrender.com
           TARGET_COUNT: "500"
           STATUS_LIMIT: "5000"
-          MAX_CANDIDATES_PER_RUN: "360"
+          MAX_CANDIDATES_PER_RUN: "60"
           REQUEST_DELAY_MS: "20000"
         run: |
           node --input-type=module <<'NODE'
           const base = process.env.API_BASE;
           const target = Number(process.env.TARGET_COUNT || 500);
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
-          const maxCandidates = Number(process.env.MAX_CANDIDATES_PER_RUN || 360);
+          const maxCandidates = Number(process.env.MAX_CANDIDATES_PER_RUN || 60);
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
