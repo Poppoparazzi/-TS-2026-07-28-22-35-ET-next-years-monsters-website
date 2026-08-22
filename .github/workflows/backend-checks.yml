@@ -1,4 +1,4 @@
-# TS: 2026-08-21 23:23 ET
+# TS: 2026-08-21 23:25 ET
 
 name: Phase 3 Backend Checks
 
@@ -36,18 +36,47 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Probe live production rating count
+      - name: Probe live production rating count and one real candidate
         run: |
           node --input-type=module <<'NODE'
-          const response = await fetch("https://next-years-monsters-api.onrender.com/api/universe/status?limit=1000", {
+          const base = "https://next-years-monsters-api.onrender.com";
+          const statusResponse = await fetch(`${base}/api/universe/status?limit=1000`, {
             headers: { Accept: "application/json" },
             signal: AbortSignal.timeout(90000),
           });
-          const body = await response.json();
-          console.log(`LIVE_RATING_COMPLETE_COUNT=${body.ratingCompleteCount ?? "null"}`);
-          console.log(`LIVE_FULLY_COMPLETE_COUNT=${body.fullyCompleteCount ?? "null"}`);
-          console.log(`LIVE_RETRIEVED_AT=${body.retrievedAt ?? new Date().toISOString()}`);
-          if (!response.ok) process.exit(1);
+          const status = await statusResponse.json();
+          console.log(`LIVE_RATING_COMPLETE_COUNT=${status.ratingCompleteCount ?? "null"}`);
+          console.log(`LIVE_FULLY_COMPLETE_COUNT=${status.fullyCompleteCount ?? "null"}`);
+          console.log(`LIVE_RETRIEVED_AT=${status.retrievedAt ?? new Date().toISOString()}`);
+          if (!statusResponse.ok) process.exit(1);
+
+          const companies = Array.isArray(status.companies) ? status.companies : [];
+          const candidate = companies.find((company) =>
+            company &&
+            company.ticker &&
+            company.hasRating !== true &&
+            company.hasSecIdentity === true &&
+            company.hasFilings === true &&
+            company.hasFacts === true
+          );
+
+          if (!candidate) {
+            console.log("DIAGNOSTIC=no_eligible_unrated_candidate_returned");
+            process.exit(0);
+          }
+
+          const ticker = String(candidate.ticker).trim().toUpperCase();
+          console.log(`DIAGNOSTIC_CANDIDATE=${ticker}`);
+          const ratingResponse = await fetch(`${base}/api/ratings/${encodeURIComponent(ticker)}`, {
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(90000),
+          });
+          const rating = await ratingResponse.json().catch(() => null);
+          console.log(`DIAGNOSTIC_HTTP=${ratingResponse.status}`);
+          console.log(`DIAGNOSTIC_ELIGIBLE=${rating?.eligible ?? "null"}`);
+          console.log(`DIAGNOSTIC_SCORE=${rating?.score ?? "null"}`);
+          console.log(`DIAGNOSTIC_CODE=${rating?.eligibilityCode ?? rating?.error ?? "none"}`);
+          console.log(`DIAGNOSTIC_MESSAGE=${rating?.message ?? rating?.summary ?? "none"}`);
           NODE
 
       - name: Use Node.js 20
