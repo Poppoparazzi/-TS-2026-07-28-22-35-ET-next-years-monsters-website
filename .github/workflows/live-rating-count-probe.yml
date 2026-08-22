@@ -1,4 +1,4 @@
-# TS: 2026-08-21 23:24 ET
+# TS: 2026-08-22 03:23 ET
 
 name: Live rating count probe
 
@@ -34,6 +34,7 @@ jobs:
             process.exit(1);
           }
 
+          const startup = await getJson(`${base}/api/startup-status`).catch(() => null);
           const companies = Array.isArray(first.body.companies) ? first.body.companies : [];
           const candidate = companies.find((company) =>
             company &&
@@ -47,9 +48,12 @@ jobs:
           console.log(JSON.stringify({
             stage: "before",
             ratingCompleteCount: first.body.ratingCompleteCount ?? null,
+            fullyCompleteCount: first.body.fullyCompleteCount ?? null,
             candidate: candidate?.ticker ?? null,
             companyCount: companies.length,
             secEvidenceReadyCount: first.body.secEvidenceReadyCount ?? null,
+            deployedCommit: startup?.body?.deployment?.commit ?? startup?.body?.deploymentCommit ?? null,
+            ratingJob: startup?.body?.jobs?.ratingBatch ?? null,
           }, null, 2));
 
           if (!candidate?.ticker) process.exit(0);
