@@ -1,4 +1,4 @@
-// TS: 2026-08-22 01:07 ET
+// TS: 2026-08-22 01:58 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -84,10 +84,10 @@ export async function runRatingBatchOnStartup(
 
     const isTwelveData = marketProvider.name === "twelve-data";
     // Twelve Data Basic allows 8 API credits per minute. The batch job loads SPY
-    // once and then spends one history credit per candidate, so an 8-second start
-    // interval keeps the job below the provider ceiling while restoring the intended
-    // roughly 500-ratings-per-75-minutes throughput.
-    const defaultMarketDelayMs = isTwelveData ? 8_000 : 0;
+    // once and then spends one history credit per candidate. A 9-second start
+    // interval preserves headroom below the provider ceiling in both explicit
+    // Render configuration and fallback recovery behavior.
+    const defaultMarketDelayMs = isTwelveData ? 9_000 : 0;
     const defaultLimitRetryMs = isTwelveData ? 65_000 : 0;
     // Do not let an exhausted daily quota strand a Render worker for many hours.
     // A handful of minute-boundary retries is enough for transient throttling.
