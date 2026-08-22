@@ -1,0 +1,95 @@
+# TS: 2026-08-22 11:25 UTC
+
+name: Live rating ops probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/live-rating-ops-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe production and recent Actions runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+
+          const base = 'https://next-years-monsters-api.onrender.com';
+          async function get(path) {
+            const response = await fetch(base + path, {
+              headers: { Accept: 'application/json' },
+              signal: AbortSignal.timeout(90000),
+            });
+            const body = await response.json().catch(() => null);
+            return { status: response.status, body };
+          }
+
+          const [health, universe, startup] = await Promise.all([
+            get('/api/health'),
+            get('/api/universe/status?limit=5000'),
+            get('/api/startup-status'),
+          ]);
+
+          let actionRuns = [];
+          try {
+            const raw = execFileSync('gh', [
+              'api',
+              `repos/${process.env.REPO}/actions/runs?per_page=30`,
+              '--jq',
+              '.workflow_runs[] | {id,name,event,status,conclusion,head_sha,created_at,updated_at,html_url}'
+            ], { encoding: 'utf8' });
+            actionRuns = raw.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+          } catch (error) {
+            actionRuns = [{ probeError: String(error?.message || error) }];
+          }
+
+          const relevantRuns = actionRuns.filter((run) =>
+            !run.name || /rating|render|phase 3|backend/i.test(run.name)
+          ).slice(0, 15);
+
+          const output = {
+            probedAt: new Date().toISOString(),
+            healthStatus: health.status,
+            universeStatus: universe.status,
+            startupStatus: startup.status,
+            ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
+            fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
+            examinedCount: universe.body?.examinedCount ?? null,
+            secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
+            marketConfigured: health.body?.marketData?.configured ?? null,
+            deployedCommit: startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null,
+            ratingJob: startup.body?.jobs?.ratingBatch ?? null,
+            relevantRuns,
+          };
+
+          fs.mkdirSync('ops', { recursive: true });
+          fs.writeFileSync('ops/live-rating-status.json', JSON.stringify(output, null, 2) + '\n');
+          console.log(JSON.stringify(output, null, 2));
+          NODE
+
+      - name: Commit probe result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ops/live-rating-status.json
+          if git diff --cached --quiet; then
+            echo "No probe result change to commit."
+            exit 0
+          fi
+          git commit -m "Record live Monster Rating ops status"
+          git push
