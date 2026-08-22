@@ -1,4 +1,4 @@
-# TS: 2026-08-21 18:02 ET
+# TS: 2026-08-22 04:08 ET
 
 name: Render deploy recovery
 
@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
   actions: write
+
+concurrency:
+  group: render-deploy-recovery
+  cancel-in-progress: false
 
 jobs:
   recover-render:
