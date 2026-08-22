@@ -1,4 +1,4 @@
-// TS: 2026-08-21 16:36 ET
+// TS: 2026-08-22 00:05 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -61,14 +61,22 @@ export async function runRatingBatchOnStartup(
     }
 
     const isTwelveData = marketProvider.name === "twelve-data";
-    const defaultMarketDelayMs = marketProvider.name === "twelve-data" ? 9_000 : 0;
+    // Twelve Data Basic allows 8 API credits per minute. The batch job loads SPY
+    // once and then spends one history credit per candidate, so an 8-second start
+    // interval keeps the job below the provider ceiling while restoring the intended
+    // roughly 500-ratings-per-75-minutes throughput.
+    const defaultMarketDelayMs = isTwelveData ? 8_000 : 0;
     const defaultLimitRetryMs = isTwelveData ? 65_000 : 0;
-    const defaultLimitMaxRetries = isTwelveData ? 480 : 0;
+    // Do not let an exhausted daily quota strand a Render worker for many hours.
+    // A handful of minute-boundary retries is enough for transient throttling.
+    const defaultLimitMaxRetries = isTwelveData ? 8 : 0;
     const accounting = await runRatingBatch(
       { marketProvider, secProvider, persistenceStore, batchStore },
       {
         targetCount: boundedInteger(environment.RATING_TARGET_COUNT, 500, 1_000),
-        candidateLimit: boundedInteger(environment.RATING_CANDIDATE_LIMIT, 1_000, 5_000),
+        // Use the full evidence-ready reserve so ordinary ineligible names are
+        // replacements, not blockers. The batch still stops as soon as the target is met.
+        candidateLimit: boundedInteger(environment.RATING_CANDIDATE_LIMIT, 5_000, 5_000),
         marketRequestDelayMs: boundedNonNegativeInteger(
           environment.RATING_MARKET_REQUEST_DELAY_MS,
           defaultMarketDelayMs,
