@@ -1,14 +1,19 @@
-# TS: 2026-08-22 11:10 UTC
+# TS: 2026-08-22 11:14 UTC
 
 name: Monster Rating status ledger
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/rating-status-ledger.yml"
   workflow_run:
     workflows: ["Monster Rating rollout worker"]
     types: [completed]
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -17,6 +22,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
+      - name: Kick Monster Rating worker on install/manual run
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run rating-rollout-worker.yml --repo "${{ github.repository }}" --ref main
 
       - name: Fetch live production status
         run: |
