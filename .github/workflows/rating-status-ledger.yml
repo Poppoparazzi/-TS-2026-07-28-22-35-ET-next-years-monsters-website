@@ -1,4 +1,4 @@
-# TS: 2026-08-22 08:59 ET
+# TS: 2026-08-22 09:01 ET
 
 name: Monster Rating status ledger
 
@@ -87,10 +87,14 @@ jobs:
             aaplRatingEligibilityCode: aaplRating.body?.eligibilityCode ?? null,
             aaplRatingTier: aaplRating.body?.tier ?? null,
             ratingRouteMissing,
+            examinedCount: universe.body?.examinedCount ?? null,
+            secCompleteCount: universe.body?.secCompleteCount ?? null,
+            secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
+            failedCount: universe.body?.failedCount ?? null,
+            unresolvedCount: universe.body?.unresolvedCount ?? null,
+            quoteCompleteCount: universe.body?.quoteCompleteCount ?? null,
             ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
             fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
-            examinedCount: universe.body?.examinedCount ?? null,
-            secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
             deployedCommit,
             currentMainCommit,
             staleDeployment,
@@ -125,7 +129,7 @@ jobs:
       - name: Report blocked recovery authority
         if: steps.live_status.outputs.needs_recovery == 'true' && steps.live_status.outputs.render_authority != 'true'
         run: |
-          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials and AAPL rating-route status."
+          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials, AAPL rating-route status, SEC exceptions, and real-provider completion counts."
 
       - name: Commit status snapshot
         run: |
