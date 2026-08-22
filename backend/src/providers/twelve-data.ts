@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:08 UTC
+// TS: 2026-08-22 14:12 UTC
 
 import {
   type DailyMarketBar,
@@ -11,6 +11,7 @@ import {
 const BASE_URL = "https://api.twelvedata.com";
 const FEED_DISCLOSURE =
   "Near-live U.S. market data from Twelve Data. This is not labeled as a full consolidated SIP quote.";
+const BENCHMARK_HISTORY_CACHE_TTL_MS = 15 * 60 * 1_000;
 
 interface TwelveDataErrorResponse {
   readonly status?: string;
@@ -81,6 +82,10 @@ function normalizeSymbol(value: string): string {
 export class TwelveDataMarketDataProvider implements MarketDataProvider {
   public readonly name = "twelve-data";
   public readonly configured = true;
+  private readonly benchmarkHistoryCache = new Map<
+    number,
+    { readonly expiresAt: number; readonly history: DailyMarketHistory }
+  >();
 
   public constructor(private readonly apiKey: string) {
     if (!apiKey.trim()) {
@@ -187,6 +192,15 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
   ): Promise<DailyMarketHistory> {
     const normalizedSymbol = normalizeSymbol(symbol);
     const safeOutputSize = Math.min(Math.max(Math.trunc(outputSize), 60), 500);
+
+    if (normalizedSymbol === "SPY") {
+      const cached = this.benchmarkHistoryCache.get(safeOutputSize);
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached.history;
+      }
+      if (cached) this.benchmarkHistoryCache.delete(safeOutputSize);
+    }
+
     const parameters = new URLSearchParams({
       symbol: normalizedSymbol,
       interval: "1day",
@@ -223,12 +237,21 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
       );
     }
 
-    return Object.freeze({
+    const history = Object.freeze({
       symbol: payload.meta?.symbol?.toUpperCase() || normalizedSymbol,
       bars: Object.freeze(bars),
       provider: this.name,
       retrievedAt: new Date().toISOString(),
       feedDisclosure: FEED_DISCLOSURE,
     });
+
+    if (normalizedSymbol === "SPY") {
+      this.benchmarkHistoryCache.set(safeOutputSize, {
+        expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
+        history,
+      });
+    }
+
+    return history;
   }
 }
