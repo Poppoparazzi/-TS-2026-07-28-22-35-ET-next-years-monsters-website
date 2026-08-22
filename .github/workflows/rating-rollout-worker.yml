@@ -1,4 +1,4 @@
-# TS: 2026-08-21 22:57 ET
+# TS: 2026-08-21 23:29 ET
 
 name: Monster Rating rollout worker
 
@@ -30,6 +30,7 @@ jobs:
           STATUS_LIMIT: "5000"
           MAX_CANDIDATES_PER_RUN: "60"
           REQUEST_DELAY_MS: "20000"
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           node --input-type=module <<'NODE'
           const base = process.env.API_BASE;
@@ -37,10 +38,9 @@ jobs:
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxCandidates = Number(process.env.MAX_CANDIDATES_PER_RUN || 60);
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
+          const runNumber = Math.max(Number(process.env.RUN_NUMBER || 1), 1);
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-          // Keep the first real rollout focused on the strategic/VCL names before
-          // consuming quota on lower-priority reserve candidates.
           const protectedPriority = Object.freeze([
             "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST",
             "VRT", "AXON", "DECK", "WING", "META", "APP", "MSFT", "CRDO", "RKLB",
@@ -58,176 +58,128 @@ jobs:
 
           async function getStatus() {
             const { response, body } = await getJson(`${base}/api/universe/status?limit=${statusLimit}`);
-            if (!response.ok || !body) {
-              throw new Error(`Universe status failed with HTTP ${response.status}`);
-            }
+            if (!response.ok || !body) throw new Error(`Universe status HTTP ${response.status}`);
             return body;
           }
 
-          // Preflight before touching the universe endpoint or spending provider quota.
-          // An unreachable/stale backend is a deployment-recovery condition, not a
-          // reason for this independent rating worker to fail every scheduled run.
-          let healthResponse;
           let health;
-          let ratingPreflight;
+          let aapl;
           try {
-            [{ response: healthResponse, body: health }, ratingPreflight] = await Promise.all([
+            [health, aapl] = await Promise.all([
               getJson(`${base}/api/health`),
               getJson(`${base}/api/ratings/AAPL`),
             ]);
           } catch (error) {
-            console.log(
-              `Rating rollout deferred: production preflight is unreachable (${error instanceof Error ? error.message : String(error)}). ` +
-              "Render recovery owns deployment repair.",
-            );
+            console.log(`Rating rollout deferred: production preflight unreachable (${error instanceof Error ? error.message : String(error)}).`);
             process.exit(0);
           }
 
-          if (!healthResponse.ok || !health) {
-            console.log(`Rating rollout deferred: /api/health returned HTTP ${healthResponse.status}.`);
+          if (!health.response.ok || health.body?.marketData?.configured !== true) {
+            console.log(`Rating rollout deferred: market-data preflight failed (HTTP ${health.response.status}).`);
             process.exit(0);
           }
-          if (health?.marketData?.configured !== true) {
-            console.log("Rating rollout deferred: licensed market-data provider is not configured in production.");
-            process.exit(0);
-          }
-          if (ratingPreflight.response.status === 404) {
-            console.log("Rating rollout deferred: /api/ratings/AAPL is not deployed yet. Render recovery must update the backend first.");
-            process.exit(0);
-          }
-          if (!ratingPreflight.response.ok) {
-            console.log(
-              `Rating rollout deferred: AAPL rating preflight returned HTTP ${ratingPreflight.response.status} ` +
-              `(${ratingPreflight.body?.error ?? ratingPreflight.body?.eligibilityCode ?? "unknown"}).`,
-            );
+          if (aapl.response.status === 404) {
+            console.log("Rating rollout deferred: production rating route is missing.");
             process.exit(0);
           }
 
-          let first;
-          try {
-            first = await getStatus();
-          } catch (error) {
-            console.log(
-              `Rating rollout deferred: universe status is unavailable after a healthy route preflight ` +
-              `(${error instanceof Error ? error.message : String(error)}).`,
-            );
-            process.exit(0);
-          }
-
+          const first = await getStatus();
           let liveCount = Number(first.ratingCompleteCount || 0);
-          console.log(`Initial ratingCompleteCount=${liveCount}; target=${target}; statusLimit=${statusLimit}`);
-          if (liveCount >= target) {
-            console.log("500-rating target already reached.");
-            process.exit(0);
-          }
+          console.log(`Initial ratingCompleteCount=${liveCount}; target=${target}; runNumber=${runNumber}`);
+          if (liveCount >= target) process.exit(0);
 
-          // Give Render one minute to prove it is already advancing before GitHub
-          // takes over. This avoids duplicate provider usage without wasting five minutes.
-          console.log("Watching production for one minute before taking over...");
+          console.log("Watching production for one minute before GitHub takes over...");
           await sleep(60000);
-          const second = await getStatus().catch((error) => {
-            console.log(
-              `Rating rollout deferred: universe status became unavailable during the takeover watch ` +
-              `(${error instanceof Error ? error.message : String(error)}).`,
-            );
-            return null;
-          });
-          if (!second) process.exit(0);
-
+          const second = await getStatus();
           const secondCount = Number(second.ratingCompleteCount || 0);
           if (secondCount > liveCount) {
-            console.log(`Render is already advancing ratings: ${liveCount} -> ${secondCount}. Exiting to avoid duplicate provider usage.`);
+            console.log(`Render advanced ratings on its own: ${liveCount} -> ${secondCount}. Exiting to avoid duplicate usage.`);
             process.exit(0);
           }
           liveCount = secondCount;
 
           const companies = Array.isArray(second.companies) ? second.companies : [];
-          const candidates = companies
-            .filter((company) =>
-              company &&
-              company.ticker &&
-              company.hasRating !== true &&
-              company.hasSecIdentity === true &&
-              company.hasFilings === true &&
-              company.hasFacts === true
-            )
-            .sort((left, right) => {
-              const leftTicker = String(left.ticker).trim().toUpperCase();
-              const rightTicker = String(right.ticker).trim().toUpperCase();
-              const leftRank = priorityRank.get(leftTicker) ?? Number.MAX_SAFE_INTEGER;
-              const rightRank = priorityRank.get(rightTicker) ?? Number.MAX_SAFE_INTEGER;
-              if (leftRank !== rightRank) return leftRank - rightRank;
-              return 0;
-            })
-            .slice(0, maxCandidates);
+          const pool = companies.filter((company) =>
+            company &&
+            company.ticker &&
+            company.hasRating !== true &&
+            company.hasSecIdentity === true &&
+            company.hasFilings === true &&
+            company.hasFacts === true
+          );
 
-          const priorityCandidates = candidates.filter((company) =>
-            priorityRank.has(String(company.ticker).trim().toUpperCase())
-          );
-          console.log(
-            `GitHub worker taking over with ${candidates.length} candidates from ${companies.length} returned companies; ` +
-            `${priorityCandidates.length} protected strategic candidates are scheduled first.`,
-          );
+          const priority = pool
+            .filter((company) => priorityRank.has(String(company.ticker).trim().toUpperCase()))
+            .sort((left, right) =>
+              (priorityRank.get(String(left.ticker).trim().toUpperCase()) ?? 999) -
+              (priorityRank.get(String(right.ticker).trim().toUpperCase()) ?? 999)
+            );
+
+          const ordinary = pool
+            .filter((company) => !priorityRank.has(String(company.ticker).trim().toUpperCase()))
+            .sort((left, right) => String(left.ticker).localeCompare(String(right.ticker)));
+
+          // Rotate ordinary candidates every run. Previously every run sliced the same
+          // front cohort, so permanently ineligible names such as HOOD could be retried
+          // forever while later candidates were never reached.
+          const ordinarySlots = Math.max(maxCandidates - priority.length, 0);
+          const rotationOffset = ordinary.length > 0
+            ? ((runNumber - 1) * Math.max(ordinarySlots, 1)) % ordinary.length
+            : 0;
+          const rotatedOrdinary = ordinary.length === 0
+            ? []
+            : [...ordinary.slice(rotationOffset), ...ordinary.slice(0, rotationOffset)];
+          const candidates = [...priority, ...rotatedOrdinary].slice(0, maxCandidates);
+
+          console.log(JSON.stringify({
+            candidatePool: pool.length,
+            priorityCandidates: priority.length,
+            ordinaryCandidates: ordinary.length,
+            rotationOffset,
+            selectedThisRun: candidates.length,
+          }));
 
           let attempted = 0;
           let ratedThisRun = 0;
           let skipped = 0;
           let consecutiveProviderStops = 0;
-          let consecutiveRouteMisses = 0;
 
           for (const company of candidates) {
             if (liveCount >= target) break;
             const ticker = String(company.ticker).trim().toUpperCase();
             if (!ticker) continue;
-
             attempted += 1;
+
             let result;
             try {
               result = await getJson(`${base}/api/ratings/${encodeURIComponent(ticker)}`);
             } catch (error) {
-              console.log(`[network] ${ticker}: ${error instanceof Error ? error.message : String(error)}`);
               consecutiveProviderStops += 1;
-              if (consecutiveProviderStops >= 3) {
-                console.log("Three consecutive provider/network stops. Ending this run safely; the next 30-minute run will resume.");
-                break;
-              }
+              console.log(`[network] ${ticker}: ${error instanceof Error ? error.message : String(error)}`);
+              if (consecutiveProviderStops >= 3) break;
               await sleep(65000);
               continue;
             }
 
             const { response, body } = result;
-            if (response.ok && body?.eligible === true && Number.isFinite(Number(body?.score))) {
+            if (response.ok && body?.eligible === true && Number.isFinite(Number(body.score))) {
               ratedThisRun += 1;
               liveCount += 1;
               consecutiveProviderStops = 0;
-              consecutiveRouteMisses = 0;
               console.log(`[rated] ${ticker} score=${body.score} estimatedComplete=${liveCount}`);
-            } else if (response.status === 404) {
-              consecutiveRouteMisses += 1;
-              consecutiveProviderStops = 0;
-              console.log(`[route-missing] ${ticker} HTTP 404; consecutive=${consecutiveRouteMisses}`);
-              if (consecutiveRouteMisses >= 3) {
-                console.log("Three consecutive rating-route 404s. Ending this run instead of hammering a stale Render backend.");
-                break;
-              }
             } else if (response.status === 429 || response.status === 503) {
               consecutiveProviderStops += 1;
-              consecutiveRouteMisses = 0;
               console.log(`[provider-stop] ${ticker} HTTP ${response.status}; consecutive=${consecutiveProviderStops}`);
-              if (consecutiveProviderStops >= 3) {
-                console.log("Provider appears rate- or daily-quota-limited. Ending this run safely; the next 30-minute run will resume automatically.");
-                break;
-              }
+              if (consecutiveProviderStops >= 3) break;
               await sleep(65000);
               continue;
             } else {
               skipped += 1;
               consecutiveProviderStops = 0;
-              consecutiveRouteMisses = 0;
               console.log(`[skip] ${ticker} HTTP ${response.status} eligible=${body?.eligible ?? null} code=${body?.eligibilityCode ?? body?.error ?? "unknown"}`);
             }
 
-            if (attempted % 20 === 0) {
+            if (attempted % 10 === 0) {
               const checkpoint = await getStatus().catch(() => null);
               if (checkpoint) {
                 liveCount = Number(checkpoint.ratingCompleteCount || liveCount);
@@ -238,22 +190,15 @@ jobs:
             if (liveCount < target) await sleep(requestDelayMs);
           }
 
-          const final = await getStatus().catch((error) => {
-            console.log(
-              `Final universe status unavailable; preserving this run's local accounting ` +
-              `(${error instanceof Error ? error.message : String(error)}).`,
-            );
-            return null;
-          });
+          const final = await getStatus().catch(() => null);
           const finalCount = final ? Number(final.ratingCompleteCount || liveCount) : liveCount;
           console.log(JSON.stringify({
             initialRatingCompleteCount: Number(first.ratingCompleteCount || 0),
             finalRatingCompleteCount: finalCount,
             target,
-            statusLimit,
             attempted,
             ratedThisRun,
             skipped,
-            protectedPriorityCandidatesScheduled: priorityCandidates.length,
+            rotationOffset,
           }, null, 2));
           NODE
