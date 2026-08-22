@@ -1,54 +1,19 @@
-# TS: 2026-08-22 00:25 ET
+# TS: 2026-08-22 01:19 ET
 
-name: Phase 3 Backend Checks
+name: Live Monster Rating report probe
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-checks.yml"
   pull_request:
     branches: [main]
     paths:
-      - "backend/**"
-      - ".github/workflows/backend-checks.yml"
+      - ".github/workflows/live-rating-report-probe.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: phase-3-backend-checks-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  verify-backend:
-    name: Typecheck and test backend
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    defaults:
-      run:
-        working-directory: backend
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install backend dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Run typechecks and tests
-        run: npm run check
-
-  live-rating-report-probe:
-    name: Live Monster Rating report probe
+  probe:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -82,4 +47,5 @@ jobs:
             ratingJob: startup.body?.jobs?.ratingBatch ?? null,
             retrievedAt: new Date().toISOString(),
           }, null, 2));
+          if (!health.status || !universe.status || !startup.status) process.exit(1);
           NODE
