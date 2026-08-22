@@ -1,4 +1,4 @@
-# TS: 2026-08-22 09:24 UTC
+# TS: 2026-08-22 09:26 UTC
 
 name: Rating status probe
 
@@ -17,6 +17,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Probe live production rating rollout
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
           node --input-type=module <<'NODE'
           const base = "https://next-years-monsters-api.onrender.com";
@@ -44,6 +48,12 @@ jobs:
             deployedCommit: startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null,
             ratingJob: startup.body?.jobs?.ratingBatch ?? null,
             marketConfigured: health.body?.marketData?.configured ?? null,
+            deploymentAuthority: {
+              deployHook: Boolean(process.env.RENDER_DEPLOY_HOOK_URL),
+              apiKey: Boolean(process.env.RENDER_API_KEY),
+              serviceId: Boolean(process.env.RENDER_SERVICE_ID),
+              usable: Boolean(process.env.RENDER_DEPLOY_HOOK_URL) || Boolean(process.env.RENDER_API_KEY && process.env.RENDER_SERVICE_ID),
+            },
             retrievedAt: universe.body?.retrievedAt ?? new Date().toISOString(),
           }, null, 2));
           NODE
