@@ -1,4 +1,4 @@
-# TS: 2026-08-22 00:06 ET
+# TS: 2026-08-22 00:27 ET
 
 name: Monster Rating rollout worker
 
@@ -96,9 +96,13 @@ jobs:
             process.exit(0);
           }
 
-          if (ratingJob?.state === "pending" || earlierJobRunning) {
-            console.log("Startup work is still progressing toward the bulk rating job; do not interrupt it with another redeploy.");
+          if (earlierJobRunning) {
+            console.log("Earlier startup work is still running; do not interrupt it with another redeploy.");
             process.exit(0);
+          }
+
+          if (ratingJob?.state === "pending") {
+            console.log(`Bulk rating job is pending with no earlier startup job running at ${count}/${target}; treat this as stalled and restart production.`);
           }
 
           const deployHook = (process.env.RENDER_DEPLOY_HOOK_URL || "").trim();
