@@ -1,4 +1,4 @@
-# TS: 2026-08-22 09:01 ET
+# TS: 2026-08-22 16:00 ET
 
 name: Monster Rating status ledger
 
@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Kick Monster Rating worker on install/manual run
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -41,6 +43,7 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import { execFileSync } from 'node:child_process';
+          import { resolveBackendDeployTarget } from './scripts/resolve-backend-deploy-target.mjs';
           const base = 'https://next-years-monsters-api.onrender.com';
           async function get(path) {
             const response = await fetch(base + path, {
@@ -56,11 +59,12 @@ jobs:
             get('/api/startup-status'),
             get('/api/ratings/AAPL'),
           ]);
-          const currentMainCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          const repositoryHeadCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          const backendDeployTargetCommit = resolveBackendDeployTarget();
           const deployedCommit = startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null;
           const ratingJob = startup.body?.jobs?.ratingBatch ?? null;
           const marketConfigured = health.body?.marketData?.configured ?? null;
-          const staleDeployment = Boolean(deployedCommit && deployedCommit !== currentMainCommit);
+          const staleDeployment = Boolean(deployedCommit && deployedCommit !== backendDeployTargetCommit);
           const ratingRecoveryDisabled = Boolean(
             marketConfigured === true && ratingJob?.summary?.status === 'disabled'
           );
@@ -96,7 +100,9 @@ jobs:
             ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
             fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
             deployedCommit,
-            currentMainCommit,
+            repositoryHeadCommit,
+            backendDeployTargetCommit,
+            currentMainCommit: backendDeployTargetCommit,
             staleDeployment,
             ratingRecoveryDisabled,
             needsRecovery,
