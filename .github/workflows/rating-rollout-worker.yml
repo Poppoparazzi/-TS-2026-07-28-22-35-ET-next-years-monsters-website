@@ -1,4 +1,4 @@
-# TS: 2026-08-22 12:01 ET
+# TS: 2026-08-22 16:23 UTC
 
 name: Monster Rating rollout worker
 
@@ -36,6 +36,7 @@ jobs:
           STATUS_LIMIT: "5000"
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
           REQUEST_DELAY_MS: "20000"
+          PREFLIGHT_POOL_SIZE: "32"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
@@ -46,6 +47,7 @@ jobs:
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
+          const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 32);
           const protectedVclTickers = Object.freeze([
             "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
             "NFLX", "AMD", "COST", "VRT", "AXON",
@@ -171,9 +173,10 @@ jobs:
           // caps the fallback at 384 candidates/day; at the conservative two market-data
           // credits per unrated candidate, that is 768 credits/day and stays below the
           // 800-credit free allowance while modestly improving throughput over 5 every 20 minutes.
-          // Always service currently-unrated protected VCL names first, then spread the
-          // remaining attempts across the wider eligible universe so structurally
-          // ineligible ordinary stocks cannot monopolize the front of the line.
+          // Before spending any market-data calls, cheaply preflight a rotating pool using
+          // persisted database metadata. Prefer companies with more SEC facts/filings and
+          // no stored rating, which makes the eight paid attempts materially more likely to
+          // satisfy the engine's two-annual-period financial-history requirement.
           const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
           const eligibleCandidates = companies.filter((company) =>
             company &&
@@ -199,24 +202,48 @@ jobs:
             ordinaryCandidates.length,
           );
           const startIndex = ordinaryCandidates.length > 0
-            ? (cohortNumber * Math.max(ordinaryAttemptCount, 1)) % ordinaryCandidates.length
+            ? (cohortNumber * Math.max(preflightPoolSize, 1)) % ordinaryCandidates.length
             : 0;
-          const stride = ordinaryAttemptCount > 0
-            ? Math.max(Math.floor(ordinaryCandidates.length / ordinaryAttemptCount), 1)
+          const preflightStride = ordinaryCandidates.length > 0
+            ? Math.max(Math.floor(ordinaryCandidates.length / Math.max(preflightPoolSize, 1)), 1)
             : 1;
-          const spreadOrdinaryCandidates = Array.from(
-            { length: ordinaryAttemptCount },
-            (_, index) => ordinaryCandidates[(startIndex + index * stride) % ordinaryCandidates.length],
+          const preflightPool = Array.from(
+            { length: Math.min(preflightPoolSize, ordinaryCandidates.length) },
+            (_, index) => ordinaryCandidates[(startIndex + index * preflightStride) % ordinaryCandidates.length],
           );
+          const preflightResults = await Promise.all(preflightPool.map(async (company) => {
+            const ticker = String(company.ticker).trim().toUpperCase();
+            try {
+              const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
+              if (!stored.response.ok || !stored.body) return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
+              return {
+                company,
+                factCount: Number(stored.body.factCount || 0),
+                filingCount: Number(stored.body.filingCount || 0),
+                ratingCount: Number(stored.body.ratingCount || 0),
+              };
+            } catch {
+              return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
+            }
+          }));
+          const rankedOrdinaryCandidates = preflightResults
+            .filter((item) => item.ratingCount === 0)
+            .sort((left, right) =>
+              right.factCount - left.factCount ||
+              right.filingCount - left.filingCount ||
+              String(left.company.ticker).localeCompare(String(right.company.ticker))
+            )
+            .slice(0, ordinaryAttemptCount)
+            .map((item) => item.company);
           const candidates = [
             ...protectedCandidates.slice(0, protectedAttemptCount),
-            ...spreadOrdinaryCandidates,
+            ...rankedOrdinaryCandidates,
           ];
 
           console.log(
-            `No Render deployment authority. Using VCL-priority direct quota-safe fallback for ${candidates.length} candidates ` +
+            `No Render deployment authority. Using VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
             `(eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, ordinary=${ordinaryCandidates.length}, ` +
-            `startIndex=${startIndex}, stride=${stride}) at ${count}/${target}.`,
+            `preflighted=${preflightPool.length}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -247,8 +274,9 @@ jobs:
             directFallbackEligibleCount: eligibleCandidates.length,
             directFallbackProtectedCount: protectedCandidates.length,
             directFallbackOrdinaryCount: ordinaryCandidates.length,
+            directFallbackPreflightedCount: preflightPool.length,
             directFallbackStartIndex: startIndex,
-            directFallbackStride: stride,
+            directFallbackPreflightStride: preflightStride,
             initialRatingCompleteCount: count,
             finalRatingCompleteCount: final ? Number(final.body?.ratingCompleteCount || count) : count,
           }, null, 2));
