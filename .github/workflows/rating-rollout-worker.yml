@@ -1,4 +1,4 @@
-# TS: 2026-08-21 16:57 ET
+# TS: 2026-08-21 19:58 ET
 
 name: Monster Rating rollout worker
 
@@ -27,12 +27,14 @@ jobs:
         env:
           API_BASE: https://next-years-monsters-api.onrender.com
           TARGET_COUNT: "500"
+          STATUS_LIMIT: "5000"
           MAX_CANDIDATES_PER_RUN: "360"
           REQUEST_DELAY_MS: "20000"
         run: |
           node --input-type=module <<'NODE'
           const base = process.env.API_BASE;
           const target = Number(process.env.TARGET_COUNT || 500);
+          const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxCandidates = Number(process.env.MAX_CANDIDATES_PER_RUN || 360);
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -47,7 +49,7 @@ jobs:
           }
 
           async function getStatus() {
-            const { response, body } = await getJson(`${base}/api/universe/status?limit=1000`);
+            const { response, body } = await getJson(`${base}/api/universe/status?limit=${statusLimit}`);
             if (!response.ok || !body) {
               throw new Error(`Universe status failed with HTTP ${response.status}`);
             }
@@ -56,7 +58,7 @@ jobs:
 
           const first = await getStatus();
           let liveCount = Number(first.ratingCompleteCount || 0);
-          console.log(`Initial ratingCompleteCount=${liveCount}; target=${target}`);
+          console.log(`Initial ratingCompleteCount=${liveCount}; target=${target}; statusLimit=${statusLimit}`);
           if (liveCount >= target) {
             console.log("500-rating target already reached.");
             process.exit(0);
@@ -113,7 +115,7 @@ jobs:
             )
             .slice(0, maxCandidates);
 
-          console.log(`GitHub worker taking over with ${candidates.length} candidates.`);
+          console.log(`GitHub worker taking over with ${candidates.length} candidates from ${companies.length} returned companies.`);
 
           let attempted = 0;
           let ratedThisRun = 0;
@@ -190,6 +192,7 @@ jobs:
             initialRatingCompleteCount: Number(first.ratingCompleteCount || 0),
             finalRatingCompleteCount: finalCount,
             target,
+            statusLimit,
             attempted,
             ratedThisRun,
             skipped,
