@@ -1,4 +1,4 @@
-# TS: 2026-08-22 16:23 UTC
+# TS: 2026-08-22 13:02 ET
 
 name: Monster Rating rollout worker
 
@@ -36,7 +36,8 @@ jobs:
           STATUS_LIMIT: "5000"
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
           REQUEST_DELAY_MS: "20000"
-          PREFLIGHT_POOL_SIZE: "32"
+          PREFLIGHT_POOL_SIZE: "64"
+          PREFLIGHT_CONCURRENCY: "8"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
@@ -47,7 +48,8 @@ jobs:
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
-          const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 32);
+          const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 64);
+          const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
           const protectedVclTickers = Object.freeze([
             "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
             "NFLX", "AMD", "COST", "VRT", "AXON",
@@ -63,6 +65,24 @@ jobs:
             });
             const body = await response.json().catch(() => null);
             return { response, body };
+          }
+
+          async function mapWithConcurrency(items, concurrency, mapper) {
+            const results = new Array(items.length);
+            let nextIndex = 0;
+            const workers = Array.from(
+              { length: Math.min(concurrency, Math.max(items.length, 1)) },
+              async () => {
+                while (true) {
+                  const index = nextIndex;
+                  nextIndex += 1;
+                  if (index >= items.length) return;
+                  results[index] = await mapper(items[index], index);
+                }
+              },
+            );
+            await Promise.all(workers);
+            return results;
           }
 
           let health;
@@ -173,10 +193,11 @@ jobs:
           // caps the fallback at 384 candidates/day; at the conservative two market-data
           // credits per unrated candidate, that is 768 credits/day and stays below the
           // 800-credit free allowance while modestly improving throughput over 5 every 20 minutes.
-          // Before spending any market-data calls, cheaply preflight a rotating pool using
+          // Before spending any market-data calls, cheaply preflight a wider rotating pool using
           // persisted database metadata. Prefer companies with more SEC facts/filings and
           // no stored rating, which makes the eight paid attempts materially more likely to
-          // satisfy the engine's two-annual-period financial-history requirement.
+          // satisfy the engine's two-annual-period financial-history requirement. Throttle
+          // those cheap lookups so the broader search does not hammer the Render/Postgres path.
           const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
           const eligibleCandidates = companies.filter((company) =>
             company &&
@@ -211,21 +232,25 @@ jobs:
             { length: Math.min(preflightPoolSize, ordinaryCandidates.length) },
             (_, index) => ordinaryCandidates[(startIndex + index * preflightStride) % ordinaryCandidates.length],
           );
-          const preflightResults = await Promise.all(preflightPool.map(async (company) => {
-            const ticker = String(company.ticker).trim().toUpperCase();
-            try {
-              const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
-              if (!stored.response.ok || !stored.body) return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
-              return {
-                company,
-                factCount: Number(stored.body.factCount || 0),
-                filingCount: Number(stored.body.filingCount || 0),
-                ratingCount: Number(stored.body.ratingCount || 0),
-              };
-            } catch {
-              return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
-            }
-          }));
+          const preflightResults = await mapWithConcurrency(
+            preflightPool,
+            preflightConcurrency,
+            async (company) => {
+              const ticker = String(company.ticker).trim().toUpperCase();
+              try {
+                const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
+                if (!stored.response.ok || !stored.body) return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
+                return {
+                  company,
+                  factCount: Number(stored.body.factCount || 0),
+                  filingCount: Number(stored.body.filingCount || 0),
+                  ratingCount: Number(stored.body.ratingCount || 0),
+                };
+              } catch {
+                return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
+              }
+            },
+          );
           const rankedOrdinaryCandidates = preflightResults
             .filter((item) => item.ratingCount === 0)
             .sort((left, right) =>
@@ -243,7 +268,8 @@ jobs:
           console.log(
             `No Render deployment authority. Using VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
             `(eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, ordinary=${ordinaryCandidates.length}, ` +
-            `preflighted=${preflightPool.length}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
+            `preflighted=${preflightPool.length}, preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, ` +
+            `preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -275,6 +301,7 @@ jobs:
             directFallbackProtectedCount: protectedCandidates.length,
             directFallbackOrdinaryCount: ordinaryCandidates.length,
             directFallbackPreflightedCount: preflightPool.length,
+            directFallbackPreflightConcurrency: preflightConcurrency,
             directFallbackStartIndex: startIndex,
             directFallbackPreflightStride: preflightStride,
             initialRatingCompleteCount: count,
