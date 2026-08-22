@@ -1,4 +1,4 @@
-# TS: 2026-08-22 13:22 UTC
+# TS: 2026-08-22 11:00 ET
 
 name: Monster Rating rollout worker
 
@@ -14,7 +14,7 @@ on:
       - "render.yaml"
       - ".github/workflows/rating-rollout-worker.yml"
   schedule:
-    - cron: "8,28,48 * * * *"
+    - cron: "8,38 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -34,7 +34,7 @@ jobs:
           API_BASE: https://next-years-monsters-api.onrender.com
           TARGET_COUNT: "500"
           STATUS_LIMIT: "5000"
-          MAX_DIRECT_FALLBACK_PER_RUN: "5"
+          MAX_DIRECT_FALLBACK_PER_RUN: "8"
           REQUEST_DELAY_MS: "20000"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -44,7 +44,7 @@ jobs:
           const base = process.env.API_BASE;
           const target = Number(process.env.TARGET_COUNT || 500);
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
-          const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 5);
+          const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -161,11 +161,12 @@ jobs:
 
           // No Render deployment authority exists in GitHub. Keep making bounded,
           // quota-safe progress through the already-live rating route instead of
-          // repeatedly diagnosing the same stall. Five candidates every 20 minutes
-          // caps the fallback near 360 candidates/day; even at roughly two market-data
-          // credits per unrated candidate, that stays below the 800-credit free allowance.
-          // Spread each five-attempt batch across the whole eligible universe instead of
-          // burning a run on five adjacent symbols that may share the same ineligibility pattern.
+          // repeatedly diagnosing the same stall. Eight candidates every 30 minutes
+          // caps the fallback at 384 candidates/day; at the conservative two market-data
+          // credits per unrated candidate, that is 768 credits/day and stays below the
+          // 800-credit free allowance while modestly improving throughput over 5 every 20 minutes.
+          // Spread each eight-attempt batch across the whole eligible universe instead of
+          // burning a run on adjacent symbols that may share the same ineligibility pattern.
           const companies = Array.isArray(universe.body?.companies) ? universe.body.companies : [];
           const eligibleCandidates = companies.filter((company) =>
             company &&
@@ -175,7 +176,7 @@ jobs:
             company.hasFilings === true &&
             company.hasFacts === true
           );
-          const cohortNumber = Math.floor(Date.now() / (20 * 60 * 1000));
+          const cohortNumber = Math.floor(Date.now() / (30 * 60 * 1000));
           const attemptCount = Math.min(maxDirectFallbackPerRun, eligibleCandidates.length);
           const startIndex = eligibleCandidates.length > 0
             ? (cohortNumber * maxDirectFallbackPerRun) % eligibleCandidates.length
