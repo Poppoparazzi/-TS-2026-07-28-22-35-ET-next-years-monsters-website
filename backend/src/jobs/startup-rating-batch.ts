@@ -1,4 +1,4 @@
-// TS: 2026-08-22 00:05 ET
+// TS: 2026-08-22 01:07 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -6,6 +6,7 @@ import { isServerlessRuntime } from "../deployment-policy.js";
 import { createMarketDataProvider } from "../providers/index.js";
 import { createRatingBatchStore } from "../ratings/batch-store.js";
 import { createSecDataProvider } from "../sec/index.js";
+import { createUniverseStore } from "../universe/store.js";
 import { runRatingBatch } from "./rating-batch.js";
 
 export function ratingRefreshEnabled(
@@ -39,24 +40,45 @@ export async function runRatingBatchOnStartup(
   const secProvider = createSecDataProvider(config);
   const persistenceStore = createPersistenceStore(config);
   const batchStore = createRatingBatchStore(config);
+  const universeStore = createUniverseStore(config);
 
   try {
+    const desiredTargetCount = boundedInteger(environment.RATING_TARGET_COUNT, 500, 1_000);
+
     if (!ratingRefreshEnabled(environment, config.nodeEnv)) {
       return Object.freeze({
         status: "disabled",
-        targetCount: boundedInteger(environment.RATING_TARGET_COUNT, 500, 1_000),
+        targetCount: desiredTargetCount,
         detail: "Automatic Monster Rating refresh is disabled.",
       });
     }
     if (
       !marketProvider.configured || !marketProvider.getDailyHistory ||
-      !secProvider.configured || !persistenceStore.configured || !batchStore.configured
+      !secProvider.configured || !persistenceStore.configured || !batchStore.configured ||
+      !universeStore.configured
     ) {
       return Object.freeze({
         status: "dependencies-unconfigured",
-        targetCount: boundedInteger(environment.RATING_TARGET_COUNT, 500, 1_000),
+        targetCount: desiredTargetCount,
         marketProvider: marketProvider.name,
         detail: "Not Yet Rated — Stay Tuned. Coming Soon. The licensed historical market feed is not configured.",
+      });
+    }
+
+    // The production target is cumulative. A restart at 364/500 should request
+    // only the remaining 136 ratings, not another 500 fresh ratings. This keeps
+    // recovery fast and avoids wasting licensed provider credits after redeploys.
+    const universeStatus = await universeStore.getStatus(5_000);
+    const alreadyRatedCount = universeStatus.ratingCompleteCount;
+    const remainingTargetCount = Math.max(desiredTargetCount - alreadyRatedCount, 0);
+
+    if (remainingTargetCount === 0) {
+      return Object.freeze({
+        status: "completed",
+        targetCount: desiredTargetCount,
+        alreadyRatedCount,
+        remainingTargetCount,
+        detail: `Monster Rating target already satisfied at ${alreadyRatedCount}/${desiredTargetCount}.`,
       });
     }
 
@@ -73,7 +95,7 @@ export async function runRatingBatchOnStartup(
     const accounting = await runRatingBatch(
       { marketProvider, secProvider, persistenceStore, batchStore },
       {
-        targetCount: boundedInteger(environment.RATING_TARGET_COUNT, 500, 1_000),
+        targetCount: remainingTargetCount,
         // Use the full evidence-ready reserve so ordinary ineligible names are
         // replacements, not blockers. The batch still stops as soon as the target is met.
         candidateLimit: boundedInteger(environment.RATING_CANDIDATE_LIMIT, 5_000, 5_000),
@@ -96,9 +118,12 @@ export async function runRatingBatchOnStartup(
     );
     return Object.freeze({
       status: accounting.ratedCount >= accounting.targetCount ? "completed" : "partial",
+      desiredTargetCount,
+      alreadyRatedCount,
+      remainingTargetCount,
       ...accounting,
     });
   } finally {
-    await Promise.all([persistenceStore.close(), batchStore.close()]);
+    await Promise.all([persistenceStore.close(), batchStore.close(), universeStore.close()]);
   }
 }
