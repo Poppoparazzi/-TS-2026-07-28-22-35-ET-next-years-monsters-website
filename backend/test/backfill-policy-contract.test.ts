@@ -1,4 +1,4 @@
-// TS: 2026-08-21 19:58 UTC
+// TS: 2026-08-22 01:58 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -52,7 +52,11 @@ test("production rating recovery stays on the real licensed market-data path", (
   );
   assert.match(renderYaml, /key:\s*TWELVE_DATA_API_KEY[\s\S]*?sync:\s*false/);
   assert.match(renderYaml, /key:\s*RATING_TARGET_COUNT[\s\S]*?value:\s*"500"/);
-  assert.match(renderYaml, /key:\s*RATING_CANDIDATE_LIMIT[\s\S]*?value:\s*"1000"/);
+  assert.match(
+    renderYaml,
+    /key:\s*RATING_CANDIDATE_LIMIT[\s\S]*?value:\s*"5000"/,
+    "production rating recovery must be able to replace ineligible names from the full reserve",
+  );
   assert.match(
     renderYaml,
     /key:\s*RATING_MARKET_REQUEST_DELAY_MS[\s\S]*?value:\s*"9000"/,
@@ -62,6 +66,11 @@ test("production rating recovery stays on the real licensed market-data path", (
     startupRatingSource,
     /marketProvider\.name\s*===\s*"twelve-data"\s*\?\s*9_000\s*:\s*0/,
     "Twelve Data startup batches must retain the safe 9-second fallback pacing",
+  );
+  assert.match(
+    startupRatingSource,
+    /RATING_CANDIDATE_LIMIT,\s*5_000,\s*5_000/,
+    "startup rating recovery must retain the full 5,000-company reserve fallback",
   );
 });
 
