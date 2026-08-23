@@ -1,4 +1,4 @@
-// TS: 2026-08-23 14:00 ET
+// TS: 2026-08-23 19:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -196,4 +196,21 @@ test("rating batch closes its audit run when benchmark history is unavailable", 
   assert.deepEqual(persistenceStore.savedFacts, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedQuotes, []);
   assert.deepEqual(batchStore.finished, accounting);
+});
+
+test("rating batch accepts the full 5,000-company reserve target without a hidden 1,000 ceiling", async () => {
+  const accounting = await runRatingBatch(
+    {
+      marketProvider: new BatchMarketProvider(),
+      secProvider: new BatchSecProvider(),
+      persistenceStore: new BatchPersistenceStore(),
+      batchStore: new MemoryBatchStore(),
+    },
+    { targetCount: 5_000, candidateLimit: 5_000 },
+  );
+
+  assert.equal(accounting.targetCount, 5_000);
+  assert.equal(accounting.candidateLimit, 5_000);
+  assert.equal(accounting.ratedCount, 1);
+  assert.match(accounting.stoppedReason ?? "", /before 5000 verified ratings/i);
 });
