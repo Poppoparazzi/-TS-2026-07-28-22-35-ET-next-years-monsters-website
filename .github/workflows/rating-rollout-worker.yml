@@ -1,4 +1,4 @@
-# TS: 2026-08-23 03:06 ET
+# TS: 2026-08-23 03:58 ET
 
 name: Monster Rating rollout worker
 
@@ -110,6 +110,8 @@ jobs:
           }
 
           const count = Number(universe.body?.ratingCompleteCount || 0);
+          const remainingCount = Math.max(target - count, 0);
+          const directFallbackBudget = Math.min(maxDirectFallbackPerRun, remainingCount);
           const ratingJob = startup.body?.jobs?.ratingBatch ?? null;
           const earlierJobs = [
             startup.body?.jobs?.universeImport,
@@ -121,6 +123,8 @@ jobs:
           console.log(JSON.stringify({
             ratingCompleteCount: count,
             target,
+            remainingCount,
+            directFallbackBudget,
             secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
             marketConfigured: health.body?.marketData?.configured === true,
             ratingJobState: ratingJob?.state ?? null,
@@ -219,7 +223,7 @@ jobs:
           const protectedAttemptCount = Math.min(
             protectedCandidates.length,
             maxProtectedFallbackPerRun,
-            maxDirectFallbackPerRun,
+            directFallbackBudget,
           );
           const protectedStartIndex = protectedCandidates.length > 0
             ? cohortNumber % protectedCandidates.length
@@ -229,7 +233,7 @@ jobs:
             (_, index) => protectedCandidates[(protectedStartIndex + index) % protectedCandidates.length],
           );
           const ordinaryAttemptCount = Math.min(
-            Math.max(maxDirectFallbackPerRun - protectedAttemptCount, 0),
+            Math.max(directFallbackBudget - protectedAttemptCount, 0),
             ordinaryCandidates.length,
           );
           const startIndex = ordinaryCandidates.length > 0
@@ -280,7 +284,7 @@ jobs:
 
           console.log(
             `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
-            `(eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, ` +
+            `(remaining=${remainingCount}, budget=${directFallbackBudget}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, ` +
             `protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, ` +
             `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
