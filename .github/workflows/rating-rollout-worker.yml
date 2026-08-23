@@ -1,4 +1,4 @@
-# TS: 2026-08-22 22:58 ET
+# TS: 2026-08-23 03:06 ET
 
 name: Monster Rating rollout worker
 
@@ -27,7 +27,7 @@ permissions:
 
 concurrency:
   group: monster-rating-rollout
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   advance-ratings:
