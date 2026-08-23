@@ -1,4 +1,4 @@
-// TS: 2026-08-22 23:58 ET
+// TS: 2026-08-23 02:04 ET
 
 import { execFileSync } from "node:child_process";
 
@@ -12,12 +12,23 @@ function git(arguments_, cwd) {
   return execFileSync("git", arguments_, { cwd, encoding: "utf8" }).trim();
 }
 
-export function isTimestampOnlyRenderPatch(patch) {
-  const changedLines = patch
+function changedPatchLines(patch) {
+  return patch
     .split("\n")
     .filter((line) => (line.startsWith("+") || line.startsWith("-")) && !line.startsWith("+++") && !line.startsWith("---"));
+}
 
-  return changedLines.length > 0 && changedLines.every((line) => /^[-+]# TS: /.test(line));
+export function isTimestampOnlyPatch(patch) {
+  const changedLines = changedPatchLines(patch);
+  return changedLines.length > 0 && changedLines.every((line) => (
+    /^[-+]\s*\/\/ TS: /.test(line) ||
+    /^[-+]\s*# TS: /.test(line) ||
+    /^[-+]\s*<!-- TS: .* -->\s*$/.test(line)
+  ));
+}
+
+export function isTimestampOnlyRenderPatch(patch) {
+  return isTimestampOnlyPatch(patch);
 }
 
 export function isRatingRolloutKickOnly(changedFiles) {
@@ -34,8 +45,15 @@ function isDeployRelevantCommit(sha, cwd) {
     return false;
   }
 
-  if (changedFiles.some((file) => file === "backend" || file.startsWith("backend/"))) {
-    return true;
+  const backendFiles = changedFiles.filter((file) => file === "backend" || file.startsWith("backend/"));
+  if (backendFiles.length > 0) {
+    const backendChangesAreTimestampOnly = backendFiles.every((file) => {
+      const patch = git(["show", "--format=", "--unified=0", sha, "--", file], cwd);
+      return isTimestampOnlyPatch(patch);
+    });
+    if (!backendChangesAreTimestampOnly) {
+      return true;
+    }
   }
 
   if (!changedFiles.includes("render.yaml")) {
