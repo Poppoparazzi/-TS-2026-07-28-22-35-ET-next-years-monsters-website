@@ -1,4 +1,4 @@
-// TS: 2026-08-23 02:04 ET
+// TS: 2026-08-23 07:59 ET
 
 import { execFileSync } from "node:child_process";
 
@@ -7,6 +7,7 @@ const DEPLOY_RELEVANT_PATHS = Object.freeze([
   "render.yaml",
 ]);
 const RATING_ROLLOUT_KICK_PATTERN = /^backend\/src\/policy\/rating-rollout-kick-\d+\.ts$/;
+const BACKEND_TEST_PATTERN = /^backend\/test\//;
 
 function git(arguments_, cwd) {
   return execFileSync("git", arguments_, { cwd, encoding: "utf8" }).trim();
@@ -35,13 +36,17 @@ export function isRatingRolloutKickOnly(changedFiles) {
   return changedFiles.length > 0 && changedFiles.every((file) => RATING_ROLLOUT_KICK_PATTERN.test(file));
 }
 
+export function isBackendTestOnly(changedFiles) {
+  return changedFiles.length > 0 && changedFiles.every((file) => BACKEND_TEST_PATTERN.test(file));
+}
+
 function isDeployRelevantCommit(sha, cwd) {
   const changedFiles = git(["diff-tree", "--no-commit-id", "--name-only", "-r", sha], cwd)
     .split("\n")
     .map((file) => file.trim())
     .filter(Boolean);
 
-  if (isRatingRolloutKickOnly(changedFiles)) {
+  if (isRatingRolloutKickOnly(changedFiles) || isBackendTestOnly(changedFiles)) {
     return false;
   }
 
