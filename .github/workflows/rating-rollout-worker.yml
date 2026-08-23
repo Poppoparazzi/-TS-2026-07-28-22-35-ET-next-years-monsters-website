@@ -1,4 +1,4 @@
-# TS: 2026-08-22 22:57 UTC
+# TS: 2026-08-22 20:00 ET
 
 name: Monster Rating rollout worker
 
@@ -10,6 +10,11 @@ on:
       - "backend/src/jobs/startup-rating-batch.ts"
       - "backend/src/jobs/rating-batch.ts"
       - "backend/src/database/persistence.ts"
+      - "backend/src/providers/**"
+      - "backend/src/sec/**"
+      - "backend/src/universe/**"
+      - "backend/src/policy/**"
+      - "backend/src/config.ts"
       - "backend/src/app.ts"
       - "render.yaml"
       - ".github/workflows/rating-rollout-worker.yml"
