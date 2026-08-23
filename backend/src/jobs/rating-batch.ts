@@ -1,4 +1,4 @@
-// TS: 2026-08-23 07:08 ET
+// TS: 2026-08-23 09:00 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -131,12 +131,14 @@ export async function runRatingBatch(
     if (ratedTickers.length >= targetCount) break;
     examinedCount += 1;
     try {
-      const [company, facts, filings, history] = await Promise.all([
+      // Qualify the SEC side first. A failed SEC lookup must not consume a licensed
+      // market-history request for a company that cannot possibly produce a rating.
+      const [company, facts, filings] = await Promise.all([
         secProvider.getCompany(candidate.ticker),
         secProvider.getCompanyFacts(candidate.ticker),
         secProvider.getRecentFilings(candidate.ticker, 1),
-        getPacedHistory(candidate.ticker, 300),
       ]);
+      const history = await getPacedHistory(candidate.ticker, 300);
       const calculatedAt = new Date().toISOString();
       const rating = calculateMonsterRatingV1(buildProductionRatingInput({
         company,
