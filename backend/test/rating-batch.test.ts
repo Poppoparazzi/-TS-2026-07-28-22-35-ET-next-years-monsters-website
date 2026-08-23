@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:47 UTC
+// TS: 2026-08-23 07:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -117,10 +117,14 @@ class BatchPersistenceStore implements PersistenceStore {
   public readonly name = "test-db";
   public readonly configured = true;
   public readonly ratings: EligibleProductionRating[] = [];
-  public async saveQuote(_quote: QuoteSnapshot): Promise<void> {}
-  public async saveSecCompany(_company: SecCompany): Promise<void> {}
-  public async saveSecFilings(_company: SecCompany, _filings: readonly SecFilingSummary[]): Promise<void> {}
-  public async saveSecFacts(_summary: SecCompanyFactsSummary): Promise<void> {}
+  public readonly savedQuotes: string[] = [];
+  public readonly savedCompanies: string[] = [];
+  public readonly savedFilings: string[] = [];
+  public readonly savedFacts: string[] = [];
+  public async saveQuote(quote: QuoteSnapshot): Promise<void> { this.savedQuotes.push(quote.symbol); }
+  public async saveSecCompany(company: SecCompany): Promise<void> { this.savedCompanies.push(company.ticker); }
+  public async saveSecFilings(company: SecCompany, _filings: readonly SecFilingSummary[]): Promise<void> { this.savedFilings.push(company.ticker); }
+  public async saveSecFacts(summary: SecCompanyFactsSummary): Promise<void> { this.savedFacts.push(summary.ticker); }
   public async saveRating(rating: EligibleProductionRating): Promise<void> { this.ratings.push(rating); }
   public async getStoredCompany(_symbol: string): Promise<StoredCompanySnapshot | null> { return null; }
   public async close(): Promise<void> {}
@@ -165,6 +169,10 @@ test("rating batch retains protected failures, replaces ordinary failures, and r
   assert.equal(accounting.finalUsableUniverse, 1);
   assert.equal(accounting.stoppedReason, null);
   assert.equal(persistenceStore.ratings.length, 1);
+  assert.deepEqual(persistenceStore.savedCompanies, ["AAPL", "FAIL", "GOOD"]);
+  assert.deepEqual(persistenceStore.savedFilings, ["AAPL", "FAIL", "GOOD"]);
+  assert.deepEqual(persistenceStore.savedFacts, ["AAPL", "FAIL", "GOOD"]);
+  assert.deepEqual(persistenceStore.savedQuotes, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(batchStore.finished, accounting);
 });
 
