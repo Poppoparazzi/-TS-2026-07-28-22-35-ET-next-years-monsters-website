@@ -1,4 +1,4 @@
-// TS: 2026-08-23 07:59 ET
+// TS: 2026-08-23 15:05 ET
 
 import { execFileSync } from "node:child_process";
 
@@ -6,7 +6,7 @@ const DEPLOY_RELEVANT_PATHS = Object.freeze([
   "backend",
   "render.yaml",
 ]);
-const RATING_ROLLOUT_KICK_PATTERN = /^backend\/src\/policy\/rating-rollout-kick-\d+\.ts$/;
+const RATING_ROLLOUT_KICK_PATTERN = /^backend\/src\/policy\/rating-rollout-kick-[\d-]+\.ts$/;
 const BACKEND_TEST_PATTERN = /^backend\/test\//;
 
 function git(arguments_, cwd) {
