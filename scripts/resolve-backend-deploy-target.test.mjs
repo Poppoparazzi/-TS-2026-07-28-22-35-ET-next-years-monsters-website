@@ -1,9 +1,10 @@
-// TS: 2026-08-23 02:04 ET
+// TS: 2026-08-23 07:59 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  isBackendTestOnly,
   isRatingRolloutKickOnly,
   isTimestampOnlyPatch,
   isTimestampOnlyRenderPatch,
@@ -48,4 +49,22 @@ test("rating-rollout kick marker commits are not deployment targets", () => {
     false,
   );
   assert.equal(isRatingRolloutKickOnly(["backend/src/ratings/engine.ts"]), false);
+});
+
+test("backend test-only commits do not make Render look stale", () => {
+  assert.equal(
+    isBackendTestOnly([
+      "backend/test/rating-batch.test.ts",
+      "backend/test/twelve-data.test.ts",
+    ]),
+    true,
+  );
+  assert.equal(
+    isBackendTestOnly([
+      "backend/test/rating-batch.test.ts",
+      "backend/src/jobs/rating-batch.ts",
+    ]),
+    false,
+  );
+  assert.equal(isBackendTestOnly(["scripts/verify-production.mjs"]), false);
 });
