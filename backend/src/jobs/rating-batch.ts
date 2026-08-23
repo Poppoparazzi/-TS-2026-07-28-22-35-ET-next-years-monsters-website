@@ -1,4 +1,4 @@
-// TS: 2026-08-23 10:57 ET
+// TS: 2026-08-23 13:00 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -104,29 +104,7 @@ export async function runRatingBatch(
   const replaceable: { ticker: string; reason: string }[] = [];
   let examinedCount = 0;
   let stoppedReason: string | null = null;
-  let benchmarkHistory: DailyMarketHistory;
-
-  try {
-    benchmarkHistory = await getPacedHistory("SPY", 300);
-  } catch (error) {
-    const accounting: RatingBatchAccounting = Object.freeze({
-      targetCount,
-      candidateLimit,
-      totalCandidatesExamined: 0,
-      ratedCount: 0,
-      protectedMustRepairCount: 0,
-      replaceableCount: 0,
-      replacementsAttempted: 0,
-      finalUsableUniverse: 0,
-      protectedMustRepair: Object.freeze([]),
-      replaceable: Object.freeze([]),
-      ratedTickers: Object.freeze([]),
-      stoppedReason: `Benchmark market history could not be loaded: ${reason(error)}`,
-      completedAt: new Date().toISOString(),
-    });
-    await batchStore.finishRun(runId, accounting);
-    return accounting;
-  }
+  let benchmarkHistory: DailyMarketHistory | undefined;
 
   for (const candidate of candidates) {
     if (ratedTickers.length >= targetCount) break;
@@ -146,7 +124,8 @@ export async function runRatingBatch(
 
       // The rating engine cannot possibly publish a score without at least two
       // comparable annual SEC revenue periods. Detect that from free SEC evidence
-      // before spending a licensed market-history request on a guaranteed skip.
+      // before spending any licensed market-history request, including the shared
+      // benchmark request for a batch that may contain no viable candidates.
       const annualFinancials = buildAnnualFinancialPeriods(facts);
       const annualRevenuePeriods = annualFinancials.filter(
         (period) => typeof period.revenue === "number" && Number.isFinite(period.revenue),
@@ -159,6 +138,15 @@ export async function runRatingBatch(
         if (candidate.isProtected) protectedMustRepair.push(failure);
         else replaceable.push(failure);
         continue;
+      }
+
+      if (!benchmarkHistory) {
+        try {
+          benchmarkHistory = await getPacedHistory("SPY", 300);
+        } catch (error) {
+          stoppedReason = `Benchmark market history could not be loaded: ${reason(error)}`;
+          break;
+        }
       }
 
       const history = await getPacedHistory(candidate.ticker, 300);
