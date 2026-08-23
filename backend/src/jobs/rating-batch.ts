@@ -1,4 +1,4 @@
-// TS: 2026-08-21 16:33 ET
+// TS: 2026-08-23 07:08 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -145,6 +145,16 @@ export async function runRatingBatch(
         benchmarkHistory,
         calculatedAt,
       }));
+
+      // Every successful provider/SEC fetch is useful production evidence, even when
+      // the rating engine correctly withholds a score. Persist that real evidence so
+      // future selection/preflight work does not throw away a paid market-data call.
+      const quote = quoteFromDailyHistory(company, history);
+      await persistenceStore.saveSecCompany(company);
+      await persistenceStore.saveSecFilings(company, filings);
+      await persistenceStore.saveSecFacts(facts);
+      await persistenceStore.saveQuote(quote);
+
       if (!rating.eligible) {
         const failure = { ticker: candidate.ticker, reason: rating.reasons[0]?.message ?? rating.summary };
         if (candidate.isProtected) protectedMustRepair.push(failure);
@@ -152,7 +162,6 @@ export async function runRatingBatch(
         continue;
       }
 
-      const quote = quoteFromDailyHistory(company, history);
       const publishableRating = buildPublishableRating({
         rating,
         facts,
@@ -160,9 +169,6 @@ export async function runRatingBatch(
         quote,
         secProviderName: secProvider.name,
       });
-      await persistenceStore.saveSecCompany(company);
-      await persistenceStore.saveSecFilings(company, filings);
-      await persistenceStore.saveQuote(quote);
       if (!persistenceStore.saveRating) throw new Error("Rating persistence is unavailable.");
       await persistenceStore.saveRating(publishableRating);
       ratedTickers.push(candidate.ticker);
