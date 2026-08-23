@@ -1,4 +1,4 @@
-// TS: 2026-08-22 01:58 ET
+// TS: 2026-08-22 22:08 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -71,6 +71,31 @@ test("production rating recovery stays on the real licensed market-data path", (
     startupRatingSource,
     /RATING_CANDIDATE_LIMIT,\s*5_000,\s*5_000/,
     "startup rating recovery must retain the full 5,000-company reserve fallback",
+  );
+});
+
+test("direct rating rollout preserves the first-500 quota-safe recovery policy", () => {
+  const rolloutWorker = readRepositoryFile("../../.github/workflows/rating-rollout-worker.yml");
+
+  assert.match(rolloutWorker, /TARGET_COUNT:\s*"500"/);
+  assert.match(rolloutWorker, /STATUS_LIMIT:\s*"5000"/);
+  assert.match(rolloutWorker, /MAX_DIRECT_FALLBACK_PER_RUN:\s*"8"/);
+  assert.match(rolloutWorker, /MAX_PROTECTED_FALLBACK_PER_RUN:\s*"2"/);
+  assert.match(rolloutWorker, /REQUEST_DELAY_MS:\s*"20000"/);
+  assert.match(rolloutWorker, /PREFLIGHT_POOL_SIZE:\s*"64"/);
+  assert.match(rolloutWorker, /PREFLIGHT_CONCURRENCY:\s*"8"/);
+  assert.match(rolloutWorker, /cron:\s*"8,38 \* \* \* \*"/);
+  assert.match(rolloutWorker, /backend\/src\/providers\/\*\*/);
+  assert.match(rolloutWorker, /backend\/src\/sec\/\*\*/);
+  assert.match(rolloutWorker, /backend\/src\/universe\/\*\*/);
+  assert.match(rolloutWorker, /protectedVclTickers = Object\.freeze\(\[/);
+  assert.match(rolloutWorker, /protectedAttemptCount = Math\.min\(/);
+  assert.match(rolloutWorker, /preflightPoolSize/);
+  assert.match(rolloutWorker, /preflightConcurrency/);
+  assert.doesNotMatch(
+    rolloutWorker,
+    /TARGET_COUNT:\s*"5000"/,
+    "the 5,000-company reserve must never be confused with the first-500 rating milestone",
   );
 });
 
