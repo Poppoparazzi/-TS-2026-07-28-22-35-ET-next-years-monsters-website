@@ -1,4 +1,4 @@
-# TS: 2026-08-23 16:21 ET
+# TS: 2026-08-23 17:01 ET
 
 name: Monster Rating rollout worker
 
@@ -38,6 +38,7 @@ jobs:
         env:
           API_BASE: https://next-years-monsters-api.onrender.com
           TARGET_COUNT: "5000"
+          FIRST_MILESTONE_COUNT: "500"
           STATUS_LIMIT: "5000"
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
           MAX_PROTECTED_FALLBACK_PER_RUN: "2"
@@ -51,6 +52,7 @@ jobs:
           node --input-type=module <<'NODE'
           const base = process.env.API_BASE;
           const target = Number(process.env.TARGET_COUNT || 5000);
+          const firstMilestone = Number(process.env.FIRST_MILESTONE_COUNT || 500);
           const statusLimit = Number(process.env.STATUS_LIMIT || 5000);
           const maxDirectFallbackPerRun = Number(process.env.MAX_DIRECT_FALLBACK_PER_RUN || 8);
           const maxProtectedFallbackPerRun = Math.max(
@@ -111,6 +113,8 @@ jobs:
 
           const count = Number(universe.body?.ratingCompleteCount || 0);
           const remainingCount = Math.max(target - count, 0);
+          const remainingFirstMilestone = Math.max(firstMilestone - count, 0);
+          const firstMilestoneReached = count >= firstMilestone;
           const directFallbackBudget = Math.min(maxDirectFallbackPerRun, remainingCount);
           const ratingJob = startup.body?.jobs?.ratingBatch ?? null;
           const earlierJobs = [
@@ -124,6 +128,9 @@ jobs:
             ratingCompleteCount: count,
             target,
             remainingCount,
+            firstMilestone,
+            remainingFirstMilestone,
+            firstMilestoneReached,
             directFallbackBudget,
             secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
             marketConfigured: health.body?.marketData?.configured === true,
@@ -136,6 +143,10 @@ jobs:
           if (count >= target) {
             console.log(`Monster Rating target reached: ${count}/${target}.`);
             process.exit(0);
+          }
+
+          if (firstMilestoneReached) {
+            console.log(`First Monster Rating milestone reached: ${count}/${firstMilestone}. Continuing safely toward ${target}.`);
           }
 
           if (health.body?.marketData?.configured !== true) {
@@ -284,7 +295,7 @@ jobs:
 
           console.log(
             `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
-            `(remaining=${remainingCount}, budget=${directFallbackBudget}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, ` +
+            `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, ` +
             `protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, ` +
             `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
