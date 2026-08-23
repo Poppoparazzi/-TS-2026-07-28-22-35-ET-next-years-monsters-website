@@ -1,4 +1,4 @@
-// TS: 2026-08-22 02:58 ET
+// TS: 2026-08-23 04:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -116,6 +116,16 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           WHERE cf.company_id = c.id
             AND cf.value_numeric IS NOT NULL
         ) size_metric ON true
+        LEFT JOIN LATERAL (
+          SELECT count(*) AS fact_count
+          FROM company_facts cf
+          WHERE cf.company_id = c.id
+        ) fact_depth ON true
+        LEFT JOIN LATERAL (
+          SELECT count(*) AS filing_count
+          FROM sec_filings sf
+          WHERE sf.company_id = c.id
+        ) filing_depth ON true
         WHERE c.is_active = true
           AND cps.sec_status = 'complete'
           AND c.sec_cik IS NOT NULL
@@ -125,6 +135,8 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
         ORDER BY
           CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
           c.is_pilot DESC,
+          COALESCE(fact_depth.fact_count, 0) DESC,
+          COALESCE(filing_depth.filing_count, 0) DESC,
           COALESCE(size_metric.priority_metric, 0) DESC,
           c.ticker
         LIMIT $1
