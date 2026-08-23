@@ -1,4 +1,4 @@
-// TS: 2026-08-23 09:00 ET
+// TS: 2026-08-23 10:03 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -131,13 +131,18 @@ export async function runRatingBatch(
     if (ratedTickers.length >= targetCount) break;
     examinedCount += 1;
     try {
-      // Qualify the SEC side first. A failed SEC lookup must not consume a licensed
-      // market-history request for a company that cannot possibly produce a rating.
+      // Qualify and persist the SEC side first. A failed SEC lookup or database
+      // write must not consume a licensed market-history request, and a later
+      // market/provider failure must not discard SEC evidence we already earned.
       const [company, facts, filings] = await Promise.all([
         secProvider.getCompany(candidate.ticker),
         secProvider.getCompanyFacts(candidate.ticker),
         secProvider.getRecentFilings(candidate.ticker, 1),
       ]);
+      await persistenceStore.saveSecCompany(company);
+      await persistenceStore.saveSecFilings(company, filings);
+      await persistenceStore.saveSecFacts(facts);
+
       const history = await getPacedHistory(candidate.ticker, 300);
       const calculatedAt = new Date().toISOString();
       const rating = calculateMonsterRatingV1(buildProductionRatingInput({
@@ -148,13 +153,10 @@ export async function runRatingBatch(
         calculatedAt,
       }));
 
-      // Every successful provider/SEC fetch is useful production evidence, even when
-      // the rating engine correctly withholds a score. Persist that real evidence so
-      // future selection/preflight work does not throw away a paid market-data call.
+      // Every successful market fetch is useful production evidence, even when
+      // the rating engine correctly withholds a score. Persist the real quote so
+      // future selection/preflight work does not throw away a paid provider call.
       const quote = quoteFromDailyHistory(company, history);
-      await persistenceStore.saveSecCompany(company);
-      await persistenceStore.saveSecFilings(company, filings);
-      await persistenceStore.saveSecFacts(facts);
       await persistenceStore.saveQuote(quote);
 
       if (!rating.eligible) {
