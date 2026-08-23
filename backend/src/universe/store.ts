@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-08-22 21:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -8,6 +8,7 @@ import {
   PROTECTED_STRATEGIC_TICKERS,
 } from "../policy/protected-stocks.js";
 import { ProviderNotConfiguredError } from "../providers/types.js";
+import { MONSTER_RATING_ENGINE_VERSION } from "../ratings/engine-v1.js";
 import type {
   PipelineStatus,
   UniverseCompany,
@@ -250,7 +251,9 @@ export class PostgresUniverseStore implements UniverseStore {
               EXISTS (SELECT 1 FROM quote_snapshots qs WHERE qs.company_id = c.id) AS has_quote,
               EXISTS (
                 SELECT 1 FROM monster_rating_runs mr
-                WHERE mr.company_id = c.id AND mr.status = 'complete'
+                WHERE mr.company_id = c.id
+                  AND mr.rating_version = $2
+                  AND mr.status = 'complete'
               ) AS has_rating,
               c.updated_at
             FROM companies c
@@ -263,7 +266,7 @@ export class PostgresUniverseStore implements UniverseStore {
               c.ticker
             LIMIT $1
           `,
-          [safeLimit],
+          [safeLimit, MONSTER_RATING_ENGINE_VERSION],
         ),
       ]);
 
@@ -451,7 +454,9 @@ export class PostgresUniverseStore implements UniverseStore {
               EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id) AS has_facts,
               EXISTS (
                 SELECT 1 FROM monster_rating_runs mr
-                WHERE mr.company_id = c.id AND mr.status = 'complete'
+                WHERE mr.company_id = c.id
+                  AND mr.rating_version = $4
+                  AND mr.status = 'complete'
               ) AS has_rating
             FROM companies c
             LEFT JOIN company_pipeline_status cps ON cps.company_id = c.id
@@ -478,7 +483,7 @@ export class PostgresUniverseStore implements UniverseStore {
               c.ticker
             LIMIT $2
           `,
-          [normalizedQuery, safeLimit, evidenceReadyOnly],
+          [normalizedQuery, safeLimit, evidenceReadyOnly, MONSTER_RATING_ENGINE_VERSION],
         ),
       ]);
 
