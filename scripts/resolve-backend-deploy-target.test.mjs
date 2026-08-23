@@ -1,4 +1,4 @@
-// TS: 2026-08-23 07:59 ET
+// TS: 2026-08-23 15:07 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -39,6 +39,10 @@ test("timestamp-only backend source changes are not deployment targets", () => {
 test("rating-rollout kick marker commits are not deployment targets", () => {
   assert.equal(
     isRatingRolloutKickOnly(["backend/src/policy/rating-rollout-kick-20260822.ts"]),
+    true,
+  );
+  assert.equal(
+    isRatingRolloutKickOnly(["backend/src/policy/rating-rollout-kick-20260823-1824.ts"]),
     true,
   );
   assert.equal(
