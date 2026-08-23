@@ -1,9 +1,10 @@
-// TS: 2026-08-23 10:03 ET
+// TS: 2026-08-23 10:57 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
 import { calculateMonsterRatingV1 } from "../ratings/engine-v1.js";
 import {
+  buildAnnualFinancialPeriods,
   buildProductionRatingInput,
   buildPublishableRating,
   quoteFromDailyHistory,
@@ -142,6 +143,23 @@ export async function runRatingBatch(
       await persistenceStore.saveSecCompany(company);
       await persistenceStore.saveSecFilings(company, filings);
       await persistenceStore.saveSecFacts(facts);
+
+      // The rating engine cannot possibly publish a score without at least two
+      // comparable annual SEC revenue periods. Detect that from free SEC evidence
+      // before spending a licensed market-history request on a guaranteed skip.
+      const annualFinancials = buildAnnualFinancialPeriods(facts);
+      const annualRevenuePeriods = annualFinancials.filter(
+        (period) => typeof period.revenue === "number" && Number.isFinite(period.revenue),
+      );
+      if (annualFinancials.length < 2 || annualRevenuePeriods.length < 2) {
+        const failure = {
+          ticker: candidate.ticker,
+          reason: "At least two comparable annual SEC revenue periods are required.",
+        };
+        if (candidate.isProtected) protectedMustRepair.push(failure);
+        else replaceable.push(failure);
+        continue;
+      }
 
       const history = await getPacedHistory(candidate.ticker, 300);
       const calculatedAt = new Date().toISOString();
