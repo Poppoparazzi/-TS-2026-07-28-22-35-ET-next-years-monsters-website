@@ -1,4 +1,4 @@
-// TS: 2026-08-23 13:00 ET
+// TS: 2026-08-23 16:01 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -121,6 +121,19 @@ export async function runRatingBatch(
       await persistenceStore.saveSecCompany(company);
       await persistenceStore.saveSecFilings(company, filings);
       await persistenceStore.saveSecFacts(facts);
+
+      // A mismatched SEC identity can never produce a publishable rating. Detect
+      // it after preserving the real SEC response but before buying SPY or company
+      // market history. Protected names stay in repair; ordinary names are replaceable.
+      if (company.cik <= 0 || facts.cik !== company.cik) {
+        const failure = {
+          ticker: candidate.ticker,
+          reason: "Official SEC company identity does not match the company-facts identity.",
+        };
+        if (candidate.isProtected) protectedMustRepair.push(failure);
+        else replaceable.push(failure);
+        continue;
+      }
 
       // The rating engine cannot possibly publish a score without at least two
       // comparable annual SEC revenue periods. Detect that from free SEC evidence
