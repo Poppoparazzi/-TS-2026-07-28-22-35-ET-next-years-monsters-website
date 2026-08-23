@@ -1,4 +1,4 @@
-# TS: 2026-08-23 03:06 ET
+# TS: 2026-08-23 07:10 UTC
 
 name: Monster Rating rollout worker
 
@@ -37,7 +37,7 @@ jobs:
       - name: Watch production and restart the real bulk rating job when needed
         env:
           API_BASE: https://next-years-monsters-api.onrender.com
-          TARGET_COUNT: "500"
+          TARGET_COUNT: "5000"
           STATUS_LIMIT: "5000"
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
           MAX_PROTECTED_FALLBACK_PER_RUN: "2"
@@ -262,9 +262,6 @@ jobs:
             },
           );
           const rankedOrdinaryCandidates = preflightResults
-            // universe.hasRating is the authoritative current-engine rollout flag.
-            // A nonzero stored ratingCount may represent an older engine version and must not
-            // make that company permanently ineligible for the current-version first-500 rollout.
             .sort((left, right) =>
               left.ratingCount - right.ratingCount ||
               right.factCount - left.factCount ||
