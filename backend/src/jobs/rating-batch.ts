@@ -1,4 +1,4 @@
-// TS: 2026-08-23 16:01 ET
+// TS: 2026-08-23 19:02 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -57,7 +57,9 @@ export async function runRatingBatch(
   dependencies: RatingBatchDependencies,
   options: RatingBatchOptions = {},
 ): Promise<RatingBatchAccounting> {
-  const targetCount = Math.min(Math.max(Math.trunc(options.targetCount ?? 500), 1), 1_000);
+  // The production reserve is 5,000 companies. Do not reintroduce a smaller
+  // hidden bulk-rating ceiling after the first-500 milestone is crossed.
+  const targetCount = Math.min(Math.max(Math.trunc(options.targetCount ?? 500), 1), 5_000);
   const candidateLimit = Math.min(
     Math.max(Math.trunc(options.candidateLimit ?? Math.max(targetCount * 2, 1_000)), targetCount),
     5_000,
