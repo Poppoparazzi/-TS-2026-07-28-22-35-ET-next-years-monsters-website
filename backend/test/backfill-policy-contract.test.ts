@@ -1,4 +1,4 @@
-// TS: 2026-08-22 22:08 ET
+// TS: 2026-08-23 17:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -74,10 +74,14 @@ test("production rating recovery stays on the real licensed market-data path", (
   );
 });
 
-test("direct rating rollout preserves the first-500 quota-safe recovery policy", () => {
+test("direct rating rollout preserves a visible first-500 milestone while continuing safely", () => {
   const rolloutWorker = readRepositoryFile("../../.github/workflows/rating-rollout-worker.yml");
 
-  assert.match(rolloutWorker, /TARGET_COUNT:\s*"500"/);
+  assert.match(rolloutWorker, /TARGET_COUNT:\s*"5000"/);
+  assert.match(rolloutWorker, /FIRST_MILESTONE_COUNT:\s*"500"/);
+  assert.match(rolloutWorker, /firstMilestoneReached/);
+  assert.match(rolloutWorker, /remainingFirstMilestone/);
+  assert.match(rolloutWorker, /First Monster Rating milestone reached/);
   assert.match(rolloutWorker, /STATUS_LIMIT:\s*"5000"/);
   assert.match(rolloutWorker, /MAX_DIRECT_FALLBACK_PER_RUN:\s*"8"/);
   assert.match(rolloutWorker, /MAX_PROTECTED_FALLBACK_PER_RUN:\s*"2"/);
@@ -92,11 +96,6 @@ test("direct rating rollout preserves the first-500 quota-safe recovery policy",
   assert.match(rolloutWorker, /protectedAttemptCount = Math\.min\(/);
   assert.match(rolloutWorker, /preflightPoolSize/);
   assert.match(rolloutWorker, /preflightConcurrency/);
-  assert.doesNotMatch(
-    rolloutWorker,
-    /TARGET_COUNT:\s*"5000"/,
-    "the 5,000-company reserve must never be confused with the first-500 rating milestone",
-  );
 });
 
 test("scheduled recovery and production closeout use the broad reserve", () => {
