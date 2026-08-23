@@ -1,4 +1,4 @@
-// TS: 2026-08-23 07:58 ET
+// TS: 2026-08-23 14:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -172,24 +172,28 @@ test("rating batch retains protected failures, replaces ordinary failures, and r
   assert.deepEqual(persistenceStore.savedCompanies, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedFilings, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedFacts, ["AAPL", "FAIL", "GOOD"]);
-  assert.deepEqual(persistenceStore.savedQuotes, ["AAPL", "FAIL", "GOOD"]);
+  assert.deepEqual(persistenceStore.savedQuotes, ["GOOD"]);
   assert.deepEqual(batchStore.finished, accounting);
 });
 
 test("rating batch closes its audit run when benchmark history is unavailable", async () => {
+  const persistenceStore = new BatchPersistenceStore();
   const batchStore = new MemoryBatchStore();
   const accounting = await runRatingBatch(
     {
       marketProvider: new BenchmarkFailingMarketProvider(),
       secProvider: new BatchSecProvider(),
-      persistenceStore: new BatchPersistenceStore(),
+      persistenceStore,
       batchStore,
     },
     { targetCount: 1, candidateLimit: 3 },
   );
 
-  assert.equal(accounting.totalCandidatesExamined, 0);
+  assert.equal(accounting.totalCandidatesExamined, 3);
   assert.equal(accounting.ratedCount, 0);
   assert.match(accounting.stoppedReason ?? "", /benchmark quota/i);
+  assert.deepEqual(persistenceStore.savedCompanies, ["AAPL", "FAIL", "GOOD"]);
+  assert.deepEqual(persistenceStore.savedFacts, ["AAPL", "FAIL", "GOOD"]);
+  assert.deepEqual(persistenceStore.savedQuotes, []);
   assert.deepEqual(batchStore.finished, accounting);
 });
