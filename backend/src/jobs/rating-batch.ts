@@ -1,4 +1,4 @@
-// TS: 2026-08-24 11:14 ET
+// TS: 2026-08-24 17:59 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -43,7 +43,7 @@ function providerAuthorizationUnavailable(message: string): boolean {
 }
 
 function providerTransportUnavailable(message: string): boolean {
-  return /fetch failed|network|timeout|timed out|econnreset|econnrefused|etimedout|socket hang up|service unavailable|bad gateway|gateway timeout|http 50[234]/i.test(message);
+  return /fetch failed|network|timeout|timed out|econnreset|econnrefused|etimedout|socket hang up|service unavailable|bad gateway|gateway timeout|http 408|http 5\d\d/i.test(message);
 }
 
 function boundedDelay(value: number | undefined, maximum = 60_000): number {
