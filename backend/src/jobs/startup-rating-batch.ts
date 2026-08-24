@@ -1,4 +1,4 @@
-// TS: 2026-08-23 20:05 ET
+// TS: 2026-08-23 21:04 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -68,20 +68,12 @@ export async function runRatingBatchOnStartup(
       });
     }
 
-    // Count only ratings completed by the current engine version. The universe
-    // status count intentionally answers the broader "has any rating" question,
-    // while listCandidates excludes only companies already completed by the
-    // current engine version. Subtracting current-version unrated evidence-ready
-    // candidates from the evidence-ready population gives the matching rollout
-    // count and prevents old-version ratings from prematurely satisfying 500.
-    const [universeStatus, currentVersionUnratedCandidates] = await Promise.all([
-      universeStore.getStatus(5_000),
-      batchStore.listCandidates(5_000),
-    ]);
-    const alreadyRatedCount = Math.max(
-      universeStatus.secEvidenceReadyCount - currentVersionUnratedCandidates.length,
-      0,
-    );
+    // Universe status now counts only ratings completed by the current engine
+    // version. Use that authoritative count directly instead of issuing a second
+    // 5,000-company candidate scan merely to infer how many ratings already exist.
+    // runRatingBatch will fetch the candidate reserve once if more ratings are needed.
+    const universeStatus = await universeStore.getStatus(5_000);
+    const alreadyRatedCount = universeStatus.ratingCompleteCount;
     const remainingTargetCount = Math.max(desiredTargetCount - alreadyRatedCount, 0);
 
     if (remainingTargetCount === 0) {
