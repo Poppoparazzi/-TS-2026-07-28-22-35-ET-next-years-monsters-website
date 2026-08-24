@@ -1,4 +1,4 @@
-// TS: 2026-08-24 01:01 ET
+// TS: 2026-08-24 11:14 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -36,6 +36,10 @@ function reason(error: unknown): string {
 
 function providerLimitReached(message: string): boolean {
   return /rate limit|api credits|credit limit|too many requests|quota/i.test(message);
+}
+
+function providerAuthorizationUnavailable(message: string): boolean {
+  return /http 40[13]|unauthori[sz]ed|forbidden|invalid api key|api key.*invalid|authentication|entitlement|permission denied/i.test(message);
 }
 
 function providerTransportUnavailable(message: string): boolean {
@@ -204,10 +208,14 @@ export async function runRatingBatch(
         history = await getPacedHistory(candidate.ticker, 300);
       } catch (error) {
         const message = reason(error);
-        // A provider-wide quota or transport outage says nothing about the stock.
-        // Stop the batch without poisoning the repair/replacement roster. Genuine
-        // symbol/evidence errors continue through the ordinary candidate handling.
-        if (providerLimitReached(message) || providerTransportUnavailable(message)) {
+        // Provider-wide quota, authorization, entitlement, or transport trouble says
+        // nothing about the stock. Stop the batch without poisoning the repair or
+        // replacement roster. Genuine symbol/evidence errors continue normally.
+        if (
+          providerLimitReached(message) ||
+          providerAuthorizationUnavailable(message) ||
+          providerTransportUnavailable(message)
+        ) {
           stoppedReason = `Market-data provider unavailable while processing ${candidate.ticker}: ${message}`;
           break;
         }
@@ -248,11 +256,10 @@ export async function runRatingBatch(
       ratedTickers.push(candidate.ticker);
     } catch (error) {
       const message = reason(error);
-      // Provider quota/rate-limit exhaustion is a batch-level transport condition,
-      // not evidence that the current company is bad. Do not poison the repair or
-      // replacement roster by blaming a candidate for Twelve Data being unavailable.
-      if (providerLimitReached(message)) {
-        stoppedReason = `Market-data provider limit remained unavailable after ${marketLimitMaxRetries} retries while processing ${candidate.ticker}: ${message}`;
+      // Provider quota/rate-limit or authorization/entitlement exhaustion is a
+      // batch-level condition, not evidence that the current company is bad.
+      if (providerLimitReached(message) || providerAuthorizationUnavailable(message)) {
+        stoppedReason = `Market-data provider remained unavailable while processing ${candidate.ticker}: ${message}`;
         break;
       }
 
