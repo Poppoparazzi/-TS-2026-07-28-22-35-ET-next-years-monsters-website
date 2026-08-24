@@ -1,4 +1,4 @@
-// TS: 2026-08-23 22:59 ET
+// TS: 2026-08-24 00:03 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -222,6 +222,14 @@ export async function runRatingBatch(
       // replacement roster by blaming a candidate for Twelve Data being unavailable.
       if (providerLimitReached(message)) {
         stoppedReason = `Market-data provider limit remained unavailable after ${marketLimitMaxRetries} retries while processing ${candidate.ticker}: ${message}`;
+        break;
+      }
+
+      // The same rule applies to SEC, database, DNS, and other upstream transport
+      // failures caught by the outer guard. A timeout is infrastructure evidence,
+      // not evidence that the current ticker should be repaired or replaced.
+      if (providerTransportUnavailable(message)) {
+        stoppedReason = `Upstream transport unavailable while processing ${candidate.ticker}: ${message}`;
         break;
       }
 
