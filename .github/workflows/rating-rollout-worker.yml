@@ -1,4 +1,4 @@
-# TS: 2026-08-24 14:03 ET
+# TS: 2026-08-24 15:18 ET
 
 name: Monster Rating rollout worker
 
@@ -281,12 +281,6 @@ jobs:
           );
           const verifiedPreflightResults = preflightResults.filter((item) => item.preflightOk);
           const rankedOrdinaryCandidates = verifiedPreflightResults
-            // A failed free preflight is uncertainty, not evidence. Do not spend a
-            // licensed rating attempt on ordinary candidates whose stored-data check
-            // could not be verified. Protected VCL names retain their bounded priority.
-            // Evidence depth is the strongest cheap signal that a paid attempt can finish.
-            // Historical rating count is only a tie-breaker because old-engine ratings must
-            // remain eligible for the current-version rollout.
             .sort((left, right) =>
               right.factCount - left.factCount ||
               right.filingCount - left.filingCount ||
