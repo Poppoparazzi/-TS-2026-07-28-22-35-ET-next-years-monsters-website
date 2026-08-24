@@ -1,4 +1,4 @@
-// TS: 2026-08-24 02:05 ET
+// TS: 2026-08-24 04:15 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -96,6 +96,16 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
   assert.match(rolloutWorker, /protectedAttemptCount = Math\.min\(/);
   assert.match(rolloutWorker, /preflightPoolSize/);
   assert.match(rolloutWorker, /preflightConcurrency/);
+  assert.match(
+    rolloutWorker,
+    /Number\(right\.preflightOk\) - Number\(left\.preflightOk\)/,
+    "successfully verified stored-data preflights must rank ahead of lookup failures before paid attempts",
+  );
+  assert.match(
+    rolloutWorker,
+    /preflightOk:\s*false,\s*factCount:\s*-1,\s*filingCount:\s*-1/,
+    "failed free preflights must remain explicitly marked as uncertain rather than looking evidence-rich",
+  );
 });
 
 test("scheduled recovery and production closeout use the broad reserve", () => {
