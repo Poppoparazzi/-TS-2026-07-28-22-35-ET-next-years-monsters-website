@@ -1,4 +1,4 @@
-// TS: 2026-08-23 19:02 ET
+// TS: 2026-08-23 22:59 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -90,6 +90,13 @@ class BatchMarketProvider implements MarketDataProvider {
 class BenchmarkFailingMarketProvider extends BatchMarketProvider {
   public override async getDailyHistory(symbol: string): Promise<DailyMarketHistory> {
     if (symbol === "SPY") throw new Error("Test benchmark quota reached.");
+    return super.getDailyHistory(symbol);
+  }
+}
+
+class MarketTransportFailingProvider extends BatchMarketProvider {
+  public override async getDailyHistory(symbol: string): Promise<DailyMarketHistory> {
+    if (symbol === "GOOD") throw new Error("fetch failed: network timeout");
     return super.getDailyHistory(symbol);
   }
 }
@@ -194,6 +201,30 @@ test("rating batch closes its audit run when benchmark history is unavailable", 
   assert.match(accounting.stoppedReason ?? "", /benchmark quota/i);
   assert.deepEqual(persistenceStore.savedCompanies, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedFacts, ["AAPL", "FAIL", "GOOD"]);
+  assert.deepEqual(persistenceStore.savedQuotes, []);
+  assert.deepEqual(batchStore.finished, accounting);
+});
+
+test("rating batch stops on market transport outages without blaming the candidate", async () => {
+  const persistenceStore = new BatchPersistenceStore();
+  const batchStore = new MemoryBatchStore();
+  const accounting = await runRatingBatch(
+    {
+      marketProvider: new MarketTransportFailingProvider(),
+      secProvider: new BatchSecProvider(),
+      persistenceStore,
+      batchStore,
+    },
+    { targetCount: 1, candidateLimit: 3 },
+  );
+
+  assert.equal(accounting.totalCandidatesExamined, 3);
+  assert.equal(accounting.ratedCount, 0);
+  assert.equal(accounting.protectedMustRepairCount, 1);
+  assert.deepEqual(accounting.protectedMustRepair.map((entry) => entry.ticker), ["AAPL"]);
+  assert.equal(accounting.replaceableCount, 1);
+  assert.deepEqual(accounting.replaceable.map((entry) => entry.ticker), ["FAIL"]);
+  assert.match(accounting.stoppedReason ?? "", /market-data provider unavailable.*GOOD.*network timeout/i);
   assert.deepEqual(persistenceStore.savedQuotes, []);
   assert.deepEqual(batchStore.finished, accounting);
 });
