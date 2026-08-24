@@ -1,4 +1,4 @@
-# TS: 2026-08-24 15:18 ET
+# TS: 2026-08-24 16:01 ET
 
 name: Monster Rating rollout worker
 
@@ -32,7 +32,7 @@ concurrency:
 jobs:
   advance-ratings:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - name: Watch production and restart the real bulk rating job when needed
         env:
