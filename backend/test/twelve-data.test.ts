@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:08 UTC
+// TS: 2026-08-24 10:30 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -52,6 +52,39 @@ test("Twelve Data quote is normalized without putting the key in the URL or resu
     assert.equal(quote.provider, "twelve-data");
     assert.equal(JSON.stringify(quote).includes(API_KEY), false);
     assert.match(quote.feedDisclosure, /not labeled as a full consolidated SIP quote/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Twelve Data adapter preserves HTTP status and provider code on quota errors", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        status: "error",
+        code: 429,
+        message: "API credits exhausted for the current minute",
+      }),
+      {
+        status: 429,
+        headers: { "content-type": "application/json" },
+      },
+    )) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY);
+    await assert.rejects(
+      provider.getQuote("AAPL"),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /API credits exhausted/i);
+        assert.match(error.message, /HTTP 429/i);
+        assert.match(error.message, /provider code 429/i);
+        return true;
+      },
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
