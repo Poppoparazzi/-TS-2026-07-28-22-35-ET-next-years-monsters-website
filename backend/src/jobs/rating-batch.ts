@@ -1,4 +1,4 @@
-// TS: 2026-08-23 22:01 ET
+// TS: 2026-08-23 22:59 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -36,6 +36,10 @@ function reason(error: unknown): string {
 
 function providerLimitReached(message: string): boolean {
   return /rate limit|api credits|credit limit|too many requests|quota/i.test(message);
+}
+
+function providerTransportUnavailable(message: string): boolean {
+  return /fetch failed|network|timeout|timed out|econnreset|econnrefused|etimedout|socket hang up|service unavailable|bad gateway|gateway timeout|http 50[234]/i.test(message);
 }
 
 function boundedDelay(value: number | undefined, maximum = 60_000): number {
@@ -164,7 +168,21 @@ export async function runRatingBatch(
         }
       }
 
-      const history = await getPacedHistory(candidate.ticker, 300);
+      let history: DailyMarketHistory;
+      try {
+        history = await getPacedHistory(candidate.ticker, 300);
+      } catch (error) {
+        const message = reason(error);
+        // A provider-wide quota or transport outage says nothing about the stock.
+        // Stop the batch without poisoning the repair/replacement roster. Genuine
+        // symbol/evidence errors continue through the ordinary candidate handling.
+        if (providerLimitReached(message) || providerTransportUnavailable(message)) {
+          stoppedReason = `Market-data provider unavailable while processing ${candidate.ticker}: ${message}`;
+          break;
+        }
+        throw error;
+      }
+
       const calculatedAt = new Date().toISOString();
       const rating = calculateMonsterRatingV1(buildProductionRatingInput({
         company,
