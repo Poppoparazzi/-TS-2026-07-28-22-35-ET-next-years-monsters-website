@@ -1,4 +1,4 @@
-// TS: 2026-08-23 17:01 ET
+// TS: 2026-08-24 02:05 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -86,7 +86,7 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
   assert.match(rolloutWorker, /MAX_DIRECT_FALLBACK_PER_RUN:\s*"8"/);
   assert.match(rolloutWorker, /MAX_PROTECTED_FALLBACK_PER_RUN:\s*"2"/);
   assert.match(rolloutWorker, /REQUEST_DELAY_MS:\s*"20000"/);
-  assert.match(rolloutWorker, /PREFLIGHT_POOL_SIZE:\s*"64"/);
+  assert.match(rolloutWorker, /PREFLIGHT_POOL_SIZE:\s*"96"/);
   assert.match(rolloutWorker, /PREFLIGHT_CONCURRENCY:\s*"8"/);
   assert.match(rolloutWorker, /cron:\s*"8,38 \* \* \* \*"/);
   assert.match(rolloutWorker, /backend\/src\/providers\/\*\*/);
