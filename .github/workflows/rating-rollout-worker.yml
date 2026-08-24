@@ -1,4 +1,4 @@
-# TS: 2026-08-23 18:22 ET
+# TS: 2026-08-24 02:05 ET
 
 name: Monster Rating rollout worker
 
@@ -43,7 +43,7 @@ jobs:
           MAX_DIRECT_FALLBACK_PER_RUN: "8"
           MAX_PROTECTED_FALLBACK_PER_RUN: "2"
           REQUEST_DELAY_MS: "20000"
-          PREFLIGHT_POOL_SIZE: "64"
+          PREFLIGHT_POOL_SIZE: "96"
           PREFLIGHT_CONCURRENCY: "8"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -60,7 +60,7 @@ jobs:
             0,
           );
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
-          const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 64);
+          const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 96);
           const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
           const protectedVclTickers = Object.freeze([
             "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
