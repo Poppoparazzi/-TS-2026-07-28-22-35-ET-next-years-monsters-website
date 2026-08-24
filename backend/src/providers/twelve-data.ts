@@ -1,4 +1,4 @@
-// TS: 2026-08-22 14:12 UTC
+// TS: 2026-08-24 08:03 ET
 
 import {
   type DailyMarketBar,
@@ -106,8 +106,15 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     const payload = (await response.json()) as T & TwelveDataErrorResponse;
 
     if (!response.ok || payload.status === "error") {
-      const reason = payload.message || `Twelve Data request failed with HTTP ${response.status}.`;
-      throw new Error(reason);
+      // Preserve the HTTP status even when Twelve Data supplies its own message.
+      // The batch controller uses HTTP 429/quota language to classify provider-wide
+      // throttling correctly instead of blaming the current stock.
+      const details = [
+        payload.message?.trim(),
+        `HTTP ${response.status}`,
+        Number.isFinite(payload.code) ? `provider code ${payload.code}` : null,
+      ].filter((value): value is string => Boolean(value));
+      throw new Error(details.join(" | ") || "Twelve Data request failed.");
     }
 
     return payload;
