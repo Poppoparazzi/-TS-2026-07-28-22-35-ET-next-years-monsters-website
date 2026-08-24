@@ -1,4 +1,4 @@
-# TS: 2026-08-24 03:24 ET
+# TS: 2026-08-24 06:02 ET
 
 name: Monster Rating rollout worker
 
@@ -279,15 +279,15 @@ jobs:
               }
             },
           );
-          const rankedOrdinaryCandidates = preflightResults
-            // A failed free preflight is uncertainty, not a positive signal. Keep
-            // successfully inspected candidates ahead of lookup failures so the
-            // scarce paid rating slots go to stocks whose stored evidence was verified.
+          const verifiedPreflightResults = preflightResults.filter((item) => item.preflightOk);
+          const rankedOrdinaryCandidates = verifiedPreflightResults
+            // A failed free preflight is uncertainty, not evidence. Do not spend a
+            // licensed rating attempt on ordinary candidates whose stored-data check
+            // could not be verified. Protected VCL names retain their bounded priority.
             // universe.hasRating is the authoritative current-engine rollout flag.
             // A nonzero stored ratingCount may represent an older engine version and must not
             // make that company permanently ineligible for the current-version rollout.
             .sort((left, right) =>
-              Number(right.preflightOk) - Number(left.preflightOk) ||
               left.ratingCount - right.ratingCount ||
               right.factCount - left.factCount ||
               right.filingCount - left.filingCount ||
@@ -303,7 +303,7 @@ jobs:
           console.log(
             `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
             `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, ` +
-            `protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, ` +
+            `protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
             `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
@@ -338,6 +338,7 @@ jobs:
             directFallbackProtectedStartIndex: protectedStartIndex,
             directFallbackOrdinaryCount: ordinaryCandidates.length,
             directFallbackPreflightedCount: preflightPool.length,
+            directFallbackVerifiedPreflightCount: verifiedPreflightResults.length,
             directFallbackPreflightConcurrency: preflightConcurrency,
             directFallbackStartIndex: startIndex,
             directFallbackPreflightStride: preflightStride,
