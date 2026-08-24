@@ -1,4 +1,4 @@
-// TS: 2026-08-24 06:02 ET
+// TS: 2026-08-24 07:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -105,6 +105,11 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
     rolloutWorker,
     /rankedOrdinaryCandidates = verifiedPreflightResults/,
     "failed ordinary preflights must not fall through into paid candidate selection",
+  );
+  assert.match(
+    rolloutWorker,
+    /right\.factCount - left\.factCount \|\|[\s\S]*?right\.filingCount - left\.filingCount \|\|[\s\S]*?left\.ratingCount - right\.ratingCount/,
+    "paid ordinary attempts must favor deeper SEC evidence before historical-rating tie breakers",
   );
   assert.match(
     rolloutWorker,
