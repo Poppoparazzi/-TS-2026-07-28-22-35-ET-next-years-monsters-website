@@ -1,4 +1,4 @@
-// TS: 2026-08-24 00:03 ET
+// TS: 2026-08-24 01:01 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -55,6 +55,28 @@ function boundedRetryCount(value: number | undefined): number {
 function sleep(milliseconds: number): Promise<void> {
   if (milliseconds <= 0) return Promise.resolve();
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function validateBenchmarkHistory(history: DailyMarketHistory, calculatedAt = new Date().toISOString()): string | null {
+  const usableBars = history.bars
+    .filter((bar) => Number.isFinite(bar.close) && bar.close > 0 && Number.isFinite(bar.volume) && bar.volume >= 0)
+    .sort((left, right) => left.date.localeCompare(right.date));
+  if (usableBars.length < 253) {
+    return `Benchmark market history has only ${usableBars.length} usable daily bars; at least 253 are required.`;
+  }
+
+  const latestDate = usableBars.at(-1)?.date ?? "";
+  const latestTime = Date.parse(latestDate);
+  const calculatedTime = Date.parse(calculatedAt);
+  if (!latestDate || !Number.isFinite(latestTime) || !Number.isFinite(calculatedTime)) {
+    return "Benchmark market history does not contain a valid latest daily-bar date.";
+  }
+
+  const ageDays = (calculatedTime - latestTime) / (24 * 60 * 60 * 1_000);
+  if (ageDays > 7) {
+    return `Benchmark market history is stale; latest daily bar is ${latestDate}.`;
+  }
+  return null;
 }
 
 export async function runRatingBatch(
@@ -164,6 +186,15 @@ export async function runRatingBatch(
           benchmarkHistory = await getPacedHistory("SPY", 300);
         } catch (error) {
           stoppedReason = `Benchmark market history could not be loaded: ${reason(error)}`;
+          break;
+        }
+
+        // Every publishable rating needs a current 253-session benchmark. If the
+        // shared SPY response itself cannot satisfy that gate, no candidate in this
+        // run can succeed. Stop before buying company histories one by one.
+        const benchmarkProblem = validateBenchmarkHistory(benchmarkHistory);
+        if (benchmarkProblem) {
+          stoppedReason = benchmarkProblem;
           break;
         }
       }
