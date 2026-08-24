@@ -1,4 +1,4 @@
-// TS: 2026-08-24 04:15 ET
+// TS: 2026-08-24 06:02 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -98,8 +98,13 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
   assert.match(rolloutWorker, /preflightConcurrency/);
   assert.match(
     rolloutWorker,
-    /Number\(right\.preflightOk\) - Number\(left\.preflightOk\)/,
-    "successfully verified stored-data preflights must rank ahead of lookup failures before paid attempts",
+    /verifiedPreflightResults = preflightResults\.filter\(\(item\) => item\.preflightOk\)/,
+    "ordinary paid rating attempts must only come from successfully verified free stored-data preflights",
+  );
+  assert.match(
+    rolloutWorker,
+    /rankedOrdinaryCandidates = verifiedPreflightResults/,
+    "failed ordinary preflights must not fall through into paid candidate selection",
   );
   assert.match(
     rolloutWorker,
