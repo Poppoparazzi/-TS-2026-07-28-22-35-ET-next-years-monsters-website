@@ -1,4 +1,4 @@
-// TS: 2026-08-23 19:02 ET
+// TS: 2026-08-23 22:01 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -199,13 +199,17 @@ export async function runRatingBatch(
       ratedTickers.push(candidate.ticker);
     } catch (error) {
       const message = reason(error);
-      const failure = { ticker: candidate.ticker, reason: message };
-      if (candidate.isProtected) protectedMustRepair.push(failure);
-      else replaceable.push(failure);
+      // Provider quota/rate-limit exhaustion is a batch-level transport condition,
+      // not evidence that the current company is bad. Do not poison the repair or
+      // replacement roster by blaming a candidate for Twelve Data being unavailable.
       if (providerLimitReached(message)) {
         stoppedReason = `Market-data provider limit remained unavailable after ${marketLimitMaxRetries} retries while processing ${candidate.ticker}: ${message}`;
         break;
       }
+
+      const failure = { ticker: candidate.ticker, reason: message };
+      if (candidate.isProtected) protectedMustRepair.push(failure);
+      else replaceable.push(failure);
     }
   }
 
