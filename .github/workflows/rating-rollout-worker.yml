@@ -1,4 +1,4 @@
-# TS: 2026-08-24 02:05 ET
+# TS: 2026-08-24 03:24 ET
 
 name: Monster Rating rollout worker
 
@@ -264,23 +264,30 @@ jobs:
               const ticker = String(company.ticker).trim().toUpperCase();
               try {
                 const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
-                if (!stored.response.ok || !stored.body) return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
+                if (!stored.response.ok || !stored.body) {
+                  return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0 };
+                }
                 return {
                   company,
+                  preflightOk: true,
                   factCount: Number(stored.body.factCount || 0),
                   filingCount: Number(stored.body.filingCount || 0),
                   ratingCount: Number(stored.body.ratingCount || 0),
                 };
               } catch {
-                return { company, factCount: -1, filingCount: -1, ratingCount: 0 };
+                return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0 };
               }
             },
           );
           const rankedOrdinaryCandidates = preflightResults
+            // A failed free preflight is uncertainty, not a positive signal. Keep
+            // successfully inspected candidates ahead of lookup failures so the
+            // scarce paid rating slots go to stocks whose stored evidence was verified.
             // universe.hasRating is the authoritative current-engine rollout flag.
             // A nonzero stored ratingCount may represent an older engine version and must not
             // make that company permanently ineligible for the current-version rollout.
             .sort((left, right) =>
+              Number(right.preflightOk) - Number(left.preflightOk) ||
               left.ratingCount - right.ratingCount ||
               right.factCount - left.factCount ||
               right.filingCount - left.filingCount ||
