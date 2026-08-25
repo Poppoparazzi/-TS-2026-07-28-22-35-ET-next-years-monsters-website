@@ -1,4 +1,4 @@
-// TS: 2026-08-23 04:57 ET
+// TS: 2026-08-25 10:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -64,6 +64,11 @@ interface CandidateRow {
   readonly company_name: string;
   readonly is_pilot: boolean;
   readonly priority_metric: string | number | null;
+}
+
+function stoppedByBatchLevelInfrastructure(accounting: RatingBatchAccounting): boolean {
+  if (!accounting.stoppedReason) return false;
+  return /^(Benchmark market history|Market-data provider|Upstream transport)/i.test(accounting.stoppedReason);
 }
 
 export class UnconfiguredRatingBatchStore implements RatingBatchStore {
@@ -185,7 +190,7 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
   public async finishRun(runId: string, accounting: RatingBatchAccounting): Promise<void> {
     const status = accounting.ratedCount >= accounting.targetCount
       ? "completed"
-      : accounting.ratedCount > 0
+      : accounting.ratedCount > 0 || stoppedByBatchLevelInfrastructure(accounting)
         ? "partial"
         : "failed";
     await this.pool.query(
