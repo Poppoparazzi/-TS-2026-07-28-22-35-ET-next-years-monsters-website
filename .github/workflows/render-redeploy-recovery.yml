@@ -1,4 +1,4 @@
-# TS: 2026-08-22 04:08 ET
+# TS: 2026-08-25 06:02 ET
 
 name: Render deploy recovery
 
@@ -35,13 +35,10 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { execFileSync } from "node:child_process";
+          import { resolveBackendDeployTarget } from "./scripts/resolve-backend-deploy-target.mjs";
 
           const base = "https://next-years-monsters-api.onrender.com";
-          const latestRelevantCommit = execFileSync(
-            "git",
-            ["rev-list", "-1", "HEAD", "--", "backend", "render.yaml"],
-            { encoding: "utf8" },
-          ).trim();
+          const latestRelevantCommit = resolveBackendDeployTarget();
 
           let startupHttpStatus = null;
           let startupError = null;
@@ -52,6 +49,15 @@ jobs:
           let ratingCompleteCount = null;
           let ratingBatchAgeHours = null;
           let ratingProtectedMustRepairCount = null;
+
+          function isAncestor(ancestor, descendant) {
+            try {
+              execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { stdio: "ignore" });
+              return true;
+            } catch {
+              return false;
+            }
+          }
 
           try {
             const startupResponse = await fetch(`${base}/api/startup-status`, {
@@ -64,16 +70,19 @@ jobs:
 
             if (deployedCommit) {
               try {
-                const changed = execFileSync(
-                  "git",
-                  ["diff", "--name-only", `${deployedCommit}..HEAD`, "--", "backend", "render.yaml"],
-                  { encoding: "utf8" },
-                )
-                  .trim()
-                  .split("\n")
-                  .filter(Boolean);
-                relevantChangesAfterDeploy = changed.length;
-                classification = changed.length > 0 ? "stale_deployment" : "current_for_backend";
+                execFileSync("git", ["cat-file", "-e", `${deployedCommit}^{commit}`], { stdio: "ignore" });
+                const targetAlreadyDeployed = isAncestor(latestRelevantCommit, deployedCommit);
+                const targetAheadOfDeploy = isAncestor(deployedCommit, latestRelevantCommit);
+
+                if (targetAlreadyDeployed) {
+                  relevantChangesAfterDeploy = 0;
+                  classification = "current_for_backend";
+                } else if (targetAheadOfDeploy) {
+                  relevantChangesAfterDeploy = 1;
+                  classification = "stale_deployment";
+                } else {
+                  classification = "deployed_commit_not_in_repository_history";
+                }
 
                 if (classification === "current_for_backend") {
                   const [healthResponse, universeResponse] = await Promise.all([
