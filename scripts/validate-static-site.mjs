@@ -1,4 +1,4 @@
-// TS: 2026-08-11 12:15 UTC
+// TS: 2026-08-25 00:57 ET
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -194,11 +194,33 @@ function validateFactoryStatus() {
   }
 }
 
+function validateHomeRatingStatus() {
+  const html = read("index.html");
+  const script = read("assets/home-data-status.js");
+
+  if (!html.includes("data-home-data-status")) {
+    fail("Homepage is missing the data-status container required for live Monster Rating status.");
+  }
+  if (!script.includes("/api/universe/status?limit=1")) {
+    fail("Homepage Monster Rating status does not read the live universe status endpoint.");
+  }
+  if (!script.includes("ratingCompleteCount")) {
+    fail("Homepage Monster Rating status does not consume ratingCompleteCount.");
+  }
+  if (!script.includes("VERIFIED · 15 DEMONSTRATIONS")) {
+    fail("Homepage Monster Rating status no longer formats the live verified-rating count.");
+  }
+  if (!script.includes("TEMPORARILY UNAVAILABLE · 15 DEMONSTRATIONS")) {
+    fail("Homepage Monster Rating status must fail closed when the production count is unavailable.");
+  }
+}
+
 validateJavaScript();
 validateLocalReferences();
 validateVclOrder();
 validateVerificationLedger();
 validateFactoryStatus();
+validateHomeRatingStatus();
 
 if (failures.length) {
   console.error("Static-site validation failed:");
