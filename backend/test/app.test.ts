@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:34 UTC
+// TS: 2026-08-25 19:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -86,11 +86,16 @@ class StaticMarketDataProvider implements MarketDataProvider {
 }
 
 function dailyHistory(symbol: string, dailyGrowth: number): DailyMarketHistory {
-  const end = new Date("2026-08-21T00:00:00.000Z");
+  // Keep this fixture fresh relative to the test clock so the route test does not
+  // rot as calendar time advances. The rating engine intentionally rejects stale
+  // market history in production, and the fixture should exercise eligibility,
+  // not accidentally become a stale-data test weeks later.
+  const end = new Date();
+  end.setUTCHours(0, 0, 0, 0);
   return Object.freeze({
     symbol,
     provider: "historical-test-provider",
-    retrievedAt: "2026-08-21T15:00:00.000Z",
+    retrievedAt: new Date(end.getTime() + 15 * 60 * 60 * 1_000).toISOString(),
     feedDisclosure: "Test end-of-day history.",
     bars: Object.freeze(Array.from({ length: 300 }, (_, index) => {
       const date = new Date(end.getTime() - (299 - index) * 24 * 60 * 60 * 1_000);
