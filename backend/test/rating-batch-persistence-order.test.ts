@@ -1,4 +1,4 @@
-// TS: 2026-08-23 10:05 ET
+// TS: 2026-08-25 18:19 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -11,7 +11,7 @@ test("rating batch persists SEC evidence before requesting paid company history"
   const saveCompany = source.indexOf("await persistenceStore.saveSecCompany(company);");
   const saveFilings = source.indexOf("await persistenceStore.saveSecFilings(company, filings);");
   const saveFacts = source.indexOf("await persistenceStore.saveSecFacts(facts);");
-  const paidHistory = source.indexOf("const history = await getPacedHistory(candidate.ticker, 300);");
+  const paidHistory = source.indexOf("history = await getPacedHistory(candidate.ticker, 300);");
 
   assert.ok(saveCompany >= 0, "SEC company persistence must remain present.");
   assert.ok(saveFilings >= 0, "SEC filing persistence must remain present.");
