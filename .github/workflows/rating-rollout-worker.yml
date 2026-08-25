@@ -1,4 +1,4 @@
-# TS: 2026-08-24 19:04 ET
+# TS: 2026-08-25 02:05 ET
 
 name: Monster Rating rollout worker
 
@@ -115,7 +115,8 @@ jobs:
           const remainingCount = Math.max(target - count, 0);
           const remainingFirstMilestone = Math.max(firstMilestone - count, 0);
           const firstMilestoneReached = count >= firstMilestone;
-          const directFallbackBudget = Math.min(maxDirectFallbackPerRun, remainingCount);
+          const milestoneAwareRemaining = firstMilestoneReached ? remainingCount : remainingFirstMilestone;
+          const directFallbackBudget = Math.min(maxDirectFallbackPerRun, milestoneAwareRemaining);
           const ratingJob = startup.body?.jobs?.ratingBatch ?? null;
           const earlierJobs = [
             startup.body?.jobs?.universeImport,
