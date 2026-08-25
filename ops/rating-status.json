@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-08-25T13:12:39.753Z",
+  "recordedAt": "2026-08-25T13:58:55.624Z",
   "healthStatus": 200,
   "universeStatus": 200,
   "startupStatus": 200,
@@ -16,21 +16,17 @@
   "ratingCompleteCount": 463,
   "fullyCompleteCount": 463,
   "deployedCommit": "3356910a73c6d43ec10d0af911105f7fb024718c",
-  "repositoryHeadCommit": "aae5cd7022b0651ab24b216c2446dac06cc7cf37",
+  "repositoryHeadCommit": "ac7f70def00b0fb9164d42c09cd5b1723ac610e3",
   "backendDeployTargetCommit": "6ee1582a99c1f48e9848c8fb6716cdc58133d0fb",
   "currentMainCommit": "6ee1582a99c1f48e9848c8fb6716cdc58133d0fb",
   "staleDeployment": true,
-  "ratingRecoveryDisabled": true,
+  "ratingRecoveryDisabled": false,
   "needsRecovery": true,
   "ratingJob": {
-    "state": "completed",
-    "startedAt": "2026-08-25T13:05:22.149Z",
-    "completedAt": "2026-08-25T13:05:22.150Z",
-    "summary": {
-      "status": "disabled",
-      "targetCount": 500,
-      "detail": "Automatic Monster Rating refresh is disabled."
-    },
+    "state": "pending",
+    "startedAt": null,
+    "completedAt": null,
+    "summary": null,
     "error": null
   },
   "marketConfigured": true,
