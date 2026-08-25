@@ -1,4 +1,4 @@
-# TS: 2026-08-25 02:05 ET
+# TS: 2026-08-25 09:07 ET
 
 name: Monster Rating rollout worker
 
@@ -95,6 +95,25 @@ jobs:
             );
             await Promise.all(workers);
             return results;
+          }
+
+          async function preflightStoredCandidate(company) {
+            const ticker = String(company.ticker).trim().toUpperCase();
+            try {
+              const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
+              if (!stored.response.ok || !stored.body) {
+                return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0 };
+              }
+              return {
+                company,
+                preflightOk: true,
+                factCount: Number(stored.body.factCount || 0),
+                filingCount: Number(stored.body.filingCount || 0),
+                ratingCount: Number(stored.body.ratingCount || 0),
+              };
+            } catch {
+              return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0 };
+            }
           }
 
           let health;
@@ -232,20 +251,33 @@ jobs:
             (company) => !protectedVclSet.has(String(company.ticker).trim().toUpperCase()),
           );
           const cohortNumber = Math.floor(Date.now() / (30 * 60 * 1000));
+
+          // Protected VCL names remain protected and first in line, but they must pass
+          // the same free stored-data verification before consuming licensed provider
+          // capacity. A failed preflight defers the paid attempt; it never makes the
+          // protected ticker replaceable.
+          const protectedPreflightResults = await mapWithConcurrency(
+            protectedCandidates,
+            preflightConcurrency,
+            preflightStoredCandidate,
+          );
+          const verifiedProtectedCandidates = protectedPreflightResults
+            .filter((item) => item.preflightOk)
+            .map((item) => item.company);
           const protectedAttemptCount = Math.min(
-            protectedCandidates.length,
+            verifiedProtectedCandidates.length,
             maxProtectedFallbackPerRun,
             directFallbackBudget,
           );
-          const protectedStartIndex = protectedCandidates.length > 0
-            ? cohortNumber % protectedCandidates.length
+          const protectedStartIndex = verifiedProtectedCandidates.length > 0
+            ? cohortNumber % verifiedProtectedCandidates.length
             : 0;
           const selectedProtectedCandidates = Array.from(
             { length: protectedAttemptCount },
-            (_, index) => protectedCandidates[(protectedStartIndex + index) % protectedCandidates.length],
+            (_, index) => verifiedProtectedCandidates[(protectedStartIndex + index) % verifiedProtectedCandidates.length],
           );
           const ordinaryAttemptCount = Math.min(
-            Math.max(directFallbackBudget - protectedAttemptCount, 0),
+            Math.max(directFallbackBudget - selectedProtectedCandidates.length, 0),
             ordinaryCandidates.length,
           );
           const startIndex = ordinaryCandidates.length > 0
@@ -261,30 +293,14 @@ jobs:
           const preflightResults = await mapWithConcurrency(
             preflightPool,
             preflightConcurrency,
-            async (company) => {
-              const ticker = String(company.ticker).trim().toUpperCase();
-              try {
-                const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
-                if (!stored.response.ok || !stored.body) {
-                  return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0 };
-                }
-                return {
-                  company,
-                  preflightOk: true,
-                  factCount: Number(stored.body.factCount || 0),
-                  filingCount: Number(stored.body.filingCount || 0),
-                  ratingCount: Number(stored.body.ratingCount || 0),
-                };
-              } catch {
-                return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0 };
-              }
-            },
+            preflightStoredCandidate,
           );
           const verifiedPreflightResults = preflightResults.filter((item) => item.preflightOk);
           const rankedOrdinaryCandidates = verifiedPreflightResults
             // A failed free preflight is uncertainty, not evidence. Do not spend a
             // licensed rating attempt on ordinary candidates whose stored-data check
-            // could not be verified. Protected VCL names retain their bounded priority.
+            // could not be verified. Protected VCL names retain their bounded priority,
+            // but now must also pass the same free preflight before a paid attempt.
             // Evidence depth is the strongest cheap signal that a paid attempt can finish.
             // Historical rating count is only a tie-breaker because old-engine ratings must
             // remain eligible for the current-version rollout.
@@ -303,8 +319,8 @@ jobs:
 
           console.log(
             `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
-            `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, ` +
-            `protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
+            `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedPreflighted=${protectedPreflightResults.length}, ` +
+            `verifiedProtectedPreflight=${verifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
             `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
@@ -335,6 +351,8 @@ jobs:
             directFallbackRated: rated,
             directFallbackEligibleCount: eligibleCandidates.length,
             directFallbackProtectedCount: protectedCandidates.length,
+            directFallbackProtectedPreflightedCount: protectedPreflightResults.length,
+            directFallbackVerifiedProtectedPreflightCount: verifiedProtectedCandidates.length,
             directFallbackProtectedAttemptedCount: selectedProtectedCandidates.length,
             directFallbackProtectedStartIndex: protectedStartIndex,
             directFallbackOrdinaryCount: ordinaryCandidates.length,
