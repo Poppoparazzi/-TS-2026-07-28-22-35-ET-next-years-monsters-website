@@ -1,4 +1,4 @@
-// TS: 2026-08-25 13:02 ET
+// TS: 2026-08-25 14:04 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -182,7 +182,7 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
         targetCount,
         JSON.stringify({
           ratingVersion: MONSTER_RATING_ENGINE_VERSION,
-          rollout: "top_500_then_top_1000",
+          rollout: "first_500_then_full_reserve",
           protectedPolicy: "must_repair",
           ordinaryFailurePolicy: "replace_from_reserve",
         }),
