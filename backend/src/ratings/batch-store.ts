@@ -1,4 +1,4 @@
-// TS: 2026-08-25 12:03 ET
+// TS: 2026-08-25 13:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -72,7 +72,9 @@ function stoppedByBatchLevelInfrastructure(accounting: RatingBatchAccounting): b
 }
 
 function completedNormalCandidatePass(accounting: RatingBatchAccounting): boolean {
-  return accounting.totalCandidatesExamined > 0 && accounting.stoppedReason === null;
+  // A normal pass is not a failed execution merely because no candidates remain
+  // after the cumulative current-version exclusions have been applied.
+  return accounting.stoppedReason === null;
 }
 
 export class UnconfiguredRatingBatchStore implements RatingBatchStore {
