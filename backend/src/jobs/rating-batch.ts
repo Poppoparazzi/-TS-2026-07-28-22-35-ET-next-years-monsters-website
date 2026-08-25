@@ -1,4 +1,4 @@
-// TS: 2026-08-24 17:59 ET
+// TS: 2026-08-24 23:02 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -43,7 +43,7 @@ function providerAuthorizationUnavailable(message: string): boolean {
 }
 
 function providerTransportUnavailable(message: string): boolean {
-  return /fetch failed|network|timeout|timed out|econnreset|econnrefused|etimedout|socket hang up|service unavailable|bad gateway|gateway timeout|http 408|http 5\d\d/i.test(message);
+  return /fetch failed|network|timeout|timed out|econnreset|econnrefused|etimedout|enotfound|eai_again|dns|socket hang up|service unavailable|bad gateway|gateway timeout|http 408|http 5\d\d/i.test(message);
 }
 
 function boundedDelay(value: number | undefined, maximum = 60_000): number {
@@ -208,7 +208,7 @@ export async function runRatingBatch(
         history = await getPacedHistory(candidate.ticker, 300);
       } catch (error) {
         const message = reason(error);
-        // Provider-wide quota, authorization, entitlement, or transport trouble says
+        // Provider-wide quota, authorization, entitlement, DNS, or transport trouble says
         // nothing about the stock. Stop the batch without poisoning the repair or
         // replacement roster. Genuine symbol/evidence errors continue normally.
         if (
