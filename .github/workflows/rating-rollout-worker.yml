@@ -1,4 +1,4 @@
-# TS: 2026-08-25 09:07 ET
+# TS: 2026-08-25 16:03 ET
 
 name: Monster Rating rollout worker
 
@@ -143,6 +143,10 @@ jobs:
             startup.body?.jobs?.pilotRefresh,
           ].filter(Boolean);
           const earlierJobRunning = earlierJobs.some((job) => job?.state === "running");
+          const deployHook = (process.env.RENDER_DEPLOY_HOOK_URL || "").trim();
+          const apiKey = (process.env.RENDER_API_KEY || "").trim();
+          const serviceId = (process.env.RENDER_SERVICE_ID || "").trim();
+          const hasRenderAuthority = Boolean(deployHook || (apiKey && serviceId));
 
           console.log(JSON.stringify({
             ratingCompleteCount: count,
@@ -158,6 +162,8 @@ jobs:
             ratingJobStartedAt: ratingJob?.startedAt ?? null,
             ratingJobCompletedAt: ratingJob?.completedAt ?? null,
             ratingJobSummary: ratingJob?.summary ?? null,
+            earlierJobRunning,
+            hasRenderAuthority,
           }, null, 2));
 
           if (count >= target) {
@@ -179,18 +185,22 @@ jobs:
             process.exit(0);
           }
 
-          if (earlierJobRunning) {
-            console.log("Earlier startup work is still running; do not interrupt it with another redeploy.");
+          if (earlierJobRunning && hasRenderAuthority) {
+            console.log("Earlier startup work is still running; do not interrupt it with another Render redeploy.");
             process.exit(0);
           }
 
-          if (ratingJob?.state === "pending") {
-            console.log(`Bulk rating job is pending with no earlier startup job running at ${count}/${target}; treat this as stalled and restart production.`);
+          if (earlierJobRunning && !hasRenderAuthority) {
+            console.log("Earlier startup work is still running, but no Render deployment authority exists; continue with the bounded direct rating fallback without redeploying Render.");
           }
 
-          const deployHook = (process.env.RENDER_DEPLOY_HOOK_URL || "").trim();
-          const apiKey = (process.env.RENDER_API_KEY || "").trim();
-          const serviceId = (process.env.RENDER_SERVICE_ID || "").trim();
+          if (ratingJob?.state === "pending") {
+            if (earlierJobRunning && !hasRenderAuthority) {
+              console.log(`Bulk rating job is pending during earlier startup work at ${count}/${target}; use bounded direct fallback because Render cannot be redeployed.`);
+            } else {
+              console.log(`Bulk rating job is pending with no earlier startup job blocking recovery at ${count}/${target}; treat this as stalled and restart production.`);
+            }
+          }
 
           if (deployHook) {
             const response = await fetch(deployHook, {
