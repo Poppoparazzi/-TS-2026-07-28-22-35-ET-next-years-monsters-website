@@ -1,4 +1,4 @@
-// TS: 2026-08-23 12:01 ET
+// TS: 2026-08-25 18:19 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -12,7 +12,7 @@ test("rating batch rejects insufficient SEC revenue history before paid market h
   const secPersistenceIndex = source.indexOf("await persistenceStore.saveSecFacts(facts);");
   const annualFinancialsIndex = source.indexOf("const annualFinancials = buildAnnualFinancialPeriods(facts);");
   const annualRevenueGuardIndex = source.indexOf("annualRevenuePeriods.length < 2");
-  const paidHistoryIndex = source.indexOf("const history = await getPacedHistory(candidate.ticker, 300);");
+  const paidHistoryIndex = source.indexOf("history = await getPacedHistory(candidate.ticker, 300);");
 
   assert.ok(secPersistenceIndex >= 0, "SEC facts must be persisted before rating qualification.");
   assert.ok(annualFinancialsIndex > secPersistenceIndex, "SEC annual-period qualification must follow SEC persistence.");
