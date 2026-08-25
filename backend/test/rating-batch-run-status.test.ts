@@ -1,4 +1,4 @@
-// TS: 2026-08-25 12:04 ET
+// TS: 2026-08-25 18:20 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -34,16 +34,16 @@ test("normal candidate exhaustion is partial rather than a false failed run", ()
   assert.match(
     batchStoreSource,
     /function completedNormalCandidatePass\(accounting: RatingBatchAccounting\): boolean/,
-    "batch-store must distinguish a normal examined pass from an execution failure",
+    "batch-store must distinguish a normal pass from an execution failure",
   );
   assert.match(
     batchStoreSource,
-    /accounting\.totalCandidatesExamined > 0 && accounting\.stoppedReason === null/,
-    "a normal pass must require at least one examined candidate and no batch stop reason",
+    /return accounting\.stoppedReason === null;/,
+    "a normal pass must remain normal even when cumulative exclusions leave zero candidates",
   );
   assert.match(
     batchStoreSource,
     /completedNormalCandidatePass\(accounting\)[\s\S]*?\? "partial"[\s\S]*?: "failed"/,
-    "a zero-rating pass that examined candidates normally must be partial, not failed",
+    "a normal zero-rating pass must be partial, not failed",
   );
 });
