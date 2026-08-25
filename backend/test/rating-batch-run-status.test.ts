@@ -1,4 +1,4 @@
-// TS: 2026-08-25 11:04 ET
+// TS: 2026-08-25 12:04 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -23,7 +23,27 @@ test("provider-wide rating stoppages remain partial instead of false failed runs
   );
   assert.match(
     batchStoreSource,
-    /accounting\.ratedCount > 0 \|\| stoppedByBatchLevelInfrastructure\(accounting\)[\s\S]*?\? "partial"[\s\S]*?: "failed"/,
+    /stoppedByBatchLevelInfrastructure\(accounting\)[\s\S]*?\? "partial"[\s\S]*?: "failed"/,
     "zero-rating infrastructure stoppages must be stored as partial, not failed",
+  );
+});
+
+test("normal candidate exhaustion is partial rather than a false failed run", () => {
+  const batchStoreSource = readRepositoryFile("../src/ratings/batch-store.ts");
+
+  assert.match(
+    batchStoreSource,
+    /function completedNormalCandidatePass\(accounting: RatingBatchAccounting\): boolean/,
+    "batch-store must distinguish a normal examined pass from an execution failure",
+  );
+  assert.match(
+    batchStoreSource,
+    /accounting\.totalCandidatesExamined > 0 && accounting\.stoppedReason === null/,
+    "a normal pass must require at least one examined candidate and no batch stop reason",
+  );
+  assert.match(
+    batchStoreSource,
+    /completedNormalCandidatePass\(accounting\)[\s\S]*?\? "partial"[\s\S]*?: "failed"/,
+    "a zero-rating pass that examined candidates normally must be partial, not failed",
   );
 });
