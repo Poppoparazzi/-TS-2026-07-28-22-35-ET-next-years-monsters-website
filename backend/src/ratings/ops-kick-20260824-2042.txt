@@ -1,0 +1,2 @@
+// TS: 2026-08-24 20:42 ET
+Trigger the existing quota-safe Monster Rating rollout worker after a verified stall at 459. No rating logic, quota settings, schedule, frontend, or homepage visuals changed.
