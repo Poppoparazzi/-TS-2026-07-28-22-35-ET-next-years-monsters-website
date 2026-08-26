@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-08-26T01:55:12.671Z",
+  "recordedAt": "2026-08-26T03:17:32.816Z",
   "healthStatus": 200,
   "universeStatus": 200,
   "startupStatus": 200,
@@ -12,11 +12,11 @@
   "secEvidenceReadyCount": 3309,
   "failedCount": 0,
   "unresolvedCount": 244,
-  "quoteCompleteCount": 480,
-  "ratingCompleteCount": 480,
-  "fullyCompleteCount": 480,
+  "quoteCompleteCount": 481,
+  "ratingCompleteCount": 481,
+  "fullyCompleteCount": 481,
   "deployedCommit": "3356910a73c6d43ec10d0af911105f7fb024718c",
-  "repositoryHeadCommit": "6bfa748413d05d34f115de99ef595dcc5ea42b5e",
+  "repositoryHeadCommit": "593c7ffcd217c66288367e2d32e8aecc2bc62f7b",
   "backendDeployTargetCommit": "26321d68150f1d191486726e907d6ce4338979c3",
   "currentMainCommit": "26321d68150f1d191486726e907d6ce4338979c3",
   "staleDeployment": true,
@@ -24,8 +24,8 @@
   "needsRecovery": true,
   "ratingJob": {
     "state": "completed",
-    "startedAt": "2026-08-26T01:52:39.450Z",
-    "completedAt": "2026-08-26T01:52:39.451Z",
+    "startedAt": "2026-08-26T03:14:54.304Z",
+    "completedAt": "2026-08-26T03:14:54.304Z",
     "summary": {
       "status": "disabled",
       "targetCount": 500,
