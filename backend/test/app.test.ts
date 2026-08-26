@@ -1,4 +1,4 @@
-// TS: 2026-08-25 19:01 ET
+// TS: 2026-08-26 04:03 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -66,6 +66,8 @@ class StaticMarketDataProvider implements MarketDataProvider {
     if (this.failingSymbols.has(symbol)) {
       throw new Error(`Test-only failure for ${symbol}.`);
     }
+    const retrievedAt = new Date();
+    const providerTimestamp = new Date(retrievedAt.getTime() - 1_000);
     return {
       symbol,
       companyName: "Test Company",
@@ -78,8 +80,8 @@ class StaticMarketDataProvider implements MarketDataProvider {
       marketSession: "regular",
       freshness: "near-live",
       provider: this.name,
-      providerTimestamp: "2026-07-29T15:45:00.000Z",
-      retrievedAt: "2026-07-29T15:45:01.000Z",
+      providerTimestamp: providerTimestamp.toISOString(),
+      retrievedAt: retrievedAt.toISOString(),
       feedDisclosure: "Test feed disclosure.",
     };
   }
