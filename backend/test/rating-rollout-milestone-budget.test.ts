@@ -1,4 +1,4 @@
-// TS: 2026-08-26 08:01 ET
+// TS: 2026-08-26 16:08 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -20,6 +20,18 @@ function milestoneAwareBudget(count: number): number {
   const firstMilestoneReached = count >= firstMilestone;
   const milestoneAwareRemaining = firstMilestoneReached ? remainingCount : remainingFirstMilestone;
   return Math.min(maxDirectFallbackPerRun, milestoneAwareRemaining);
+}
+
+function effectivePreflightPool(count: number): number {
+  const firstMilestone = 500;
+  const preflightPoolSize = 192;
+  const finalStretchPreflightPoolSize = 768;
+  const remainingFirstMilestone = Math.max(firstMilestone - count, 0);
+  const firstMilestoneReached = count >= firstMilestone;
+  const finalStretchActive = !firstMilestoneReached && remainingFirstMilestone > 0 && remainingFirstMilestone <= 2;
+  return finalStretchActive
+    ? Math.max(preflightPoolSize, finalStretchPreflightPoolSize)
+    : preflightPoolSize;
 }
 
 test("paid direct fallback respects the remaining first-500 milestone before broad continuation", () => {
@@ -51,4 +63,16 @@ test("paid fallback budget crosses 500 without overshoot or accidental shutdown"
   assert.equal(milestoneAwareBudget(501), 8, "after 500 the worker must continue broad coverage safely");
   assert.equal(milestoneAwareBudget(4999), 1, "one rating short of the long-range target must permit only one paid attempt");
   assert.equal(milestoneAwareBudget(5000), 0, "the worker must stop paid attempts at the long-range target");
+});
+
+test("final-stretch preflight expands only before 500 and returns to normal after the milestone", () => {
+  const rolloutWorker = readRolloutWorker();
+
+  assert.match(rolloutWorker, /PREFLIGHT_POOL_SIZE:\s*"192"/);
+  assert.match(rolloutWorker, /FINAL_STRETCH_PREFLIGHT_POOL_SIZE:\s*"768"/);
+  assert.equal(effectivePreflightPool(497), 192, "normal preflight must remain in effect more than two ratings from 500");
+  assert.equal(effectivePreflightPool(498), 768, "two ratings from 500 should widen only the free preflight pool");
+  assert.equal(effectivePreflightPool(499), 768, "one rating from 500 should keep the widened free preflight pool");
+  assert.equal(effectivePreflightPool(500), 192, "at 500 the worker must return to the normal post-milestone preflight pool");
+  assert.equal(effectivePreflightPool(502), 192, "post-500 expansion must stay on the normal bounded preflight policy");
 });
