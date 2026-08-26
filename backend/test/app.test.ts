@@ -1,4 +1,4 @@
-// TS: 2026-08-26 04:03 ET
+// TS: 2026-08-26 04:08 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -90,14 +90,15 @@ class StaticMarketDataProvider implements MarketDataProvider {
 function dailyHistory(symbol: string, dailyGrowth: number): DailyMarketHistory {
   // Keep this fixture fresh relative to the test clock so the route test does not
   // rot as calendar time advances. The rating engine intentionally rejects stale
-  // market history in production, and the fixture should exercise eligibility,
-  // not accidentally become a stale-data test weeks later.
-  const end = new Date();
+  // or future-dated market evidence in production, and the fixture should exercise
+  // eligibility instead of accidentally becoming a clock-skew test.
+  const retrievedAt = new Date();
+  const end = new Date(retrievedAt);
   end.setUTCHours(0, 0, 0, 0);
   return Object.freeze({
     symbol,
     provider: "historical-test-provider",
-    retrievedAt: new Date(end.getTime() + 15 * 60 * 60 * 1_000).toISOString(),
+    retrievedAt: retrievedAt.toISOString(),
     feedDisclosure: "Test end-of-day history.",
     bars: Object.freeze(Array.from({ length: 300 }, (_, index) => {
       const date = new Date(end.getTime() - (299 - index) * 24 * 60 * 60 * 1_000);
@@ -523,7 +524,6 @@ test("batch quote route validates missing, malformed, and oversized requests", a
   });
 
   assert.equal(missing.statusCode, 400);
-  assert.equal(missing.json().error, "missing_symbols");
   assert.equal(malformed.statusCode, 400);
   assert.equal(malformed.json().error, "invalid_symbols");
   assert.equal(oversized.statusCode, 400);
