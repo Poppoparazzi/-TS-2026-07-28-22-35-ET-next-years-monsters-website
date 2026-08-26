@@ -1,4 +1,4 @@
-// TS: 2026-08-25 03:05 ET
+// TS: 2026-08-26 08:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -9,6 +9,17 @@ function readRolloutWorker(): string {
     new URL("../../.github/workflows/rating-rollout-worker.yml", import.meta.url),
     "utf8",
   );
+}
+
+function milestoneAwareBudget(count: number): number {
+  const target = 5000;
+  const firstMilestone = 500;
+  const maxDirectFallbackPerRun = 8;
+  const remainingCount = Math.max(target - count, 0);
+  const remainingFirstMilestone = Math.max(firstMilestone - count, 0);
+  const firstMilestoneReached = count >= firstMilestone;
+  const milestoneAwareRemaining = firstMilestoneReached ? remainingCount : remainingFirstMilestone;
+  return Math.min(maxDirectFallbackPerRun, milestoneAwareRemaining);
 }
 
 test("paid direct fallback respects the remaining first-500 milestone before broad continuation", () => {
@@ -31,4 +42,13 @@ test("paid direct fallback respects the remaining first-500 milestone before bro
     /directFallbackBudget\s*=\s*Math\.min\(maxDirectFallbackPerRun, milestoneAwareRemaining\)/,
     "paid fallback attempts must not exceed the remaining first-milestone distance",
   );
+});
+
+test("paid fallback budget crosses 500 without overshoot or accidental shutdown", () => {
+  assert.equal(milestoneAwareBudget(495), 5, "five ratings short of 500 must permit only five paid attempts");
+  assert.equal(milestoneAwareBudget(499), 1, "one rating short of 500 must permit only one paid attempt");
+  assert.equal(milestoneAwareBudget(500), 8, "at 500 the worker must resume the bounded broad-coverage budget");
+  assert.equal(milestoneAwareBudget(501), 8, "after 500 the worker must continue broad coverage safely");
+  assert.equal(milestoneAwareBudget(4999), 1, "one rating short of the long-range target must permit only one paid attempt");
+  assert.equal(milestoneAwareBudget(5000), 0, "the worker must stop paid attempts at the long-range target");
 });
