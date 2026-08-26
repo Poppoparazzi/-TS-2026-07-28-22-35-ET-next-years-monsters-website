@@ -1,4 +1,4 @@
-// TS: 2026-08-24 21:33 ET
+// TS: 2026-08-26 01:03 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -64,7 +64,12 @@ test("production rating recovery stays on the real licensed market-data path", (
   );
   assert.match(
     startupRatingSource,
-    /marketProvider\.name\s*===\s*"twelve-data"\s*\?\s*9_000\s*:\s*0/,
+    /const\s+isTwelveData\s*=\s*marketProvider\.name\s*===\s*"twelve-data"/,
+    "startup rating recovery must explicitly recognize the Twelve Data provider",
+  );
+  assert.match(
+    startupRatingSource,
+    /const\s+defaultMarketDelayMs\s*=\s*isTwelveData\s*\?\s*9_000\s*:\s*0/,
     "Twelve Data startup batches must retain the safe 9-second fallback pacing",
   );
   assert.match(
