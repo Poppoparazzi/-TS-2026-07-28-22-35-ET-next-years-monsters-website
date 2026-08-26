@@ -1,4 +1,4 @@
-# TS: 2026-08-22 16:00 ET
+# TS: 2026-08-26 17:00 ET
 
 name: Monster Rating status ledger
 
@@ -45,6 +45,7 @@ jobs:
           import { execFileSync } from 'node:child_process';
           import { resolveBackendDeployTarget } from './scripts/resolve-backend-deploy-target.mjs';
           const base = 'https://next-years-monsters-api.onrender.com';
+          const firstMilestone = 500;
           async function get(path) {
             const response = await fetch(base + path, {
               headers: { Accept: 'application/json' },
@@ -64,12 +65,28 @@ jobs:
           const deployedCommit = startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null;
           const ratingJob = startup.body?.jobs?.ratingBatch ?? null;
           const marketConfigured = health.body?.marketData?.configured ?? null;
+          const ratingCompleteCount = Number(universe.body?.ratingCompleteCount ?? 0);
+          let previousRatingCompleteCount = null;
+          try {
+            if (fs.existsSync('ops/rating-status.json')) {
+              const previous = JSON.parse(fs.readFileSync('ops/rating-status.json', 'utf8'));
+              const prior = Number(previous?.ratingCompleteCount);
+              previousRatingCompleteCount = Number.isFinite(prior) ? prior : null;
+            }
+          } catch (error) {
+            console.warn(`Could not read previous rating status snapshot: ${error instanceof Error ? error.message : String(error)}`);
+          }
+          const milestoneRegression = Boolean(
+            previousRatingCompleteCount !== null &&
+            previousRatingCompleteCount >= firstMilestone &&
+            ratingCompleteCount < firstMilestone
+          );
           const staleDeployment = Boolean(deployedCommit && deployedCommit !== backendDeployTargetCommit);
           const ratingRecoveryDisabled = Boolean(
             marketConfigured === true && ratingJob?.summary?.status === 'disabled'
           );
           const ratingRouteMissing = aaplRating.status === 404;
-          const needsRecovery = staleDeployment || ratingRecoveryDisabled || ratingRouteMissing;
+          const needsRecovery = staleDeployment || ratingRecoveryDisabled || ratingRouteMissing || milestoneRegression;
 
           const hasDeployHook = Boolean(process.env.RENDER_DEPLOY_HOOK_URL?.trim());
           const hasRenderApiKey = Boolean(process.env.RENDER_API_KEY?.trim());
@@ -99,6 +116,9 @@ jobs:
             quoteCompleteCount: universe.body?.quoteCompleteCount ?? null,
             ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
             fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
+            firstMilestone,
+            previousRatingCompleteCount,
+            milestoneRegression,
             deployedCommit,
             repositoryHeadCommit,
             backendDeployTargetCommit,
@@ -120,9 +140,13 @@ jobs:
           };
           fs.writeFileSync('ops/rating-status.json', JSON.stringify(status, null, 2) + '\n');
           console.log(JSON.stringify(status, null, 2));
+          if (milestoneRegression) {
+            console.error(`Monster Rating milestone regression detected: previous=${previousRatingCompleteCount}, current=${ratingCompleteCount}, floor=${firstMilestone}.`);
+          }
           if (process.env.GITHUB_OUTPUT) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `needs_recovery=${needsRecovery}\n`);
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `render_authority=${hasRenderAuthority}\n`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `milestone_regression=${milestoneRegression}\n`);
           }
           NODE
 
@@ -135,7 +159,7 @@ jobs:
       - name: Report blocked recovery authority
         if: steps.live_status.outputs.needs_recovery == 'true' && steps.live_status.outputs.render_authority != 'true'
         run: |
-          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials, AAPL rating-route status, SEC exceptions, and real-provider completion counts."
+          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials, AAPL rating-route status, SEC exceptions, real-provider completion counts, and first-500 milestone regression state."
 
       - name: Commit status snapshot
         run: |
