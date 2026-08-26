@@ -1,4 +1,4 @@
-# TS: 2026-08-26 05:12 ET
+# TS: 2026-08-26 14:02 ET
 
 name: Monster Rating rollout worker
 
@@ -44,6 +44,7 @@ jobs:
           MAX_PROTECTED_FALLBACK_PER_RUN: "2"
           REQUEST_DELAY_MS: "20000"
           PREFLIGHT_POOL_SIZE: "192"
+          FINAL_STRETCH_PREFLIGHT_POOL_SIZE: "768"
           PREFLIGHT_CONCURRENCY: "8"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -61,6 +62,7 @@ jobs:
           );
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 192);
+          const finalStretchPreflightPoolSize = Number(process.env.FINAL_STRETCH_PREFLIGHT_POOL_SIZE || 768);
           const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
           const protectedVclTickers = Object.freeze([
             "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
@@ -136,6 +138,10 @@ jobs:
           const firstMilestoneReached = count >= firstMilestone;
           const milestoneAwareRemaining = firstMilestoneReached ? remainingCount : remainingFirstMilestone;
           const directFallbackBudget = Math.min(maxDirectFallbackPerRun, milestoneAwareRemaining);
+          const finalStretchActive = !firstMilestoneReached && remainingFirstMilestone > 0 && remainingFirstMilestone <= 2;
+          const effectivePreflightPoolSize = finalStretchActive
+            ? Math.max(preflightPoolSize, finalStretchPreflightPoolSize)
+            : preflightPoolSize;
           const ratingJob = startup.body?.jobs?.ratingBatch ?? null;
           const earlierJobs = [
             startup.body?.jobs?.universeImport,
@@ -156,6 +162,10 @@ jobs:
             remainingFirstMilestone,
             firstMilestoneReached,
             directFallbackBudget,
+            finalStretchActive,
+            preflightPoolSize,
+            finalStretchPreflightPoolSize,
+            effectivePreflightPoolSize,
             secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
             marketConfigured: health.body?.marketData?.configured === true,
             ratingJobState: ratingJob?.state ?? null,
@@ -291,13 +301,13 @@ jobs:
             ordinaryCandidates.length,
           );
           const startIndex = ordinaryCandidates.length > 0
-            ? (cohortNumber * Math.max(preflightPoolSize, 1)) % ordinaryCandidates.length
+            ? (cohortNumber * Math.max(effectivePreflightPoolSize, 1)) % ordinaryCandidates.length
             : 0;
           const preflightStride = ordinaryCandidates.length > 0
-            ? Math.max(Math.floor(ordinaryCandidates.length / Math.max(preflightPoolSize, 1)), 1)
+            ? Math.max(Math.floor(ordinaryCandidates.length / Math.max(effectivePreflightPoolSize, 1)), 1)
             : 1;
           const preflightPool = Array.from(
-            { length: Math.min(preflightPoolSize, ordinaryCandidates.length) },
+            { length: Math.min(effectivePreflightPoolSize, ordinaryCandidates.length) },
             (_, index) => ordinaryCandidates[(startIndex + index * preflightStride) % ordinaryCandidates.length],
           );
           const preflightResults = await mapWithConcurrency(
@@ -330,8 +340,8 @@ jobs:
 
           console.log(
             `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
-            `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedPreflighted=${protectedPreflightResults.length}, ` +
-            `verifiedProtectedPreflight=${verifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
+            `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, finalStretch=${finalStretchActive}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedPreflighted=${protectedPreflightResults.length}, ` +
+            `verifiedProtectedPreflight=${verifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, configuredPreflightPool=${preflightPoolSize}, effectivePreflightPool=${effectivePreflightPoolSize}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
             `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
@@ -367,6 +377,9 @@ jobs:
             directFallbackProtectedAttemptedCount: selectedProtectedCandidates.length,
             directFallbackProtectedStartIndex: protectedStartIndex,
             directFallbackOrdinaryCount: ordinaryCandidates.length,
+            directFallbackConfiguredPreflightPoolSize: preflightPoolSize,
+            directFallbackEffectivePreflightPoolSize: effectivePreflightPoolSize,
+            directFallbackFinalStretchActive: finalStretchActive,
             directFallbackPreflightedCount: preflightPool.length,
             directFallbackVerifiedPreflightCount: verifiedPreflightResults.length,
             directFallbackPreflightConcurrency: preflightConcurrency,
