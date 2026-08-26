@@ -1,4 +1,4 @@
-# TS: 2026-08-01 21:26 ET
+# TS: 2026-08-26 00:00 ET
 
 name: Phase 3 Backend Checks
 
@@ -7,11 +7,13 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "render.yaml"
       - ".github/workflows/backend-checks.yml"
   pull_request:
     branches: [main]
     paths:
       - "backend/**"
+      - "render.yaml"
       - ".github/workflows/backend-checks.yml"
   workflow_dispatch:
 
