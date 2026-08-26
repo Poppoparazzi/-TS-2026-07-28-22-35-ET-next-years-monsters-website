@@ -1,4 +1,4 @@
-// TS: 2026-08-26 01:03 ET
+// TS: 2026-08-26 05:13 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -113,8 +113,8 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
   );
   assert.match(
     rolloutWorker,
-    /right\.factCount - left\.factCount \|\|[\s\S]*?right\.filingCount - left\.filingCount \|\|[\s\S]*?left\.ratingCount - right\.ratingCount/,
-    "paid ordinary attempts must favor deeper SEC evidence before historical-rating tie breakers",
+    /right\.filingCount - left\.filingCount \|\|[\s\S]*?right\.factCount - left\.factCount \|\|[\s\S]*?left\.ratingCount - right\.ratingCount/,
+    "paid ordinary attempts must favor filing depth as the strongest cheap proxy for multi-period SEC history before fact depth and historical-rating tie breakers",
   );
   assert.match(
     rolloutWorker,
