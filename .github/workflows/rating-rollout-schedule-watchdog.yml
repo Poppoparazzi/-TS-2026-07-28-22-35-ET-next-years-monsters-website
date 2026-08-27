@@ -1,10 +1,15 @@
-# TS: 2026-08-27 04:00 ET
+# TS: 2026-08-27 05:01 ET
 
 name: Monster Rating schedule watchdog
 
 on:
   schedule:
     - cron: "23 * * * *"
+  push:
+    branches: [main]
+    paths:
+      - "ops/rating-rollout-watchdog-heartbeat.json"
+      - ".github/workflows/rating-rollout-schedule-watchdog.yml"
   workflow_dispatch:
 
 permissions:
@@ -56,6 +61,7 @@ jobs:
             latestAt,
             ageMinutes: Number.isFinite(ageMs) ? Math.round(ageMs / 60000) : null,
             staleAfterMinutes: Math.round(staleAfterMs / 60000),
+            triggerEvent: process.env.GITHUB_EVENT_NAME ?? null,
           }, null, 2));
 
           if (ageMs <= staleAfterMs) {
