@@ -1,4 +1,4 @@
-# TS: 2026-08-26 20:02 ET
+# TS: 2026-08-26 21:58 ET
 
 name: Monster Rating rollout worker
 
@@ -44,7 +44,7 @@ jobs:
           MAX_PROTECTED_FALLBACK_PER_RUN: "2"
           REQUEST_DELAY_MS: "20000"
           PREFLIGHT_POOL_SIZE: "192"
-          POST_MILESTONE_PREFLIGHT_POOL_SIZE: "256"
+          POST_MILESTONE_PREFLIGHT_POOL_SIZE: "320"
           FINAL_STRETCH_PREFLIGHT_POOL_SIZE: "768"
           PREFLIGHT_CONCURRENCY: "8"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -63,7 +63,7 @@ jobs:
           );
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 192);
-          const postMilestonePreflightPoolSize = Number(process.env.POST_MILESTONE_PREFLIGHT_POOL_SIZE || 256);
+          const postMilestonePreflightPoolSize = Number(process.env.POST_MILESTONE_PREFLIGHT_POOL_SIZE || 320);
           const finalStretchPreflightPoolSize = Number(process.env.FINAL_STRETCH_PREFLIGHT_POOL_SIZE || 768);
           const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
           const protectedVclTickers = Object.freeze([
@@ -277,10 +277,6 @@ jobs:
           );
           const cohortNumber = Math.floor(Date.now() / (30 * 60 * 1000));
 
-          // Protected VCL names remain protected and first in line, but they must pass
-          // the same free stored-data verification before consuming licensed provider
-          // capacity. A failed preflight defers the paid attempt; it never makes the
-          // protected ticker replaceable.
           const protectedPreflightResults = await mapWithConcurrency(
             protectedCandidates,
             preflightConcurrency,
@@ -322,14 +318,6 @@ jobs:
           );
           const verifiedPreflightResults = preflightResults.filter((item) => item.preflightOk);
           const rankedOrdinaryCandidates = verifiedPreflightResults
-            // A failed free preflight is uncertainty, not evidence. Do not spend a
-            // licensed rating attempt on ordinary candidates whose stored-data check
-            // could not be verified. Protected VCL names retain their bounded priority,
-            // but now must also pass the same free preflight before a paid attempt.
-            // Filing depth is the strongest cheap proxy for multi-period SEC history,
-            // which is the gate that rejected most candidates in the previous pass.
-            // Fact depth is secondary; historical rating count remains only a tie-breaker
-            // because old-engine ratings must remain eligible for the current-version rollout.
             .sort((left, right) =>
               right.filingCount - left.filingCount ||
               right.factCount - left.factCount ||
