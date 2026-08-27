@@ -1,16 +1,22 @@
-// TS: 2026-08-21 16:32 UTC
+// TS: 2026-08-27 18:00 ET
 
 import { readFileSync } from "node:fs";
 import { protectedTickers } from "./protected-stocks.mjs";
 
 const failures = [];
+const warnings = [];
 const fail = (message) => failures.push(message);
+const warn = (message) => warnings.push(message);
 const read = (path) => readFileSync(path, "utf8");
 
 const expectedVcl = [
   "AAPL", "NVDA", "MNST", "AMZN", "TSLA", "NFLX", "AMD", "COST",
   "VRT", "AXON", "DECK", "WING", "META", "APP", "MSFT",
 ];
+const ancientBrokenCommit = "0b0388d9b2eba7feff9ad4ccfddc4b4ec88ecb73";
+const liveApiBase = (process.env.NYM_API_BASE_URL || "https://next-years-monsters-api.onrender.com")
+  .trim()
+  .replace(/\/$/, "");
 
 function parseQuotedArray(source, constantName) {
   const match = source.match(
@@ -165,17 +171,97 @@ function verifyMonsterHuntConsistency() {
   }
 }
 
+async function fetchJson(path) {
+  const response = await fetch(`${liveApiBase}${path}`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(70_000),
+  });
+  const payload = await response.json().catch(() => null);
+  return { response, payload };
+}
+
+async function verifyLiveProductionWatchdog() {
+  try {
+    const [startupResult, healthResult, universeResult, aaplResult] = await Promise.all([
+      fetchJson("/api/startup-status"),
+      fetchJson("/api/health"),
+      fetchJson("/api/universe/status?limit=5000"),
+      fetchJson("/api/ratings/AAPL"),
+    ]);
+
+    const deployedCommit = startupResult.payload?.deployment?.commit
+      ?? startupResult.payload?.deploymentCommit
+      ?? null;
+    const quoteCompleteCount = Number(universeResult.payload?.quoteCompleteCount);
+    const ratingCompleteCount = Number(universeResult.payload?.ratingCompleteCount);
+    const failedCount = Number(universeResult.payload?.failedCount);
+    const secEvidenceReadyCount = Number(universeResult.payload?.secEvidenceReadyCount);
+    const examinedCount = Number(universeResult.payload?.examinedCount);
+    const marketConfigured = healthResult.payload?.marketData?.configured === true;
+
+    console.log("Live production watchdog snapshot:");
+    console.log(JSON.stringify({
+      deployedCommit,
+      startupStatus: startupResult.response.status,
+      healthStatus: healthResult.response.status,
+      marketConfigured,
+      universeStatus: universeResult.response.status,
+      examinedCount: Number.isFinite(examinedCount) ? examinedCount : null,
+      secEvidenceReadyCount: Number.isFinite(secEvidenceReadyCount) ? secEvidenceReadyCount : null,
+      failedCount: Number.isFinite(failedCount) ? failedCount : null,
+      quoteCompleteCount: Number.isFinite(quoteCompleteCount) ? quoteCompleteCount : null,
+      ratingCompleteCount: Number.isFinite(ratingCompleteCount) ? ratingCompleteCount : null,
+      aaplStatus: aaplResult.response.status,
+      aaplSymbol: aaplResult.payload?.symbol ?? null,
+      aaplEligible: aaplResult.payload?.eligible ?? null,
+      aaplTier: aaplResult.payload?.tier ?? null,
+    }, null, 2));
+
+    if (deployedCommit === ancientBrokenCommit) {
+      fail(`Render regressed to ancient broken commit ${ancientBrokenCommit}.`);
+    }
+    if (aaplResult.response.status === 404) {
+      fail("GET /api/ratings/AAPL regressed to HTTP 404.");
+    } else if (!aaplResult.response.ok || aaplResult.payload?.symbol !== "AAPL") {
+      fail(`GET /api/ratings/AAPL is unhealthy: HTTP ${aaplResult.response.status}.`);
+    }
+    if (!marketConfigured) {
+      warn("Production market-data provider is not currently reported configured.");
+    }
+    if (!Number.isInteger(quoteCompleteCount) || quoteCompleteCount < 0) {
+      fail(`quoteCompleteCount is not a valid nonnegative integer: ${String(universeResult.payload?.quoteCompleteCount)}.`);
+    }
+    if (!Number.isInteger(ratingCompleteCount) || ratingCompleteCount < 0) {
+      fail(`ratingCompleteCount is not a valid nonnegative integer: ${String(universeResult.payload?.ratingCompleteCount)}.`);
+    }
+    if (Number.isInteger(quoteCompleteCount) && Number.isInteger(ratingCompleteCount) && ratingCompleteCount > quoteCompleteCount) {
+      fail(`ratingCompleteCount=${ratingCompleteCount} exceeds quoteCompleteCount=${quoteCompleteCount}; ratings must advance only from real provider-backed quote data.`);
+    }
+    if (Number.isInteger(failedCount) && failedCount > 0) {
+      warn(`SEC/universe failedCount is ${failedCount}; exception recovery still has work remaining.`);
+    }
+  } catch (error) {
+    warn(`Live production watchdog could not complete this pass: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 verifyHomepageSearch();
 verifyBroadProductionDirectory();
 verifyMonsterCheckQuickPicks();
 verifyProtectedVclPolicy();
 verifyBackendAndRecoveryProtectionPoliciesMatch();
 verifyMonsterHuntConsistency();
+await verifyLiveProductionWatchdog();
+
+if (warnings.length) {
+  console.warn("Frozen/live watchdog warnings:");
+  warnings.forEach((message) => console.warn(`- ${message}`));
+}
 
 if (failures.length) {
   console.error("Frozen functional invariant verification failed:");
   failures.forEach((message) => console.error(`- ${message}`));
   process.exitCode = 1;
 } else {
-  console.log("Frozen functional invariant verification passed: Apple/AAPL routing, 15 unique VCL quick picks, synchronized backend/recovery VCL replacement protection, direct chart routing, selected-ticker-first status panel, and shared Monster Hunt score/rank source are intact.");
+  console.log("Frozen functional invariant verification passed: Apple/AAPL routing, 15 unique VCL quick picks, synchronized backend/recovery VCL replacement protection, direct chart routing, selected-ticker-first status panel, shared Monster Hunt score/rank source, and the live Render/AAPL/accounting watchdog are intact.");
 }
