@@ -1,4 +1,4 @@
-# TS: 2026-08-27 07:14 ET
+# TS: 2026-08-27 15:57 ET
 
 name: Monster Rating rollout worker
 
@@ -71,6 +71,8 @@ jobs:
           const secQualificationPoolSize = Math.max(Number(process.env.SEC_QUALIFICATION_POOL_SIZE || 64), 1);
           const secQualificationConcurrency = Math.max(Number(process.env.SEC_QUALIFICATION_CONCURRENCY || 4), 1);
           const annualForms = new Set(["10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"]);
+          const maxSecFactAgeMs = 7 * 24 * 60 * 60 * 1000;
+          const futureToleranceMs = 5 * 60 * 1000;
           const protectedVclTickers = Object.freeze([
             "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
             "NFLX", "AMD", "COST", "VRT", "AXON",
@@ -151,21 +153,43 @@ jobs:
             return fiscalYears.size;
           }
 
+          function secFinancialEvidenceReady(summary, ticker, company) {
+            if (!summary || typeof summary !== "object") return false;
+            const normalizedTicker = String(summary.ticker || "").trim().toUpperCase();
+            const cik = Number(summary.cik);
+            const expectedCik = Number(company?.cik);
+            const retrievedAtMs = Date.parse(String(summary.retrievedAt || ""));
+            const nowMs = Date.now();
+            const sourceUrl = String(summary.sourceUrl || "");
+            const facts = summary.facts && typeof summary.facts === "object" ? summary.facts : null;
+            if (normalizedTicker !== ticker) return false;
+            if (!Number.isInteger(cik) || cik <= 0) return false;
+            if (!sourceUrl.startsWith("https://data.sec.gov/")) return false;
+            if (!facts || Object.keys(facts).length === 0) return false;
+            if (!Number.isFinite(retrievedAtMs)) return false;
+            const ageMs = nowMs - retrievedAtMs;
+            if (ageMs < -futureToleranceMs || ageMs > maxSecFactAgeMs) return false;
+            if (Number.isInteger(expectedCik) && expectedCik > 0 && expectedCik !== cik) return false;
+            return true;
+          }
+
           async function preflightSecRevenueCandidate(item) {
             const ticker = String(item.company.ticker).trim().toUpperCase();
             try {
               const facts = await getJson(`${base}/api/sec/facts/${encodeURIComponent(ticker)}`, 30_000);
               if (!facts.response.ok || !facts.body) {
-                return { ...item, secQualificationOk: false, annualRevenuePeriodCount: 0 };
+                return { ...item, secQualificationOk: false, annualRevenuePeriodCount: 0, secReadinessOk: false };
               }
-              const annualRevenuePeriods = annualRevenuePeriodCount(facts.body);
+              const secReadinessOk = secFinancialEvidenceReady(facts.body, ticker, item.company);
+              const annualRevenuePeriods = secReadinessOk ? annualRevenuePeriodCount(facts.body) : 0;
               return {
                 ...item,
-                secQualificationOk: annualRevenuePeriods >= 2,
+                secQualificationOk: secReadinessOk && annualRevenuePeriods >= 2,
                 annualRevenuePeriodCount: annualRevenuePeriods,
+                secReadinessOk,
               };
             } catch {
-              return { ...item, secQualificationOk: false, annualRevenuePeriodCount: 0 };
+              return { ...item, secQualificationOk: false, annualRevenuePeriodCount: 0, secReadinessOk: false };
             }
           }
 
