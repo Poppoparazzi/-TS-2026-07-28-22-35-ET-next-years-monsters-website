@@ -1,0 +1,2 @@
+// TS: 2026-08-27 18:24 ET
+// Inert trigger marker: nudge the existing Monster Rating rollout worker after a missing scheduled pass. No rating logic or pacing changes.
