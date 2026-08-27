@@ -1,4 +1,4 @@
-# TS: 2026-08-26 21:01 ET
+# TS: 2026-08-26 22:57 ET
 
 name: Monster Rating status ledger
 
@@ -46,6 +46,8 @@ jobs:
           import { resolveBackendDeployTarget } from './scripts/resolve-backend-deploy-target.mjs';
           const base = 'https://next-years-monsters-api.onrender.com';
           const firstMilestone = 500;
+          const longRangeTarget = 5000;
+          const stallThreshold = 3;
           async function get(path) {
             const response = await fetch(base + path, {
               headers: { Accept: 'application/json' },
@@ -69,13 +71,16 @@ jobs:
           const quoteCompleteCount = Number(universe.body?.quoteCompleteCount ?? 0);
           let previousRatingCompleteCount = null;
           let previousQuoteCompleteCount = null;
+          let previousPostMilestoneNoProgressStreak = 0;
           try {
             if (fs.existsSync('ops/rating-status.json')) {
               const previous = JSON.parse(fs.readFileSync('ops/rating-status.json', 'utf8'));
               const priorRating = Number(previous?.ratingCompleteCount);
               const priorQuote = Number(previous?.quoteCompleteCount);
+              const priorStreak = Number(previous?.postMilestoneNoProgressStreak ?? 0);
               previousRatingCompleteCount = Number.isFinite(priorRating) ? priorRating : null;
               previousQuoteCompleteCount = Number.isFinite(priorQuote) ? priorQuote : null;
+              previousPostMilestoneNoProgressStreak = Number.isFinite(priorStreak) && priorStreak > 0 ? priorStreak : 0;
             }
           } catch (error) {
             console.warn(`Could not read previous rating status snapshot: ${error instanceof Error ? error.message : String(error)}`);
@@ -90,12 +95,26 @@ jobs:
             previousRatingCompleteCount >= firstMilestone &&
             ratingCompleteCount < firstMilestone
           );
+          const postMilestoneNoProgressStreak = Boolean(
+            previousRatingCompleteCount !== null &&
+            ratingCompleteCount >= firstMilestone &&
+            ratingCompleteCount < longRangeTarget &&
+            ratingCompleteCount <= previousRatingCompleteCount
+          )
+            ? previousPostMilestoneNoProgressStreak + 1
+            : 0;
+          const postMilestoneStall = Boolean(
+            marketConfigured === true &&
+            ratingCompleteCount >= firstMilestone &&
+            ratingCompleteCount < longRangeTarget &&
+            postMilestoneNoProgressStreak >= stallThreshold
+          );
           const staleDeployment = Boolean(deployedCommit && deployedCommit !== backendDeployTargetCommit);
           const ratingRecoveryDisabled = Boolean(
             marketConfigured === true && ratingJob?.summary?.status === 'disabled'
           );
           const ratingRouteMissing = aaplRating.status === 404;
-          const needsRecovery = staleDeployment || ratingRecoveryDisabled || ratingRouteMissing || milestoneRegression;
+          const needsRecovery = staleDeployment || ratingRecoveryDisabled || ratingRouteMissing || milestoneRegression || postMilestoneStall;
 
           const hasDeployHook = Boolean(process.env.RENDER_DEPLOY_HOOK_URL?.trim());
           const hasRenderApiKey = Boolean(process.env.RENDER_API_KEY?.trim());
@@ -126,12 +145,16 @@ jobs:
             ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
             fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
             firstMilestone,
+            longRangeTarget,
             previousRatingCompleteCount,
             previousQuoteCompleteCount,
             ratingDelta,
             quoteDelta,
             ratingPerQuoteDelta,
             milestoneRegression,
+            postMilestoneNoProgressStreak,
+            postMilestoneStall,
+            postMilestoneStallThreshold: stallThreshold,
             deployedCommit,
             repositoryHeadCommit,
             backendDeployTargetCommit,
@@ -156,10 +179,14 @@ jobs:
           if (milestoneRegression) {
             console.error(`Monster Rating milestone regression detected: previous=${previousRatingCompleteCount}, current=${ratingCompleteCount}, floor=${firstMilestone}.`);
           }
+          if (postMilestoneStall) {
+            console.error(`Post-500 Monster Rating stall detected: count=${ratingCompleteCount}, no-progress-streak=${postMilestoneNoProgressStreak}, threshold=${stallThreshold}.`);
+          }
           if (process.env.GITHUB_OUTPUT) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `needs_recovery=${needsRecovery}\n`);
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `render_authority=${hasRenderAuthority}\n`);
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `milestone_regression=${milestoneRegression}\n`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `post_milestone_stall=${postMilestoneStall}\n`);
           }
           NODE
 
@@ -172,7 +199,7 @@ jobs:
       - name: Report blocked recovery authority
         if: steps.live_status.outputs.needs_recovery == 'true' && steps.live_status.outputs.render_authority != 'true'
         run: |
-          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials, AAPL rating-route status, SEC exceptions, real-provider completion counts, post-500 conversion deltas, and first-500 milestone regression state."
+          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials, AAPL rating-route status, SEC exceptions, real-provider completion counts, post-500 conversion deltas, post-500 stall state, and first-500 milestone regression state."
 
       - name: Commit status snapshot
         run: |
