@@ -1,4 +1,4 @@
-# TS: 2026-08-27 01:01 ET
+# TS: 2026-08-27 07:14 ET
 
 name: Monster Rating rollout worker
 
@@ -111,17 +111,24 @@ jobs:
             try {
               const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
               if (!stored.response.ok || !stored.body) {
-                return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0 };
+                return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0, storedDollarVolume: null };
               }
+              const storedPrice = Number(stored.body.latestQuote?.price);
+              const storedVolume = Number(stored.body.latestQuote?.volume);
+              const storedDollarVolume =
+                Number.isFinite(storedPrice) && storedPrice > 0 && Number.isFinite(storedVolume) && storedVolume > 0
+                  ? storedPrice * storedVolume
+                  : null;
               return {
                 company,
                 preflightOk: true,
                 factCount: Number(stored.body.factCount || 0),
                 filingCount: Number(stored.body.filingCount || 0),
                 ratingCount: Number(stored.body.ratingCount || 0),
+                storedDollarVolume,
               };
             } catch {
-              return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0 };
+              return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0, storedDollarVolume: null };
             }
           }
 
@@ -384,6 +391,16 @@ jobs:
           );
           const qualifiedOrdinaryCandidates = secQualificationResults
             .filter((item) => item.secQualificationOk)
+            .sort((left, right) => {
+              const leftLiquidity = Number.isFinite(left.storedDollarVolume) ? left.storedDollarVolume : -1;
+              const rightLiquidity = Number.isFinite(right.storedDollarVolume) ? right.storedDollarVolume : -1;
+              return (
+                rightLiquidity - leftLiquidity ||
+                right.filingCount - left.filingCount ||
+                right.factCount - left.factCount ||
+                String(left.company.ticker).localeCompare(String(right.company.ticker))
+              );
+            })
             .slice(0, ordinaryAttemptCount)
             .map((item) => item.company);
           const candidates = [
