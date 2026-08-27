@@ -1,4 +1,4 @@
-// TS: 2026-08-26 20:02 ET
+// TS: 2026-08-26 21:58 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -25,7 +25,7 @@ function milestoneAwareBudget(count: number): number {
 function effectivePreflightPool(count: number): number {
   const firstMilestone = 500;
   const preflightPoolSize = 192;
-  const postMilestonePreflightPoolSize = 256;
+  const postMilestonePreflightPoolSize = 320;
   const finalStretchPreflightPoolSize = 768;
   const remainingFirstMilestone = Math.max(firstMilestone - count, 0);
   const firstMilestoneReached = count >= firstMilestone;
@@ -72,11 +72,11 @@ test("free preflight widens only at the final stretch and after the first 500 mi
   const rolloutWorker = readRolloutWorker();
 
   assert.match(rolloutWorker, /PREFLIGHT_POOL_SIZE:\s*"192"/);
-  assert.match(rolloutWorker, /POST_MILESTONE_PREFLIGHT_POOL_SIZE:\s*"256"/);
+  assert.match(rolloutWorker, /POST_MILESTONE_PREFLIGHT_POOL_SIZE:\s*"320"/);
   assert.match(rolloutWorker, /FINAL_STRETCH_PREFLIGHT_POOL_SIZE:\s*"768"/);
   assert.equal(effectivePreflightPool(497), 192, "normal preflight must remain in effect more than two ratings from 500");
   assert.equal(effectivePreflightPool(498), 768, "two ratings from 500 should widen only the free preflight pool");
   assert.equal(effectivePreflightPool(499), 768, "one rating from 500 should keep the widened free preflight pool");
-  assert.equal(effectivePreflightPool(500), 256, "at 500 the worker should switch to the broader free post-milestone pool");
-  assert.equal(effectivePreflightPool(506), 256, "post-500 expansion should keep the broader free pool without increasing paid attempts");
+  assert.equal(effectivePreflightPool(500), 320, "at 500 the worker should switch to the broader free post-milestone pool");
+  assert.equal(effectivePreflightPool(506), 320, "post-500 expansion should keep the broader free pool without increasing paid attempts");
 });
