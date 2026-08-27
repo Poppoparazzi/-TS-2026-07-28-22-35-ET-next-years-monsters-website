@@ -1,4 +1,4 @@
-// TS: 2026-08-26 05:13 ET
+// TS: 2026-08-27 01:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -93,6 +93,8 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
   assert.match(rolloutWorker, /REQUEST_DELAY_MS:\s*"20000"/);
   assert.match(rolloutWorker, /PREFLIGHT_POOL_SIZE:\s*"192"/);
   assert.match(rolloutWorker, /PREFLIGHT_CONCURRENCY:\s*"8"/);
+  assert.match(rolloutWorker, /SEC_QUALIFICATION_POOL_SIZE:\s*"64"/);
+  assert.match(rolloutWorker, /SEC_QUALIFICATION_CONCURRENCY:\s*"4"/);
   assert.match(rolloutWorker, /cron:\s*"8,38 \* \* \* \*"/);
   assert.match(rolloutWorker, /backend\/src\/providers\/\*\*/);
   assert.match(rolloutWorker, /backend\/src\/sec\/\*\*/);
@@ -108,13 +110,28 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
   );
   assert.match(
     rolloutWorker,
-    /rankedOrdinaryCandidates = verifiedPreflightResults/,
-    "failed ordinary preflights must not fall through into paid candidate selection",
+    /rankedStoredPreflightResults = verifiedPreflightResults\.sort/,
+    "failed ordinary stored-data preflights must not enter the ranked shortlist",
+  );
+  assert.match(
+    rolloutWorker,
+    /secQualificationPool = rankedStoredPreflightResults\.slice\([\s\S]*?secQualificationPoolSize/,
+    "only a bounded stored-data shortlist may enter free SEC qualification",
+  );
+  assert.match(
+    rolloutWorker,
+    /qualifiedOrdinaryCandidates = secQualificationResults[\s\S]*?\.filter\(\(item\) => item\.secQualificationOk\)[\s\S]*?\.slice\(0, ordinaryAttemptCount\)/,
+    "only SEC-qualified ordinary candidates may fall through into paid candidate selection",
+  );
+  assert.match(
+    rolloutWorker,
+    /const candidates = \[[\s\S]*?\.\.\.selectedProtectedCandidates,[\s\S]*?\.\.\.qualifiedOrdinaryCandidates/,
+    "the paid candidate cohort must use SEC-qualified ordinary candidates rather than the raw stored-data shortlist",
   );
   assert.match(
     rolloutWorker,
     /right\.filingCount - left\.filingCount \|\|[\s\S]*?right\.factCount - left\.factCount \|\|[\s\S]*?left\.ratingCount - right\.ratingCount/,
-    "paid ordinary attempts must favor filing depth as the strongest cheap proxy for multi-period SEC history before fact depth and historical-rating tie breakers",
+    "free stored-data ranking must still favor filing depth before fact depth and historical-rating tie breakers",
   );
   assert.match(
     rolloutWorker,
