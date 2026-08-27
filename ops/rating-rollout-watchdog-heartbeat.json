@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-27T10:00:05-04:00",
+  "timestamp": "2026-08-27T10:59:06-04:00",
   "reason": "External hourly recovery heartbeat after missing GitHub schedule events",
   "expectedWorkerStaleAfterMinutes": 45
 }
