@@ -1,4 +1,4 @@
-# TS: 2026-08-26 14:02 ET
+# TS: 2026-08-26 20:02 ET
 
 name: Monster Rating rollout worker
 
@@ -44,6 +44,7 @@ jobs:
           MAX_PROTECTED_FALLBACK_PER_RUN: "2"
           REQUEST_DELAY_MS: "20000"
           PREFLIGHT_POOL_SIZE: "192"
+          POST_MILESTONE_PREFLIGHT_POOL_SIZE: "256"
           FINAL_STRETCH_PREFLIGHT_POOL_SIZE: "768"
           PREFLIGHT_CONCURRENCY: "8"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -62,6 +63,7 @@ jobs:
           );
           const requestDelayMs = Number(process.env.REQUEST_DELAY_MS || 20000);
           const preflightPoolSize = Number(process.env.PREFLIGHT_POOL_SIZE || 192);
+          const postMilestonePreflightPoolSize = Number(process.env.POST_MILESTONE_PREFLIGHT_POOL_SIZE || 256);
           const finalStretchPreflightPoolSize = Number(process.env.FINAL_STRETCH_PREFLIGHT_POOL_SIZE || 768);
           const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
           const protectedVclTickers = Object.freeze([
@@ -141,7 +143,9 @@ jobs:
           const finalStretchActive = !firstMilestoneReached && remainingFirstMilestone > 0 && remainingFirstMilestone <= 2;
           const effectivePreflightPoolSize = finalStretchActive
             ? Math.max(preflightPoolSize, finalStretchPreflightPoolSize)
-            : preflightPoolSize;
+            : firstMilestoneReached
+              ? Math.max(preflightPoolSize, postMilestonePreflightPoolSize)
+              : preflightPoolSize;
           const ratingJob = startup.body?.jobs?.ratingBatch ?? null;
           const earlierJobs = [
             startup.body?.jobs?.universeImport,
@@ -164,6 +168,7 @@ jobs:
             directFallbackBudget,
             finalStretchActive,
             preflightPoolSize,
+            postMilestonePreflightPoolSize,
             finalStretchPreflightPoolSize,
             effectivePreflightPoolSize,
             secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
@@ -341,7 +346,7 @@ jobs:
           console.log(
             `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
             `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, finalStretch=${finalStretchActive}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedPreflighted=${protectedPreflightResults.length}, ` +
-            `verifiedProtectedPreflight=${verifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, configuredPreflightPool=${preflightPoolSize}, effectivePreflightPool=${effectivePreflightPoolSize}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
+            `verifiedProtectedPreflight=${verifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, configuredPreflightPool=${preflightPoolSize}, postMilestonePreflightPool=${postMilestonePreflightPoolSize}, effectivePreflightPool=${effectivePreflightPoolSize}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
             `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
@@ -378,6 +383,7 @@ jobs:
             directFallbackProtectedStartIndex: protectedStartIndex,
             directFallbackOrdinaryCount: ordinaryCandidates.length,
             directFallbackConfiguredPreflightPoolSize: preflightPoolSize,
+            directFallbackPostMilestonePreflightPoolSize: postMilestonePreflightPoolSize,
             directFallbackEffectivePreflightPoolSize: effectivePreflightPoolSize,
             directFallbackFinalStretchActive: finalStretchActive,
             directFallbackPreflightedCount: preflightPool.length,
