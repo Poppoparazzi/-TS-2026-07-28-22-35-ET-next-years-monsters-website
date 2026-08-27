@@ -1,4 +1,4 @@
-# TS: 2026-08-26 17:00 ET
+# TS: 2026-08-26 21:01 ET
 
 name: Monster Rating status ledger
 
@@ -66,16 +66,25 @@ jobs:
           const ratingJob = startup.body?.jobs?.ratingBatch ?? null;
           const marketConfigured = health.body?.marketData?.configured ?? null;
           const ratingCompleteCount = Number(universe.body?.ratingCompleteCount ?? 0);
+          const quoteCompleteCount = Number(universe.body?.quoteCompleteCount ?? 0);
           let previousRatingCompleteCount = null;
+          let previousQuoteCompleteCount = null;
           try {
             if (fs.existsSync('ops/rating-status.json')) {
               const previous = JSON.parse(fs.readFileSync('ops/rating-status.json', 'utf8'));
-              const prior = Number(previous?.ratingCompleteCount);
-              previousRatingCompleteCount = Number.isFinite(prior) ? prior : null;
+              const priorRating = Number(previous?.ratingCompleteCount);
+              const priorQuote = Number(previous?.quoteCompleteCount);
+              previousRatingCompleteCount = Number.isFinite(priorRating) ? priorRating : null;
+              previousQuoteCompleteCount = Number.isFinite(priorQuote) ? priorQuote : null;
             }
           } catch (error) {
             console.warn(`Could not read previous rating status snapshot: ${error instanceof Error ? error.message : String(error)}`);
           }
+          const ratingDelta = previousRatingCompleteCount === null ? null : ratingCompleteCount - previousRatingCompleteCount;
+          const quoteDelta = previousQuoteCompleteCount === null ? null : quoteCompleteCount - previousQuoteCompleteCount;
+          const ratingPerQuoteDelta = quoteDelta && quoteDelta > 0 && ratingDelta !== null
+            ? Number((ratingDelta / quoteDelta).toFixed(4))
+            : null;
           const milestoneRegression = Boolean(
             previousRatingCompleteCount !== null &&
             previousRatingCompleteCount >= firstMilestone &&
@@ -118,6 +127,10 @@ jobs:
             fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
             firstMilestone,
             previousRatingCompleteCount,
+            previousQuoteCompleteCount,
+            ratingDelta,
+            quoteDelta,
+            ratingPerQuoteDelta,
             milestoneRegression,
             deployedCommit,
             repositoryHeadCommit,
@@ -159,7 +172,7 @@ jobs:
       - name: Report blocked recovery authority
         if: steps.live_status.outputs.needs_recovery == 'true' && steps.live_status.outputs.render_authority != 'true'
         run: |
-          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials, AAPL rating-route status, SEC exceptions, real-provider completion counts, and first-500 milestone regression state."
+          echo "Render recovery is needed but no authorized Render deployment path is available. See ops/rating-status.json for exact missing credentials, AAPL rating-route status, SEC exceptions, real-provider completion counts, post-500 conversion deltas, and first-500 milestone regression state."
 
       - name: Commit status snapshot
         run: |
