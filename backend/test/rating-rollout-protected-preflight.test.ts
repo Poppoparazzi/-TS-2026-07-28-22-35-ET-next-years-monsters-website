@@ -1,4 +1,4 @@
-// TS: 2026-08-25 09:07 ET
+// TS: 2026-08-27 01:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -11,32 +11,71 @@ function readRolloutWorker(): string {
   );
 }
 
-test("protected VCL candidates must pass free stored-data preflight before paid rating attempts", () => {
+test("protected VCL candidates must pass free stored-data and SEC revenue preflight before paid rating attempts", () => {
   const rolloutWorker = readRolloutWorker();
 
   assert.match(
     rolloutWorker,
     /protectedPreflightResults\s*=\s*await mapWithConcurrency\([\s\S]*?protectedCandidates,[\s\S]*?preflightStoredCandidate/,
-    "protected VCL candidates must use the same free stored-data preflight helper before paid selection",
+    "protected VCL candidates must use the free stored-data preflight helper before paid selection",
   );
   assert.match(
     rolloutWorker,
-    /verifiedProtectedCandidates\s*=\s*protectedPreflightResults[\s\S]*?\.filter\(\(item\) => item\.preflightOk\)[\s\S]*?\.map\(\(item\) => item\.company\)/,
-    "only protected candidates with successful free preflight may enter the paid protected cohort",
+    /verifiedProtectedPreflight\s*=\s*protectedPreflightResults\.filter\(\(item\) => item\.preflightOk\)/,
+    "only protected candidates with successful stored-data preflight may advance to SEC qualification",
   );
   assert.match(
     rolloutWorker,
-    /protectedAttemptCount\s*=\s*Math\.min\([\s\S]*?verifiedProtectedCandidates\.length,[\s\S]*?maxProtectedFallbackPerRun,[\s\S]*?directFallbackBudget/,
-    "protected paid attempts must remain bounded by verified preflight availability and the existing quota caps",
+    /protectedSecQualificationResults\s*=\s*await mapWithConcurrency\([\s\S]*?verifiedProtectedPreflight,[\s\S]*?secQualificationConcurrency,[\s\S]*?preflightSecRevenueCandidate/,
+    "protected candidates must pass the free SEC annual-revenue qualification stage before paid selection",
   );
   assert.match(
     rolloutWorker,
-    /const candidates = \[[\s\S]*?\.\.\.selectedProtectedCandidates,[\s\S]*?\.\.\.rankedOrdinaryCandidates/,
-    "verified protected candidates must retain first priority without making failed protected preflights replaceable",
+    /qualifiedProtectedCandidates\s*=\s*protectedSecQualificationResults[\s\S]*?\.filter\(\(item\) => item\.secQualificationOk\)[\s\S]*?\.map\(\(item\) => item\.company\)/,
+    "only SEC-qualified protected candidates may enter the paid protected cohort",
+  );
+  assert.match(
+    rolloutWorker,
+    /protectedAttemptCount\s*=\s*Math\.min\([\s\S]*?qualifiedProtectedCandidates\.length,[\s\S]*?maxProtectedFallbackPerRun,[\s\S]*?directFallbackBudget/,
+    "protected paid attempts must remain bounded by SEC-qualified availability and the existing quota caps",
   );
   assert.doesNotMatch(
     rolloutWorker,
     /selectedProtectedCandidates\s*=\s*Array\.from\([\s\S]*?protectedCandidates\[/,
-    "paid protected selection must not bypass free preflight by indexing directly into raw protected candidates",
+    "paid protected selection must not bypass the free preflight stages by indexing directly into raw protected candidates",
   );
+});
+
+test("ordinary candidates must have two annual SEC revenue periods before paid rating attempts", () => {
+  const rolloutWorker = readRolloutWorker();
+
+  assert.match(rolloutWorker, /SEC_QUALIFICATION_POOL_SIZE:\s*"64"/);
+  assert.match(rolloutWorker, /SEC_QUALIFICATION_CONCURRENCY:\s*"4"/);
+  assert.match(
+    rolloutWorker,
+    /annualForms\s*=\s*new Set\(\["10-K", "10-K\/A", "20-F", "20-F\/A", "40-F", "40-F\/A"\]\)/,
+    "SEC qualification must use the same annual filing forms as the rating input builder",
+  );
+  assert.match(
+    rolloutWorker,
+    /annualRevenuePeriodCount\([\s\S]*?history\?\.revenue[\s\S]*?fiscalPeriod !== "FY"[\s\S]*?fiscalYears\.size/,
+    "free SEC qualification must count distinct qualifying annual revenue periods",
+  );
+  assert.match(
+    rolloutWorker,
+    /preflightSecRevenueCandidate[\s\S]*?\/api\/sec\/facts\/\$\{encodeURIComponent\(ticker\)\}[\s\S]*?annualRevenuePeriods >= 2/,
+    "SEC qualification must use the existing free production SEC facts route and require two annual revenue periods",
+  );
+  assert.match(
+    rolloutWorker,
+    /secQualificationPool\s*=\s*rankedStoredPreflightResults\.slice\([\s\S]*?secQualificationPoolSize/,
+    "only a bounded stored-data shortlist may enter the SEC qualification stage",
+  );
+  assert.match(
+    rolloutWorker,
+    /qualifiedOrdinaryCandidates\s*=\s*secQualificationResults[\s\S]*?\.filter\(\(item\) => item\.secQualificationOk\)[\s\S]*?\.slice\(0, ordinaryAttemptCount\)/,
+    "only SEC-qualified ordinary candidates may consume the paid fallback budget",
+  );
+  assert.match(rolloutWorker, /MAX_DIRECT_FALLBACK_PER_RUN:\s*"8"/);
+  assert.match(rolloutWorker, /REQUEST_DELAY_MS:\s*"20000"/);
 });
