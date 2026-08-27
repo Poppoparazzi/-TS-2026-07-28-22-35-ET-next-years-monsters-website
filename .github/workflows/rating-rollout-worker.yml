@@ -1,4 +1,4 @@
-# TS: 2026-08-26 21:58 ET
+# TS: 2026-08-27 01:01 ET
 
 name: Monster Rating rollout worker
 
@@ -47,6 +47,8 @@ jobs:
           POST_MILESTONE_PREFLIGHT_POOL_SIZE: "320"
           FINAL_STRETCH_PREFLIGHT_POOL_SIZE: "768"
           PREFLIGHT_CONCURRENCY: "8"
+          SEC_QUALIFICATION_POOL_SIZE: "64"
+          SEC_QUALIFICATION_CONCURRENCY: "4"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
@@ -66,6 +68,9 @@ jobs:
           const postMilestonePreflightPoolSize = Number(process.env.POST_MILESTONE_PREFLIGHT_POOL_SIZE || 320);
           const finalStretchPreflightPoolSize = Number(process.env.FINAL_STRETCH_PREFLIGHT_POOL_SIZE || 768);
           const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
+          const secQualificationPoolSize = Math.max(Number(process.env.SEC_QUALIFICATION_POOL_SIZE || 64), 1);
+          const secQualificationConcurrency = Math.max(Number(process.env.SEC_QUALIFICATION_CONCURRENCY || 4), 1);
+          const annualForms = new Set(["10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"]);
           const protectedVclTickers = Object.freeze([
             "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
             "NFLX", "AMD", "COST", "VRT", "AXON",
@@ -120,6 +125,43 @@ jobs:
             }
           }
 
+          function annualRevenuePeriodCount(summary) {
+            const history = Array.isArray(summary?.history?.revenue)
+              ? summary.history.revenue
+              : summary?.facts?.revenue
+                ? [summary.facts.revenue]
+                : [];
+            const fiscalYears = new Set();
+            for (const fact of history) {
+              if (
+                fact?.fiscalPeriod !== "FY" ||
+                !annualForms.has(String(fact?.form || "")) ||
+                !Number.isFinite(Number(fact?.value)) ||
+                !Number.isFinite(Number(fact?.fiscalYear))
+              ) continue;
+              fiscalYears.add(Number(fact.fiscalYear));
+            }
+            return fiscalYears.size;
+          }
+
+          async function preflightSecRevenueCandidate(item) {
+            const ticker = String(item.company.ticker).trim().toUpperCase();
+            try {
+              const facts = await getJson(`${base}/api/sec/facts/${encodeURIComponent(ticker)}`, 30_000);
+              if (!facts.response.ok || !facts.body) {
+                return { ...item, secQualificationOk: false, annualRevenuePeriodCount: 0 };
+              }
+              const annualRevenuePeriods = annualRevenuePeriodCount(facts.body);
+              return {
+                ...item,
+                secQualificationOk: annualRevenuePeriods >= 2,
+                annualRevenuePeriodCount: annualRevenuePeriods,
+              };
+            } catch {
+              return { ...item, secQualificationOk: false, annualRevenuePeriodCount: 0 };
+            }
+          }
+
           let health;
           let universe;
           let startup;
@@ -171,6 +213,8 @@ jobs:
             postMilestonePreflightPoolSize,
             finalStretchPreflightPoolSize,
             effectivePreflightPoolSize,
+            secQualificationPoolSize,
+            secQualificationConcurrency,
             secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
             marketConfigured: health.body?.marketData?.configured === true,
             ratingJobState: ratingJob?.state ?? null,
@@ -282,20 +326,26 @@ jobs:
             preflightConcurrency,
             preflightStoredCandidate,
           );
-          const verifiedProtectedCandidates = protectedPreflightResults
-            .filter((item) => item.preflightOk)
+          const verifiedProtectedPreflight = protectedPreflightResults.filter((item) => item.preflightOk);
+          const protectedSecQualificationResults = await mapWithConcurrency(
+            verifiedProtectedPreflight,
+            secQualificationConcurrency,
+            preflightSecRevenueCandidate,
+          );
+          const qualifiedProtectedCandidates = protectedSecQualificationResults
+            .filter((item) => item.secQualificationOk)
             .map((item) => item.company);
           const protectedAttemptCount = Math.min(
-            verifiedProtectedCandidates.length,
+            qualifiedProtectedCandidates.length,
             maxProtectedFallbackPerRun,
             directFallbackBudget,
           );
-          const protectedStartIndex = verifiedProtectedCandidates.length > 0
-            ? cohortNumber % verifiedProtectedCandidates.length
+          const protectedStartIndex = qualifiedProtectedCandidates.length > 0
+            ? cohortNumber % qualifiedProtectedCandidates.length
             : 0;
           const selectedProtectedCandidates = Array.from(
             { length: protectedAttemptCount },
-            (_, index) => verifiedProtectedCandidates[(protectedStartIndex + index) % verifiedProtectedCandidates.length],
+            (_, index) => qualifiedProtectedCandidates[(protectedStartIndex + index) % qualifiedProtectedCandidates.length],
           );
           const ordinaryAttemptCount = Math.min(
             Math.max(directFallbackBudget - selectedProtectedCandidates.length, 0),
@@ -317,25 +367,35 @@ jobs:
             preflightStoredCandidate,
           );
           const verifiedPreflightResults = preflightResults.filter((item) => item.preflightOk);
-          const rankedOrdinaryCandidates = verifiedPreflightResults
-            .sort((left, right) =>
-              right.filingCount - left.filingCount ||
-              right.factCount - left.factCount ||
-              left.ratingCount - right.ratingCount ||
-              String(left.company.ticker).localeCompare(String(right.company.ticker))
-            )
+          const rankedStoredPreflightResults = verifiedPreflightResults.sort((left, right) =>
+            right.filingCount - left.filingCount ||
+            right.factCount - left.factCount ||
+            left.ratingCount - right.ratingCount ||
+            String(left.company.ticker).localeCompare(String(right.company.ticker))
+          );
+          const secQualificationPool = rankedStoredPreflightResults.slice(
+            0,
+            Math.min(secQualificationPoolSize, rankedStoredPreflightResults.length),
+          );
+          const secQualificationResults = await mapWithConcurrency(
+            secQualificationPool,
+            secQualificationConcurrency,
+            preflightSecRevenueCandidate,
+          );
+          const qualifiedOrdinaryCandidates = secQualificationResults
+            .filter((item) => item.secQualificationOk)
             .slice(0, ordinaryAttemptCount)
             .map((item) => item.company);
           const candidates = [
             ...selectedProtectedCandidates,
-            ...rankedOrdinaryCandidates,
+            ...qualifiedOrdinaryCandidates,
           ];
 
           console.log(
-            `No Render deployment authority. Using bounded VCL-priority preflighted quota-safe fallback for ${candidates.length} candidates ` +
+            `No Render deployment authority. Using bounded VCL-priority SEC-qualified quota-safe fallback for ${candidates.length} candidates ` +
             `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, finalStretch=${finalStretchActive}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedPreflighted=${protectedPreflightResults.length}, ` +
-            `verifiedProtectedPreflight=${verifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, configuredPreflightPool=${preflightPoolSize}, postMilestonePreflightPool=${postMilestonePreflightPoolSize}, effectivePreflightPool=${effectivePreflightPoolSize}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
-            `preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
+            `verifiedProtectedPreflight=${verifiedProtectedPreflight.length}, protectedSecQualified=${qualifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, configuredPreflightPool=${preflightPoolSize}, postMilestonePreflightPool=${postMilestonePreflightPoolSize}, effectivePreflightPool=${effectivePreflightPoolSize}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
+            `secQualificationPool=${secQualificationPool.length}, secQualifiedOrdinary=${qualifiedOrdinaryCandidates.length}, secQualificationConcurrency=${secQualificationConcurrency}, preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -366,7 +426,8 @@ jobs:
             directFallbackEligibleCount: eligibleCandidates.length,
             directFallbackProtectedCount: protectedCandidates.length,
             directFallbackProtectedPreflightedCount: protectedPreflightResults.length,
-            directFallbackVerifiedProtectedPreflightCount: verifiedProtectedCandidates.length,
+            directFallbackVerifiedProtectedPreflightCount: verifiedProtectedPreflight.length,
+            directFallbackProtectedSecQualifiedCount: qualifiedProtectedCandidates.length,
             directFallbackProtectedAttemptedCount: selectedProtectedCandidates.length,
             directFallbackProtectedStartIndex: protectedStartIndex,
             directFallbackOrdinaryCount: ordinaryCandidates.length,
@@ -376,6 +437,9 @@ jobs:
             directFallbackFinalStretchActive: finalStretchActive,
             directFallbackPreflightedCount: preflightPool.length,
             directFallbackVerifiedPreflightCount: verifiedPreflightResults.length,
+            directFallbackSecQualificationPoolSize: secQualificationPool.length,
+            directFallbackSecQualifiedOrdinaryCount: qualifiedOrdinaryCandidates.length,
+            directFallbackSecQualificationConcurrency: secQualificationConcurrency,
             directFallbackPreflightConcurrency: preflightConcurrency,
             directFallbackStartIndex: startIndex,
             directFallbackPreflightStride: preflightStride,
