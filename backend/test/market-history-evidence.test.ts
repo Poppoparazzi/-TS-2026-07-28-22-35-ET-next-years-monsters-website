@@ -1,8 +1,12 @@
-// TS: 2026-08-28 07:10 ET
+// TS: 2026-08-28 09:03 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildMarketHistoryEvidence } from "../src/ratings/market-history-evidence.js";
+import {
+  buildMarketHistoryEvidence,
+  hasMinimumRatingHistoryEvidence,
+  MINIMUM_RATING_HISTORY_BARS,
+} from "../src/ratings/market-history-evidence.js";
 import type { DailyMarketHistory } from "../src/providers/types.js";
 
 test("counts only usable provider daily bars for rating preflight evidence", () => {
@@ -26,4 +30,21 @@ test("counts only usable provider daily bars for rating preflight evidence", () 
   assert.equal(evidence.latestBarDate, "2026-08-28");
   assert.equal(evidence.retrievedAt, history.retrievedAt);
   assert.equal(evidence.feedDisclosure, history.feedDisclosure);
+  assert.equal(hasMinimumRatingHistoryEvidence(evidence), false);
+});
+
+test("uses the rating engine's 253-session minimum for persisted preflight evidence", () => {
+  assert.equal(MINIMUM_RATING_HISTORY_BARS, 253);
+
+  const base = {
+    symbol: "AAPL",
+    provider: "licensed-test-provider",
+    latestBarDate: "2026-08-28",
+    retrievedAt: "2026-08-28T13:00:00.000Z",
+    feedDisclosure: "test provider history",
+  } as const;
+
+  assert.equal(hasMinimumRatingHistoryEvidence({ ...base, usableBarCount: 252 }), false);
+  assert.equal(hasMinimumRatingHistoryEvidence({ ...base, usableBarCount: 253 }), true);
+  assert.equal(hasMinimumRatingHistoryEvidence({ ...base, usableBarCount: 300 }), true);
 });
