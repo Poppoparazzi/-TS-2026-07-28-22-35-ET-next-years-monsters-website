@@ -1,4 +1,4 @@
-// TS: 2026-08-24 12:13 ET
+// TS: 2026-08-28 04:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -38,7 +38,7 @@ function completeFacts(): SecCompanyFactsSummary {
     ticker: "GOOD",
     cik: 1,
     companyName: "GOOD Company",
-    retrievedAt: "2026-08-24T12:13:00.000Z",
+    retrievedAt: new Date().toISOString(),
     sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000000001.json",
     disclosure: "Test SEC evidence.",
     facts: Object.freeze({ revenue: revenue.at(-1)! }),
@@ -56,11 +56,13 @@ function completeFacts(): SecCompanyFactsSummary {
 }
 
 function benchmarkHistory(): DailyMarketHistory {
-  const end = new Date("2026-08-21T00:00:00.000Z");
+  const end = new Date();
+  end.setUTCHours(0, 0, 0, 0);
+  end.setUTCDate(end.getUTCDate() - 1);
   return Object.freeze({
     symbol: "SPY",
     provider: "test-market",
-    retrievedAt: "2026-08-24T12:13:00.000Z",
+    retrievedAt: new Date().toISOString(),
     feedDisclosure: "Test history.",
     bars: Object.freeze(Array.from({ length: 300 }, (_, index) => {
       const date = new Date(end.getTime() - (299 - index) * 24 * 60 * 60 * 1_000);
