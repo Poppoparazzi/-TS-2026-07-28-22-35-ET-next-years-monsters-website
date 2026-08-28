@@ -1,4 +1,4 @@
-// TS: 2026-08-24 23:02 ET
+// TS: 2026-08-28 18:03 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -9,6 +9,7 @@ import {
   buildPublishableRating,
   quoteFromDailyHistory,
 } from "../ratings/input-builder.js";
+import { buildMarketHistoryEvidence } from "../ratings/market-history-evidence.js";
 import type {
   RatingBatchAccounting,
   RatingBatchStore,
@@ -221,6 +222,11 @@ export async function runRatingBatch(
         }
         throw error;
       }
+
+      // Preserve the exact provider-backed daily-history evidence immediately after
+      // a successful paid fetch, even when the rating engine later withholds a score.
+      // This is the durable input for the future 253-real-bar preflight.
+      await batchStore.saveMarketHistoryEvidence(buildMarketHistoryEvidence(history));
 
       const calculatedAt = new Date().toISOString();
       const rating = calculateMonsterRatingV1(buildProductionRatingInput({
