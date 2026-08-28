@@ -1,4 +1,4 @@
-// TS: 2026-08-28 12:59 ET
+// TS: 2026-08-28 14:57 ET
 
 import type { PoolClient } from "pg";
 import type { MarketHistoryEvidence } from "../ratings/market-history-evidence.js";
@@ -16,7 +16,11 @@ function assertPersistableMarketHistoryEvidence(
   if (!Number.isInteger(evidence.usableBarCount) || evidence.usableBarCount < 0) {
     throw new Error("market_history_evidence_invalid_usable_bar_count");
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(evidence.latestBarDate)) {
+  const hasUsableBars = evidence.usableBarCount > 0;
+  const hasLatestBarDate = evidence.latestBarDate !== null;
+  if (hasUsableBars !== hasLatestBarDate || (
+    evidence.latestBarDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(evidence.latestBarDate)
+  )) {
     throw new Error("market_history_evidence_invalid_latest_bar_date");
   }
   if (!Number.isFinite(Date.parse(evidence.retrievedAt))) {
