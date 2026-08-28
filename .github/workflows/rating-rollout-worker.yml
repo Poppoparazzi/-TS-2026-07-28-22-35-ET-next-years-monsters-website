@@ -1,4 +1,4 @@
-# TS: 2026-08-27 15:57 ET
+# TS: 2026-08-27 22:00 ET
 
 name: Monster Rating rollout worker
 
@@ -449,9 +449,10 @@ jobs:
                 rated += 1;
                 console.log(`[direct-rated] ${ticker} score=${result.body.score}`);
               } else {
-                const code = result.body?.eligibilityCode ?? result.body?.reasons?.[0]?.code ?? "unknown";
-                const missing = result.body?.reasons?.[0]?.missingEvidence ?? [];
-                console.log(`[direct-skip] ${ticker} HTTP ${result.response.status} eligible=${result.body?.eligible ?? null} code=${code} missing=${JSON.stringify(missing)}`);
+                const reasons = Array.isArray(result.body?.reasons) ? result.body.reasons : [];
+                const code = result.body?.eligibilityCode ?? reasons[0]?.code ?? "unknown";
+                const missing = reasons.flatMap((reason) => Array.isArray(reason?.missingEvidence) ? reason.missingEvidence : []);
+                console.log(`[direct-skip] ${ticker} HTTP ${result.response.status} eligible=${result.body?.eligible ?? null} code=${code} missing=${JSON.stringify(missing)} reasons=${JSON.stringify(reasons)}`);
               }
             } catch (error) {
               console.log(`[direct-error] ${ticker}: ${error instanceof Error ? error.message : String(error)}`);
