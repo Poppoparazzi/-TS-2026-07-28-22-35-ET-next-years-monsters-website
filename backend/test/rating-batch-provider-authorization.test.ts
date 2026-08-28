@@ -1,10 +1,11 @@
-// TS: 2026-08-28 04:00 ET
+// TS: 2026-08-28 19:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { PersistenceStore, StoredCompanySnapshot } from "../src/database/persistence.js";
 import { runRatingBatch } from "../src/jobs/rating-batch.js";
 import type { DailyMarketHistory, MarketDataProvider, QuoteSnapshot, TickerSearchResult } from "../src/providers/types.js";
+import type { MarketHistoryEvidence } from "../src/ratings/market-history-evidence.js";
 import type { EligibleProductionRating } from "../src/ratings/types.js";
 import type { RatingBatchAccounting, RatingBatchCandidate, RatingBatchStore } from "../src/ratings/batch-store.js";
 import type { SecCompany, SecCompanyFactsSummary, SecDataProvider, SecFactSnapshot, SecFilingSummary } from "../src/sec/types.js";
@@ -121,6 +122,7 @@ class OneCandidateBatchStore implements RatingBatchStore {
   ]);
   public async listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]> { return this.candidates.slice(0, limit); }
   public async startRun(_targetCount: number, _provider: string): Promise<string> { return "1"; }
+  public async saveMarketHistoryEvidence(_evidence: MarketHistoryEvidence): Promise<void> {}
   public async finishRun(_runId: string, accounting: RatingBatchAccounting): Promise<void> { this.finished = accounting; }
   public async close(): Promise<void> {}
 }
