@@ -1,13 +1,15 @@
-// TS: 2026-08-25 14:04 ET
+// TS: 2026-08-28 18:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
+import { upsertMarketHistoryEvidence } from "../database/market-history-evidence-persistence.js";
 import {
   isProtectedCompany,
   PROTECTED_COMPANY_SQL_PREDICATE,
 } from "../policy/protected-stocks.js";
 import { ProviderNotConfiguredError } from "../providers/types.js";
 import { MONSTER_RATING_ENGINE_VERSION } from "./engine-v1.js";
+import type { MarketHistoryEvidence } from "./market-history-evidence.js";
 
 const { Pool } = pg;
 type DatabasePool = InstanceType<typeof Pool>;
@@ -55,6 +57,7 @@ export interface RatingBatchStore {
   readonly configured: boolean;
   listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]>;
   startRun(targetCount: number, provider: string): Promise<string>;
+  saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void>;
   finishRun(runId: string, accounting: RatingBatchAccounting): Promise<void>;
   close(): Promise<void>;
 }
@@ -86,6 +89,10 @@ export class UnconfiguredRatingBatchStore implements RatingBatchStore {
   }
 
   public async startRun(_targetCount: number, _provider: string): Promise<string> {
+    throw new ProviderNotConfiguredError("Rating batch database");
+  }
+
+  public async saveMarketHistoryEvidence(_evidence: MarketHistoryEvidence): Promise<void> {
     throw new ProviderNotConfiguredError("Rating batch database");
   }
 
@@ -191,6 +198,23 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
     const id = result.rows[0]?.id;
     if (id === undefined) throw new Error("Unable to start rating refresh run.");
     return String(id);
+  }
+
+  public async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      const companyResult = await client.query<{ id: string | number }>(
+        "SELECT id FROM companies WHERE ticker = $1 LIMIT 1",
+        [evidence.symbol],
+      );
+      const companyId = companyResult.rows[0]?.id;
+      if (companyId === undefined) {
+        throw new Error(`Unable to associate market history evidence with ${evidence.symbol}.`);
+      }
+      await upsertMarketHistoryEvidence(client, String(companyId), evidence);
+    } finally {
+      client.release();
+    }
   }
 
   public async finishRun(runId: string, accounting: RatingBatchAccounting): Promise<void> {
