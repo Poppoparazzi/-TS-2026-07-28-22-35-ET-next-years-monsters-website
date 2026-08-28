@@ -1,4 +1,4 @@
-// TS: 2026-08-26 04:08 ET
+// TS: 2026-08-28 16:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -280,7 +280,7 @@ class HistoricalStaticSecDataProvider extends StaticSecDataProvider {
       ticker: symbol,
       cik: 320193,
       companyName: "Apple Inc.",
-      retrievedAt: "2026-08-21T15:00:00.000Z",
+      retrievedAt: new Date().toISOString(),
       sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
       disclosure: "Test SEC facts.",
       facts: Object.freeze({ revenue: revenues.at(-1)! }),
