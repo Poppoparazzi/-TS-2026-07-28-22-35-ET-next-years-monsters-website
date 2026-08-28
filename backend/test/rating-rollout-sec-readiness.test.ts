@@ -1,4 +1,4 @@
-// TS: 2026-08-27 22:58 ET
+// TS: 2026-08-28 03:08 ET
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -19,6 +19,20 @@ test("direct rating fallback screens SEC readiness before paid rating attempts",
   const paidRatingIndex = workflow.indexOf("/api/ratings/${encodeURIComponent(ticker)}");
   assert.ok(qualificationIndex >= 0, "SEC qualification helper must exist");
   assert.ok(paidRatingIndex > qualificationIndex, "SEC qualification must occur before paid rating requests");
+});
+
+test("annual revenue preflight rejects null or undefined fiscal years before numeric coercion", () => {
+  const fiscalYearReadIndex = workflow.indexOf("const fiscalYear = fact?.fiscalYear;");
+  const nullGuardIndex = workflow.indexOf("fiscalYear === null", fiscalYearReadIndex);
+  const undefinedGuardIndex = workflow.indexOf("fiscalYear === undefined", fiscalYearReadIndex);
+  const numericGuardIndex = workflow.indexOf("!Number.isFinite(Number(fiscalYear))", fiscalYearReadIndex);
+  const addYearIndex = workflow.indexOf("fiscalYears.add(Number(fiscalYear));", fiscalYearReadIndex);
+
+  assert.ok(fiscalYearReadIndex >= 0, "annual revenue preflight must read fiscalYear without coercion");
+  assert.ok(nullGuardIndex > fiscalYearReadIndex, "null fiscal years must be rejected explicitly");
+  assert.ok(undefinedGuardIndex > nullGuardIndex, "undefined fiscal years must be rejected explicitly");
+  assert.ok(numericGuardIndex > undefinedGuardIndex, "numeric validation must happen after nullish guards");
+  assert.ok(addYearIndex > numericGuardIndex, "fiscal year must only be coerced after nullish and numeric validation");
 });
 
 test("SEC readiness preflight preserves provider-budget and pacing guards", () => {
