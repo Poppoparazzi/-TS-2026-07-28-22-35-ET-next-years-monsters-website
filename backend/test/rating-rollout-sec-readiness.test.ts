@@ -1,4 +1,4 @@
-// TS: 2026-08-27 16:58 ET
+// TS: 2026-08-27 22:58 ET
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -33,4 +33,11 @@ test("protected VCL candidates use the same SEC qualification before paid attemp
   assert.match(workflow, /protectedSecQualificationResults = await mapWithConcurrency\([\s\S]*?preflightSecRevenueCandidate/);
   assert.match(workflow, /qualifiedProtectedCandidates = protectedSecQualificationResults[\s\S]*?secQualificationOk/);
   assert.match(workflow, /protectedVclTickers = Object\.freeze\(\[/);
+});
+
+test("paid readiness telemetry preserves every returned reason and missing-evidence item", () => {
+  assert.match(workflow, /const reasons = Array\.isArray\(result\.body\?\.reasons\) \? result\.body\.reasons : \[\]/);
+  assert.match(workflow, /reasons\.flatMap\(\(reason\) => Array\.isArray\(reason\?\.missingEvidence\) \? reason\.missingEvidence : \[\]\)/);
+  assert.match(workflow, /missing=\$\{JSON\.stringify\(missing\)\} reasons=\$\{JSON\.stringify\(reasons\)\}/);
+  assert.doesNotMatch(workflow, /missingEvidence.*reasons\[0\]/);
 });
