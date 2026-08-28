@@ -1,10 +1,11 @@
-// TS: 2026-08-28 04:00 ET
+// TS: 2026-08-28 19:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { PersistenceStore, StoredCompanySnapshot } from "../src/database/persistence.js";
 import { runRatingBatch } from "../src/jobs/rating-batch.js";
 import type { DailyMarketHistory, MarketDataProvider, QuoteSnapshot, TickerSearchResult } from "../src/providers/types.js";
+import type { MarketHistoryEvidence } from "../src/ratings/market-history-evidence.js";
 import type { EligibleProductionRating } from "../src/ratings/types.js";
 import type { RatingBatchAccounting, RatingBatchCandidate, RatingBatchStore } from "../src/ratings/batch-store.js";
 import type { SecCompany, SecCompanyFactsSummary, SecDataProvider, SecFactSnapshot, SecFilingSummary } from "../src/sec/types.js";
@@ -143,6 +144,7 @@ class MemoryBatchStore implements RatingBatchStore {
   public readonly name = "test-db";
   public readonly configured = true;
   public finished: RatingBatchAccounting | null = null;
+  public readonly savedMarketHistoryEvidence: MarketHistoryEvidence[] = [];
   public readonly candidates: readonly RatingBatchCandidate[] = Object.freeze([
     Object.freeze({ ticker: "AAPL", companyName: "Apple", isPilot: true, isProtected: true, priorityMetric: 10 }),
     Object.freeze({ ticker: "FAIL", companyName: "Replaceable", isPilot: false, isProtected: false, priorityMetric: 9 }),
@@ -150,6 +152,7 @@ class MemoryBatchStore implements RatingBatchStore {
   ]);
   public async listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]> { return this.candidates.slice(0, limit); }
   public async startRun(_targetCount: number, _provider: string): Promise<string> { return "1"; }
+  public async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void> { this.savedMarketHistoryEvidence.push(evidence); }
   public async finishRun(_runId: string, accounting: RatingBatchAccounting): Promise<void> { this.finished = accounting; }
   public async close(): Promise<void> {}
 }
@@ -182,6 +185,8 @@ test("rating batch retains protected failures, replaces ordinary failures, and r
   assert.deepEqual(persistenceStore.savedFilings, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedFacts, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedQuotes, ["GOOD"]);
+  assert.deepEqual(batchStore.savedMarketHistoryEvidence.map((evidence) => evidence.symbol), ["GOOD"]);
+  assert.equal(batchStore.savedMarketHistoryEvidence[0]?.usableBarCount, 300);
   assert.deepEqual(batchStore.finished, accounting);
 });
 
@@ -204,6 +209,7 @@ test("rating batch closes its audit run when benchmark history is unavailable", 
   assert.deepEqual(persistenceStore.savedCompanies, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedFacts, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedQuotes, []);
+  assert.deepEqual(batchStore.savedMarketHistoryEvidence, []);
   assert.deepEqual(batchStore.finished, accounting);
 });
 
@@ -228,6 +234,7 @@ test("rating batch stops on market transport outages without blaming the candida
   assert.deepEqual(accounting.replaceable.map((entry) => entry.ticker), ["FAIL"]);
   assert.match(accounting.stoppedReason ?? "", /market-data provider unavailable.*GOOD.*network timeout/i);
   assert.deepEqual(persistenceStore.savedQuotes, []);
+  assert.deepEqual(batchStore.savedMarketHistoryEvidence, []);
   assert.deepEqual(batchStore.finished, accounting);
 });
 
