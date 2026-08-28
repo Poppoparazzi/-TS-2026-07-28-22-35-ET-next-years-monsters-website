@@ -1,4 +1,4 @@
-# TS: 2026-08-22 15:23 UTC
+# TS: 2026-08-27 21:01 ET
 
 name: Live rating ops probe
 
@@ -24,6 +24,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -39,10 +43,11 @@ jobs:
             return { status: response.status, body };
           }
 
-          const [health, universe, startup] = await Promise.all([
+          const [health, universe, startup, aapl] = await Promise.all([
             get('/api/health'),
             get('/api/universe/status?limit=5000'),
             get('/api/startup-status'),
+            get('/api/ratings/AAPL'),
           ]);
 
           let actionRuns = [];
@@ -62,20 +67,51 @@ jobs:
             !run.name || /rating|render|phase 3|backend/i.test(run.name)
           ).slice(0, 15);
 
+          const renderDeployHook = Boolean((process.env.RENDER_DEPLOY_HOOK_URL || '').trim());
+          const renderApiKey = Boolean((process.env.RENDER_API_KEY || '').trim());
+          const renderServiceId = Boolean((process.env.RENDER_SERVICE_ID || '').trim());
+          const vercelAuthority = Boolean((process.env.VERCEL_TOKEN || '').trim());
+
           const output = {
             probedAt: new Date().toISOString(),
             healthStatus: health.status,
             universeStatus: universe.status,
             startupStatus: startup.status,
+            aaplRatingStatus: aapl.status,
+            aaplRatingEligibilityCode: aapl.body?.eligibilityCode ?? null,
+            aaplRatingTier: aapl.body?.tier ?? null,
+            ratingRouteMissing: aapl.status === 404,
+            quoteCompleteCount: universe.body?.quoteCompleteCount ?? null,
             ratingCompleteCount: universe.body?.ratingCompleteCount ?? null,
             fullyCompleteCount: universe.body?.fullyCompleteCount ?? null,
             examinedCount: universe.body?.examinedCount ?? null,
+            secCompleteCount: universe.body?.secCompleteCount ?? null,
             secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
+            failedCount: universe.body?.failedCount ?? null,
+            unresolvedCount: universe.body?.unresolvedCount ?? null,
+            providerBackedRatings: Number(universe.body?.ratingCompleteCount ?? 0) <= Number(universe.body?.quoteCompleteCount ?? 0),
             marketConfigured: health.body?.marketData?.configured ?? null,
             deployedCommit: startup.body?.deployment?.commit ?? startup.body?.deploymentCommit ?? null,
             ratingJob: startup.body?.jobs?.ratingBatch ?? null,
+            deploymentAuthority: {
+              renderDeployHook,
+              renderApiKey,
+              renderServiceId,
+              renderApiAuthority: renderApiKey && renderServiceId,
+              renderAuthority: renderDeployHook || (renderApiKey && renderServiceId),
+              vercelAuthority,
+              missingRenderCredentials: [
+                !renderDeployHook ? 'RENDER_DEPLOY_HOOK_URL' : null,
+                !renderApiKey ? 'RENDER_API_KEY' : null,
+                !renderServiceId ? 'RENDER_SERVICE_ID' : null,
+              ].filter(Boolean),
+            },
             relevantRuns,
           };
+
+          if (!output.providerBackedRatings) {
+            throw new Error(`Rating count ${output.ratingCompleteCount} exceeds quote count ${output.quoteCompleteCount}; refusing to record an ungrounded production state.`);
+          }
 
           fs.mkdirSync('ops', { recursive: true });
           fs.writeFileSync('ops/live-rating-status.json', JSON.stringify(output, null, 2) + '\n');
