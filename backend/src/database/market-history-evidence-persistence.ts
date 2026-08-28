@@ -1,13 +1,39 @@
-// TS: 2026-08-28 10:57 ET
+// TS: 2026-08-28 12:59 ET
 
 import type { PoolClient } from "pg";
 import type { MarketHistoryEvidence } from "../ratings/market-history-evidence.js";
+
+function assertPersistableMarketHistoryEvidence(
+  companyId: string,
+  evidence: MarketHistoryEvidence,
+): void {
+  if (!companyId.trim()) {
+    throw new Error("market_history_evidence_company_id_required");
+  }
+  if (!evidence.provider.trim()) {
+    throw new Error("market_history_evidence_provider_required");
+  }
+  if (!Number.isInteger(evidence.usableBarCount) || evidence.usableBarCount < 0) {
+    throw new Error("market_history_evidence_invalid_usable_bar_count");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(evidence.latestBarDate)) {
+    throw new Error("market_history_evidence_invalid_latest_bar_date");
+  }
+  if (!Number.isFinite(Date.parse(evidence.retrievedAt))) {
+    throw new Error("market_history_evidence_invalid_retrieved_at");
+  }
+  if (!evidence.feedDisclosure.trim()) {
+    throw new Error("market_history_evidence_disclosure_required");
+  }
+}
 
 export async function upsertMarketHistoryEvidence(
   client: Pick<PoolClient, "query">,
   companyId: string,
   evidence: MarketHistoryEvidence,
 ): Promise<void> {
+  assertPersistableMarketHistoryEvidence(companyId, evidence);
+
   await client.query(
     `
       INSERT INTO market_history_evidence (
