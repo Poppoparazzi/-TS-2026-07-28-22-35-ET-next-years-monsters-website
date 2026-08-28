@@ -1,6 +1,8 @@
-// TS: 2026-08-28 07:09 ET
+// TS: 2026-08-28 09:03 ET
 
 import type { DailyMarketHistory } from "../providers/types.js";
+
+export const MINIMUM_RATING_HISTORY_BARS = 253;
 
 export interface MarketHistoryEvidence {
   readonly symbol: string;
@@ -27,4 +29,8 @@ export function buildMarketHistoryEvidence(history: DailyMarketHistory): MarketH
     retrievedAt: history.retrievedAt,
     feedDisclosure: history.feedDisclosure,
   });
+}
+
+export function hasMinimumRatingHistoryEvidence(evidence: MarketHistoryEvidence): boolean {
+  return evidence.usableBarCount >= MINIMUM_RATING_HISTORY_BARS;
 }
