@@ -1,4 +1,4 @@
-# TS: 2026-08-27 22:00 ET
+# TS: 2026-08-28 02:00 ET
 
 name: Monster Rating rollout worker
 
@@ -142,13 +142,16 @@ jobs:
                 : [];
             const fiscalYears = new Set();
             for (const fact of history) {
+              const fiscalYear = fact?.fiscalYear;
               if (
                 fact?.fiscalPeriod !== "FY" ||
                 !annualForms.has(String(fact?.form || "")) ||
                 !Number.isFinite(Number(fact?.value)) ||
-                !Number.isFinite(Number(fact?.fiscalYear))
+                fiscalYear === null ||
+                fiscalYear === undefined ||
+                !Number.isFinite(Number(fiscalYear))
               ) continue;
-              fiscalYears.add(Number(fact.fiscalYear));
+              fiscalYears.add(Number(fiscalYear));
             }
             return fiscalYears.size;
           }
