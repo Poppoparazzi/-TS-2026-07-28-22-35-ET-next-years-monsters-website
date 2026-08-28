@@ -1,4 +1,4 @@
-// TS: 2026-08-23 22:59 ET
+// TS: 2026-08-28 04:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -10,11 +10,13 @@ import type { RatingBatchAccounting, RatingBatchCandidate, RatingBatchStore } fr
 import type { SecCompany, SecCompanyFactsSummary, SecDataProvider, SecFactSnapshot, SecFilingSummary } from "../src/sec/types.js";
 
 function history(symbol: string, dailyGrowth: number): DailyMarketHistory {
-  const end = new Date("2026-08-21T00:00:00.000Z");
+  const end = new Date();
+  end.setUTCHours(0, 0, 0, 0);
+  end.setUTCDate(end.getUTCDate() - 1);
   return Object.freeze({
     symbol,
     provider: "test-market",
-    retrievedAt: "2026-08-21T17:08:00.000Z",
+    retrievedAt: new Date().toISOString(),
     feedDisclosure: "Test end-of-day history.",
     bars: Object.freeze(Array.from({ length: 300 }, (_, index) => {
       const date = new Date(end.getTime() - (299 - index) * 24 * 60 * 60 * 1_000);
@@ -60,7 +62,7 @@ function facts(symbol: string, complete: boolean): SecCompanyFactsSummary {
     ticker: symbol,
     cik: 1,
     companyName: `${symbol} Company`,
-    retrievedAt: "2026-08-21T17:08:00.000Z",
+    retrievedAt: new Date().toISOString(),
     sourceUrl: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000000001.json",
     disclosure: "Test SEC evidence.",
     facts: Object.freeze({ revenue: revenue.at(-1)! }),
