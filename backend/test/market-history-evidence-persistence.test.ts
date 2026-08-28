@@ -1,4 +1,4 @@
-// TS: 2026-08-28 13:00 ET
+// TS: 2026-08-28 14:59 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -73,6 +73,14 @@ test("fails closed before SQL when market history evidence is not trustworthy", 
   );
   await assert.rejects(
     () => upsertMarketHistoryEvidence(client as never, "42", { ...valid, latestBarDate: "08/28/2026" }),
+    /market_history_evidence_invalid_latest_bar_date/,
+  );
+  await assert.rejects(
+    () => upsertMarketHistoryEvidence(client as never, "42", { ...valid, latestBarDate: null }),
+    /market_history_evidence_invalid_latest_bar_date/,
+  );
+  await assert.rejects(
+    () => upsertMarketHistoryEvidence(client as never, "42", { ...valid, usableBarCount: 0 }),
     /market_history_evidence_invalid_latest_bar_date/,
   );
   await assert.rejects(
