@@ -1,4 +1,4 @@
-# TS: 2026-08-29 04:03 ET
+# TS: 2026-08-29 08:02 ET
 
 name: Monster Rating suppression report
 
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   report-suppression:
@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
@@ -31,12 +33,34 @@ jobs:
       - name: Install backend dependencies
         run: npm install --prefix backend --no-audit --no-fund
 
-      - name: Report real provider-history suppression
+      - name: Record real provider-history suppression
+        id: suppression
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL is missing; suppression counts cannot be read from the production-capable database context."
+            echo "available=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          npm run --prefix backend ratings:suppression-report
+          mkdir -p ops
+          npm run --prefix backend ratings:suppression-report --silent > ops/rating-suppression.json
+          cat ops/rating-suppression.json
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Persist exact suppression snapshot
+        if: steps.suppression.outputs.available == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ops/rating-suppression.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Record live Monster Rating suppression status"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            git pull --rebase origin main
+          done
+          echo "Unable to persist suppression snapshot after three push attempts." >&2
+          exit 1
