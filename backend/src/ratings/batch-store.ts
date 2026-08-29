@@ -1,4 +1,4 @@
-// TS: 2026-08-29 19:00 ET
+// TS: 2026-08-29 19:04 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -242,9 +242,9 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
             WHEN history_readiness.rating_history_ready IS NULL THEN 1
             ELSE 2
           END,
-          COALESCE(revenue_metric.latest_annual_revenue, -1) DESC,
           COALESCE(fact_depth.fact_count, 0) DESC,
           COALESCE(filing_depth.filing_count, 0) DESC,
+          COALESCE(revenue_metric.latest_annual_revenue, -1) DESC,
           c.ticker
         LIMIT $1
       `,
