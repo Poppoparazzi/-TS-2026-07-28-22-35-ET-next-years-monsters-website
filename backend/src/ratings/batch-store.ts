@@ -1,4 +1,4 @@
-// TS: 2026-08-28 21:58 ET
+// TS: 2026-08-28 22:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -32,10 +32,11 @@ export const EXCLUDE_CURRENT_COMPLETED_RATING_SQL = `
 // reuse that evidence before buying the same history again. Insufficient history
 // is temporary for young companies. Count only plausible weekday sessions since
 // the latest real bar, then add a small conservative holiday allowance so weekends
-// and exchange holidays cannot trigger an obviously premature paid retry. This is
-// intentionally conservative: a slightly late retry is cheaper than repeatedly
-// paying to learn that the 253rd genuine session still does not exist. A zero-bar
-// response has no latest date, so retry it weekly instead of hammering the provider.
+// and exchange holidays cannot trigger an obviously premature paid retry. Every
+// insufficient provider response also gets a seven-day cooldown, preventing a
+// halted or thinly traded symbol with an unchanged latest bar from being repurchased
+// on every batch once the calendar threshold has elapsed. A zero-bar response uses
+// the same weekly cooldown rather than hammering the provider.
 export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
   NOT EXISTS (
     SELECT 1
@@ -43,7 +44,8 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
     WHERE mhe.company_id = c.id
       AND mhe.rating_history_ready = false
       AND (
-        (
+        CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '7 days'
+        OR (
           mhe.latest_bar_date IS NOT NULL
           AND (
             SELECT count(*)
@@ -56,10 +58,6 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
           ) <
             (253 - mhe.usable_bar_count)
             + CEIL(GREATEST(253 - mhe.usable_bar_count, 0) / 20.0)
-        )
-        OR (
-          mhe.latest_bar_date IS NULL
-          AND CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '7 days'
         )
       )
   )
