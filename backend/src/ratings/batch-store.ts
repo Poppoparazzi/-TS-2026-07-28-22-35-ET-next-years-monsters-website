@@ -1,4 +1,4 @@
-// TS: 2026-08-28 22:57 ET
+// TS: 2026-08-29 09:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -60,6 +60,30 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
             + CEIL(GREATEST(253 - mhe.usable_bar_count, 0) / 20.0)
         )
       )
+  )
+`;
+
+// A completed rating pass already persists ordinary ineligible candidates in the
+// run metadata as structured JSON. Reuse that durable outcome for a short cooldown
+// instead of immediately paying Twelve Data for the same candidate again on the
+// next worker pass. Protected/VCL names are deliberately not suppressed here: they
+// remain must-repair. The seven-day window is conservative enough to avoid hammering
+// known ineligible ordinary names while still allowing genuinely changed evidence
+// to re-enter the reserve later.
+export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
+  NOT EXISTS (
+    SELECT 1
+    FROM data_refresh_runs drr
+    CROSS JOIN LATERAL jsonb_array_elements(
+      CASE
+        WHEN jsonb_typeof(drr.metadata -> 'replaceable') = 'array'
+          THEN drr.metadata -> 'replaceable'
+        ELSE '[]'::jsonb
+      END
+    ) AS prior_failure
+    WHERE drr.refresh_type = 'ratings'
+      AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+      AND prior_failure ->> 'ticker' = c.ticker
   )
 `;
 
@@ -186,6 +210,7 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           AND EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id)
           AND ${EXCLUDE_CURRENT_COMPLETED_RATING_SQL}
           AND ${EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL}
+          AND ${EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL}
         ORDER BY
           CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
           c.is_pilot DESC,
