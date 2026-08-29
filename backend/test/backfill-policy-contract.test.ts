@@ -1,4 +1,4 @@
-// TS: 2026-08-27 01:01 ET
+// TS: 2026-08-29 07:55 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -51,7 +51,11 @@ test("production rating recovery stays on the real licensed market-data path", (
     "production rating recovery must use Twelve Data rather than the unconfigured provider",
   );
   assert.match(renderYaml, /key:\s*TWELVE_DATA_API_KEY[\s\S]*?sync:\s*false/);
-  assert.match(renderYaml, /key:\s*RATING_TARGET_COUNT[\s\S]*?value:\s*"500"/);
+  assert.match(
+    renderYaml,
+    /key:\s*RATING_TARGET_COUNT[\s\S]*?value:\s*"5000"/,
+    "production rating recovery must keep advancing beyond the first-500 milestone",
+  );
   assert.match(
     renderYaml,
     /key:\s*RATING_CANDIDATE_LIMIT[\s\S]*?value:\s*"5000"/,
