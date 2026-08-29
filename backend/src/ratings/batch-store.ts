@@ -1,4 +1,4 @@
-// TS: 2026-08-28 18:02 ET
+// TS: 2026-08-28 20:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -25,6 +25,20 @@ export const EXCLUDE_CURRENT_COMPLETED_RATING_SQL = `
     WHERE mrr.company_id = c.id
       AND mrr.rating_version = $2
       AND mrr.status = 'complete'
+  )
+`;
+
+// Once the paid provider has already returned a real company-history response,
+// reuse that evidence before buying the same history again. A latest persisted
+// response with fewer than 253 usable bars cannot satisfy Rating V1 today, so it
+// is excluded from the current candidate pass. Companies with no persisted
+// history evidence remain eligible for one real provider attempt.
+export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
+  NOT EXISTS (
+    SELECT 1
+    FROM market_history_evidence_latest mhe
+    WHERE mhe.company_id = c.id
+      AND mhe.rating_history_ready = false
   )
 `;
 
@@ -150,6 +164,7 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           AND EXISTS (SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id)
           AND EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id)
           AND ${EXCLUDE_CURRENT_COMPLETED_RATING_SQL}
+          AND ${EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL}
         ORDER BY
           CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
           c.is_pilot DESC,
