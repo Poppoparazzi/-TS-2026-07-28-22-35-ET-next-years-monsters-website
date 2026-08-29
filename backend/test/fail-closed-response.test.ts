@@ -1,4 +1,4 @@
-// TS: 2026-08-14 04:00 UTC
+// TS: 2026-08-29 08:40 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -17,6 +17,8 @@ test("withholds a score when required production evidence is unavailable", () =>
   assert.equal(response.score, null);
   assert.equal(response.tier, "NOT YET RATED");
   assert.equal(response.eligibilityCode, "required_evidence_incomplete");
+  assert.match(response.summary, /Insufficient Evidence for Prediction/);
+  assert.equal(response.rollout.message, "Not Yet Rated — Insufficient Evidence for Prediction.");
   assert.equal(response.reasons.length, 1);
   assert.equal(response.reasons[0]?.code, "gate_marketQuote");
 });
@@ -27,4 +29,5 @@ test("supplies an explicit incomplete-evidence reason instead of an empty failur
   assert.equal(response.symbol, "RKLB");
   assert.equal(response.score, null);
   assert.equal(response.reasons[0]?.code, "required_evidence_incomplete");
+  assert.match(response.reasons[0]?.message ?? "", /incomplete|verified/i);
 });
