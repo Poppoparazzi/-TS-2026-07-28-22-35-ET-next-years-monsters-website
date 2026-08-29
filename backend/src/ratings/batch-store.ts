@@ -1,4 +1,4 @@
-// TS: 2026-08-28 20:02 ET
+// TS: 2026-08-28 20:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -29,16 +29,28 @@ export const EXCLUDE_CURRENT_COMPLETED_RATING_SQL = `
 `;
 
 // Once the paid provider has already returned a real company-history response,
-// reuse that evidence before buying the same history again. A latest persisted
-// response with fewer than 253 usable bars cannot satisfy Rating V1 today, so it
-// is excluded from the current candidate pass. Companies with no persisted
-// history evidence remain eligible for one real provider attempt.
+// reuse that evidence before buying the same history again. Insufficient history
+// is temporary for young companies: suppress another paid request only until the
+// latest real daily-bar date plus the number of missing sessions makes 253 bars
+// possible. A zero-bar response has no latest date, so retry it weekly instead of
+// excluding the company forever or hammering the provider every batch.
 export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
   NOT EXISTS (
     SELECT 1
     FROM market_history_evidence_latest mhe
     WHERE mhe.company_id = c.id
       AND mhe.rating_history_ready = false
+      AND (
+        (
+          mhe.latest_bar_date IS NOT NULL
+          AND CURRENT_DATE < mhe.latest_bar_date
+            + ((253 - mhe.usable_bar_count) * INTERVAL '1 day')
+        )
+        OR (
+          mhe.latest_bar_date IS NULL
+          AND CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '7 days'
+        )
+      )
   )
 `;
 
