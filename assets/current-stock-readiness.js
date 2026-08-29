@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:31 UTC
+// TS: 2026-08-29 08:39 ET
 
 (() => {
   "use strict";
@@ -176,18 +176,25 @@
       return;
     }
 
-    value.textContent = "DATA INCOMPLETE";
-    status.textContent = "CURRENT STOCK RATING™ · NOT YET RATED";
-    const firstReason = Array.isArray(rating.reasons) ? rating.reasons[0]?.message : "";
-    copy.textContent = `Not Yet Rated — Stay Tuned. Coming Soon. ${String(
-      firstReason ||
-      (rating.eligible === true
-        ? "A numeric production result was withheld because one or more required machine-readable evidence gates could not be independently verified in the returned payload."
-        : "The production engine returned an explicit ineligible result, so no numeric Current Stock Rating™ is published.")
-    )}`;
+    const reasons = Array.isArray(rating.reasons)
+      ? rating.reasons
+          .map((reason) => String(reason?.message ?? "").trim())
+          .filter(Boolean)
+          .slice(0, 5)
+      : [];
+
+    const reasonText = reasons.length > 0
+      ? `${reasons.length === 1 ? "Reason" : "Reasons"}: ${reasons.join(" • ")}`
+      : rating.eligible === true
+        ? "Reason: the returned production result could not be independently verified against every required evidence gate."
+        : "Possible causes: fewer than two comparable annual financial periods • trading liquidity below the minimum threshold • insufficient market-price history • incomplete SEC financial evidence • unresolved company identity.";
+
+    value.textContent = "NOT YET RATED";
+    status.textContent = "INSUFFICIENT EVIDENCE FOR PREDICTION";
+    copy.textContent = reasonText;
     card.dataset.productionRatingStatus = "ineligible";
     card.dataset.productionRatingEngine = String(rating.engineVersion ?? "");
-    card.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}`);
+    card.setAttribute("aria-label", `Current Stock Rating not yet rated for ${ticker}: insufficient evidence for prediction`);
   }
 
   function injectStyles() {
@@ -244,7 +251,7 @@
       <div class="current-stock-readiness-head">
         <div>
           <span class="current-stock-readiness-kicker">CURRENT STOCK RATING™ / REQUIRED EVIDENCE</span>
-          <h3>${ready ? "VERIFIED RATING INPUTS COMPLETE" : "DATA INCOMPLETE / NOT YET RATED"}</h3>
+          <h3>${ready ? "VERIFIED RATING INPUTS COMPLETE" : "INSUFFICIENT EVIDENCE FOR PREDICTION"}</h3>
         </div>
         <strong class="current-stock-readiness-summary">${completeCount} / ${REQUIRED_INPUTS.length} VERIFIED INPUTS PRESENT</strong>
       </div>
