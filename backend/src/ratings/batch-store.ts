@@ -1,4 +1,4 @@
-// TS: 2026-08-29 09:00 ET
+// TS: 2026-08-29 11:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -95,6 +95,13 @@ export interface RatingBatchCandidate {
   readonly priorityMetric: number;
 }
 
+export interface RatingBatchFailure {
+  readonly ticker: string;
+  readonly reason: string;
+  readonly reasonCode?: string;
+  readonly suppressionStage?: string;
+}
+
 export interface RatingBatchAccounting {
   readonly targetCount: number;
   readonly candidateLimit: number;
@@ -104,8 +111,8 @@ export interface RatingBatchAccounting {
   readonly replaceableCount: number;
   readonly replacementsAttempted: number;
   readonly finalUsableUniverse: number;
-  readonly protectedMustRepair: readonly { readonly ticker: string; readonly reason: string }[];
-  readonly replaceable: readonly { readonly ticker: string; readonly reason: string }[];
+  readonly protectedMustRepair: readonly RatingBatchFailure[];
+  readonly replaceable: readonly RatingBatchFailure[];
   readonly ratedTickers: readonly string[];
   readonly stoppedReason: string | null;
   readonly completedAt: string;
