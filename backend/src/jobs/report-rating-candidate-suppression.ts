@@ -1,4 +1,4 @@
-// TS: 2026-08-29 11:00 ET
+// TS: 2026-08-29 12:02 ET
 
 import pg from "pg";
 
@@ -48,8 +48,10 @@ export const RATING_CANDIDATE_SUPPRESSION_REPORT_SQL = `
 `;
 
 export const RATING_RECENT_FAILURE_REASON_REPORT_SQL = `
-  WITH recent_failures AS (
+  WITH recent_failure_events AS (
     SELECT
+      drr.started_at,
+      UPPER(NULLIF(prior_failure ->> 'ticker', '')) AS ticker,
       COALESCE(NULLIF(prior_failure ->> 'reasonCode', ''), 'legacy_unclassified') AS reason_code,
       COALESCE(NULLIF(prior_failure ->> 'suppressionStage', ''), 'legacy_unclassified') AS suppression_stage
     FROM data_refresh_runs drr
@@ -62,16 +64,29 @@ export const RATING_RECENT_FAILURE_REASON_REPORT_SQL = `
     ) AS prior_failure
     WHERE drr.refresh_type = 'ratings'
       AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+  ), latest_candidate_failure AS (
+    SELECT DISTINCT ON (ticker)
+      ticker,
+      reason_code,
+      suppression_stage,
+      started_at
+    FROM recent_failure_events
+    WHERE ticker IS NOT NULL
+    ORDER BY ticker, started_at DESC
   ), grouped AS (
     SELECT
       reason_code,
       suppression_stage,
       count(*)::int AS candidate_count
-    FROM recent_failures
+    FROM latest_candidate_failure
     GROUP BY reason_code, suppression_stage
+  ), event_totals AS (
+    SELECT count(*)::int AS event_count
+    FROM recent_failure_events
   )
   SELECT
-    COALESCE(sum(candidate_count), 0)::int AS total_recent_replaceable_count,
+    COALESCE((SELECT count(*) FROM latest_candidate_failure), 0)::int AS total_recent_replaceable_count,
+    COALESCE((SELECT event_count FROM event_totals), 0)::int AS total_recent_replaceable_event_count,
     COALESCE(
       jsonb_agg(
         jsonb_build_object(
@@ -95,6 +110,7 @@ interface CandidateSuppressionRow {
 
 interface RecentFailureReasonRow {
   readonly total_recent_replaceable_count: string | number;
+  readonly total_recent_replaceable_event_count: string | number;
   readonly reason_breakdown: readonly {
     readonly reasonCode: string;
     readonly suppressionStage: string;
@@ -114,6 +130,7 @@ export interface CandidateSuppressionReport {
   readonly retryEligibleCount: number;
   readonly totalKnownInsufficientCount: number;
   readonly recentReplaceableCount: number;
+  readonly recentReplaceableEventCount: number;
   readonly recentReplaceableReasons: readonly CandidateSuppressionReasonCount[];
   readonly generatedAt: string;
 }
@@ -152,6 +169,7 @@ export async function readCandidateSuppressionReport(databaseUrl: string): Promi
       retryEligibleCount: Number(historyRow.retry_eligible_count ?? 0),
       totalKnownInsufficientCount: Number(historyRow.total_known_insufficient_count ?? 0),
       recentReplaceableCount: Number(recentFailureRow.total_recent_replaceable_count ?? 0),
+      recentReplaceableEventCount: Number(recentFailureRow.total_recent_replaceable_event_count ?? 0),
       recentReplaceableReasons: normalizeReasonBreakdown(recentFailureRow.reason_breakdown),
       generatedAt: new Date().toISOString(),
     });
