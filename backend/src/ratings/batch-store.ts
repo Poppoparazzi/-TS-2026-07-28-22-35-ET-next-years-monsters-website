@@ -1,4 +1,4 @@
-// TS: 2026-08-28 20:57 ET
+// TS: 2026-08-28 21:58 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -30,10 +30,12 @@ export const EXCLUDE_CURRENT_COMPLETED_RATING_SQL = `
 
 // Once the paid provider has already returned a real company-history response,
 // reuse that evidence before buying the same history again. Insufficient history
-// is temporary for young companies: suppress another paid request only until the
-// latest real daily-bar date plus the number of missing sessions makes 253 bars
-// possible. A zero-bar response has no latest date, so retry it weekly instead of
-// excluding the company forever or hammering the provider every batch.
+// is temporary for young companies. Count only plausible weekday sessions since
+// the latest real bar, then add a small conservative holiday allowance so weekends
+// and exchange holidays cannot trigger an obviously premature paid retry. This is
+// intentionally conservative: a slightly late retry is cheaper than repeatedly
+// paying to learn that the 253rd genuine session still does not exist. A zero-bar
+// response has no latest date, so retry it weekly instead of hammering the provider.
 export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
   NOT EXISTS (
     SELECT 1
@@ -43,8 +45,17 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
       AND (
         (
           mhe.latest_bar_date IS NOT NULL
-          AND CURRENT_DATE < mhe.latest_bar_date
-            + ((253 - mhe.usable_bar_count) * INTERVAL '1 day')
+          AND (
+            SELECT count(*)
+            FROM generate_series(
+              mhe.latest_bar_date + INTERVAL '1 day',
+              CURRENT_DATE,
+              INTERVAL '1 day'
+            ) AS candidate_session(day)
+            WHERE EXTRACT(ISODOW FROM candidate_session.day) BETWEEN 1 AND 5
+          ) <
+            (253 - mhe.usable_bar_count)
+            + CEIL(GREATEST(253 - mhe.usable_bar_count, 0) / 20.0)
         )
         OR (
           mhe.latest_bar_date IS NULL
