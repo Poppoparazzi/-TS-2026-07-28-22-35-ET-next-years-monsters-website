@@ -1,4 +1,4 @@
-// TS: 2026-08-29 12:59 ET
+// TS: 2026-08-29 15:01 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -191,15 +191,29 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           c.ticker,
           c.company_name,
           c.is_pilot,
-          COALESCE(size_metric.priority_metric, 0) AS priority_metric
+          COALESCE(revenue_metric.latest_annual_revenue, 0) AS priority_metric
         FROM companies c
         JOIN company_pipeline_status cps ON cps.company_id = c.id
         LEFT JOIN LATERAL (
-          SELECT max(abs(cf.value_numeric)) AS priority_metric
+          SELECT cf.value_numeric AS latest_annual_revenue
           FROM company_facts cf
           WHERE cf.company_id = c.id
+            AND cf.taxonomy = 'us-gaap'
+            AND cf.concept IN (
+              'RevenueFromContractWithCustomerExcludingAssessedTax',
+              'Revenues',
+              'SalesRevenueNet'
+            )
             AND cf.value_numeric IS NOT NULL
-        ) size_metric ON true
+            AND cf.value_numeric >= 0
+            AND cf.fiscal_period = 'FY'
+            AND cf.form_type IN ('10-K', '10-K/A', '20-F', '20-F/A', '40-F', '40-F/A')
+          ORDER BY
+            cf.fiscal_year DESC NULLS LAST,
+            cf.period_end DESC NULLS LAST,
+            cf.filed_date DESC NULLS LAST
+          LIMIT 1
+        ) revenue_metric ON true
         LEFT JOIN LATERAL (
           SELECT count(*) AS fact_count
           FROM company_facts cf
@@ -221,9 +235,9 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
         ORDER BY
           CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
           c.is_pilot DESC,
+          COALESCE(revenue_metric.latest_annual_revenue, -1) DESC,
           COALESCE(fact_depth.fact_count, 0) DESC,
           COALESCE(filing_depth.filing_count, 0) DESC,
-          COALESCE(size_metric.priority_metric, 0) DESC,
           c.ticker
         LIMIT $1
       `,
