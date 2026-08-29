@@ -1,4 +1,4 @@
-// TS: 2026-08-29 07:55 ET
+// TS: 2026-08-29 08:10 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -136,6 +136,16 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
     rolloutWorker,
     /right\.filingCount - left\.filingCount \|\|[\s\S]*?right\.factCount - left\.factCount \|\|[\s\S]*?left\.ratingCount - right\.ratingCount/,
     "free stored-data ranking must still favor filing depth before fact depth and historical-rating tie breakers",
+  );
+  assert.match(
+    rolloutWorker,
+    /function latestAnnualRevenueValue\(summary\)/,
+    "free SEC qualification must retain a usable latest annual revenue value for candidate ranking",
+  );
+  assert.match(
+    rolloutWorker,
+    /rightLiquidity - leftLiquidity \|\|[\s\S]*?rightRevenue - leftRevenue/,
+    "paid rating attempts should prefer stronger known liquidity and then larger verified annual revenue before weaker candidates",
   );
   assert.match(
     rolloutWorker,
