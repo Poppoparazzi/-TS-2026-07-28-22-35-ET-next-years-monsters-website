@@ -1,15 +1,7 @@
-// TS: 2026-08-29 17:00 ET
+// TS: 2026-08-28 14:57 ET
 
 import type { PoolClient } from "pg";
 import type { MarketHistoryEvidence } from "../ratings/market-history-evidence.js";
-
-interface MarketHistoryEvidenceRow {
-  provider: string;
-  usable_bar_count: number;
-  latest_bar_date: string | Date | null;
-  retrieved_at: string | Date;
-  feed_disclosure: string;
-}
 
 function assertPersistableMarketHistoryEvidence(
   companyId: string,
@@ -37,62 +29,6 @@ function assertPersistableMarketHistoryEvidence(
   if (!evidence.feedDisclosure.trim()) {
     throw new Error("market_history_evidence_disclosure_required");
   }
-}
-
-function normalizeDateOnly(value: string | Date | null): string | null {
-  if (value === null) return null;
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  return String(value).slice(0, 10);
-}
-
-function normalizeTimestamp(value: string | Date): string {
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
-}
-
-export async function getMarketHistoryEvidence(
-  client: Pick<PoolClient, "query">,
-  companyId: string,
-  provider: string,
-  symbol: string,
-): Promise<MarketHistoryEvidence | null> {
-  if (!companyId.trim()) {
-    throw new Error("market_history_evidence_company_id_required");
-  }
-  if (!provider.trim()) {
-    throw new Error("market_history_evidence_provider_required");
-  }
-  if (!symbol.trim()) {
-    throw new Error("market_history_evidence_symbol_required");
-  }
-
-  const result = await client.query<MarketHistoryEvidenceRow>(
-    `
-      SELECT
-        provider,
-        usable_bar_count,
-        latest_bar_date,
-        retrieved_at,
-        feed_disclosure
-      FROM market_history_evidence
-      WHERE company_id = $1
-        AND provider = $2
-      LIMIT 1
-    `,
-    [companyId, provider],
-  );
-  const row = result.rows[0];
-  if (!row) return null;
-
-  const evidence: MarketHistoryEvidence = {
-    symbol: symbol.trim().toUpperCase(),
-    provider: row.provider,
-    usableBarCount: Number(row.usable_bar_count),
-    latestBarDate: normalizeDateOnly(row.latest_bar_date),
-    retrievedAt: normalizeTimestamp(row.retrieved_at),
-    feedDisclosure: row.feed_disclosure,
-  };
-  assertPersistableMarketHistoryEvidence(companyId, evidence);
-  return evidence;
 }
 
 export async function upsertMarketHistoryEvidence(
