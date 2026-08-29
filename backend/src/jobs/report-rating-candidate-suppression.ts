@@ -1,4 +1,4 @@
-// TS: 2026-08-29 00:59 ET
+// TS: 2026-08-29 11:00 ET
 
 import pg from "pg";
 
@@ -47,6 +47,45 @@ export const RATING_CANDIDATE_SUPPRESSION_REPORT_SQL = `
   FROM insufficient
 `;
 
+export const RATING_RECENT_FAILURE_REASON_REPORT_SQL = `
+  WITH recent_failures AS (
+    SELECT
+      COALESCE(NULLIF(prior_failure ->> 'reasonCode', ''), 'legacy_unclassified') AS reason_code,
+      COALESCE(NULLIF(prior_failure ->> 'suppressionStage', ''), 'legacy_unclassified') AS suppression_stage
+    FROM data_refresh_runs drr
+    CROSS JOIN LATERAL jsonb_array_elements(
+      CASE
+        WHEN jsonb_typeof(drr.metadata -> 'replaceable') = 'array'
+          THEN drr.metadata -> 'replaceable'
+        ELSE '[]'::jsonb
+      END
+    ) AS prior_failure
+    WHERE drr.refresh_type = 'ratings'
+      AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+  ), grouped AS (
+    SELECT
+      reason_code,
+      suppression_stage,
+      count(*)::int AS candidate_count
+    FROM recent_failures
+    GROUP BY reason_code, suppression_stage
+  )
+  SELECT
+    COALESCE(sum(candidate_count), 0)::int AS total_recent_replaceable_count,
+    COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'reasonCode', reason_code,
+          'suppressionStage', suppression_stage,
+          'count', candidate_count
+        )
+        ORDER BY suppression_stage, reason_code
+      ) FILTER (WHERE candidate_count > 0),
+      '[]'::jsonb
+    ) AS reason_breakdown
+  FROM grouped
+`;
+
 interface CandidateSuppressionRow {
   readonly cooldown_suppressed_count: string | number;
   readonly session_gap_suppressed_count: string | number;
@@ -54,12 +93,39 @@ interface CandidateSuppressionRow {
   readonly total_known_insufficient_count: string | number;
 }
 
+interface RecentFailureReasonRow {
+  readonly total_recent_replaceable_count: string | number;
+  readonly reason_breakdown: readonly {
+    readonly reasonCode: string;
+    readonly suppressionStage: string;
+    readonly count: number;
+  }[] | string;
+}
+
+export interface CandidateSuppressionReasonCount {
+  readonly reasonCode: string;
+  readonly suppressionStage: string;
+  readonly count: number;
+}
+
 export interface CandidateSuppressionReport {
   readonly cooldownSuppressedCount: number;
   readonly sessionGapSuppressedCount: number;
   readonly retryEligibleCount: number;
   readonly totalKnownInsufficientCount: number;
+  readonly recentReplaceableCount: number;
+  readonly recentReplaceableReasons: readonly CandidateSuppressionReasonCount[];
   readonly generatedAt: string;
+}
+
+function normalizeReasonBreakdown(value: RecentFailureReasonRow["reason_breakdown"]): readonly CandidateSuppressionReasonCount[] {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  if (!Array.isArray(parsed)) return Object.freeze([]);
+  return Object.freeze(parsed.map((entry) => Object.freeze({
+    reasonCode: String(entry.reasonCode ?? "legacy_unclassified"),
+    suppressionStage: String(entry.suppressionStage ?? "legacy_unclassified"),
+    count: Number(entry.count ?? 0),
+  })));
 }
 
 export async function readCandidateSuppressionReport(databaseUrl: string): Promise<CandidateSuppressionReport> {
@@ -71,15 +137,22 @@ export async function readCandidateSuppressionReport(databaseUrl: string): Promi
   });
 
   try {
-    const result = await pool.query<CandidateSuppressionRow>(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL);
-    const row = result.rows[0];
-    if (!row) throw new Error("Candidate suppression report returned no row.");
+    const [historyResult, recentFailureResult] = await Promise.all([
+      pool.query<CandidateSuppressionRow>(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL),
+      pool.query<RecentFailureReasonRow>(RATING_RECENT_FAILURE_REASON_REPORT_SQL),
+    ]);
+    const historyRow = historyResult.rows[0];
+    const recentFailureRow = recentFailureResult.rows[0];
+    if (!historyRow) throw new Error("Candidate suppression report returned no history row.");
+    if (!recentFailureRow) throw new Error("Candidate suppression report returned no recent-failure row.");
 
     return Object.freeze({
-      cooldownSuppressedCount: Number(row.cooldown_suppressed_count ?? 0),
-      sessionGapSuppressedCount: Number(row.session_gap_suppressed_count ?? 0),
-      retryEligibleCount: Number(row.retry_eligible_count ?? 0),
-      totalKnownInsufficientCount: Number(row.total_known_insufficient_count ?? 0),
+      cooldownSuppressedCount: Number(historyRow.cooldown_suppressed_count ?? 0),
+      sessionGapSuppressedCount: Number(historyRow.session_gap_suppressed_count ?? 0),
+      retryEligibleCount: Number(historyRow.retry_eligible_count ?? 0),
+      totalKnownInsufficientCount: Number(historyRow.total_known_insufficient_count ?? 0),
+      recentReplaceableCount: Number(recentFailureRow.total_recent_replaceable_count ?? 0),
+      recentReplaceableReasons: normalizeReasonBreakdown(recentFailureRow.reason_breakdown),
       generatedAt: new Date().toISOString(),
     });
   } finally {
