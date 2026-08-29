@@ -1,8 +1,11 @@
-// TS: 2026-08-29 01:00 ET
+// TS: 2026-08-29 11:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { RATING_CANDIDATE_SUPPRESSION_REPORT_SQL } from "../src/jobs/report-rating-candidate-suppression.js";
+import {
+  RATING_CANDIDATE_SUPPRESSION_REPORT_SQL,
+  RATING_RECENT_FAILURE_REASON_REPORT_SQL,
+} from "../src/jobs/report-rating-candidate-suppression.js";
 
 test("candidate suppression report separates cooldown, session-gap, and retry-eligible histories", () => {
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /market_history_evidence_latest/i);
@@ -15,4 +18,16 @@ test("candidate suppression report separates cooldown, session-gap, and retry-el
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /retry_eligible_count/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /total_known_insufficient_count/i);
   assert.doesNotMatch(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /\b(?:update|delete|insert|alter|drop|truncate)\b/i);
+});
+
+test("candidate suppression report groups recent replaceable failures by machine-readable reason", () => {
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /data_refresh_runs/i);
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /metadata\s*->\s*'replaceable'/i);
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /reasonCode/i);
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /suppressionStage/i);
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /legacy_unclassified/i);
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /INTERVAL\s+'7 days'/i);
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /total_recent_replaceable_count/i);
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /reason_breakdown/i);
+  assert.doesNotMatch(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /\b(?:update|delete|insert|alter|drop|truncate)\b/i);
 });
