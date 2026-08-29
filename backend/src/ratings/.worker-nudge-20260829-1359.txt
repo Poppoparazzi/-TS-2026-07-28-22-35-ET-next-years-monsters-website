@@ -1,0 +1,2 @@
+// TS: 2026-08-29 13:59 ET
+Trigger the quota-safe Monster Rating rollout worker after confirming production at 636/5000. Preserve frozen visuals; use free stored/SEC preflight and existing bounded paid fallback only.
