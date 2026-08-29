@@ -1,4 +1,4 @@
-# TS: 2026-08-29 03:00 ET
+# TS: 2026-08-29 06:03 ET
 
 name: Monster Rating status ledger
 
@@ -10,6 +10,8 @@ on:
   workflow_run:
     workflows: ["Monster Rating rollout worker"]
     types: [completed]
+  schedule:
+    - cron: "7 * * * *"
   workflow_dispatch:
 
 permissions:
