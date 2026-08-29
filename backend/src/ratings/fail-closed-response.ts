@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:08 UTC
+// TS: 2026-08-29 08:38 ET
 
 export interface RatingEvidenceFailure {
   readonly code: string;
@@ -27,7 +27,7 @@ export interface FailClosedRatingResponse {
   readonly rollout: {
     readonly cohort: "top_500";
     readonly status: "rating_in_progress";
-    readonly message: "Not Yet Rated — Stay Tuned. Coming Soon.";
+    readonly message: "Not Yet Rated — Insufficient Evidence for Prediction.";
   };
 }
 
@@ -45,7 +45,7 @@ export function buildFailClosedRatingResponse(
     : [
         {
           code: "required_evidence_incomplete",
-          message: "Required production evidence is unavailable.",
+          message: "Required production evidence is incomplete or cannot yet be verified.",
         },
       ];
 
@@ -57,7 +57,7 @@ export function buildFailClosedRatingResponse(
     score: null,
     tier: "NOT YET RATED",
     eligibilityCode: "required_evidence_incomplete",
-    summary: "Not Yet Rated — Stay Tuned. Coming Soon. One or more required production evidence sources are unavailable or incomplete.",
+    summary: "Not Yet Rated — Insufficient Evidence for Prediction. A numeric Monster Rating™ is withheld until the required evidence can be verified.",
     evidenceInputs: Object.freeze([]),
     components: Object.freeze([
       Object.freeze({
@@ -73,7 +73,7 @@ export function buildFailClosedRatingResponse(
     rollout: Object.freeze({
       cohort: "top_500",
       status: "rating_in_progress",
-      message: "Not Yet Rated — Stay Tuned. Coming Soon.",
+      message: "Not Yet Rated — Insufficient Evidence for Prediction.",
     }),
   });
 }
