@@ -1,4 +1,4 @@
-// TS: 2026-08-28 18:03 ET
+// TS: 2026-08-29 10:00 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -162,6 +162,8 @@ export async function runRatingBatch(
         const failure = {
           ticker: candidate.ticker,
           reason: "Official SEC company identity does not match the company-facts identity.",
+          reasonCode: "unresolved_sec_identity",
+          suppressionStage: "sec_preflight",
         };
         if (candidate.isProtected) protectedMustRepair.push(failure);
         else replaceable.push(failure);
@@ -180,6 +182,8 @@ export async function runRatingBatch(
         const failure = {
           ticker: candidate.ticker,
           reason: "At least two comparable annual SEC revenue periods are required.",
+          reasonCode: "insufficient_financial_history",
+          suppressionStage: "sec_preflight",
         };
         if (candidate.isProtected) protectedMustRepair.push(failure);
         else replaceable.push(failure);
@@ -244,7 +248,12 @@ export async function runRatingBatch(
       await persistenceStore.saveQuote(quote);
 
       if (!rating.eligible) {
-        const failure = { ticker: candidate.ticker, reason: rating.reasons[0]?.message ?? rating.summary };
+        const failure = {
+          ticker: candidate.ticker,
+          reason: rating.reasons[0]?.message ?? rating.summary,
+          reasonCode: rating.eligibilityCode,
+          suppressionStage: "rating_engine",
+        };
         if (candidate.isProtected) protectedMustRepair.push(failure);
         else replaceable.push(failure);
         continue;
@@ -277,7 +286,12 @@ export async function runRatingBatch(
         break;
       }
 
-      const failure = { ticker: candidate.ticker, reason: message };
+      const failure = {
+        ticker: candidate.ticker,
+        reason: message,
+        reasonCode: "candidate_processing_error",
+        suppressionStage: "candidate_processing",
+      };
       if (candidate.isProtected) protectedMustRepair.push(failure);
       else replaceable.push(failure);
     }
