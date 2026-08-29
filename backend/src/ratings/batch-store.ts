@@ -1,4 +1,4 @@
-// TS: 2026-08-29 11:00 ET
+// TS: 2026-08-29 12:59 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -63,13 +63,10 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
   )
 `;
 
-// A completed rating pass already persists ordinary ineligible candidates in the
-// run metadata as structured JSON. Reuse that durable outcome for a short cooldown
-// instead of immediately paying Twelve Data for the same candidate again on the
-// next worker pass. Protected/VCL names are deliberately not suppressed here: they
-// remain must-repair. The seven-day window is conservative enough to avoid hammering
-// known ineligible ordinary names while still allowing genuinely changed evidence
-// to re-enter the reserve later.
+// Reuse only durable, machine-readable ineligibility outcomes for the short paid-
+// provider cooldown. Generic candidate-processing errors can be transient and must
+// not hide an otherwise viable stock for seven days. Protected/VCL names are still
+// excluded from this ordinary suppression path and remain must-repair.
 export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
   NOT EXISTS (
     SELECT 1
@@ -84,6 +81,9 @@ export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
     WHERE drr.refresh_type = 'ratings'
       AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
       AND prior_failure ->> 'ticker' = c.ticker
+      AND prior_failure ->> 'reasonCode' IS NOT NULL
+      AND prior_failure ->> 'suppressionStage' IN ('sec_preflight', 'rating_engine')
+      AND prior_failure ->> 'reasonCode' <> 'candidate_processing_error'
   )
 `;
 
