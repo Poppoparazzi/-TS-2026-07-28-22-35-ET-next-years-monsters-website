@@ -1,4 +1,4 @@
-# TS: 2026-08-25 18:18 ET
+# TS: 2026-08-29 07:50 ET
 
 databases:
   - name: next-years-monsters-db
@@ -52,7 +52,7 @@ services:
       - key: AUTO_REFRESH_RATINGS_ON_START
         value: "true"
       - key: RATING_TARGET_COUNT
-        value: "500"
+        value: "5000"
       - key: RATING_CANDIDATE_LIMIT
         value: "5000"
       - key: RATING_MARKET_REQUEST_DELAY_MS
