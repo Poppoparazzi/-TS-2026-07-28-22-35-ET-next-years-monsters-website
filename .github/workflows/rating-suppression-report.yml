@@ -1,4 +1,4 @@
-# TS: 2026-08-29 04:00 ET
+# TS: 2026-08-29 04:03 ET
 
 name: Monster Rating suppression report
 
@@ -27,11 +27,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
 
       - name: Install backend dependencies
-        run: npm ci --prefix backend
+        run: npm install --prefix backend --no-audit --no-fund
 
       - name: Report real provider-history suppression
         env:
