@@ -1,4 +1,4 @@
-// TS: 2026-08-30 03:00 ET
+// TS: 2026-08-30 18:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -67,63 +67,63 @@ test("non-positive price or volume fails closed", () => {
   assert.equal(evaluateStoredLiquidity({ price: 10, volume: 0, retrievedAt: new Date(nowMs).toISOString() }, nowMs).fresh, false);
 });
 
-test("pre-SEC priority keeps filing and fact depth ahead of liquidity", () => {
-  const deepEvidence = {
-    filingCount: 8,
-    factCount: 20,
+test("fresh verified liquidity outranks deeper stale SEC evidence before paid calls", () => {
+  const deepStale = {
+    filingCount: 500,
+    factCount: 5_000,
     ratingCount: 0,
     ticker: "DEEP",
-    liquidity: evaluateStoredLiquidity({ price: 10, volume: 100_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
-  };
-  const liquidShallow = {
-    filingCount: 7,
-    factCount: 50,
-    ratingCount: 0,
-    ticker: "LIQD",
-    liquidity: evaluateStoredLiquidity({ price: 100, volume: 10_000_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
-  };
-
-  assert.ok(compareStoredLiquidityPriority(deepEvidence, liquidShallow) < 0);
-});
-
-test("fresh verified liquidity outranks stale liquidity when SEC evidence depth ties", () => {
-  const fresh = {
-    filingCount: 8,
-    factCount: 20,
-    ratingCount: 0,
-    ticker: "FRESH",
-    liquidity: evaluateStoredLiquidity({ price: 25, volume: 400_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
-  };
-  const stale = {
-    filingCount: 8,
-    factCount: 20,
-    ratingCount: 0,
-    ticker: "STALE",
     liquidity: evaluateStoredLiquidity({
-      price: 100,
+      price: 500,
       volume: 10_000_000,
       providerTimestamp: new Date(nowMs - STORED_LIQUIDITY_MAX_AGE_MS - 1).toISOString(),
     }, nowMs),
   };
-
-  assert.ok(compareStoredLiquidityPriority(fresh, stale) < 0);
-});
-
-test("higher fresh dollar volume wins after evidence depth and freshness tie", () => {
-  const lower = {
-    filingCount: 8,
-    factCount: 20,
+  const liquidShallow = {
+    filingCount: 1,
+    factCount: 1,
     ratingCount: 0,
-    ticker: "LOW",
+    ticker: "LIQD",
     liquidity: evaluateStoredLiquidity({ price: 10, volume: 100_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
   };
-  const higher = {
-    filingCount: 8,
-    factCount: 20,
+
+  assert.ok(compareStoredLiquidityPriority(liquidShallow, deepStale) < 0);
+});
+
+test("higher fresh dollar volume outranks deeper evidence when both snapshots are fresh", () => {
+  const deepLowerLiquidity = {
+    filingCount: 100,
+    factCount: 1_000,
+    ratingCount: 0,
+    ticker: "DEEP",
+    liquidity: evaluateStoredLiquidity({ price: 10, volume: 100_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
+  };
+  const shallowHigherLiquidity = {
+    filingCount: 1,
+    factCount: 1,
     ratingCount: 0,
     ticker: "HIGH",
     liquidity: evaluateStoredLiquidity({ price: 25, volume: 400_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
   };
 
-  assert.ok(compareStoredLiquidityPriority(higher, lower) < 0);
+  assert.ok(compareStoredLiquidityPriority(shallowHigherLiquidity, deepLowerLiquidity) < 0);
+});
+
+test("filing and fact depth break ties after liquidity freshness and dollar volume", () => {
+  const shallow = {
+    filingCount: 1,
+    factCount: 1,
+    ratingCount: 0,
+    ticker: "SHALLOW",
+    liquidity: evaluateStoredLiquidity({ price: 25, volume: 400_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
+  };
+  const deep = {
+    filingCount: 8,
+    factCount: 20,
+    ratingCount: 0,
+    ticker: "DEEP",
+    liquidity: evaluateStoredLiquidity({ price: 25, volume: 400_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
+  };
+
+  assert.ok(compareStoredLiquidityPriority(deep, shallow) < 0);
 });
