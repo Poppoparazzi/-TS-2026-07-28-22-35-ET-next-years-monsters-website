@@ -1,10 +1,24 @@
-// TS: 2026-08-30 07:58 ET
+// TS: 2026-08-30 09:02 ET
 
 import type { PoolClient } from "pg";
 import {
   MINIMUM_RATING_HISTORY_BARS,
   type MarketHistoryEvidence,
 } from "../ratings/market-history-evidence.js";
+
+export interface PersistedMarketHistorySuppression {
+  readonly ratingEligibilityCode: "eligible" | "insufficient_market_history";
+  readonly suppressionReason: "insufficient_market_history" | null;
+  readonly usableBarCount: number;
+  readonly retrievedAt: string;
+}
+
+interface PersistedMarketHistorySuppressionRow {
+  readonly rating_eligibility_code: "eligible" | "insufficient_market_history";
+  readonly suppression_reason: "insufficient_market_history" | null;
+  readonly usable_bar_count: string | number;
+  readonly retrieved_at: Date | string;
+}
 
 function assertPersistableMarketHistoryEvidence(
   companyId: string,
@@ -48,6 +62,57 @@ function classifyMarketHistoryEvidence(evidence: MarketHistoryEvidence): {
     ratingEligibilityCode: "insufficient_market_history",
     suppressionReason: "insufficient_market_history",
   };
+}
+
+export async function getPersistedMarketHistorySuppression(
+  client: Pick<PoolClient, "query">,
+  companyId: string,
+  provider: string,
+): Promise<PersistedMarketHistorySuppression | null> {
+  const normalizedCompanyId = companyId.trim();
+  const normalizedProvider = provider.trim();
+  if (!normalizedCompanyId) throw new Error("market_history_evidence_company_id_required");
+  if (!normalizedProvider) throw new Error("market_history_evidence_provider_required");
+
+  const result = await client.query<PersistedMarketHistorySuppressionRow>(
+    `
+      SELECT
+        rating_eligibility_code,
+        suppression_reason,
+        usable_bar_count,
+        retrieved_at
+      FROM market_history_evidence
+      WHERE company_id = $1
+        AND provider = $2
+        AND suppression_reason IS NOT NULL
+      ORDER BY retrieved_at DESC
+      LIMIT 1
+    `,
+    [normalizedCompanyId, normalizedProvider],
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+
+  const usableBarCount = Number(row.usable_bar_count);
+  const retrievedAt = row.retrieved_at instanceof Date
+    ? row.retrieved_at.toISOString()
+    : new Date(row.retrieved_at).toISOString();
+  if (!Number.isInteger(usableBarCount) || usableBarCount < 0 || !Number.isFinite(Date.parse(retrievedAt))) {
+    throw new Error("market_history_evidence_invalid_persisted_suppression");
+  }
+  if (
+    row.rating_eligibility_code !== "insufficient_market_history" ||
+    row.suppression_reason !== "insufficient_market_history"
+  ) {
+    throw new Error("market_history_evidence_invalid_persisted_suppression");
+  }
+
+  return Object.freeze({
+    ratingEligibilityCode: row.rating_eligibility_code,
+    suppressionReason: row.suppression_reason,
+    usableBarCount,
+    retrievedAt,
+  });
 }
 
 export async function upsertMarketHistoryEvidence(
