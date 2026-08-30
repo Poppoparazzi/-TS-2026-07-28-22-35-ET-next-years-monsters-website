@@ -1,9 +1,10 @@
-// TS: 2026-08-30 09:02 ET
+// TS: 2026-08-30 10:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getPersistedMarketHistorySuppression,
+  MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS,
   upsertMarketHistoryEvidence,
 } from "../src/database/market-history-evidence-persistence.js";
 
@@ -66,9 +67,10 @@ test("persists insufficient market history as a reusable suppression reason", as
   assert.equal(params[7], "insufficient_market_history");
 });
 
-test("reads persisted insufficient-history suppression without another provider call", async () => {
+test("reads fresh persisted insufficient-history suppression without another provider call", async () => {
   let sql = "";
   let params: readonly unknown[] = [];
+  const retrievedAt = "2026-08-28T14:58:00.000Z";
   const client = {
     async query(text: string, values?: readonly unknown[]) {
       sql = text;
@@ -78,7 +80,7 @@ test("reads persisted insufficient-history suppression without another provider 
           rating_eligibility_code: "insufficient_market_history",
           suppression_reason: "insufficient_market_history",
           usable_bar_count: 120,
-          retrieved_at: "2026-08-28T14:58:00.000Z",
+          retrieved_at: retrievedAt,
         }],
         rowCount: 1,
       };
@@ -89,6 +91,7 @@ test("reads persisted insufficient-history suppression without another provider 
     client as never,
     "43",
     "licensed-test-provider",
+    Date.parse(retrievedAt) + 60 * 60 * 1000,
   );
 
   assert.match(sql, /FROM market_history_evidence/);
@@ -99,8 +102,35 @@ test("reads persisted insufficient-history suppression without another provider 
     ratingEligibilityCode: "insufficient_market_history",
     suppressionReason: "insufficient_market_history",
     usableBarCount: 120,
-    retrievedAt: "2026-08-28T14:58:00.000Z",
+    retrievedAt,
   });
+});
+
+test("does not reuse stale persisted market-history suppression forever", async () => {
+  const retrievedAt = "2026-08-28T14:58:00.000Z";
+  const client = {
+    async query() {
+      return {
+        rows: [{
+          rating_eligibility_code: "insufficient_market_history",
+          suppression_reason: "insufficient_market_history",
+          usable_bar_count: 252,
+          retrieved_at: retrievedAt,
+        }],
+        rowCount: 1,
+      };
+    },
+  };
+
+  assert.equal(
+    await getPersistedMarketHistorySuppression(
+      client as never,
+      "44",
+      "licensed-test-provider",
+      Date.parse(retrievedAt) + MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS + 1,
+    ),
+    null,
+  );
 });
 
 test("returns null when no persisted market-history suppression exists", async () => {
