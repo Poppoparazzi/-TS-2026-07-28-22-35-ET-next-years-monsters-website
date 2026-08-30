@@ -1,4 +1,4 @@
-// TS: 2026-08-30 06:01 ET
+// TS: 2026-08-30 06:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -118,4 +118,20 @@ test("qualification pool selector preserves stronger SEC evidence ahead of liqui
   ], 1);
 
   assert.equal(selected[0]?.ticker, "MORE_FILINGS");
+});
+
+test("qualification pool selector removes duplicate ticker candidates before bounded slicing", () => {
+  const fresh = evaluateStoredLiquidity({
+    price: 40,
+    volume: 2_000_000,
+    providerTimestamp: iso(-1_000),
+  }, NOW);
+
+  const selected = selectStoredLiquidityQualificationPool([
+    { ticker: "AAPL", filingCount: 12, factCount: 80, ratingCount: 0, liquidity: fresh },
+    { ticker: " aapl ", filingCount: 10, factCount: 70, ratingCount: 0, liquidity: fresh },
+    { ticker: "MSFT", filingCount: 9, factCount: 60, ratingCount: 0, liquidity: fresh },
+  ], 2);
+
+  assert.deepEqual(selected.map((item) => item.ticker.trim().toUpperCase()), ["AAPL", "MSFT"]);
 });
