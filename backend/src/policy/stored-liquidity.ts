@@ -1,4 +1,4 @@
-// TS: 2026-08-30 06:01 ET
+// TS: 2026-08-30 06:57 ET
 
 export const STORED_LIQUIDITY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const STORED_LIQUIDITY_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
@@ -137,10 +137,14 @@ export function selectStoredLiquidityQualificationPool<T extends StoredLiquidity
   const safePoolSize = Number.isFinite(poolSize)
     ? Math.max(Math.floor(poolSize), 0)
     : 0;
+  const ranked = [...items].sort(compareStoredLiquidityPriority);
+  const uniqueByTicker = new Map<string, T>();
 
-  return Object.freeze(
-    [...items]
-      .sort(compareStoredLiquidityPriority)
-      .slice(0, safePoolSize),
-  );
+  for (const item of ranked) {
+    const normalizedTicker = String(item.ticker || "").trim().toUpperCase();
+    if (!normalizedTicker || uniqueByTicker.has(normalizedTicker)) continue;
+    uniqueByTicker.set(normalizedTicker, item);
+  }
+
+  return Object.freeze([...uniqueByTicker.values()].slice(0, safePoolSize));
 }
