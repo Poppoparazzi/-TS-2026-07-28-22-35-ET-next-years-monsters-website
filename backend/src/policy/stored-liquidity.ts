@@ -28,9 +28,11 @@ export function evaluateStoredLiquidity(
 ): StoredLiquidityEvidence {
   const price = Number(quote?.price);
   const volume = Number(quote?.volume);
+  const providerTimestampPresent =
+    typeof quote?.providerTimestamp === "string" && quote.providerTimestamp.trim() !== "";
   const providerTimestampMs = parseTimestamp(quote?.providerTimestamp);
   const retrievedAtMs = parseTimestamp(quote?.retrievedAt);
-  const timestampMs = providerTimestampMs ?? retrievedAtMs;
+  const timestampMs = providerTimestampPresent ? providerTimestampMs : retrievedAtMs;
   const dollarVolume =
     Number.isFinite(price) && price > 0 && Number.isFinite(volume) && volume > 0
       ? price * volume
