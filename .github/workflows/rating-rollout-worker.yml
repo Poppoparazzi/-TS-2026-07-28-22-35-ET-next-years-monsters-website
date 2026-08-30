@@ -1,4 +1,4 @@
-# TS: 2026-08-29 08:08 ET
+# TS: 2026-08-30 12:14 ET
 
 name: Monster Rating rollout worker
 
@@ -72,6 +72,7 @@ jobs:
           const secQualificationConcurrency = Math.max(Number(process.env.SEC_QUALIFICATION_CONCURRENCY || 4), 1);
           const annualForms = new Set(["10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"]);
           const maxSecFactAgeMs = 7 * 24 * 60 * 60 * 1000;
+          const maxStoredLiquidityAgeMs = 24 * 60 * 60 * 1000;
           const futureToleranceMs = 5 * 60 * 1000;
           const protectedVclTickers = Object.freeze([
             "AAPL", "NVDA", "MNST", "AMZN", "TSLA",
@@ -108,19 +109,53 @@ jobs:
             return results;
           }
 
+          function evaluateStoredLiquidity(quote, nowMs = Date.now()) {
+            const storedPrice = Number(quote?.price);
+            const storedVolume = Number(quote?.volume);
+            const storedDollarVolume =
+              Number.isFinite(storedPrice) && storedPrice > 0 && Number.isFinite(storedVolume) && storedVolume > 0
+                ? storedPrice * storedVolume
+                : null;
+            const providerTimestampPresent =
+              typeof quote?.providerTimestamp === "string" && quote.providerTimestamp.trim() !== "";
+            const storedQuoteTimestampMs = providerTimestampPresent
+              ? Date.parse(quote.providerTimestamp)
+              : Date.parse(String(quote?.retrievedAt || ""));
+            const storedQuoteAgeMs = nowMs - storedQuoteTimestampMs;
+            const storedLiquidityFresh =
+              storedDollarVolume !== null &&
+              Number.isFinite(storedQuoteTimestampMs) &&
+              Number.isFinite(nowMs) &&
+              storedQuoteAgeMs >= -futureToleranceMs &&
+              storedQuoteAgeMs <= maxStoredLiquidityAgeMs;
+            return { storedDollarVolume, storedLiquidityFresh };
+          }
+
+          function compareStoredPreflightPriority(left, right) {
+            const leftLiquidity = left.storedLiquidityFresh && Number.isFinite(left.storedDollarVolume)
+              ? Number(left.storedDollarVolume)
+              : -1;
+            const rightLiquidity = right.storedLiquidityFresh && Number.isFinite(right.storedDollarVolume)
+              ? Number(right.storedDollarVolume)
+              : -1;
+            return (
+              right.filingCount - left.filingCount ||
+              right.factCount - left.factCount ||
+              Number(right.storedLiquidityFresh) - Number(left.storedLiquidityFresh) ||
+              rightLiquidity - leftLiquidity ||
+              left.ratingCount - right.ratingCount ||
+              String(left.company.ticker).localeCompare(String(right.company.ticker))
+            );
+          }
+
           async function preflightStoredCandidate(company) {
             const ticker = String(company.ticker).trim().toUpperCase();
             try {
               const stored = await getJson(`${base}/api/stored/${encodeURIComponent(ticker)}`, 20_000);
               if (!stored.response.ok || !stored.body) {
-                return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0, storedDollarVolume: null };
+                return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0, storedDollarVolume: null, storedLiquidityFresh: false };
               }
-              const storedPrice = Number(stored.body.latestQuote?.price);
-              const storedVolume = Number(stored.body.latestQuote?.volume);
-              const storedDollarVolume =
-                Number.isFinite(storedPrice) && storedPrice > 0 && Number.isFinite(storedVolume) && storedVolume > 0
-                  ? storedPrice * storedVolume
-                  : null;
+              const { storedDollarVolume, storedLiquidityFresh } = evaluateStoredLiquidity(stored.body.latestQuote);
               return {
                 company,
                 preflightOk: true,
@@ -128,9 +163,10 @@ jobs:
                 filingCount: Number(stored.body.filingCount || 0),
                 ratingCount: Number(stored.body.ratingCount || 0),
                 storedDollarVolume,
+                storedLiquidityFresh,
               };
             } catch {
-              return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0, storedDollarVolume: null };
+              return { company, preflightOk: false, factCount: -1, filingCount: -1, ratingCount: 0, storedDollarVolume: null, storedLiquidityFresh: false };
             }
           }
 
@@ -420,12 +456,7 @@ jobs:
             preflightStoredCandidate,
           );
           const verifiedPreflightResults = preflightResults.filter((item) => item.preflightOk);
-          const rankedStoredPreflightResults = verifiedPreflightResults.sort((left, right) =>
-            right.filingCount - left.filingCount ||
-            right.factCount - left.factCount ||
-            left.ratingCount - right.ratingCount ||
-            String(left.company.ticker).localeCompare(String(right.company.ticker))
-          );
+          const rankedStoredPreflightResults = verifiedPreflightResults.sort(compareStoredPreflightPriority);
           const secQualificationPool = rankedStoredPreflightResults.slice(
             0,
             Math.min(secQualificationPoolSize, rankedStoredPreflightResults.length),
@@ -438,8 +469,12 @@ jobs:
           const qualifiedOrdinaryCandidates = secQualificationResults
             .filter((item) => item.secQualificationOk)
             .sort((left, right) => {
-              const leftLiquidity = Number.isFinite(left.storedDollarVolume) ? left.storedDollarVolume : -1;
-              const rightLiquidity = Number.isFinite(right.storedDollarVolume) ? right.storedDollarVolume : -1;
+              const leftLiquidity = left.storedLiquidityFresh && Number.isFinite(left.storedDollarVolume)
+                ? left.storedDollarVolume
+                : -1;
+              const rightLiquidity = right.storedLiquidityFresh && Number.isFinite(right.storedDollarVolume)
+                ? right.storedDollarVolume
+                : -1;
               const leftRevenue = Number.isFinite(left.latestAnnualRevenueValue) ? left.latestAnnualRevenueValue : -1;
               const rightRevenue = Number.isFinite(right.latestAnnualRevenueValue) ? right.latestAnnualRevenueValue : -1;
               return (
