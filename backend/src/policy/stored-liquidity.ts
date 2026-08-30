@@ -1,4 +1,4 @@
-// TS: 2026-08-30 02:03 ET
+// TS: 2026-08-30 03:00 ET
 
 export const STORED_LIQUIDITY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const STORED_LIQUIDITY_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
@@ -14,6 +14,14 @@ export interface StoredLiquidityEvidence {
   readonly fresh: boolean;
   readonly dollarVolume: number | null;
   readonly timestampMs: number | null;
+}
+
+export interface StoredLiquidityRankable {
+  readonly filingCount: number;
+  readonly factCount: number;
+  readonly ratingCount: number;
+  readonly ticker: string;
+  readonly liquidity: StoredLiquidityEvidence;
 }
 
 function parseTimestamp(value: unknown): number | null {
@@ -48,4 +56,25 @@ export function evaluateStoredLiquidity(
     ageMs <= STORED_LIQUIDITY_MAX_AGE_MS;
 
   return Object.freeze({ fresh, dollarVolume, timestampMs });
+}
+
+export function compareStoredLiquidityPriority(
+  left: StoredLiquidityRankable,
+  right: StoredLiquidityRankable,
+): number {
+  const leftLiquidity = left.liquidity.fresh && Number.isFinite(left.liquidity.dollarVolume)
+    ? Number(left.liquidity.dollarVolume)
+    : -1;
+  const rightLiquidity = right.liquidity.fresh && Number.isFinite(right.liquidity.dollarVolume)
+    ? Number(right.liquidity.dollarVolume)
+    : -1;
+
+  return (
+    right.filingCount - left.filingCount ||
+    right.factCount - left.factCount ||
+    Number(right.liquidity.fresh) - Number(left.liquidity.fresh) ||
+    rightLiquidity - leftLiquidity ||
+    left.ratingCount - right.ratingCount ||
+    left.ticker.localeCompare(right.ticker)
+  );
 }
