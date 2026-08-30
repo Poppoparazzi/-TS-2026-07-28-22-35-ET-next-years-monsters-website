@@ -1,4 +1,4 @@
-// TS: 2026-08-30 06:57 ET
+// TS: 2026-08-30 18:01 ET
 
 export const STORED_LIQUIDITY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const STORED_LIQUIDITY_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
@@ -121,10 +121,10 @@ export function compareStoredLiquidityPriority(
     : -1;
 
   return (
-    right.filingCount - left.filingCount ||
-    right.factCount - left.factCount ||
     Number(right.liquidity.fresh) - Number(left.liquidity.fresh) ||
     rightLiquidity - leftLiquidity ||
+    right.filingCount - left.filingCount ||
+    right.factCount - left.factCount ||
     left.ratingCount - right.ratingCount ||
     left.ticker.localeCompare(right.ticker)
   );
