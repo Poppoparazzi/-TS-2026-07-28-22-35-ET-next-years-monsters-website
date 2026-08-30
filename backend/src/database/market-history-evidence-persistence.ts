@@ -1,10 +1,13 @@
-// TS: 2026-08-30 09:02 ET
+// TS: 2026-08-30 10:01 ET
 
 import type { PoolClient } from "pg";
 import {
   MINIMUM_RATING_HISTORY_BARS,
   type MarketHistoryEvidence,
 } from "../ratings/market-history-evidence.js";
+
+export const MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+export const MARKET_HISTORY_SUPPRESSION_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 export interface PersistedMarketHistorySuppression {
   readonly ratingEligibilityCode: "eligible" | "insufficient_market_history";
@@ -68,6 +71,7 @@ export async function getPersistedMarketHistorySuppression(
   client: Pick<PoolClient, "query">,
   companyId: string,
   provider: string,
+  nowMs = Date.now(),
 ): Promise<PersistedMarketHistorySuppression | null> {
   const normalizedCompanyId = companyId.trim();
   const normalizedProvider = provider.trim();
@@ -97,7 +101,8 @@ export async function getPersistedMarketHistorySuppression(
   const retrievedAt = row.retrieved_at instanceof Date
     ? row.retrieved_at.toISOString()
     : new Date(row.retrieved_at).toISOString();
-  if (!Number.isInteger(usableBarCount) || usableBarCount < 0 || !Number.isFinite(Date.parse(retrievedAt))) {
+  const retrievedAtMs = Date.parse(retrievedAt);
+  if (!Number.isInteger(usableBarCount) || usableBarCount < 0 || !Number.isFinite(retrievedAtMs)) {
     throw new Error("market_history_evidence_invalid_persisted_suppression");
   }
   if (
@@ -105,6 +110,15 @@ export async function getPersistedMarketHistorySuppression(
     row.suppression_reason !== "insufficient_market_history"
   ) {
     throw new Error("market_history_evidence_invalid_persisted_suppression");
+  }
+
+  if (!Number.isFinite(nowMs)) return null;
+  const ageMs = nowMs - retrievedAtMs;
+  if (
+    ageMs < -MARKET_HISTORY_SUPPRESSION_FUTURE_TOLERANCE_MS ||
+    ageMs > MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS
+  ) {
+    return null;
   }
 
   return Object.freeze({
