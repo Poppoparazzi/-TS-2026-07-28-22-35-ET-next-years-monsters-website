@@ -34,7 +34,7 @@ test("stale provider timestamp cannot gain liquidity priority", () => {
   assert.equal(result.dollarVolume, 10_000_000);
 });
 
-test("malformed provider timestamp falls back to retrievedAt only when provider timestamp is absent", () => {
+test("malformed provider timestamp fails closed while absent provider timestamp may use retrievedAt", () => {
   const malformed = evaluateStoredLiquidity({
     price: 25,
     volume: 400_000,
@@ -47,7 +47,7 @@ test("malformed provider timestamp falls back to retrievedAt only when provider 
     retrievedAt: new Date(nowMs).toISOString(),
   }, nowMs);
 
-  assert.equal(malformed.fresh, true);
+  assert.equal(malformed.fresh, false);
   assert.equal(absent.fresh, true);
 });
 
