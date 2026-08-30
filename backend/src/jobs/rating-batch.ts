@@ -1,4 +1,4 @@
-// TS: 2026-08-29 10:00 ET
+// TS: 2026-08-30 11:57 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -133,8 +133,8 @@ export async function runRatingBatch(
   const candidates = await batchStore.listCandidates(candidateLimit);
   const runId = await batchStore.startRun(targetCount, marketProvider.name);
   const ratedTickers: string[] = [];
-  const protectedMustRepair: { ticker: string; reason: string }[] = [];
-  const replaceable: { ticker: string; reason: string }[] = [];
+  const protectedMustRepair: { ticker: string; reason: string; reasonCode?: string; suppressionStage?: string }[] = [];
+  const replaceable: { ticker: string; reason: string; reasonCode?: string; suppressionStage?: string }[] = [];
   let examinedCount = 0;
   let stoppedReason: string | null = null;
   let benchmarkHistory: DailyMarketHistory | undefined;
@@ -184,6 +184,27 @@ export async function runRatingBatch(
           reason: "At least two comparable annual SEC revenue periods are required.",
           reasonCode: "insufficient_financial_history",
           suppressionStage: "sec_preflight",
+        };
+        if (candidate.isProtected) protectedMustRepair.push(failure);
+        else replaceable.push(failure);
+        continue;
+      }
+
+      // A recent paid history response that already proved this ticker cannot meet
+      // the 253-bar gate is reusable production evidence. Consult that durable
+      // machine-readable suppression before buying SPY or company history again.
+      // The database helper expires the suppression after 24 hours, so young stocks
+      // are reconsidered rather than suppressed forever.
+      const persistedHistorySuppression = await batchStore.getReusableMarketHistorySuppression(
+        candidate.ticker,
+        marketProvider.name,
+      );
+      if (persistedHistorySuppression) {
+        const failure = {
+          ticker: candidate.ticker,
+          reason: `Persisted market history has only ${persistedHistorySuppression.usableBarCount} usable daily bars; at least 253 are required.`,
+          reasonCode: persistedHistorySuppression.suppressionReason ?? "insufficient_market_history",
+          suppressionStage: "stored_market_history_preflight",
         };
         if (candidate.isProtected) protectedMustRepair.push(failure);
         else replaceable.push(failure);
