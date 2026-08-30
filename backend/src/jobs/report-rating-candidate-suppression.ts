@@ -1,4 +1,4 @@
-// TS: 2026-08-29 12:02 ET
+// TS: 2026-08-29 20:01 ET
 
 import pg from "pg";
 
@@ -135,14 +135,47 @@ export interface CandidateSuppressionReport {
   readonly generatedAt: string;
 }
 
+function exactNonNegativeInteger(value: string | number, field: string): number {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error(`Candidate suppression report returned invalid ${field}: ${String(value)}.`);
+  }
+  return parsed;
+}
+
 function normalizeReasonBreakdown(value: RecentFailureReasonRow["reason_breakdown"]): readonly CandidateSuppressionReasonCount[] {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
-  if (!Array.isArray(parsed)) return Object.freeze([]);
-  return Object.freeze(parsed.map((entry) => Object.freeze({
+  if (!Array.isArray(parsed)) {
+    throw new Error("Candidate suppression report returned a non-array reason breakdown.");
+  }
+  return Object.freeze(parsed.map((entry, index) => Object.freeze({
     reasonCode: String(entry.reasonCode ?? "legacy_unclassified"),
     suppressionStage: String(entry.suppressionStage ?? "legacy_unclassified"),
-    count: Number(entry.count ?? 0),
+    count: exactNonNegativeInteger(entry.count ?? 0, `recentReplaceableReasons[${index}].count`),
   })));
+}
+
+function validateCandidateSuppressionReport(report: CandidateSuppressionReport): CandidateSuppressionReport {
+  const historyPartitionTotal =
+    report.cooldownSuppressedCount + report.sessionGapSuppressedCount + report.retryEligibleCount;
+  if (historyPartitionTotal !== report.totalKnownInsufficientCount) {
+    throw new Error(
+      `Candidate suppression history partition mismatch: ${historyPartitionTotal} != ${report.totalKnownInsufficientCount}.`,
+    );
+  }
+
+  const reasonTotal = report.recentReplaceableReasons.reduce((sum, item) => sum + item.count, 0);
+  if (reasonTotal !== report.recentReplaceableCount) {
+    throw new Error(
+      `Candidate suppression reason total mismatch: ${reasonTotal} != ${report.recentReplaceableCount}.`,
+    );
+  }
+  if (report.recentReplaceableEventCount < report.recentReplaceableCount) {
+    throw new Error(
+      `Candidate suppression event count is smaller than unique candidate count: ${report.recentReplaceableEventCount} < ${report.recentReplaceableCount}.`,
+    );
+  }
+  return report;
 }
 
 export async function readCandidateSuppressionReport(databaseUrl: string): Promise<CandidateSuppressionReport> {
@@ -163,16 +196,36 @@ export async function readCandidateSuppressionReport(databaseUrl: string): Promi
     if (!historyRow) throw new Error("Candidate suppression report returned no history row.");
     if (!recentFailureRow) throw new Error("Candidate suppression report returned no recent-failure row.");
 
-    return Object.freeze({
-      cooldownSuppressedCount: Number(historyRow.cooldown_suppressed_count ?? 0),
-      sessionGapSuppressedCount: Number(historyRow.session_gap_suppressed_count ?? 0),
-      retryEligibleCount: Number(historyRow.retry_eligible_count ?? 0),
-      totalKnownInsufficientCount: Number(historyRow.total_known_insufficient_count ?? 0),
-      recentReplaceableCount: Number(recentFailureRow.total_recent_replaceable_count ?? 0),
-      recentReplaceableEventCount: Number(recentFailureRow.total_recent_replaceable_event_count ?? 0),
-      recentReplaceableReasons: normalizeReasonBreakdown(recentFailureRow.reason_breakdown),
+    const recentReplaceableReasons = normalizeReasonBreakdown(recentFailureRow.reason_breakdown);
+    const report = Object.freeze({
+      cooldownSuppressedCount: exactNonNegativeInteger(
+        historyRow.cooldown_suppressed_count ?? 0,
+        "cooldownSuppressedCount",
+      ),
+      sessionGapSuppressedCount: exactNonNegativeInteger(
+        historyRow.session_gap_suppressed_count ?? 0,
+        "sessionGapSuppressedCount",
+      ),
+      retryEligibleCount: exactNonNegativeInteger(
+        historyRow.retry_eligible_count ?? 0,
+        "retryEligibleCount",
+      ),
+      totalKnownInsufficientCount: exactNonNegativeInteger(
+        historyRow.total_known_insufficient_count ?? 0,
+        "totalKnownInsufficientCount",
+      ),
+      recentReplaceableCount: exactNonNegativeInteger(
+        recentFailureRow.total_recent_replaceable_count ?? 0,
+        "recentReplaceableCount",
+      ),
+      recentReplaceableEventCount: exactNonNegativeInteger(
+        recentFailureRow.total_recent_replaceable_event_count ?? 0,
+        "recentReplaceableEventCount",
+      ),
+      recentReplaceableReasons,
       generatedAt: new Date().toISOString(),
     });
+    return validateCandidateSuppressionReport(report);
   } finally {
     await pool.end();
   }
