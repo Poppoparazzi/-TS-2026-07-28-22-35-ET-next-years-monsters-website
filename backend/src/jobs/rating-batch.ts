@@ -1,4 +1,4 @@
-// TS: 2026-08-30 11:57 ET
+// TS: 2026-08-30 13:02 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -90,7 +90,7 @@ export async function runRatingBatch(
 ): Promise<RatingBatchAccounting> {
   // The production reserve is 5,000 companies. Do not reintroduce a smaller
   // hidden bulk-rating ceiling after the first-500 milestone is crossed.
-  const targetCount = Math.min(Math.max(Math.trunc(options.targetCount ?? 500), 1), 5_000);
+  const targetCount = Math.min(Math.max(Math.trunc(options.targetCount ?? 5_000), 1), 5_000);
   const candidateLimit = Math.min(
     Math.max(Math.trunc(options.candidateLimit ?? Math.max(targetCount * 2, 1_000)), targetCount),
     5_000,
@@ -143,9 +143,6 @@ export async function runRatingBatch(
     if (ratedTickers.length >= targetCount) break;
     examinedCount += 1;
     try {
-      // Qualify and persist the SEC side first. A failed SEC lookup or database
-      // write must not consume a licensed market-history request, and a later
-      // market/provider failure must not discard SEC evidence we already earned.
       const [company, facts, filings] = await Promise.all([
         secProvider.getCompany(candidate.ticker),
         secProvider.getCompanyFacts(candidate.ticker),
@@ -155,9 +152,6 @@ export async function runRatingBatch(
       await persistenceStore.saveSecFilings(company, filings);
       await persistenceStore.saveSecFacts(facts);
 
-      // A mismatched SEC identity can never produce a publishable rating. Detect
-      // it after preserving the real SEC response but before buying SPY or company
-      // market history. Protected names stay in repair; ordinary names are replaceable.
       if (company.cik <= 0 || facts.cik !== company.cik) {
         const failure = {
           ticker: candidate.ticker,
@@ -170,10 +164,6 @@ export async function runRatingBatch(
         continue;
       }
 
-      // The rating engine cannot possibly publish a score without at least two
-      // comparable annual SEC revenue periods. Detect that from free SEC evidence
-      // before spending any licensed market-history request, including the shared
-      // benchmark request for a batch that may contain no viable candidates.
       const annualFinancials = buildAnnualFinancialPeriods(facts);
       const annualRevenuePeriods = annualFinancials.filter(
         (period) => typeof period.revenue === "number" && Number.isFinite(period.revenue),
@@ -190,11 +180,6 @@ export async function runRatingBatch(
         continue;
       }
 
-      // A recent paid history response that already proved this ticker cannot meet
-      // the 253-bar gate is reusable production evidence. Consult that durable
-      // machine-readable suppression before buying SPY or company history again.
-      // The database helper expires the suppression after 24 hours, so young stocks
-      // are reconsidered rather than suppressed forever.
       const persistedHistorySuppression = await batchStore.getReusableMarketHistorySuppression(
         candidate.ticker,
         marketProvider.name,
@@ -219,9 +204,6 @@ export async function runRatingBatch(
           break;
         }
 
-        // Every publishable rating needs a current 253-session benchmark. If the
-        // shared SPY response itself cannot satisfy that gate, no candidate in this
-        // run can succeed. Stop before buying company histories one by one.
         const benchmarkProblem = validateBenchmarkHistory(benchmarkHistory);
         if (benchmarkProblem) {
           stoppedReason = benchmarkProblem;
@@ -234,9 +216,6 @@ export async function runRatingBatch(
         history = await getPacedHistory(candidate.ticker, 300);
       } catch (error) {
         const message = reason(error);
-        // Provider-wide quota, authorization, entitlement, DNS, or transport trouble says
-        // nothing about the stock. Stop the batch without poisoning the repair or
-        // replacement roster. Genuine symbol/evidence errors continue normally.
         if (
           providerLimitReached(message) ||
           providerAuthorizationUnavailable(message) ||
@@ -248,9 +227,6 @@ export async function runRatingBatch(
         throw error;
       }
 
-      // Preserve the exact provider-backed daily-history evidence immediately after
-      // a successful paid fetch, even when the rating engine later withholds a score.
-      // This is the durable input for the future 253-real-bar preflight.
       await batchStore.saveMarketHistoryEvidence(buildMarketHistoryEvidence(history));
 
       const calculatedAt = new Date().toISOString();
@@ -262,9 +238,6 @@ export async function runRatingBatch(
         calculatedAt,
       }));
 
-      // Every successful market fetch is useful production evidence, even when
-      // the rating engine correctly withholds a score. Persist the real quote so
-      // future selection/preflight work does not throw away a paid provider call.
       const quote = quoteFromDailyHistory(company, history);
       await persistenceStore.saveQuote(quote);
 
@@ -292,16 +265,11 @@ export async function runRatingBatch(
       ratedTickers.push(candidate.ticker);
     } catch (error) {
       const message = reason(error);
-      // Provider quota/rate-limit or authorization/entitlement exhaustion is a
-      // batch-level condition, not evidence that the current company is bad.
       if (providerLimitReached(message) || providerAuthorizationUnavailable(message)) {
         stoppedReason = `Market-data provider remained unavailable while processing ${candidate.ticker}: ${message}`;
         break;
       }
 
-      // The same rule applies to SEC, database, DNS, and other upstream transport
-      // failures caught by the outer guard. A timeout is infrastructure evidence,
-      // not evidence that the current ticker should be repaired or replaced.
       if (providerTransportUnavailable(message)) {
         stoppedReason = `Upstream transport unavailable while processing ${candidate.ticker}: ${message}`;
         break;
