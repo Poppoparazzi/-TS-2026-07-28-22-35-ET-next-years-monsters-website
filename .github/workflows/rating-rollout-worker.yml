@@ -1,4 +1,4 @@
-# TS: 2026-08-30 12:14 ET
+# TS: 2026-08-30 12:25 ET
 
 name: Monster Rating rollout worker
 
@@ -71,6 +71,10 @@ jobs:
           const secQualificationPoolSize = Math.max(Number(process.env.SEC_QUALIFICATION_POOL_SIZE || 64), 1);
           const secQualificationConcurrency = Math.max(Number(process.env.SEC_QUALIFICATION_CONCURRENCY || 4), 1);
           const annualForms = new Set(["10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"]);
+          const financialMetricKeys = Object.freeze([
+            "revenue", "grossProfit", "operatingIncome", "netIncome", "dilutedEps",
+            "assets", "liabilities", "shareholdersEquity", "cash", "operatingCashFlow",
+          ]);
           const maxSecFactAgeMs = 7 * 24 * 60 * 60 * 1000;
           const maxStoredLiquidityAgeMs = 24 * 60 * 60 * 1000;
           const futureToleranceMs = 5 * 60 * 1000;
@@ -170,43 +174,55 @@ jobs:
             }
           }
 
-          function annualRevenuePeriodCount(summary) {
-            const history = Array.isArray(summary?.history?.revenue)
-              ? summary.history.revenue
-              : summary?.facts?.revenue
-                ? [summary.facts.revenue]
-                : [];
-            const fiscalYears = new Set();
-            for (const fact of history) {
-              const fiscalYear = fact?.fiscalYear;
-              if (
-                fact?.fiscalPeriod !== "FY" ||
-                !annualForms.has(String(fact?.form || "")) ||
-                !Number.isFinite(Number(fact?.value)) ||
-                fiscalYear === null ||
-                fiscalYear === undefined ||
-                !Number.isFinite(Number(fiscalYear))
-              ) continue;
-              fiscalYears.add(Number(fiscalYear));
+          function buildAnnualFinancialPeriods(summary) {
+            const periods = new Map();
+            for (const key of financialMetricKeys) {
+              const history = Array.isArray(summary?.history?.[key]) && summary.history[key].length > 0
+                ? summary.history[key]
+                : summary?.facts?.[key]
+                  ? [summary.facts[key]]
+                  : [];
+              for (const fact of history) {
+                const fiscalYear = fact?.fiscalYear;
+                if (
+                  fiscalYear === null ||
+                  fact?.fiscalPeriod !== "FY" ||
+                  !annualForms.has(String(fact?.form || "")) ||
+                  !Number.isFinite(fact?.value)
+                ) continue;
+                const current = periods.get(fiscalYear);
+                if (!current) {
+                  periods.set(fiscalYear, {
+                    periodEnd: fact.periodEnd,
+                    filedAt: fact.filed,
+                    values: { [key]: fact.value },
+                  });
+                  continue;
+                }
+                current.values[key] = fact.value;
+                if (fact.filed > current.filedAt) {
+                  current.periodEnd = fact.periodEnd;
+                  current.filedAt = fact.filed;
+                }
+              }
             }
-            return fiscalYears.size;
+            return [...periods.values()]
+              .sort((left, right) => left.periodEnd.localeCompare(right.periodEnd))
+              .slice(-5);
+          }
+
+          function annualRevenuePeriodCount(summary) {
+            return buildAnnualFinancialPeriods(summary)
+              .filter((period) => Number.isFinite(period.values.revenue))
+              .length;
           }
 
           function latestAnnualRevenueValue(summary) {
-            const history = Array.isArray(summary?.history?.revenue)
-              ? summary.history.revenue
-              : summary?.facts?.revenue
-                ? [summary.facts.revenue]
-                : [];
-            const annualRevenue = history
-              .filter((fact) =>
-                fact?.fiscalPeriod === "FY" &&
-                annualForms.has(String(fact?.form || "")) &&
-                Number.isFinite(Number(fact?.value)) &&
-                Number(fact.value) >= 0
-              )
-              .sort((left, right) => Number(right?.fiscalYear || 0) - Number(left?.fiscalYear || 0));
-            return annualRevenue.length > 0 ? Number(annualRevenue[0].value) : -1;
+            const annualRevenue = buildAnnualFinancialPeriods(summary)
+              .filter((period) => Number.isFinite(period.values.revenue));
+            return annualRevenue.length > 0
+              ? Number(annualRevenue.at(-1).values.revenue)
+              : -1;
           }
 
           function secFinancialEvidenceReady(summary, ticker, company) {

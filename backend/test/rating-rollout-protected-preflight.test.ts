@@ -1,4 +1,4 @@
-// TS: 2026-08-27 01:01 ET
+// TS: 2026-08-30 12:26 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -58,8 +58,8 @@ test("ordinary candidates must have two annual SEC revenue periods before paid r
   );
   assert.match(
     rolloutWorker,
-    /annualRevenuePeriodCount\([\s\S]*?history\?\.revenue[\s\S]*?fiscalPeriod !== "FY"[\s\S]*?fiscalYears\.size/,
-    "free SEC qualification must count distinct qualifying annual revenue periods",
+    /function buildAnnualFinancialPeriods\(summary\)[\s\S]*?financialMetricKeys[\s\S]*?fiscalPeriod !== "FY"[\s\S]*?\.slice\(-5\)[\s\S]*?function annualRevenuePeriodCount\(summary\)[\s\S]*?period\.values\.revenue/,
+    "free SEC qualification must mirror the rating engine's latest-five financial-period revenue window",
   );
   assert.match(
     rolloutWorker,
