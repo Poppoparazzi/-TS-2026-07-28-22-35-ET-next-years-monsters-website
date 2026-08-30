@@ -1,8 +1,9 @@
-// TS: 2026-08-28 19:00 ET
+// TS: 2026-08-30 11:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { PersistenceStore, StoredCompanySnapshot } from "../src/database/persistence.js";
+import type { PersistedMarketHistorySuppression } from "../src/database/market-history-evidence-persistence.js";
 import { runRatingBatch } from "../src/jobs/rating-batch.js";
 import type { DailyMarketHistory, MarketDataProvider, QuoteSnapshot, TickerSearchResult } from "../src/providers/types.js";
 import type { MarketHistoryEvidence } from "../src/ratings/market-history-evidence.js";
@@ -83,24 +84,28 @@ function facts(symbol: string, complete: boolean): SecCompanyFactsSummary {
 class BatchMarketProvider implements MarketDataProvider {
   public readonly name = "test-market";
   public readonly configured = true;
+  public readonly historyRequests: string[] = [];
   public async searchTickers(_query: string, _limit = 10): Promise<readonly TickerSearchResult[]> { return []; }
   public async getQuote(_symbol: string): Promise<QuoteSnapshot> { throw new Error("Not used."); }
   public async getDailyHistory(symbol: string): Promise<DailyMarketHistory> {
+    this.historyRequests.push(symbol);
     return history(symbol, symbol === "SPY" ? 0.0005 : 0.002);
   }
 }
 
 class BenchmarkFailingMarketProvider extends BatchMarketProvider {
   public override async getDailyHistory(symbol: string): Promise<DailyMarketHistory> {
+    this.historyRequests.push(symbol);
     if (symbol === "SPY") throw new Error("Test benchmark quota reached.");
-    return super.getDailyHistory(symbol);
+    return history(symbol, 0.002);
   }
 }
 
 class MarketTransportFailingProvider extends BatchMarketProvider {
   public override async getDailyHistory(symbol: string): Promise<DailyMarketHistory> {
+    this.historyRequests.push(symbol);
     if (symbol === "GOOD") throw new Error("fetch failed: network timeout");
-    return super.getDailyHistory(symbol);
+    return history(symbol, symbol === "SPY" ? 0.0005 : 0.002);
   }
 }
 
@@ -120,6 +125,12 @@ class BatchSecProvider implements SecDataProvider {
   public async getRecentFilings(_symbol: string): Promise<readonly SecFilingSummary[]> { return []; }
   public async getCompanyFacts(symbol: string): Promise<SecCompanyFactsSummary> {
     return facts(symbol, symbol === "GOOD");
+  }
+}
+
+class AllCompleteSecProvider extends BatchSecProvider {
+  public override async getCompanyFacts(symbol: string): Promise<SecCompanyFactsSummary> {
+    return facts(symbol, true);
   }
 }
 
@@ -152,9 +163,33 @@ class MemoryBatchStore implements RatingBatchStore {
   ]);
   public async listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]> { return this.candidates.slice(0, limit); }
   public async startRun(_targetCount: number, _provider: string): Promise<string> { return "1"; }
+  public async getReusableMarketHistorySuppression(
+    _ticker: string,
+    _provider: string,
+  ): Promise<PersistedMarketHistorySuppression | null> { return null; }
   public async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void> { this.savedMarketHistoryEvidence.push(evidence); }
   public async finishRun(_runId: string, accounting: RatingBatchAccounting): Promise<void> { this.finished = accounting; }
   public async close(): Promise<void> {}
+}
+
+class SuppressingMemoryBatchStore extends MemoryBatchStore {
+  public override readonly candidates: readonly RatingBatchCandidate[] = Object.freeze([
+    Object.freeze({ ticker: "YOUNG", companyName: "Young Company", isPilot: false, isProtected: false, priorityMetric: 10 }),
+    Object.freeze({ ticker: "GOOD", companyName: "Rated", isPilot: false, isProtected: false, priorityMetric: 9 }),
+  ]);
+
+  public override async getReusableMarketHistorySuppression(
+    ticker: string,
+    _provider: string,
+  ): Promise<PersistedMarketHistorySuppression | null> {
+    if (ticker !== "YOUNG") return null;
+    return Object.freeze({
+      ratingEligibilityCode: "insufficient_market_history",
+      suppressionReason: "insufficient_market_history",
+      usableBarCount: 120,
+      retrievedAt: new Date().toISOString(),
+    });
+  }
 }
 
 test("rating batch retains protected failures, replaces ordinary failures, and reaches its target", async () => {
@@ -188,6 +223,30 @@ test("rating batch retains protected failures, replaces ordinary failures, and r
   assert.deepEqual(batchStore.savedMarketHistoryEvidence.map((evidence) => evidence.symbol), ["GOOD"]);
   assert.equal(batchStore.savedMarketHistoryEvidence[0]?.usableBarCount, 300);
   assert.deepEqual(batchStore.finished, accounting);
+});
+
+test("rating batch reuses persisted insufficient-history suppression before paid history", async () => {
+  const persistenceStore = new BatchPersistenceStore();
+  const batchStore = new SuppressingMemoryBatchStore();
+  const marketProvider = new BatchMarketProvider();
+  const accounting = await runRatingBatch(
+    {
+      marketProvider,
+      secProvider: new AllCompleteSecProvider(),
+      persistenceStore,
+      batchStore,
+    },
+    { targetCount: 1, candidateLimit: 2 },
+  );
+
+  assert.equal(accounting.ratedCount, 1);
+  assert.deepEqual(accounting.ratedTickers, ["GOOD"]);
+  assert.equal(accounting.replaceable[0]?.ticker, "YOUNG");
+  assert.equal(accounting.replaceable[0]?.reasonCode, "insufficient_market_history");
+  assert.equal(accounting.replaceable[0]?.suppressionStage, "stored_market_history_preflight");
+  assert.deepEqual(marketProvider.historyRequests, ["SPY", "GOOD"]);
+  assert.ok(!marketProvider.historyRequests.includes("YOUNG"));
+  assert.deepEqual(batchStore.savedMarketHistoryEvidence.map((evidence) => evidence.symbol), ["GOOD"]);
 });
 
 test("rating batch closes its audit run when benchmark history is unavailable", async () => {
