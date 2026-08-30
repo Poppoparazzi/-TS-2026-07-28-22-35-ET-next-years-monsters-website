@@ -1,4 +1,4 @@
-// TS: 2026-08-25 18:20 ET
+// TS: 2026-08-30 16:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -45,5 +45,25 @@ test("normal candidate exhaustion is partial rather than a false failed run", ()
     batchStoreSource,
     /completedNormalCandidatePass\(accounting\)[\s\S]*?\? "partial"[\s\S]*?: "failed"/,
     "a normal zero-rating pass must be partial, not failed",
+  );
+});
+
+test("machine-readable suppression totals are persisted in rating run metadata", () => {
+  const batchStoreSource = readRepositoryFile("../src/ratings/batch-store.ts");
+
+  assert.match(
+    batchStoreSource,
+    /readonly suppressionReasonCounts\?: Readonly<Record<string, number>>;/,
+    "rating accounting must retain machine-readable suppression totals grouped by reason",
+  );
+  assert.match(
+    batchStoreSource,
+    /readonly suppressionStageCounts\?: Readonly<Record<string, number>>;/,
+    "rating accounting must retain machine-readable suppression totals grouped by stage",
+  );
+  assert.match(
+    batchStoreSource,
+    /metadata = metadata \|\| \$7::jsonb[\s\S]*?JSON\.stringify\(accounting\)/,
+    "finishRun must merge the complete accounting payload, including suppression totals, into data_refresh_runs.metadata",
   );
 });
