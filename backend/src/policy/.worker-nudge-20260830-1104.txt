@@ -1,0 +1,2 @@
+// TS: 2026-08-30 11:04 ET
+Quota-safe rollout nudge after adding ticker-addressable persisted market-history suppression lookup. No visual changes.
