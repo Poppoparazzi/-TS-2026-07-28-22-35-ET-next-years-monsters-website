@@ -1,4 +1,4 @@
-# TS: 2026-08-30 12:25 ET
+# TS: 2026-08-30 16:59 ET
 
 name: Monster Rating rollout worker
 
@@ -143,10 +143,10 @@ jobs:
               ? Number(right.storedDollarVolume)
               : -1;
             return (
-              right.filingCount - left.filingCount ||
-              right.factCount - left.factCount ||
               Number(right.storedLiquidityFresh) - Number(left.storedLiquidityFresh) ||
               rightLiquidity - leftLiquidity ||
+              right.filingCount - left.filingCount ||
+              right.factCount - left.factCount ||
               left.ratingCount - right.ratingCount ||
               String(left.company.ticker).localeCompare(String(right.company.ticker))
             );
