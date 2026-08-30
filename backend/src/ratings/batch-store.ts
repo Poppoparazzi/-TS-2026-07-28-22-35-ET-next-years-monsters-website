@@ -1,8 +1,12 @@
-// TS: 2026-08-29 19:04 ET
+// TS: 2026-08-30 11:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
-import { upsertMarketHistoryEvidence } from "../database/market-history-evidence-persistence.js";
+import {
+  getPersistedMarketHistorySuppressionByTicker,
+  type PersistedMarketHistorySuppression,
+  upsertMarketHistoryEvidence,
+} from "../database/market-history-evidence-persistence.js";
 import {
   isProtectedCompany,
   PROTECTED_COMPANY_SQL_PREDICATE,
@@ -123,6 +127,10 @@ export interface RatingBatchStore {
   readonly configured: boolean;
   listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]>;
   startRun(targetCount: number, provider: string): Promise<string>;
+  getReusableMarketHistorySuppression(
+    ticker: string,
+    provider: string,
+  ): Promise<PersistedMarketHistorySuppression | null>;
   saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void>;
   finishRun(runId: string, accounting: RatingBatchAccounting): Promise<void>;
   close(): Promise<void>;
@@ -155,6 +163,13 @@ export class UnconfiguredRatingBatchStore implements RatingBatchStore {
   }
 
   public async startRun(_targetCount: number, _provider: string): Promise<string> {
+    throw new ProviderNotConfiguredError("Rating batch database");
+  }
+
+  public async getReusableMarketHistorySuppression(
+    _ticker: string,
+    _provider: string,
+  ): Promise<PersistedMarketHistorySuppression | null> {
     throw new ProviderNotConfiguredError("Rating batch database");
   }
 
@@ -287,6 +302,13 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
     const id = result.rows[0]?.id;
     if (id === undefined) throw new Error("Unable to start rating refresh run.");
     return String(id);
+  }
+
+  public async getReusableMarketHistorySuppression(
+    ticker: string,
+    provider: string,
+  ): Promise<PersistedMarketHistorySuppression | null> {
+    return getPersistedMarketHistorySuppressionByTicker(this.pool, ticker, provider);
   }
 
   public async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void> {
