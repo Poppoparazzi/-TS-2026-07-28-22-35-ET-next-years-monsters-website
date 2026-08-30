@@ -1,9 +1,10 @@
-// TS: 2026-08-30 04:10 ET
+// TS: 2026-08-30 06:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   evaluateStoredLiquidity,
+  selectStoredLiquidityQualificationPool,
   STORED_LIQUIDITY_MAX_AGE_MS,
   STORED_LIQUIDITY_FUTURE_TOLERANCE_MS,
 } from "../src/policy/stored-liquidity.js";
@@ -75,4 +76,46 @@ test("does not fall back to retrievedAt when providerTimestamp is present but ma
   assert.equal(evidence.reason, "malformed_provider_timestamp");
   assert.equal(evidence.timestampMs, null);
   assert.equal(evidence.dollarVolume, 50_000_000);
+});
+
+test("selects the bounded SEC qualification pool using fresh verified liquidity before slicing", () => {
+  const freshLow = evaluateStoredLiquidity({
+    price: 10,
+    volume: 1_000,
+    providerTimestamp: iso(-1_000),
+  }, NOW);
+  const freshHigh = evaluateStoredLiquidity({
+    price: 50,
+    volume: 1_000_000,
+    providerTimestamp: iso(-1_000),
+  }, NOW);
+  const staleHuge = evaluateStoredLiquidity({
+    price: 500,
+    volume: 10_000_000,
+    providerTimestamp: iso(-(STORED_LIQUIDITY_MAX_AGE_MS + 1)),
+  }, NOW);
+
+  const selected = selectStoredLiquidityQualificationPool([
+    { ticker: "STALE", filingCount: 8, factCount: 50, ratingCount: 0, liquidity: staleHuge },
+    { ticker: "LOW", filingCount: 8, factCount: 50, ratingCount: 0, liquidity: freshLow },
+    { ticker: "HIGH", filingCount: 8, factCount: 50, ratingCount: 0, liquidity: freshHigh },
+  ], 2);
+
+  assert.deepEqual(selected.map((item) => item.ticker), ["HIGH", "LOW"]);
+  assert.equal(Object.isFrozen(selected), true);
+});
+
+test("qualification pool selector preserves stronger SEC evidence ahead of liquidity", () => {
+  const fresh = evaluateStoredLiquidity({
+    price: 100,
+    volume: 5_000_000,
+    providerTimestamp: iso(-1_000),
+  }, NOW);
+
+  const selected = selectStoredLiquidityQualificationPool([
+    { ticker: "MORE_FILINGS", filingCount: 9, factCount: 10, ratingCount: 0, liquidity: fresh },
+    { ticker: "MORE_FACTS", filingCount: 8, factCount: 100, ratingCount: 0, liquidity: fresh },
+  ], 1);
+
+  assert.equal(selected[0]?.ticker, "MORE_FILINGS");
 });
