@@ -1,9 +1,10 @@
-// TS: 2026-08-30 10:01 ET
+// TS: 2026-08-30 10:59 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getPersistedMarketHistorySuppression,
+  getPersistedMarketHistorySuppressionByTicker,
   MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS,
   upsertMarketHistoryEvidence,
 } from "../src/database/market-history-evidence-persistence.js";
@@ -102,6 +103,45 @@ test("reads fresh persisted insufficient-history suppression without another pro
     ratingEligibilityCode: "insufficient_market_history",
     suppressionReason: "insufficient_market_history",
     usableBarCount: 120,
+    retrievedAt,
+  });
+});
+
+test("reads reusable insufficient-history suppression directly by ticker before paid history", async () => {
+  let sql = "";
+  let params: readonly unknown[] = [];
+  const retrievedAt = "2026-08-30T14:00:00.000Z";
+  const client = {
+    async query(text: string, values?: readonly unknown[]) {
+      sql = text;
+      params = values ?? [];
+      return {
+        rows: [{
+          rating_eligibility_code: "insufficient_market_history",
+          suppression_reason: "insufficient_market_history",
+          usable_bar_count: 77,
+          retrieved_at: retrievedAt,
+        }],
+        rowCount: 1,
+      };
+    },
+  };
+
+  const suppression = await getPersistedMarketHistorySuppressionByTicker(
+    client as never,
+    " newc ",
+    "licensed-test-provider",
+    Date.parse(retrievedAt) + 30 * 60 * 1000,
+  );
+
+  assert.match(sql, /INNER JOIN companies c ON c\.id = mhe\.company_id/);
+  assert.match(sql, /WHERE c\.ticker = \$1/);
+  assert.match(sql, /mhe\.suppression_reason IS NOT NULL/);
+  assert.deepEqual(params, ["NEWC", "licensed-test-provider"]);
+  assert.deepEqual(suppression, {
+    ratingEligibilityCode: "insufficient_market_history",
+    suppressionReason: "insufficient_market_history",
+    usableBarCount: 77,
     retrievedAt,
   });
 });
@@ -206,6 +246,14 @@ test("fails closed before SQL when market history evidence is not trustworthy", 
   );
   await assert.rejects(
     () => getPersistedMarketHistorySuppression(client as never, "42", ""),
+    /market_history_evidence_provider_required/,
+  );
+  await assert.rejects(
+    () => getPersistedMarketHistorySuppressionByTicker(client as never, "", "licensed-test-provider"),
+    /market_history_evidence_ticker_required/,
+  );
+  await assert.rejects(
+    () => getPersistedMarketHistorySuppressionByTicker(client as never, "AAPL", ""),
     /market_history_evidence_provider_required/,
   );
 
