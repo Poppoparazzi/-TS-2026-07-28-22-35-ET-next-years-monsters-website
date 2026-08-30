@@ -1,0 +1,5 @@
+// TS: 2026-08-29 23:02 ET
+Quota-safe production rating rollout nudge.
+Baseline verified before nudge: 677 fully complete ratings from 5000 examined.
+Preserve stored/SEC preflight, bounded Twelve Data fallback, VCL protections, persisted suppression logic, and all frozen visuals.
+Issue #141 remains the next throughput fix: fresh verified stored liquidity must influence ranking before the SEC qualification-pool slice.
