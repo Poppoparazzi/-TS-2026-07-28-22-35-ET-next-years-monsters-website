@@ -1,14 +1,15 @@
-// TS: 2026-08-30 02:03 ET
+// TS: 2026-08-30 03:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   STORED_LIQUIDITY_FUTURE_TOLERANCE_MS,
   STORED_LIQUIDITY_MAX_AGE_MS,
+  compareStoredLiquidityPriority,
   evaluateStoredLiquidity,
 } from "../src/policy/stored-liquidity.js";
 
-const nowMs = Date.parse("2026-08-30T06:03:00.000Z");
+const nowMs = Date.parse("2026-08-30T07:00:00.000Z");
 
 test("fresh provider timestamp enables verified stored liquidity", () => {
   const result = evaluateStoredLiquidity({
@@ -64,4 +65,65 @@ test("future-dated quotes beyond tolerance cannot gain liquidity priority", () =
 test("non-positive price or volume fails closed", () => {
   assert.equal(evaluateStoredLiquidity({ price: 0, volume: 100, retrievedAt: new Date(nowMs).toISOString() }, nowMs).fresh, false);
   assert.equal(evaluateStoredLiquidity({ price: 10, volume: 0, retrievedAt: new Date(nowMs).toISOString() }, nowMs).fresh, false);
+});
+
+test("pre-SEC priority keeps filing and fact depth ahead of liquidity", () => {
+  const deepEvidence = {
+    filingCount: 8,
+    factCount: 20,
+    ratingCount: 0,
+    ticker: "DEEP",
+    liquidity: evaluateStoredLiquidity({ price: 10, volume: 100_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
+  };
+  const liquidShallow = {
+    filingCount: 7,
+    factCount: 50,
+    ratingCount: 0,
+    ticker: "LIQD",
+    liquidity: evaluateStoredLiquidity({ price: 100, volume: 10_000_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
+  };
+
+  assert.ok(compareStoredLiquidityPriority(deepEvidence, liquidShallow) < 0);
+});
+
+test("fresh verified liquidity outranks stale liquidity when SEC evidence depth ties", () => {
+  const fresh = {
+    filingCount: 8,
+    factCount: 20,
+    ratingCount: 0,
+    ticker: "FRESH",
+    liquidity: evaluateStoredLiquidity({ price: 25, volume: 400_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
+  };
+  const stale = {
+    filingCount: 8,
+    factCount: 20,
+    ratingCount: 0,
+    ticker: "STALE",
+    liquidity: evaluateStoredLiquidity({
+      price: 100,
+      volume: 10_000_000,
+      providerTimestamp: new Date(nowMs - STORED_LIQUIDITY_MAX_AGE_MS - 1).toISOString(),
+    }, nowMs),
+  };
+
+  assert.ok(compareStoredLiquidityPriority(fresh, stale) < 0);
+});
+
+test("higher fresh dollar volume wins after evidence depth and freshness tie", () => {
+  const lower = {
+    filingCount: 8,
+    factCount: 20,
+    ratingCount: 0,
+    ticker: "LOW",
+    liquidity: evaluateStoredLiquidity({ price: 10, volume: 100_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
+  };
+  const higher = {
+    filingCount: 8,
+    factCount: 20,
+    ratingCount: 0,
+    ticker: "HIGH",
+    liquidity: evaluateStoredLiquidity({ price: 25, volume: 400_000, retrievedAt: new Date(nowMs).toISOString() }, nowMs),
+  };
+
+  assert.ok(compareStoredLiquidityPriority(higher, lower) < 0);
 });
