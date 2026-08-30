@@ -1,4 +1,4 @@
-// TS: 2026-08-30 12:14 ET
+// TS: 2026-08-30 17:00 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -137,10 +137,15 @@ test("actual rollout worker rejects stale, malformed, and future liquidity befor
   assert.equal(future.storedLiquidityFresh, false);
   assert.equal(retrievedAtFallback.storedLiquidityFresh, true);
 
-  const item = (ticker: string, liquidity: WorkerLiquidityResult): WorkerPreflightItem => ({
+  const item = (
+    ticker: string,
+    liquidity: WorkerLiquidityResult,
+    filingCount = 8,
+    factCount = 50,
+  ): WorkerPreflightItem => ({
     company: { ticker },
-    filingCount: 8,
-    factCount: 50,
+    filingCount,
+    factCount,
     ratingCount: 0,
     ...liquidity,
   });
@@ -153,4 +158,14 @@ test("actual rollout worker rejects stale, malformed, and future liquidity befor
   ].sort(compareStoredPreflightPriority).slice(0, 2);
 
   assert.deepEqual(selected.map((candidate) => candidate.company.ticker), ["HIGH", "LOW"]);
+
+  const liquidityMustBeatMoreFilings = [
+    item("MORE_FILINGS_STALE", staleHuge, 500, 5_000),
+    item("FRESH_LIQUID", freshLow, 1, 1),
+  ].sort(compareStoredPreflightPriority);
+  assert.equal(
+    liquidityMustBeatMoreFilings[0]?.company.ticker,
+    "FRESH_LIQUID",
+    "fresh verified liquidity must outrank filing/fact volume before the bounded SEC qualification slice",
+  );
 });
