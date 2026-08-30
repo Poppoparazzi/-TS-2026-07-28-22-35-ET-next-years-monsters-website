@@ -1,4 +1,4 @@
-// TS: 2026-08-23 21:04 ET
+// TS: 2026-08-29 23:57 ET
 
 import type { AppConfig } from "../config.js";
 import { createPersistenceStore } from "../database/persistence.js";
@@ -45,8 +45,9 @@ export async function runRatingBatchOnStartup(
   try {
     // The first public milestone is 500 ratings, but the recovery path must be
     // able to continue through the full 5,000-company reserve without silently
-    // reintroducing a smaller startup-only ceiling.
-    const desiredTargetCount = boundedInteger(environment.RATING_TARGET_COUNT, 500, 5_000);
+    // reintroducing a smaller startup-only ceiling. Missing or malformed Render
+    // configuration therefore fails safe to the production target, not 500.
+    const desiredTargetCount = boundedInteger(environment.RATING_TARGET_COUNT, 5_000, 5_000);
 
     if (!ratingRefreshEnabled(environment, config.nodeEnv)) {
       return Object.freeze({
