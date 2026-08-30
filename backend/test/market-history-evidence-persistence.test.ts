@@ -1,10 +1,10 @@
-// TS: 2026-08-28 14:59 ET
+// TS: 2026-08-30 07:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import { upsertMarketHistoryEvidence } from "../src/database/market-history-evidence-persistence.js";
 
-test("persists provider-backed market history evidence without allowing older evidence to overwrite newer evidence", async () => {
+test("persists provider-backed market history evidence with machine-readable eligibility state", async () => {
   let sql = "";
   let params: readonly unknown[] = [];
   const client = {
@@ -25,6 +25,8 @@ test("persists provider-backed market history evidence without allowing older ev
   });
 
   assert.match(sql, /INSERT INTO market_history_evidence/);
+  assert.match(sql, /rating_eligibility_code/);
+  assert.match(sql, /suppression_reason/);
   assert.match(sql, /ON CONFLICT \(company_id, provider\) DO UPDATE SET/);
   assert.match(sql, /EXCLUDED\.retrieved_at >= market_history_evidence\.retrieved_at/);
   assert.deepEqual(params, [
@@ -34,7 +36,31 @@ test("persists provider-backed market history evidence without allowing older ev
     "2026-08-28",
     "2026-08-28T14:58:00.000Z",
     "licensed provider history",
+    "eligible",
+    null,
   ]);
+});
+
+test("persists insufficient market history as a reusable suppression reason", async () => {
+  let params: readonly unknown[] = [];
+  const client = {
+    async query(_text: string, values?: readonly unknown[]) {
+      params = values ?? [];
+      return { rows: [], rowCount: 0 };
+    },
+  };
+
+  await upsertMarketHistoryEvidence(client as never, "43", {
+    symbol: "NEWC",
+    provider: "licensed-test-provider",
+    usableBarCount: 120,
+    latestBarDate: "2026-08-28",
+    retrievedAt: "2026-08-28T14:58:00.000Z",
+    feedDisclosure: "licensed provider history",
+  });
+
+  assert.equal(params[6], "insufficient_market_history");
+  assert.equal(params[7], "insufficient_market_history");
 });
 
 test("fails closed before SQL when market history evidence is not trustworthy", async () => {
