@@ -1,4 +1,4 @@
-// TS: 2026-08-30 04:00 ET
+// TS: 2026-08-30 06:01 ET
 
 export const STORED_LIQUIDITY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const STORED_LIQUIDITY_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
@@ -127,5 +127,20 @@ export function compareStoredLiquidityPriority(
     rightLiquidity - leftLiquidity ||
     left.ratingCount - right.ratingCount ||
     left.ticker.localeCompare(right.ticker)
+  );
+}
+
+export function selectStoredLiquidityQualificationPool<T extends StoredLiquidityRankable>(
+  items: readonly T[],
+  poolSize: number,
+): readonly T[] {
+  const safePoolSize = Number.isFinite(poolSize)
+    ? Math.max(Math.floor(poolSize), 0)
+    : 0;
+
+  return Object.freeze(
+    [...items]
+      .sort(compareStoredLiquidityPriority)
+      .slice(0, safePoolSize),
   );
 }
