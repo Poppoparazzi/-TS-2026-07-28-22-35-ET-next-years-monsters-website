@@ -1,0 +1,2 @@
+// TS: 2026-08-30 12:06 ET
+Quota-safe rollout nudge after wiring reusable persisted market-history suppression into the paid batch path. No visual changes.
