@@ -1,4 +1,4 @@
-// TS: 2026-08-30 10:01 ET
+// TS: 2026-08-30 10:59 ET
 
 import type { PoolClient } from "pg";
 import {
@@ -67,34 +67,10 @@ function classifyMarketHistoryEvidence(evidence: MarketHistoryEvidence): {
   };
 }
 
-export async function getPersistedMarketHistorySuppression(
-  client: Pick<PoolClient, "query">,
-  companyId: string,
-  provider: string,
-  nowMs = Date.now(),
-): Promise<PersistedMarketHistorySuppression | null> {
-  const normalizedCompanyId = companyId.trim();
-  const normalizedProvider = provider.trim();
-  if (!normalizedCompanyId) throw new Error("market_history_evidence_company_id_required");
-  if (!normalizedProvider) throw new Error("market_history_evidence_provider_required");
-
-  const result = await client.query<PersistedMarketHistorySuppressionRow>(
-    `
-      SELECT
-        rating_eligibility_code,
-        suppression_reason,
-        usable_bar_count,
-        retrieved_at
-      FROM market_history_evidence
-      WHERE company_id = $1
-        AND provider = $2
-        AND suppression_reason IS NOT NULL
-      ORDER BY retrieved_at DESC
-      LIMIT 1
-    `,
-    [normalizedCompanyId, normalizedProvider],
-  );
-  const row = result.rows[0];
+function parsePersistedSuppressionRow(
+  row: PersistedMarketHistorySuppressionRow | undefined,
+  nowMs: number,
+): PersistedMarketHistorySuppression | null {
   if (!row) return null;
 
   const usableBarCount = Number(row.usable_bar_count);
@@ -127,6 +103,71 @@ export async function getPersistedMarketHistorySuppression(
     usableBarCount,
     retrievedAt,
   });
+}
+
+export async function getPersistedMarketHistorySuppression(
+  client: Pick<PoolClient, "query">,
+  companyId: string,
+  provider: string,
+  nowMs = Date.now(),
+): Promise<PersistedMarketHistorySuppression | null> {
+  const normalizedCompanyId = companyId.trim();
+  const normalizedProvider = provider.trim();
+  if (!normalizedCompanyId) throw new Error("market_history_evidence_company_id_required");
+  if (!normalizedProvider) throw new Error("market_history_evidence_provider_required");
+
+  const result = await client.query<PersistedMarketHistorySuppressionRow>(
+    `
+      SELECT
+        rating_eligibility_code,
+        suppression_reason,
+        usable_bar_count,
+        retrieved_at
+      FROM market_history_evidence
+      WHERE company_id = $1
+        AND provider = $2
+        AND suppression_reason IS NOT NULL
+      ORDER BY retrieved_at DESC
+      LIMIT 1
+    `,
+    [normalizedCompanyId, normalizedProvider],
+  );
+
+  return parsePersistedSuppressionRow(result.rows[0], nowMs);
+}
+
+export async function getPersistedMarketHistorySuppressionByTicker(
+  client: Pick<PoolClient, "query">,
+  ticker: string,
+  provider: string,
+  nowMs = Date.now(),
+): Promise<PersistedMarketHistorySuppression | null> {
+  const normalizedTicker = ticker.trim().toUpperCase();
+  const normalizedProvider = provider.trim();
+  if (!/^[A-Z0-9.-]{1,15}$/.test(normalizedTicker)) {
+    throw new Error("market_history_evidence_ticker_required");
+  }
+  if (!normalizedProvider) throw new Error("market_history_evidence_provider_required");
+
+  const result = await client.query<PersistedMarketHistorySuppressionRow>(
+    `
+      SELECT
+        mhe.rating_eligibility_code,
+        mhe.suppression_reason,
+        mhe.usable_bar_count,
+        mhe.retrieved_at
+      FROM market_history_evidence mhe
+      INNER JOIN companies c ON c.id = mhe.company_id
+      WHERE c.ticker = $1
+        AND mhe.provider = $2
+        AND mhe.suppression_reason IS NOT NULL
+      ORDER BY mhe.retrieved_at DESC
+      LIMIT 1
+    `,
+    [normalizedTicker, normalizedProvider],
+  );
+
+  return parsePersistedSuppressionRow(result.rows[0], nowMs);
 }
 
 export async function upsertMarketHistoryEvidence(
