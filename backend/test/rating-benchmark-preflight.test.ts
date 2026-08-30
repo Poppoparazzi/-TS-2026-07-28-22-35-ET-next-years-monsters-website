@@ -1,4 +1,4 @@
-// TS: 2026-08-24 01:01 ET
+// TS: 2026-08-30 17:05 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -18,5 +18,9 @@ test("rating batch validates shared benchmark history before paid company histor
     "benchmark history must pass its 253-session/freshness gate before any paid company-history request",
   );
   assert.match(source, /usableBars\.length < 253/);
-  assert.match(source, /ageDays > 7/);
+  assert.match(
+    source,
+    /\(calculatedTime - latestTime\) \/ \(24 \* 60 \* 60 \* 1_000\) > 7/,
+    "benchmark freshness must remain capped at seven days even when the implementation computes age inline",
+  );
 });
