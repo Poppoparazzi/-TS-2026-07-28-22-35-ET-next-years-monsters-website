@@ -1,4 +1,4 @@
-# TS: 2026-08-30 16:59 ET
+# TS: 2026-08-31 06:59 ET
 
 name: Monster Rating rollout worker
 
@@ -439,19 +439,33 @@ jobs:
           );
           const qualifiedProtectedCandidates = protectedSecQualificationResults
             .filter((item) => item.secQualificationOk)
+            .sort((left, right) => {
+              const leftLiquidity = left.storedLiquidityFresh && Number.isFinite(left.storedDollarVolume)
+                ? left.storedDollarVolume
+                : -1;
+              const rightLiquidity = right.storedLiquidityFresh && Number.isFinite(right.storedDollarVolume)
+                ? right.storedDollarVolume
+                : -1;
+              const leftRevenue = Number.isFinite(left.latestAnnualRevenueValue) ? left.latestAnnualRevenueValue : -1;
+              const rightRevenue = Number.isFinite(right.latestAnnualRevenueValue) ? right.latestAnnualRevenueValue : -1;
+              const leftTicker = String(left.company.ticker).trim().toUpperCase();
+              const rightTicker = String(right.company.ticker).trim().toUpperCase();
+              return (
+                rightLiquidity - leftLiquidity ||
+                rightRevenue - leftRevenue ||
+                right.filingCount - left.filingCount ||
+                right.factCount - left.factCount ||
+                protectedVclTickers.indexOf(leftTicker) - protectedVclTickers.indexOf(rightTicker)
+              );
+            })
             .map((item) => item.company);
           const protectedAttemptCount = Math.min(
             qualifiedProtectedCandidates.length,
             maxProtectedFallbackPerRun,
             directFallbackBudget,
           );
-          const protectedStartIndex = qualifiedProtectedCandidates.length > 0
-            ? cohortNumber % qualifiedProtectedCandidates.length
-            : 0;
-          const selectedProtectedCandidates = Array.from(
-            { length: protectedAttemptCount },
-            (_, index) => qualifiedProtectedCandidates[(protectedStartIndex + index) % qualifiedProtectedCandidates.length],
-          );
+          const protectedStartIndex = 0;
+          const selectedProtectedCandidates = qualifiedProtectedCandidates.slice(0, protectedAttemptCount);
           const ordinaryAttemptCount = Math.min(
             Math.max(directFallbackBudget - selectedProtectedCandidates.length, 0),
             ordinaryCandidates.length,
