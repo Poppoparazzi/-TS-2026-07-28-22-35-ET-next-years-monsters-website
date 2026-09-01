@@ -1,14 +1,24 @@
 {
-  "generatedAt": "2026-09-01T16:50:06.719Z",
+  "generatedAt": "2026-09-01T17:30:09.557Z",
   "sourceWorkflow": "Monster Rating rollout worker",
-  "sourceRunId": 33533690625,
+  "sourceRunId": 33537688957,
   "retryWindowDays": 7,
+  "suppressionPolicy": {
+    "beforePaidCallCodes": [
+      "insufficient_liquidity",
+      "insufficient_market_history"
+    ],
+    "preflightRetryCodes": [
+      "required_evidence_incomplete"
+    ]
+  },
   "entries": [
     {
       "ticker": "BRK-B",
       "eligibilityCode": "required_evidence_incomplete",
       "httpStatus": 200,
       "eligible": false,
+      "suppressBeforePaidCall": false,
       "missingEvidence": [],
       "message": "One or more required production evidence sources could not be retrieved.",
       "observedAt": "2026-09-01T16:47:11.079Z"
@@ -19,6 +29,7 @@
       "httpStatus": 200,
       "eligible": false,
       "retryable": true,
+      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
       "observedAt": "2026-09-01T16:47:32.490Z"
@@ -29,6 +40,7 @@
       "httpStatus": 200,
       "eligible": false,
       "retryable": true,
+      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
       "observedAt": "2026-09-01T16:47:54.077Z"
@@ -39,6 +51,7 @@
       "httpStatus": 200,
       "eligible": false,
       "retryable": true,
+      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
       "observedAt": "2026-09-01T16:48:16.265Z"
@@ -49,9 +62,10 @@
       "httpStatus": 200,
       "eligible": false,
       "retryable": true,
+      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T16:48:39.898Z"
+      "observedAt": "2026-09-01T17:28:46.412Z"
     },
     {
       "ticker": "BLNK",
@@ -59,6 +73,7 @@
       "httpStatus": 200,
       "eligible": false,
       "retryable": true,
+      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
       "observedAt": "2026-09-01T16:49:01.074Z"
@@ -69,6 +84,7 @@
       "httpStatus": 200,
       "eligible": false,
       "retryable": true,
+      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
       "observedAt": "2026-09-01T16:49:22.059Z"
@@ -79,9 +95,85 @@
       "httpStatus": 200,
       "eligible": false,
       "retryable": true,
+      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
       "observedAt": "2026-09-01T16:49:45.128Z"
+    },
+    {
+      "ticker": "DLTH",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "suppressBeforePaidCall": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T17:27:23.511Z"
+    },
+    {
+      "ticker": "CMRF",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "suppressBeforePaidCall": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T17:27:44.410Z"
+    },
+    {
+      "ticker": "CALY",
+      "eligibilityCode": "required_evidence_incomplete",
+      "httpStatus": 200,
+      "eligible": false,
+      "suppressBeforePaidCall": false,
+      "missingEvidence": [],
+      "message": "One or more required production evidence sources could not be retrieved.",
+      "observedAt": "2026-09-01T17:28:04.641Z"
+    },
+    {
+      "ticker": "BRLT",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "suppressBeforePaidCall": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T17:28:25.207Z"
+    },
+    {
+      "ticker": "BZFD",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "suppressBeforePaidCall": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T17:29:07.508Z"
+    },
+    {
+      "ticker": "CEPL",
+      "eligibilityCode": "required_evidence_incomplete",
+      "httpStatus": 200,
+      "eligible": false,
+      "suppressBeforePaidCall": false,
+      "missingEvidence": [],
+      "message": "One or more required production evidence sources could not be retrieved.",
+      "observedAt": "2026-09-01T17:29:27.628Z"
+    },
+    {
+      "ticker": "CWGL",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "suppressBeforePaidCall": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T17:29:48.348Z"
     }
   ]
 }
