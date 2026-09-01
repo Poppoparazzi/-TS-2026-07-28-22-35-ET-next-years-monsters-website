@@ -1,4 +1,4 @@
-// TS: 2026-08-30 12:25 ET
+// TS: 2026-09-01 01:40 ET
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -97,6 +97,27 @@ test("annual revenue preflight mirrors the rating engine's latest-five financial
   assert.equal(annualRevenuePeriodCount(oneRevenuePeriod), 1);
   assert.equal(annualRevenuePeriodCount(readyRevenue), 5);
   assert.equal(latestAnnualRevenueValue(readyRevenue), 2_025_000);
+});
+
+test("annual revenue preflight never counts a null fiscal year as year zero", () => {
+  const { annualRevenuePeriodCount, latestAnnualRevenueValue } = loadWorkerAnnualRevenuePolicy();
+  const nullFiscalYear = {
+    history: {
+      revenue: [annualFact(null, 1_000)],
+    },
+    facts: {},
+  };
+  const validYearAlongsideNull = {
+    history: {
+      revenue: [annualFact(null, 1_000), annualFact(2025, 2_000)],
+    },
+    facts: {},
+  };
+
+  assert.equal(annualRevenuePeriodCount(nullFiscalYear), 0);
+  assert.equal(latestAnnualRevenueValue(nullFiscalYear), -1);
+  assert.equal(annualRevenuePeriodCount(validYearAlongsideNull), 1);
+  assert.equal(latestAnnualRevenueValue(validYearAlongsideNull), 2_000);
 });
 
 test("SEC readiness preflight preserves provider-budget and pacing guards", () => {
