@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-09-01T16:50:06.719Z",
+  "sourceWorkflow": "Monster Rating rollout worker",
+  "sourceRunId": 33533690625,
+  "retryWindowDays": 7,
+  "entries": [
+    {
+      "ticker": "BRK-B",
+      "eligibilityCode": "required_evidence_incomplete",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": [],
+      "message": "One or more required production evidence sources could not be retrieved.",
+      "observedAt": "2026-09-01T16:47:11.079Z"
+    },
+    {
+      "ticker": "CSTE",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T16:47:32.490Z"
+    },
+    {
+      "ticker": "AP",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T16:47:54.077Z"
+    },
+    {
+      "ticker": "AFRI",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T16:48:16.265Z"
+    },
+    {
+      "ticker": "CLAR",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T16:48:39.898Z"
+    },
+    {
+      "ticker": "BLNK",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T16:49:01.074Z"
+    },
+    {
+      "ticker": "CSBR",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T16:49:22.059Z"
+    },
+    {
+      "ticker": "BNC",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "retryable": true,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T16:49:45.128Z"
+    }
+  ]
+}
