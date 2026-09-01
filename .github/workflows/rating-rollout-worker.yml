@@ -1,4 +1,4 @@
-# TS: 2026-08-31 06:59 ET
+# TS: 2026-08-31 21:59 ET
 
 name: Monster Rating rollout worker
 
@@ -49,6 +49,7 @@ jobs:
           PREFLIGHT_CONCURRENCY: "8"
           SEC_QUALIFICATION_POOL_SIZE: "64"
           SEC_QUALIFICATION_CONCURRENCY: "4"
+          MIN_STORED_DOLLAR_VOLUME_FOR_PAID_FALLBACK: "1000000"
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
@@ -70,6 +71,10 @@ jobs:
           const preflightConcurrency = Math.max(Number(process.env.PREFLIGHT_CONCURRENCY || 8), 1);
           const secQualificationPoolSize = Math.max(Number(process.env.SEC_QUALIFICATION_POOL_SIZE || 64), 1);
           const secQualificationConcurrency = Math.max(Number(process.env.SEC_QUALIFICATION_CONCURRENCY || 4), 1);
+          const minStoredDollarVolumeForPaidFallback = Math.max(
+            Number(process.env.MIN_STORED_DOLLAR_VOLUME_FOR_PAID_FALLBACK || 1_000_000),
+            0,
+          );
           const annualForms = new Set(["10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A"]);
           const financialMetricKeys = Object.freeze([
             "revenue", "grossProfit", "operatingIncome", "netIncome", "dilutedEps",
@@ -133,6 +138,11 @@ jobs:
               storedQuoteAgeMs >= -futureToleranceMs &&
               storedQuoteAgeMs <= maxStoredLiquidityAgeMs;
             return { storedDollarVolume, storedLiquidityFresh };
+          }
+
+          function hasStrongEnoughStoredLiquidityForPaidFallback(item) {
+            if (!item?.storedLiquidityFresh || !Number.isFinite(item?.storedDollarVolume)) return true;
+            return Number(item.storedDollarVolume) >= minStoredDollarVolumeForPaidFallback;
           }
 
           function compareStoredPreflightPriority(left, right) {
@@ -320,6 +330,7 @@ jobs:
             effectivePreflightPoolSize,
             secQualificationPoolSize,
             secQualificationConcurrency,
+            minStoredDollarVolumeForPaidFallback,
             secEvidenceReadyCount: universe.body?.secEvidenceReadyCount ?? null,
             marketConfigured: health.body?.marketData?.configured === true,
             ratingJobState: ratingJob?.state ?? null,
@@ -432,8 +443,10 @@ jobs:
             preflightStoredCandidate,
           );
           const verifiedProtectedPreflight = protectedPreflightResults.filter((item) => item.preflightOk);
+          const paidFallbackProtectedPreflight = verifiedProtectedPreflight.filter(hasStrongEnoughStoredLiquidityForPaidFallback);
+          const protectedLiquidityDeferredCount = verifiedProtectedPreflight.length - paidFallbackProtectedPreflight.length;
           const protectedSecQualificationResults = await mapWithConcurrency(
-            verifiedProtectedPreflight,
+            paidFallbackProtectedPreflight,
             secQualificationConcurrency,
             preflightSecRevenueCandidate,
           );
@@ -486,7 +499,9 @@ jobs:
             preflightStoredCandidate,
           );
           const verifiedPreflightResults = preflightResults.filter((item) => item.preflightOk);
-          const rankedStoredPreflightResults = verifiedPreflightResults.sort(compareStoredPreflightPriority);
+          const paidFallbackPreflightResults = verifiedPreflightResults.filter(hasStrongEnoughStoredLiquidityForPaidFallback);
+          const liquidityDeferredCount = verifiedPreflightResults.length - paidFallbackPreflightResults.length;
+          const rankedStoredPreflightResults = paidFallbackPreflightResults.sort(compareStoredPreflightPriority);
           const secQualificationPool = rankedStoredPreflightResults.slice(
             0,
             Math.min(secQualificationPoolSize, rankedStoredPreflightResults.length),
@@ -525,8 +540,8 @@ jobs:
           console.log(
             `No Render deployment authority. Using bounded VCL-priority SEC-qualified quota-safe fallback for ${candidates.length} candidates ` +
             `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, finalStretch=${finalStretchActive}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedPreflighted=${protectedPreflightResults.length}, ` +
-            `verifiedProtectedPreflight=${verifiedProtectedPreflight.length}, protectedSecQualified=${qualifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, configuredPreflightPool=${preflightPoolSize}, postMilestonePreflightPool=${postMilestonePreflightPoolSize}, effectivePreflightPool=${effectivePreflightPoolSize}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
-            `secQualificationPool=${secQualificationPool.length}, secQualifiedOrdinary=${qualifiedOrdinaryCandidates.length}, secQualificationConcurrency=${secQualificationConcurrency}, preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
+            `verifiedProtectedPreflight=${verifiedProtectedPreflight.length}, protectedLiquidityDeferred=${protectedLiquidityDeferredCount}, protectedSecQualified=${qualifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, configuredPreflightPool=${preflightPoolSize}, postMilestonePreflightPool=${postMilestonePreflightPoolSize}, effectivePreflightPool=${effectivePreflightPoolSize}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, liquidityDeferred=${liquidityDeferredCount}, ` +
+            `minStoredDollarVolumeForPaidFallback=${minStoredDollarVolumeForPaidFallback}, secQualificationPool=${secQualificationPool.length}, secQualifiedOrdinary=${qualifiedOrdinaryCandidates.length}, secQualificationConcurrency=${secQualificationConcurrency}, preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -559,6 +574,7 @@ jobs:
             directFallbackProtectedCount: protectedCandidates.length,
             directFallbackProtectedPreflightedCount: protectedPreflightResults.length,
             directFallbackVerifiedProtectedPreflightCount: verifiedProtectedPreflight.length,
+            directFallbackProtectedLiquidityDeferredCount: protectedLiquidityDeferredCount,
             directFallbackProtectedSecQualifiedCount: qualifiedProtectedCandidates.length,
             directFallbackProtectedAttemptedCount: selectedProtectedCandidates.length,
             directFallbackProtectedStartIndex: protectedStartIndex,
@@ -569,6 +585,8 @@ jobs:
             directFallbackFinalStretchActive: finalStretchActive,
             directFallbackPreflightedCount: preflightPool.length,
             directFallbackVerifiedPreflightCount: verifiedPreflightResults.length,
+            directFallbackLiquidityDeferredCount: liquidityDeferredCount,
+            directFallbackMinStoredDollarVolumeForPaidFallback: minStoredDollarVolumeForPaidFallback,
             directFallbackSecQualificationPoolSize: secQualificationPool.length,
             directFallbackSecQualifiedOrdinaryCount: qualifiedOrdinaryCandidates.length,
             directFallbackSecQualificationConcurrency: secQualificationConcurrency,
