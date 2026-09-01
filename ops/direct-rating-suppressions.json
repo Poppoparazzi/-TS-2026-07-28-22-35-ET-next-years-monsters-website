@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-01T17:30:09.557Z",
+  "generatedAt": "2026-09-01T20:10:55.867Z",
   "sourceWorkflow": "Monster Rating rollout worker",
-  "sourceRunId": 33537688957,
+  "sourceRunId": 33553456486,
   "retryWindowDays": 7,
-  "suppressionPolicy": {
+  "policy": {
     "beforePaidCallCodes": [
       "insufficient_liquidity",
       "insufficient_market_history"
@@ -18,162 +18,230 @@
       "eligibilityCode": "required_evidence_incomplete",
       "httpStatus": 200,
       "eligible": false,
-      "suppressBeforePaidCall": false,
       "missingEvidence": [],
-      "message": "One or more required production evidence sources could not be retrieved.",
-      "observedAt": "2026-09-01T16:47:11.079Z"
+      "message": "Required evidence is incomplete.",
+      "observedAt": "2026-09-01T16:47:11.079Z",
+      "suppressBeforePaidCall": false
     },
     {
       "ticker": "CSTE",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T16:47:32.490Z"
+      "observedAt": "2026-09-01T16:47:32.490Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "AP",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T16:47:54.077Z"
+      "observedAt": "2026-09-01T16:47:54.077Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "AFRI",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T16:48:16.265Z"
+      "observedAt": "2026-09-01T16:48:16.265Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "CLAR",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T17:28:46.412Z"
+      "observedAt": "2026-09-01T17:28:46.412Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "BLNK",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T16:49:01.074Z"
+      "observedAt": "2026-09-01T16:49:01.074Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "CSBR",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T16:49:22.059Z"
+      "observedAt": "2026-09-01T16:49:22.059Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "BNC",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T16:49:45.128Z"
+      "observedAt": "2026-09-01T16:49:45.128Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "DLTH",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T17:27:23.511Z"
+      "observedAt": "2026-09-01T17:27:23.511Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "CMRF",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T17:27:44.410Z"
+      "observedAt": "2026-09-01T17:27:44.410Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "CALY",
       "eligibilityCode": "required_evidence_incomplete",
       "httpStatus": 200,
       "eligible": false,
-      "suppressBeforePaidCall": false,
       "missingEvidence": [],
-      "message": "One or more required production evidence sources could not be retrieved.",
-      "observedAt": "2026-09-01T17:28:04.641Z"
+      "message": "Required evidence is incomplete.",
+      "observedAt": "2026-09-01T17:28:04.641Z",
+      "suppressBeforePaidCall": false
     },
     {
       "ticker": "BRLT",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T17:28:25.207Z"
+      "observedAt": "2026-09-01T17:28:25.207Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "BZFD",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T17:29:07.508Z"
+      "observedAt": "2026-09-01T17:29:07.508Z",
+      "suppressBeforePaidCall": true
     },
     {
       "ticker": "CEPL",
       "eligibilityCode": "required_evidence_incomplete",
       "httpStatus": 200,
       "eligible": false,
-      "suppressBeforePaidCall": false,
       "missingEvidence": [],
-      "message": "One or more required production evidence sources could not be retrieved.",
-      "observedAt": "2026-09-01T17:29:27.628Z"
+      "message": "Required evidence is incomplete.",
+      "observedAt": "2026-09-01T17:29:27.628Z",
+      "suppressBeforePaidCall": false
     },
     {
       "ticker": "CWGL",
       "eligibilityCode": "insufficient_liquidity",
       "httpStatus": 200,
       "eligible": false,
-      "retryable": true,
-      "suppressBeforePaidCall": true,
       "missingEvidence": ["minimum_liquidity"],
       "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
-      "observedAt": "2026-09-01T17:29:48.348Z"
+      "observedAt": "2026-09-01T17:29:48.348Z",
+      "suppressBeforePaidCall": true
+    },
+    {
+      "ticker": "DOYU",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T20:08:28.719Z",
+      "suppressBeforePaidCall": true
+    },
+    {
+      "ticker": "CURV",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T20:08:48.976Z",
+      "suppressBeforePaidCall": true
+    },
+    {
+      "ticker": "ALTI",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T20:09:09.940Z",
+      "suppressBeforePaidCall": true
+    },
+    {
+      "ticker": "HURC",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T20:09:31.667Z",
+      "suppressBeforePaidCall": true
+    },
+    {
+      "ticker": "DRTTF",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T20:09:52.358Z",
+      "suppressBeforePaidCall": true
+    },
+    {
+      "ticker": "CIX",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T20:10:13.269Z",
+      "suppressBeforePaidCall": true
+    },
+    {
+      "ticker": "CBFV",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T20:10:34.867Z",
+      "suppressBeforePaidCall": true
+    },
+    {
+      "ticker": "ALCO",
+      "eligibilityCode": "insufficient_liquidity",
+      "httpStatus": 200,
+      "eligible": false,
+      "missingEvidence": ["minimum_liquidity"],
+      "message": "Average daily dollar volume is below the initial $1 million tradability floor.",
+      "observedAt": "2026-09-01T20:10:55.867Z",
+      "suppressBeforePaidCall": true
     }
   ]
 }
