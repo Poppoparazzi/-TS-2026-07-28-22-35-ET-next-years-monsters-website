@@ -1,4 +1,4 @@
-# TS: 2026-09-01 01:40 ET
+# TS: 2026-09-01 15:57 ET
 
 name: Monster Rating rollout worker
 
@@ -34,6 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
+      - name: Check out suppression ledger
+        uses: actions/checkout@v4
+
       - name: Watch production and restart the real bulk rating job when needed
         env:
           API_BASE: https://next-years-monsters-api.onrender.com
@@ -54,6 +57,8 @@ jobs:
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
           node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
           const base = process.env.API_BASE;
           const target = Number(process.env.TARGET_COUNT || 5000);
           const firstMilestone = Number(process.env.FIRST_MILESTONE_COUNT || 500);
@@ -85,6 +90,31 @@ jobs:
           ]);
           const protectedVclSet = new Set(protectedVclTickers);
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+          function loadActiveDirectSuppressions(nowMs = Date.now()) {
+            const path = "ops/direct-rating-suppressions.json";
+            try {
+              const ledger = JSON.parse(readFileSync(path, "utf8"));
+              const retryWindowDays = Number(ledger?.retryWindowDays || 7);
+              const retryWindowMs = Math.max(retryWindowDays, 0) * 24 * 60 * 60 * 1000;
+              const active = new Set();
+              for (const entry of Array.isArray(ledger?.entries) ? ledger.entries : []) {
+                if (entry?.suppressBeforePaidCall !== true) continue;
+                const ticker = String(entry?.ticker || "").trim().toUpperCase();
+                const observedAtMs = Date.parse(String(entry?.observedAt || ""));
+                const ageMs = nowMs - observedAtMs;
+                if (!ticker || !Number.isFinite(observedAtMs)) continue;
+                if (ageMs < -futureToleranceMs || ageMs > retryWindowMs) continue;
+                active.add(ticker);
+              }
+              return { active, retryWindowDays, sourceRunId: ledger?.sourceRunId ?? null };
+            } catch (error) {
+              console.log(`[suppression-ledger] unavailable: ${error instanceof Error ? error.message : String(error)}`);
+              return { active: new Set(), retryWindowDays: 7, sourceRunId: null };
+            }
+          }
+
+          const directSuppression = loadActiveDirectSuppressions();
 
           async function getJson(url, timeoutMs = 70_000) {
             const response = await fetch(url, {
@@ -325,6 +355,9 @@ jobs:
             ratingJobSummary: ratingJob?.summary ?? null,
             earlierJobRunning,
             hasRenderAuthority,
+            activeDirectSuppressionCount: directSuppression.active.size,
+            directSuppressionRetryWindowDays: directSuppression.retryWindowDays,
+            directSuppressionSourceRunId: directSuppression.sourceRunId,
           }, null, 2));
 
           if (count >= target) {
@@ -435,7 +468,10 @@ jobs:
             preflightSecRevenueCandidate,
           );
           const qualifiedProtectedCandidates = protectedSecQualificationResults
-            .filter((item) => item.secQualificationOk)
+            .filter((item) =>
+              item.secQualificationOk &&
+              !directSuppression.active.has(String(item.company.ticker).trim().toUpperCase())
+            )
             .sort((left, right) => {
               const leftLiquidity = left.storedLiquidityFresh && Number.isFinite(left.storedDollarVolume)
                 ? left.storedDollarVolume
@@ -494,7 +530,10 @@ jobs:
             preflightSecRevenueCandidate,
           );
           const qualifiedOrdinaryCandidates = secQualificationResults
-            .filter((item) => item.secQualificationOk)
+            .filter((item) =>
+              item.secQualificationOk &&
+              !directSuppression.active.has(String(item.company.ticker).trim().toUpperCase())
+            )
             .sort((left, right) => {
               const leftLiquidity = left.storedLiquidityFresh && Number.isFinite(left.storedDollarVolume)
                 ? left.storedDollarVolume
@@ -523,7 +562,7 @@ jobs:
             `No Render deployment authority. Using bounded VCL-priority SEC-qualified quota-safe fallback for ${candidates.length} candidates ` +
             `(remaining=${remainingCount}, firstMilestoneRemaining=${remainingFirstMilestone}, budget=${directFallbackBudget}, finalStretch=${finalStretchActive}, eligible=${eligibleCandidates.length}, protected=${protectedCandidates.length}, protectedPreflighted=${protectedPreflightResults.length}, ` +
             `verifiedProtectedPreflight=${verifiedProtectedPreflight.length}, protectedSecQualified=${qualifiedProtectedCandidates.length}, protectedAttempted=${selectedProtectedCandidates.length}, protectedStartIndex=${protectedStartIndex}, ordinary=${ordinaryCandidates.length}, configuredPreflightPool=${preflightPoolSize}, postMilestonePreflightPool=${postMilestonePreflightPoolSize}, effectivePreflightPool=${effectivePreflightPoolSize}, preflighted=${preflightPool.length}, verifiedPreflight=${verifiedPreflightResults.length}, ` +
-            `secQualificationPool=${secQualificationPool.length}, secQualifiedOrdinary=${qualifiedOrdinaryCandidates.length}, secQualificationConcurrency=${secQualificationConcurrency}, preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
+            `secQualificationPool=${secQualificationPool.length}, secQualifiedOrdinary=${qualifiedOrdinaryCandidates.length}, activeSuppressions=${directSuppression.active.size}, suppressionRetryWindowDays=${directSuppression.retryWindowDays}, secQualificationConcurrency=${secQualificationConcurrency}, preflightConcurrency=${preflightConcurrency}, startIndex=${startIndex}, preflightStride=${preflightStride}) at ${count}/${target}.`,
           );
 
           let rated = 0;
@@ -572,6 +611,8 @@ jobs:
             directFallbackPreflightConcurrency: preflightConcurrency,
             directFallbackStartIndex: startIndex,
             directFallbackPreflightStride: preflightStride,
+            directFallbackActiveSuppressionCount: directSuppression.active.size,
+            directFallbackSuppressionRetryWindowDays: directSuppression.retryWindowDays,
             initialRatingCompleteCount: count,
             finalRatingCompleteCount: final ? Number(final.body?.ratingCompleteCount || count) : count,
           }, null, 2));
