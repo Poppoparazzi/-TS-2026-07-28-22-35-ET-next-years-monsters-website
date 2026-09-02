@@ -1,4 +1,4 @@
-// TS: 2026-08-30 17:00 ET
+// TS: 2026-09-02 06:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -77,8 +77,8 @@ test("ordinary candidates use freshness-gated stored liquidity before and after 
   );
   assert.match(
     rolloutWorker,
-    /qualifiedOrdinaryCandidates\s*=\s*secQualificationResults[\s\S]*?\.filter\(\(item\) => item\.secQualificationOk\)[\s\S]*?\.sort\(\(left, right\) => \{[\s\S]*?storedLiquidityFresh[\s\S]*?rightLiquidity - leftLiquidity[\s\S]*?rightRevenue - leftRevenue[\s\S]*?\.slice\(0, ordinaryAttemptCount\)/,
-    "later paid-attempt ranking must preserve fresh liquidity and verified annual-revenue priority",
+    /qualifiedOrdinaryCandidates\s*=\s*secQualificationResults[\s\S]*?item\.secQualificationOk[\s\S]*?!directSuppression\.active\.has\([\s\S]*?\.sort\(\(left, right\) => \{[\s\S]*?storedLiquidityFresh[\s\S]*?rightLiquidity - leftLiquidity[\s\S]*?rightRevenue - leftRevenue[\s\S]*?\.slice\(0, ordinaryAttemptCount\)/,
+    "later paid-attempt ranking must preserve SEC qualification, active suppression, fresh liquidity, and verified annual-revenue priority",
   );
   assert.doesNotMatch(
     rolloutWorker,
