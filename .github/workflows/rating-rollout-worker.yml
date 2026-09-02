@@ -1,4 +1,4 @@
-# TS: 2026-09-01 15:57 ET
+# TS: 2026-09-01 21:10 ET
 
 name: Monster Rating rollout worker
 
@@ -123,6 +123,22 @@ jobs:
             });
             const body = await response.json().catch(() => null);
             return { response, body };
+          }
+
+          async function getJsonWithRetry(url, { attempts = 3, timeoutMs = 90_000, backoffMs = 5_000 } = {}) {
+            let lastError = null;
+            for (let attempt = 1; attempt <= attempts; attempt += 1) {
+              try {
+                const result = await getJson(url, timeoutMs);
+                if (result.response.ok || attempt === attempts) return result;
+                lastError = new Error(`HTTP ${result.response.status}`);
+              } catch (error) {
+                lastError = error;
+              }
+              console.log(`[free-status-retry] ${url} attempt=${attempt}/${attempts} failed=${lastError instanceof Error ? lastError.message : String(lastError)}`);
+              if (attempt < attempts) await sleep(backoffMs * attempt);
+            }
+            throw lastError ?? new Error(`Failed to fetch ${url}`);
           }
 
           async function mapWithConcurrency(items, concurrency, mapper) {
@@ -299,12 +315,12 @@ jobs:
           let startup;
           try {
             [health, universe, startup] = await Promise.all([
-              getJson(`${base}/api/health`),
-              getJson(`${base}/api/universe/status?limit=${statusLimit}`),
-              getJson(`${base}/api/startup-status`),
+              getJsonWithRetry(`${base}/api/health`),
+              getJsonWithRetry(`${base}/api/universe/status?limit=${statusLimit}`),
+              getJsonWithRetry(`${base}/api/startup-status`),
             ]);
           } catch (error) {
-            console.log(`Rating watchdog could not reach production: ${error instanceof Error ? error.message : String(error)}`);
+            console.log(`Rating watchdog could not reach production after bounded free-status retries: ${error instanceof Error ? error.message : String(error)}`);
             process.exit(0);
           }
 
@@ -587,7 +603,7 @@ jobs:
             await sleep(requestDelayMs);
           }
 
-          const final = await getJson(`${base}/api/universe/status?limit=${statusLimit}`).catch(() => null);
+          const final = await getJsonWithRetry(`${base}/api/universe/status?limit=${statusLimit}`, { attempts: 2, timeoutMs: 90_000, backoffMs: 5_000 }).catch(() => null);
           console.log(JSON.stringify({
             directFallbackAttempted: candidates.length,
             directFallbackRated: rated,
