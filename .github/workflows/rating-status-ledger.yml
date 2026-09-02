@@ -1,4 +1,4 @@
-# TS: 2026-08-29 06:03 ET
+# TS: 2026-09-01 21:57 ET
 
 name: Monster Rating status ledger
 
@@ -50,13 +50,27 @@ jobs:
           const firstMilestone = 500;
           const longRangeTarget = 5000;
           const stallThreshold = 3;
-          async function get(path) {
-            const response = await fetch(base + path, {
-              headers: { Accept: 'application/json' },
-              signal: AbortSignal.timeout(90000),
-            });
-            const body = await response.json().catch(() => null);
-            return { status: response.status, body };
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          async function get(path, { attempts = 3, timeoutMs = 60000, backoffMs = 5000 } = {}) {
+            let lastError = null;
+            for (let attempt = 1; attempt <= attempts; attempt += 1) {
+              try {
+                const response = await fetch(base + path, {
+                  headers: { Accept: 'application/json' },
+                  signal: AbortSignal.timeout(timeoutMs),
+                });
+                const body = await response.json().catch(() => null);
+                if (response.ok || attempt === attempts) {
+                  return { status: response.status, body };
+                }
+                lastError = new Error(`HTTP ${response.status}`);
+              } catch (error) {
+                lastError = error;
+              }
+              console.warn(`[free-status-retry] ${path} attempt=${attempt}/${attempts} failed=${lastError instanceof Error ? lastError.message : String(lastError)}`);
+              if (attempt < attempts) await sleep(backoffMs * attempt);
+            }
+            throw lastError ?? new Error(`Failed to fetch ${path}`);
           }
           const [health, universe, startup, aaplRating] = await Promise.all([
             get('/api/health'),
