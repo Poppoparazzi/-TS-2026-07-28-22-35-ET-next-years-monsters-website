@@ -1,4 +1,4 @@
-// TS: 2026-08-29 08:10 ET
+// TS: 2026-09-02 06:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -124,8 +124,8 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
   );
   assert.match(
     rolloutWorker,
-    /qualifiedOrdinaryCandidates = secQualificationResults[\s\S]*?\.filter\(\(item\) => item\.secQualificationOk\)[\s\S]*?\.slice\(0, ordinaryAttemptCount\)/,
-    "only SEC-qualified ordinary candidates may fall through into paid candidate selection",
+    /qualifiedOrdinaryCandidates = secQualificationResults[\s\S]*?item\.secQualificationOk[\s\S]*?!directSuppression\.active\.has\([\s\S]*?\.slice\(0, ordinaryAttemptCount\)/,
+    "only SEC-qualified, non-suppressed ordinary candidates may fall through into paid candidate selection",
   );
   assert.match(
     rolloutWorker,
