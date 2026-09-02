@@ -1,4 +1,4 @@
-// TS: 2026-08-30 12:26 ET
+// TS: 2026-09-02 06:01 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -31,8 +31,8 @@ test("protected VCL candidates must pass free stored-data and SEC revenue prefli
   );
   assert.match(
     rolloutWorker,
-    /qualifiedProtectedCandidates\s*=\s*protectedSecQualificationResults[\s\S]*?\.filter\(\(item\) => item\.secQualificationOk\)[\s\S]*?\.map\(\(item\) => item\.company\)/,
-    "only SEC-qualified protected candidates may enter the paid protected cohort",
+    /qualifiedProtectedCandidates\s*=\s*protectedSecQualificationResults[\s\S]*?item\.secQualificationOk[\s\S]*?!directSuppression\.active\.has\([\s\S]*?\.map\(\(item\) => item\.company\)/,
+    "only SEC-qualified, non-suppressed protected candidates may enter the paid protected cohort",
   );
   assert.match(
     rolloutWorker,
@@ -73,8 +73,8 @@ test("ordinary candidates must have two annual SEC revenue periods before paid r
   );
   assert.match(
     rolloutWorker,
-    /qualifiedOrdinaryCandidates\s*=\s*secQualificationResults[\s\S]*?\.filter\(\(item\) => item\.secQualificationOk\)[\s\S]*?\.slice\(0, ordinaryAttemptCount\)/,
-    "only SEC-qualified ordinary candidates may consume the paid fallback budget",
+    /qualifiedOrdinaryCandidates\s*=\s*secQualificationResults[\s\S]*?item\.secQualificationOk[\s\S]*?!directSuppression\.active\.has\([\s\S]*?\.slice\(0, ordinaryAttemptCount\)/,
+    "only SEC-qualified, non-suppressed ordinary candidates may consume the paid fallback budget",
   );
   assert.match(rolloutWorker, /MAX_DIRECT_FALLBACK_PER_RUN:\s*"8"/);
   assert.match(rolloutWorker, /REQUEST_DELAY_MS:\s*"20000"/);
