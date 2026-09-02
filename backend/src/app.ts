@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:31 UTC
+// TS: 2026-09-02 03:58 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -17,7 +17,9 @@ import {
   ProviderNotConfiguredError,
 } from "./providers/types.js";
 import { QuoteService } from "./quotes/service.js";
+import { createRatingBatchStore } from "./ratings/batch-store.js";
 import { installFailClosedRatingErrorHandler } from "./ratings/install-fail-closed-handler.js";
+import { buildMarketHistoryEvidence } from "./ratings/market-history-evidence.js";
 import { evaluatePublicRatingReadiness } from "./ratings/public-rating-readiness.js";
 import {
   calculateMonsterRatingV1,
@@ -123,6 +125,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const readinessProvider =
     options.readinessProvider ?? createDatabaseReadinessProvider(config);
   const persistenceStore = options.persistenceStore ?? createPersistenceStore(config);
+  const ratingBatchStore = createRatingBatchStore(config);
   const universeStore = options.universeStore ?? createUniverseStore(config);
   const app = Fastify({
     logger:
@@ -144,6 +147,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await Promise.all([
       readinessProvider.close(),
       persistenceStore.close(),
+      ratingBatchStore.close(),
       universeStore.close(),
     ]);
   });
@@ -387,6 +391,20 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       provider.getDailyHistory("SPY", 300),
     ]);
     const quote = quoteFromDailyHistory(secCompany, companyHistory);
+
+    if (persistenceStore.configured && ratingBatchStore.configured) {
+      try {
+        await persistenceStore.saveSecCompany(secCompany);
+        await Promise.all([
+          persistenceStore.saveQuote(quote),
+          persistenceStore.saveSecFilings(secCompany, filings),
+          persistenceStore.saveSecFacts(secFacts),
+          ratingBatchStore.saveMarketHistoryEvidence(buildMarketHistoryEvidence(companyHistory)),
+        ]);
+      } catch (error) {
+        request.log.error({ error, symbol }, "Unable to persist direct Monster Rating pre-return evidence");
+      }
+    }
 
     const calculatedRating = calculateMonsterRatingV1(buildProductionRatingInput({
       company: secCompany,
