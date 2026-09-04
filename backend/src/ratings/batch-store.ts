@@ -1,4 +1,4 @@
-// TS: 2026-08-30 15:00 ET
+// TS: 2026-09-04 02:58 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -35,7 +35,7 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
     WHERE mhe.company_id = c.id
       AND mhe.rating_history_ready = false
       AND (
-        CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '7 days'
+        CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days'
         OR (
           mhe.latest_bar_date IS NOT NULL
           AND (
@@ -66,7 +66,7 @@ export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
       END
     ) AS prior_failure
     WHERE drr.refresh_type = 'ratings'
-      AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+      AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
       AND prior_failure ->> 'ticker' = c.ticker
       AND prior_failure ->> 'reasonCode' IS NOT NULL
       AND prior_failure ->> 'suppressionStage' IN ('sec_preflight', 'rating_engine')
