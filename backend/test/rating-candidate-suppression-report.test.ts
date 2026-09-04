@@ -1,4 +1,4 @@
-// TS: 2026-09-04 06:01 ET
+// TS: 2026-09-04 14:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -7,9 +7,10 @@ import {
   RATING_RECENT_FAILURE_REASON_REPORT_SQL,
 } from "../src/jobs/report-rating-candidate-suppression.js";
 
-test("candidate suppression report separates cooldown, session-gap, and retry-eligible histories", () => {
+test("candidate suppression report separates history and durable liquidity suppression partitions", () => {
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /market_history_evidence_latest/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /rating_history_ready\s*=\s*false/i);
+  assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /suppression_reason\s*=\s*'insufficient_liquidity'/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /INTERVAL\s+'30 days'/i);
   assert.doesNotMatch(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /INTERVAL\s+'7 days'/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /EXTRACT\(ISODOW/i);
@@ -18,6 +19,9 @@ test("candidate suppression report separates cooldown, session-gap, and retry-el
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /session_gap_suppressed_count/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /retry_eligible_count/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /total_known_insufficient_count/i);
+  assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /durable_liquidity_suppressed_count/i);
+  assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /durable_liquidity_retry_eligible_count/i);
+  assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /total_known_liquidity_suppression_count/i);
   assert.doesNotMatch(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /\b(?:update|delete|insert|alter|drop|truncate)\b/i);
 });
 
