@@ -1,4 +1,4 @@
-// TS: 2026-08-29 12:59 ET
+// TS: 2026-09-04 02:58 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -11,8 +11,8 @@ test("rating candidate selection suppresses only recent structured ordinary inel
 
   assert.match(
     source,
-    /export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `[^`]*data_refresh_runs[^`]*metadata -> 'replaceable'[^`]*INTERVAL '7 days'[^`]*prior_failure ->> 'ticker' = c\.ticker[^`]*prior_failure ->> 'reasonCode' IS NOT NULL[^`]*prior_failure ->> 'suppressionStage' IN \('sec_preflight', 'rating_engine'\)[^`]*prior_failure ->> 'reasonCode' <> 'candidate_processing_error'[^`]*`/s,
-    "candidate selection must reuse only structured evidence-based ineligibility metadata for the seven-day cooldown",
+    /export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `[^`]*data_refresh_runs[^`]*metadata -> 'replaceable'[^`]*INTERVAL '30 days'[^`]*prior_failure ->> 'ticker' = c\.ticker[^`]*prior_failure ->> 'reasonCode' IS NOT NULL[^`]*prior_failure ->> 'suppressionStage' IN \('sec_preflight', 'rating_engine'\)[^`]*prior_failure ->> 'reasonCode' <> 'candidate_processing_error'[^`]*`/s,
+    "candidate selection must reuse only structured evidence-based ineligibility metadata for the thirty-day cooldown",
   );
   assert.match(
     source,
