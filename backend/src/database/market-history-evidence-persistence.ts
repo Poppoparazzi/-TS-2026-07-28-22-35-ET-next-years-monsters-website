@@ -1,4 +1,4 @@
-// TS: 2026-09-04 12:00 ET
+// TS: 2026-09-04 19:01 ET
 
 import type { PoolClient } from "pg";
 import {
@@ -7,19 +7,23 @@ import {
 } from "../ratings/market-history-evidence.js";
 
 export const MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+export const STALE_MARKET_DATA_SUPPRESSION_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
 export const MARKET_HISTORY_SUPPRESSION_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
-type MarketHistorySuppressionReason = "insufficient_market_history" | "insufficient_liquidity";
+const MARKET_DATA_STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+type MarketHistorySuppressionReason = "insufficient_market_history" | "insufficient_liquidity" | "stale_market_data";
+type MarketHistoryEligibilityCode = "eligible" | MarketHistorySuppressionReason;
 
 export interface PersistedMarketHistorySuppression {
-  readonly ratingEligibilityCode: "insufficient_market_history" | "insufficient_liquidity";
+  readonly ratingEligibilityCode: MarketHistorySuppressionReason;
   readonly suppressionReason: MarketHistorySuppressionReason;
   readonly usableBarCount: number;
   readonly retrievedAt: string;
 }
 
 interface PersistedMarketHistorySuppressionRow {
-  readonly rating_eligibility_code: "insufficient_market_history" | "insufficient_liquidity";
+  readonly rating_eligibility_code: MarketHistorySuppressionReason;
   readonly suppression_reason: MarketHistorySuppressionReason;
   readonly usable_bar_count: string | number;
   readonly retrieved_at: Date | string;
@@ -60,8 +64,19 @@ function assertPersistableMarketHistoryEvidence(
   )) {
     throw new Error("market_history_evidence_invalid_liquidity_suppression");
   }
-  if (!Number.isFinite(Date.parse(evidence.retrievedAt))) {
+  const retrievedAtMs = Date.parse(evidence.retrievedAt);
+  if (!Number.isFinite(retrievedAtMs)) {
     throw new Error("market_history_evidence_invalid_retrieved_at");
+  }
+  if (evidence.suppressionReason === "stale_market_data") {
+    const latestBarMs = evidence.latestBarDate === null ? Number.NaN : Date.parse(evidence.latestBarDate);
+    if (
+      evidence.usableBarCount < MINIMUM_RATING_HISTORY_BARS ||
+      !Number.isFinite(latestBarMs) ||
+      retrievedAtMs - latestBarMs <= MARKET_DATA_STALE_AFTER_MS
+    ) {
+      throw new Error("market_history_evidence_invalid_stale_market_data_suppression");
+    }
   }
   if (!evidence.feedDisclosure.trim()) {
     throw new Error("market_history_evidence_disclosure_required");
@@ -69,7 +84,7 @@ function assertPersistableMarketHistoryEvidence(
 }
 
 function classifyMarketHistoryEvidence(evidence: MarketHistoryEvidence): {
-  ratingEligibilityCode: "eligible" | "insufficient_market_history" | "insufficient_liquidity";
+  ratingEligibilityCode: MarketHistoryEligibilityCode;
   suppressionReason: MarketHistorySuppressionReason | null;
 } {
   if (evidence.usableBarCount < MINIMUM_RATING_HISTORY_BARS) {
@@ -82,6 +97,12 @@ function classifyMarketHistoryEvidence(evidence: MarketHistoryEvidence): {
     return {
       ratingEligibilityCode: "insufficient_liquidity",
       suppressionReason: "insufficient_liquidity",
+    };
+  }
+  if (evidence.suppressionReason === "stale_market_data") {
+    return {
+      ratingEligibilityCode: "stale_market_data",
+      suppressionReason: "stale_market_data",
     };
   }
   return {
@@ -110,6 +131,9 @@ function parsePersistedSuppressionRow(
   ) || (
     row.rating_eligibility_code === "insufficient_liquidity" &&
     row.suppression_reason === "insufficient_liquidity"
+  ) || (
+    row.rating_eligibility_code === "stale_market_data" &&
+    row.suppression_reason === "stale_market_data"
   );
   if (!validSuppressionPair) {
     throw new Error("market_history_evidence_invalid_persisted_suppression");
@@ -117,9 +141,12 @@ function parsePersistedSuppressionRow(
 
   if (!Number.isFinite(nowMs)) return null;
   const ageMs = nowMs - retrievedAtMs;
+  const maximumAgeMs = row.suppression_reason === "stale_market_data"
+    ? STALE_MARKET_DATA_SUPPRESSION_MAX_AGE_MS
+    : MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS;
   if (
     ageMs < -MARKET_HISTORY_SUPPRESSION_FUTURE_TOLERANCE_MS ||
-    ageMs > MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS
+    ageMs > maximumAgeMs
   ) {
     return null;
   }
