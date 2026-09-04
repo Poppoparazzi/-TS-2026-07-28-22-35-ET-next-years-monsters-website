@@ -1,4 +1,4 @@
-// TS: 2026-09-04 04:00 ET
+// TS: 2026-09-04 05:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -121,6 +121,11 @@ export interface RatingBatchStore {
     provider: string,
   ): Promise<PersistedMarketHistorySuppression | null>;
   saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void>;
+  recordCandidateFailure?(
+    runId: string,
+    failure: RatingBatchFailure,
+    protectedCandidate: boolean,
+  ): Promise<void>;
   finishRun(runId: string, accounting: RatingBatchAccounting): Promise<void>;
   close(): Promise<void>;
 }
@@ -161,6 +166,14 @@ export class UnconfiguredRatingBatchStore implements RatingBatchStore {
   }
 
   public async saveMarketHistoryEvidence(_evidence: MarketHistoryEvidence): Promise<void> {
+    throw new ProviderNotConfiguredError("Rating batch database");
+  }
+
+  public async recordCandidateFailure(
+    _runId: string,
+    _failure: RatingBatchFailure,
+    _protectedCandidate: boolean,
+  ): Promise<void> {
     throw new ProviderNotConfiguredError("Rating batch database");
   }
 
@@ -253,6 +266,25 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
     } finally {
       client.release();
     }
+  }
+
+  public async recordCandidateFailure(
+    runId: string,
+    failure: RatingBatchFailure,
+    protectedCandidate: boolean,
+  ): Promise<void> {
+    const bucket = protectedCandidate ? "protectedMustRepair" : "replaceable";
+    await this.pool.query(
+      `UPDATE data_refresh_runs
+       SET metadata = jsonb_set(
+         COALESCE(metadata, '{}'::jsonb),
+         ARRAY[$2]::text[],
+         COALESCE(metadata -> $2, '[]'::jsonb) || $3::jsonb,
+         true
+       )
+       WHERE id = $1`,
+      [runId, bucket, JSON.stringify([failure])],
+    );
   }
 
   public async finishRun(runId: string, accounting: RatingBatchAccounting): Promise<void> {
