@@ -1,4 +1,4 @@
-// TS: 2026-09-04 09:00 ET
+// TS: 2026-09-04 12:00 ET
 
 import type { DailyMarketHistory } from "../providers/types.js";
 
@@ -10,6 +10,7 @@ export interface MarketHistoryEvidence {
   readonly usableBarCount: number;
   readonly latestBarDate: string | null;
   readonly twentySessionAverageDollarVolume?: number | null;
+  readonly suppressionReason?: "insufficient_liquidity" | null;
   readonly retrievedAt: string;
   readonly feedDisclosure: string;
 }
