@@ -1,4 +1,4 @@
-// TS: 2026-09-04 04:58 UTC
+// TS: 2026-09-04 09:00 ET
 
 import type { PoolClient } from "pg";
 import {
@@ -42,6 +42,13 @@ function assertPersistableMarketHistoryEvidence(
     evidence.latestBarDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(evidence.latestBarDate)
   )) {
     throw new Error("market_history_evidence_invalid_latest_bar_date");
+  }
+  if (
+    evidence.twentySessionAverageDollarVolume !== undefined &&
+    evidence.twentySessionAverageDollarVolume !== null &&
+    (!Number.isFinite(evidence.twentySessionAverageDollarVolume) || evidence.twentySessionAverageDollarVolume < 0)
+  ) {
+    throw new Error("market_history_evidence_invalid_liquidity");
   }
   if (!Number.isFinite(Date.parse(evidence.retrievedAt))) {
     throw new Error("market_history_evidence_invalid_retrieved_at");
@@ -185,15 +192,17 @@ export async function upsertMarketHistoryEvidence(
         provider,
         usable_bar_count,
         latest_bar_date,
+        twenty_session_average_dollar_volume,
         retrieved_at,
         feed_disclosure,
         rating_eligibility_code,
         suppression_reason
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (company_id, provider) DO UPDATE SET
         usable_bar_count = EXCLUDED.usable_bar_count,
         latest_bar_date = EXCLUDED.latest_bar_date,
+        twenty_session_average_dollar_volume = EXCLUDED.twenty_session_average_dollar_volume,
         retrieved_at = EXCLUDED.retrieved_at,
         feed_disclosure = EXCLUDED.feed_disclosure,
         rating_eligibility_code = EXCLUDED.rating_eligibility_code,
@@ -205,6 +214,7 @@ export async function upsertMarketHistoryEvidence(
       evidence.provider,
       evidence.usableBarCount,
       evidence.latestBarDate,
+      evidence.twentySessionAverageDollarVolume ?? null,
       evidence.retrievedAt,
       evidence.feedDisclosure,
       classification.ratingEligibilityCode,
