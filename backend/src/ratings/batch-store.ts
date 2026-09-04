@@ -1,4 +1,4 @@
-// TS: 2026-09-04 13:02 ET
+// TS: 2026-09-04 15:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -220,6 +220,15 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           ORDER BY cf.fiscal_year DESC NULLS LAST, cf.period_end DESC NULLS LAST, cf.filed_date DESC NULLS LAST
           LIMIT 1
         ) revenue_metric ON true
+        LEFT JOIN LATERAL (
+          SELECT count(DISTINCT cf.fiscal_year) AS annual_revenue_period_count
+          FROM company_facts cf
+          WHERE cf.company_id = c.id AND cf.taxonomy = 'us-gaap'
+            AND cf.concept IN ('RevenueFromContractWithCustomerExcludingAssessedTax','Revenues','SalesRevenueNet')
+            AND cf.value_numeric IS NOT NULL AND cf.value_numeric >= 0
+            AND cf.fiscal_year IS NOT NULL AND cf.fiscal_period = 'FY'
+            AND cf.form_type IN ('10-K','10-K/A','20-F','20-F/A','40-F','40-F/A')
+        ) revenue_depth ON true
         LEFT JOIN LATERAL (SELECT count(*) AS fact_count FROM company_facts cf WHERE cf.company_id = c.id) fact_depth ON true
         LEFT JOIN LATERAL (SELECT count(*) AS filing_count FROM sec_filings sf WHERE sf.company_id = c.id) filing_depth ON true
         LEFT JOIN LATERAL (
@@ -258,6 +267,8 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           ) DESC,
           CASE WHEN stored_liquidity.dollar_volume IS NOT NULL THEN 0 ELSE 1 END,
           COALESCE(stored_liquidity.dollar_volume, -1) DESC,
+          CASE WHEN COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 0 ELSE 1 END,
+          COALESCE(revenue_depth.annual_revenue_period_count, 0) DESC,
           COALESCE(fact_depth.fact_count, 0) DESC,
           COALESCE(filing_depth.filing_count, 0) DESC,
           COALESCE(revenue_metric.latest_annual_revenue, -1) DESC,
