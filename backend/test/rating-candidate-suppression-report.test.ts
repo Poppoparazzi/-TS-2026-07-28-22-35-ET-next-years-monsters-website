@@ -1,4 +1,4 @@
-// TS: 2026-08-29 12:03 ET
+// TS: 2026-09-04 06:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -10,7 +10,8 @@ import {
 test("candidate suppression report separates cooldown, session-gap, and retry-eligible histories", () => {
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /market_history_evidence_latest/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /rating_history_ready\s*=\s*false/i);
-  assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /INTERVAL\s+'7 days'/i);
+  assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /INTERVAL\s+'30 days'/i);
+  assert.doesNotMatch(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /INTERVAL\s+'7 days'/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /EXTRACT\(ISODOW/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /BETWEEN\s+1\s+AND\s+5/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /cooldown_suppressed_count/i);
@@ -26,7 +27,8 @@ test("recent failure report counts unique candidates by their latest machine-rea
   assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /reasonCode/i);
   assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /suppressionStage/i);
   assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /legacy_unclassified/i);
-  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /INTERVAL\s+'7 days'/i);
+  assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /INTERVAL\s+'30 days'/i);
+  assert.doesNotMatch(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /INTERVAL\s+'7 days'/i);
   assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /DISTINCT\s+ON\s*\(ticker\)/i);
   assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /ORDER\s+BY\s+ticker,\s*started_at\s+DESC/i);
   assert.match(RATING_RECENT_FAILURE_REASON_REPORT_SQL, /total_recent_replaceable_count/i);
