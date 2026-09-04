@@ -1,4 +1,4 @@
-// TS: 2026-09-04 16:57 ET
+// TS: 2026-09-04 18:03 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -11,18 +11,23 @@ test("rating candidate selection suppresses only recent structural ordinary inel
 
   assert.match(
     source,
-    /export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `[^`]*data_refresh_runs[^`]*metadata -> 'replaceable'[^`]*INTERVAL '30 days'[^`]*prior_failure ->> 'ticker' = c\.ticker[^`]*prior_failure ->> 'suppressionStage' IN \('sec_preflight', 'stored_market_history_preflight', 'rating_engine'\)[^`]*prior_failure ->> 'reasonCode' IN \([^`]*'unresolved_sec_identity'[^`]*'insufficient_financial_history'[^`]*'unsupported_security_type'[^`]*'insufficient_market_history'[^`]*'insufficient_liquidity'[^`]*\)[^`]*`/s,
-    "candidate selection must reuse structural evidence-based ineligibility metadata, including stored-history preflight outcomes, for the thirty-day cooldown",
+    /export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `[^`]*data_refresh_runs[^`]*metadata -> 'replaceable'[^`]*INTERVAL '30 days'[^`]*prior_failure ->> 'ticker' = c\.ticker[^`]*prior_failure ->> 'suppressionStage' IN \('sec_preflight', 'stored_market_history_preflight', 'rating_engine'\)[^`]*prior_failure ->> 'reasonCode' IN \([^`]*'unresolved_sec_identity'[^`]*'insufficient_financial_history'[^`]*'unsupported_security_type'[^`]*'insufficient_market_history'[^`]*'insufficient_liquidity'[^`]*\)[^`]*prior_failure ->> 'reasonCode' = 'stale_market_data'[^`]*INTERVAL '2 days'[^`]*`/s,
+    "candidate selection must reuse durable structural ineligibility for thirty days and stale-market-data outcomes only for a short two-day cooldown",
   );
   assert.doesNotMatch(
     source,
     /prior_failure ->> 'reasonCode' IS NOT NULL/,
-    "the thirty-day cooldown must not suppress every machine-readable failure indiscriminately",
+    "candidate cooldown must not suppress every machine-readable failure indiscriminately",
+  );
+  assert.match(
+    source,
+    /prior_failure ->> 'reasonCode' = 'stale_market_data'[^`]*INTERVAL '2 days'/s,
+    "stale market data should avoid an immediate repeat paid history call while remaining retryable after a short cooldown",
   );
   assert.doesNotMatch(
     source,
-    /EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL[^;]*stale_market_data/s,
-    "temporary stale-market-data outcomes must remain eligible for a later free/recoverable retry",
+    /prior_failure ->> 'reasonCode' = 'stale_market_data'[^`]*INTERVAL '30 days'/s,
+    "stale market data must not inherit the thirty-day structural suppression window",
   );
   assert.match(
     source,
