@@ -1,4 +1,4 @@
-// TS: 2026-09-04 18:03 ET
+// TS: 2026-09-04 19:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -57,6 +57,10 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
         OR (
           mhe.suppression_reason = 'insufficient_liquidity'
           AND CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days'
+        )
+        OR (
+          mhe.suppression_reason = 'stale_market_data'
+          AND CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '2 days'
         )
       )
   )
