@@ -1,4 +1,4 @@
-// TS: 2026-08-30 10:59 ET
+// TS: 2026-09-04 09:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -30,6 +30,7 @@ test("persists provider-backed market history evidence with machine-readable eli
   });
 
   assert.match(sql, /INSERT INTO market_history_evidence/);
+  assert.match(sql, /twenty_session_average_dollar_volume/);
   assert.match(sql, /rating_eligibility_code/);
   assert.match(sql, /suppression_reason/);
   assert.match(sql, /ON CONFLICT \(company_id, provider\) DO UPDATE SET/);
@@ -39,11 +40,34 @@ test("persists provider-backed market history evidence with machine-readable eli
     "licensed-test-provider",
     253,
     "2026-08-28",
+    null,
     "2026-08-28T14:58:00.000Z",
     "licensed provider history",
     "eligible",
     null,
   ]);
+});
+
+test("persists derived twenty-session liquidity when provider history supplies it", async () => {
+  let params: readonly unknown[] = [];
+  const client = {
+    async query(_text: string, values?: readonly unknown[]) {
+      params = values ?? [];
+      return { rows: [], rowCount: 0 };
+    },
+  };
+
+  await upsertMarketHistoryEvidence(client as never, "42", {
+    symbol: "AAPL",
+    provider: "licensed-test-provider",
+    usableBarCount: 253,
+    latestBarDate: "2026-08-28",
+    twentySessionAverageDollarVolume: 123456789,
+    retrievedAt: "2026-08-28T14:58:00.000Z",
+    feedDisclosure: "licensed provider history",
+  });
+
+  assert.equal(params[4], 123456789);
 });
 
 test("persists insufficient market history as a reusable suppression reason", async () => {
@@ -64,8 +88,8 @@ test("persists insufficient market history as a reusable suppression reason", as
     feedDisclosure: "licensed provider history",
   });
 
-  assert.equal(params[6], "insufficient_market_history");
   assert.equal(params[7], "insufficient_market_history");
+  assert.equal(params[8], "insufficient_market_history");
 });
 
 test("reads fresh persisted insufficient-history suppression without another provider call", async () => {
@@ -231,6 +255,14 @@ test("fails closed before SQL when market history evidence is not trustworthy", 
   await assert.rejects(
     () => upsertMarketHistoryEvidence(client as never, "42", { ...valid, usableBarCount: 0 }),
     /market_history_evidence_invalid_latest_bar_date/,
+  );
+  await assert.rejects(
+    () => upsertMarketHistoryEvidence(client as never, "42", { ...valid, twentySessionAverageDollarVolume: -1 }),
+    /market_history_evidence_invalid_liquidity/,
+  );
+  await assert.rejects(
+    () => upsertMarketHistoryEvidence(client as never, "42", { ...valid, twentySessionAverageDollarVolume: Number.NaN }),
+    /market_history_evidence_invalid_liquidity/,
   );
   await assert.rejects(
     () => upsertMarketHistoryEvidence(client as never, "42", { ...valid, retrievedAt: "not-a-time" }),
