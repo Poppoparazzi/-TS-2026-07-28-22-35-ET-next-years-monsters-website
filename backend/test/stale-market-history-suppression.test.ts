@@ -1,4 +1,4 @@
-// TS: 2026-09-04 19:01 ET
+// TS: 2026-09-04 19:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -7,6 +7,7 @@ import {
   STALE_MARKET_DATA_SUPPRESSION_MAX_AGE_MS,
   upsertMarketHistoryEvidence,
 } from "../src/database/market-history-evidence-persistence.js";
+import { EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL } from "../src/ratings/batch-store.js";
 
 test("persists stale provider history with a machine-readable short-lived suppression", async () => {
   let params: readonly unknown[] = [];
@@ -63,6 +64,12 @@ test("reuses stale-market suppression for two days but not for the structural th
     Date.parse(retrievedAt) + STALE_MARKET_DATA_SUPPRESSION_MAX_AGE_MS + 1,
   );
   assert.equal(expired, null);
+});
+
+test("candidate selection excludes fresh durable stale evidence for only two days", () => {
+  assert.match(EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL, /suppression_reason = 'stale_market_data'/);
+  assert.match(EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL, /INTERVAL '2 days'/);
+  assert.doesNotMatch(EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL, /suppression_reason = 'stale_market_data'[\s\S]*INTERVAL '30 days'/);
 });
 
 test("refuses to persist a stale suppression unless the provider evidence itself proves staleness", async () => {
