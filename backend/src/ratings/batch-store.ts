@@ -1,4 +1,4 @@
-// TS: 2026-09-04 05:00 ET
+// TS: 2026-09-04 07:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -73,7 +73,8 @@ export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
         'unresolved_sec_identity',
         'insufficient_financial_history',
         'unsupported_security_type',
-        'insufficient_market_history'
+        'insufficient_market_history',
+        'insufficient_liquidity'
       )
   )
 `;
