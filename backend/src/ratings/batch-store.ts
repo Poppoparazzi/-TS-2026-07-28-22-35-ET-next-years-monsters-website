@@ -1,4 +1,4 @@
-// TS: 2026-09-04 11:02 ET
+// TS: 2026-09-04 13:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -33,22 +33,30 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
     SELECT 1
     FROM market_history_evidence_latest mhe
     WHERE mhe.company_id = c.id
-      AND mhe.rating_history_ready = false
       AND (
-        CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days'
-        OR (
-          mhe.latest_bar_date IS NOT NULL
+        (
+          mhe.rating_history_ready = false
           AND (
-            SELECT count(*)
-            FROM generate_series(
-              mhe.latest_bar_date + INTERVAL '1 day',
-              CURRENT_DATE,
-              INTERVAL '1 day'
-            ) AS candidate_session(day)
-            WHERE EXTRACT(ISODOW FROM candidate_session.day) BETWEEN 1 AND 5
-          ) <
-            (253 - mhe.usable_bar_count)
-            + CEIL(GREATEST(253 - mhe.usable_bar_count, 0) / 20.0)
+            CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days'
+            OR (
+              mhe.latest_bar_date IS NOT NULL
+              AND (
+                SELECT count(*)
+                FROM generate_series(
+                  mhe.latest_bar_date + INTERVAL '1 day',
+                  CURRENT_DATE,
+                  INTERVAL '1 day'
+                ) AS candidate_session(day)
+                WHERE EXTRACT(ISODOW FROM candidate_session.day) BETWEEN 1 AND 5
+              ) <
+                (253 - mhe.usable_bar_count)
+                + CEIL(GREATEST(253 - mhe.usable_bar_count, 0) / 20.0)
+            )
+          )
+        )
+        OR (
+          mhe.suppression_reason = 'insufficient_liquidity'
+          AND CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days'
         )
       )
   )
