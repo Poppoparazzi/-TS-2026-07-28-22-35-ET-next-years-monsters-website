@@ -1,13 +1,15 @@
-// TS: 2026-09-04 06:01 ET
+// TS: 2026-09-04 14:02 ET
 
 import pg from "pg";
 
 const { Pool } = pg;
 
 export const RATING_CANDIDATE_SUPPRESSION_REPORT_SQL = `
-  WITH insufficient AS (
+  WITH evidence AS (
     SELECT
       mhe.company_id,
+      mhe.rating_history_ready,
+      mhe.suppression_reason,
       mhe.usable_bar_count,
       mhe.latest_bar_date,
       mhe.retrieved_at,
@@ -27,24 +29,41 @@ export const RATING_CANDIDATE_SUPPRESSION_REPORT_SQL = `
       (253 - mhe.usable_bar_count)
         + CEIL(GREATEST(253 - mhe.usable_bar_count, 0) / 20.0) AS sessions_needed_with_holiday_allowance
     FROM market_history_evidence_latest mhe
-    WHERE mhe.rating_history_ready = false
   )
   SELECT
-    count(*) FILTER (WHERE in_cooldown) AS cooldown_suppressed_count,
     count(*) FILTER (
-      WHERE NOT in_cooldown
+      WHERE rating_history_ready = false
+        AND in_cooldown
+    ) AS cooldown_suppressed_count,
+    count(*) FILTER (
+      WHERE rating_history_ready = false
+        AND NOT in_cooldown
         AND latest_bar_date IS NOT NULL
         AND plausible_sessions_since_latest < sessions_needed_with_holiday_allowance
     ) AS session_gap_suppressed_count,
     count(*) FILTER (
-      WHERE NOT in_cooldown
+      WHERE rating_history_ready = false
+        AND NOT in_cooldown
         AND (
           latest_bar_date IS NULL
           OR plausible_sessions_since_latest >= sessions_needed_with_holiday_allowance
         )
     ) AS retry_eligible_count,
-    count(*) AS total_known_insufficient_count
-  FROM insufficient
+    count(*) FILTER (
+      WHERE rating_history_ready = false
+    ) AS total_known_insufficient_count,
+    count(*) FILTER (
+      WHERE suppression_reason = 'insufficient_liquidity'
+        AND in_cooldown
+    ) AS durable_liquidity_suppressed_count,
+    count(*) FILTER (
+      WHERE suppression_reason = 'insufficient_liquidity'
+        AND NOT in_cooldown
+    ) AS durable_liquidity_retry_eligible_count,
+    count(*) FILTER (
+      WHERE suppression_reason = 'insufficient_liquidity'
+    ) AS total_known_liquidity_suppression_count
+  FROM evidence
 `;
 
 export const RATING_RECENT_FAILURE_REASON_REPORT_SQL = `
@@ -106,6 +125,9 @@ interface CandidateSuppressionRow {
   readonly session_gap_suppressed_count: string | number;
   readonly retry_eligible_count: string | number;
   readonly total_known_insufficient_count: string | number;
+  readonly durable_liquidity_suppressed_count: string | number;
+  readonly durable_liquidity_retry_eligible_count: string | number;
+  readonly total_known_liquidity_suppression_count: string | number;
 }
 
 interface RecentFailureReasonRow {
@@ -129,6 +151,9 @@ export interface CandidateSuppressionReport {
   readonly sessionGapSuppressedCount: number;
   readonly retryEligibleCount: number;
   readonly totalKnownInsufficientCount: number;
+  readonly durableLiquiditySuppressedCount: number;
+  readonly durableLiquidityRetryEligibleCount: number;
+  readonly totalKnownLiquiditySuppressionCount: number;
   readonly recentReplaceableCount: number;
   readonly recentReplaceableEventCount: number;
   readonly recentReplaceableReasons: readonly CandidateSuppressionReasonCount[];
@@ -161,6 +186,14 @@ function validateCandidateSuppressionReport(report: CandidateSuppressionReport):
   if (historyPartitionTotal !== report.totalKnownInsufficientCount) {
     throw new Error(
       `Candidate suppression history partition mismatch: ${historyPartitionTotal} != ${report.totalKnownInsufficientCount}.`,
+    );
+  }
+
+  const liquidityPartitionTotal =
+    report.durableLiquiditySuppressedCount + report.durableLiquidityRetryEligibleCount;
+  if (liquidityPartitionTotal !== report.totalKnownLiquiditySuppressionCount) {
+    throw new Error(
+      `Candidate suppression liquidity partition mismatch: ${liquidityPartitionTotal} != ${report.totalKnownLiquiditySuppressionCount}.`,
     );
   }
 
@@ -213,6 +246,18 @@ export async function readCandidateSuppressionReport(databaseUrl: string): Promi
       totalKnownInsufficientCount: exactNonNegativeInteger(
         historyRow.total_known_insufficient_count ?? 0,
         "totalKnownInsufficientCount",
+      ),
+      durableLiquiditySuppressedCount: exactNonNegativeInteger(
+        historyRow.durable_liquidity_suppressed_count ?? 0,
+        "durableLiquiditySuppressedCount",
+      ),
+      durableLiquidityRetryEligibleCount: exactNonNegativeInteger(
+        historyRow.durable_liquidity_retry_eligible_count ?? 0,
+        "durableLiquidityRetryEligibleCount",
+      ),
+      totalKnownLiquiditySuppressionCount: exactNonNegativeInteger(
+        historyRow.total_known_liquidity_suppression_count ?? 0,
+        "totalKnownLiquiditySuppressionCount",
       ),
       recentReplaceableCount: exactNonNegativeInteger(
         recentFailureRow.total_recent_replaceable_count ?? 0,
