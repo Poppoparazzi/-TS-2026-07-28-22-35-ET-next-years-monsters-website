@@ -1,4 +1,4 @@
-# TS: 2026-09-01 21:10 ET
+# TS: 2026-09-04 04:00 UTC
 
 name: Monster Rating rollout worker
 
@@ -95,7 +95,7 @@ jobs:
             const path = "ops/direct-rating-suppressions.json";
             try {
               const ledger = JSON.parse(readFileSync(path, "utf8"));
-              const retryWindowDays = Number(ledger?.retryWindowDays || 7);
+              const retryWindowDays = Number(ledger?.retryWindowDays || 30);
               const retryWindowMs = Math.max(retryWindowDays, 0) * 24 * 60 * 60 * 1000;
               const active = new Set();
               for (const entry of Array.isArray(ledger?.entries) ? ledger.entries : []) {
@@ -110,7 +110,7 @@ jobs:
               return { active, retryWindowDays, sourceRunId: ledger?.sourceRunId ?? null };
             } catch (error) {
               console.log(`[suppression-ledger] unavailable: ${error instanceof Error ? error.message : String(error)}`);
-              return { active: new Set(), retryWindowDays: 7, sourceRunId: null };
+              return { active: new Set(), retryWindowDays: 30, sourceRunId: null };
             }
           }
 
