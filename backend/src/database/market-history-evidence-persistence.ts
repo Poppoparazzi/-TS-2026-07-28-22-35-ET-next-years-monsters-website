@@ -1,4 +1,4 @@
-// TS: 2026-08-30 10:59 ET
+// TS: 2026-09-04 04:58 UTC
 
 import type { PoolClient } from "pg";
 import {
@@ -6,7 +6,7 @@ import {
   type MarketHistoryEvidence,
 } from "../ratings/market-history-evidence.js";
 
-export const MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+export const MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const MARKET_HISTORY_SUPPRESSION_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 export interface PersistedMarketHistorySuppression {
