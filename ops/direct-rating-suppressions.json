@@ -10,7 +10,12 @@
     ],
     "preflightRetryCodes": [
       "required_evidence_incomplete"
-    ]
+    ],
+    "reasonRetryWindowDays": {
+      "insufficient_liquidity": 30,
+      "insufficient_market_history": 30,
+      "required_evidence_incomplete": 0
+    }
   },
   "entries": [
     {
