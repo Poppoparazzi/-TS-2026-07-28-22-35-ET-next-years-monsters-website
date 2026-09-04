@@ -1,4 +1,4 @@
-// TS: 2026-08-29 20:01 ET
+// TS: 2026-09-04 06:01 ET
 
 import pg from "pg";
 
@@ -11,7 +11,7 @@ export const RATING_CANDIDATE_SUPPRESSION_REPORT_SQL = `
       mhe.usable_bar_count,
       mhe.latest_bar_date,
       mhe.retrieved_at,
-      CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '7 days' AS in_cooldown,
+      CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days' AS in_cooldown,
       CASE
         WHEN mhe.latest_bar_date IS NULL THEN 0
         ELSE (
@@ -63,7 +63,7 @@ export const RATING_RECENT_FAILURE_REASON_REPORT_SQL = `
       END
     ) AS prior_failure
     WHERE drr.refresh_type = 'ratings'
-      AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+      AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
   ), latest_candidate_failure AS (
     SELECT DISTINCT ON (ticker)
       ticker,
