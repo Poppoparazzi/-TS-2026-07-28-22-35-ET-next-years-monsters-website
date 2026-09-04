@@ -1,4 +1,4 @@
-// TS: 2026-09-04 09:00 ET
+// TS: 2026-09-04 12:00 ET
 
 import type { PoolClient } from "pg";
 import {
@@ -9,16 +9,18 @@ import {
 export const MARKET_HISTORY_SUPPRESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const MARKET_HISTORY_SUPPRESSION_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
+type MarketHistorySuppressionReason = "insufficient_market_history" | "insufficient_liquidity";
+
 export interface PersistedMarketHistorySuppression {
-  readonly ratingEligibilityCode: "eligible" | "insufficient_market_history";
-  readonly suppressionReason: "insufficient_market_history" | null;
+  readonly ratingEligibilityCode: "insufficient_market_history" | "insufficient_liquidity";
+  readonly suppressionReason: MarketHistorySuppressionReason;
   readonly usableBarCount: number;
   readonly retrievedAt: string;
 }
 
 interface PersistedMarketHistorySuppressionRow {
-  readonly rating_eligibility_code: "eligible" | "insufficient_market_history";
-  readonly suppression_reason: "insufficient_market_history" | null;
+  readonly rating_eligibility_code: "insufficient_market_history" | "insufficient_liquidity";
+  readonly suppression_reason: MarketHistorySuppressionReason;
   readonly usable_bar_count: string | number;
   readonly retrieved_at: Date | string;
 }
@@ -50,6 +52,14 @@ function assertPersistableMarketHistoryEvidence(
   ) {
     throw new Error("market_history_evidence_invalid_liquidity");
   }
+  if (evidence.suppressionReason === "insufficient_liquidity" && (
+    evidence.usableBarCount < MINIMUM_RATING_HISTORY_BARS ||
+    evidence.twentySessionAverageDollarVolume === undefined ||
+    evidence.twentySessionAverageDollarVolume === null ||
+    evidence.twentySessionAverageDollarVolume >= 1_000_000
+  )) {
+    throw new Error("market_history_evidence_invalid_liquidity_suppression");
+  }
   if (!Number.isFinite(Date.parse(evidence.retrievedAt))) {
     throw new Error("market_history_evidence_invalid_retrieved_at");
   }
@@ -59,18 +69,24 @@ function assertPersistableMarketHistoryEvidence(
 }
 
 function classifyMarketHistoryEvidence(evidence: MarketHistoryEvidence): {
-  ratingEligibilityCode: "eligible" | "insufficient_market_history";
-  suppressionReason: "insufficient_market_history" | null;
+  ratingEligibilityCode: "eligible" | "insufficient_market_history" | "insufficient_liquidity";
+  suppressionReason: MarketHistorySuppressionReason | null;
 } {
-  if (evidence.usableBarCount >= MINIMUM_RATING_HISTORY_BARS) {
+  if (evidence.usableBarCount < MINIMUM_RATING_HISTORY_BARS) {
     return {
-      ratingEligibilityCode: "eligible",
-      suppressionReason: null,
+      ratingEligibilityCode: "insufficient_market_history",
+      suppressionReason: "insufficient_market_history",
+    };
+  }
+  if (evidence.suppressionReason === "insufficient_liquidity") {
+    return {
+      ratingEligibilityCode: "insufficient_liquidity",
+      suppressionReason: "insufficient_liquidity",
     };
   }
   return {
-    ratingEligibilityCode: "insufficient_market_history",
-    suppressionReason: "insufficient_market_history",
+    ratingEligibilityCode: "eligible",
+    suppressionReason: null,
   };
 }
 
@@ -88,10 +104,14 @@ function parsePersistedSuppressionRow(
   if (!Number.isInteger(usableBarCount) || usableBarCount < 0 || !Number.isFinite(retrievedAtMs)) {
     throw new Error("market_history_evidence_invalid_persisted_suppression");
   }
-  if (
-    row.rating_eligibility_code !== "insufficient_market_history" ||
-    row.suppression_reason !== "insufficient_market_history"
-  ) {
+  const validSuppressionPair = (
+    row.rating_eligibility_code === "insufficient_market_history" &&
+    row.suppression_reason === "insufficient_market_history"
+  ) || (
+    row.rating_eligibility_code === "insufficient_liquidity" &&
+    row.suppression_reason === "insufficient_liquidity"
+  );
+  if (!validSuppressionPair) {
     throw new Error("market_history_evidence_invalid_persisted_suppression");
   }
 
