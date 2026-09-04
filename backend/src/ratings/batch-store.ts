@@ -1,4 +1,4 @@
-// TS: 2026-09-04 07:02 ET
+// TS: 2026-09-04 08:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -214,6 +214,17 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
         ) revenue_metric ON true
         LEFT JOIN LATERAL (SELECT count(*) AS fact_count FROM company_facts cf WHERE cf.company_id = c.id) fact_depth ON true
         LEFT JOIN LATERAL (SELECT count(*) AS filing_count FROM sec_filings sf WHERE sf.company_id = c.id) filing_depth ON true
+        LEFT JOIN LATERAL (
+          SELECT (qs.price * qs.volume)::numeric AS dollar_volume
+          FROM quote_snapshots qs
+          WHERE qs.company_id = c.id
+            AND qs.price > 0
+            AND qs.volume > 0
+            AND qs.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+            AND qs.provider_timestamp <= CURRENT_TIMESTAMP + INTERVAL '5 minutes'
+          ORDER BY qs.provider_timestamp DESC, qs.retrieved_at DESC
+          LIMIT 1
+        ) stored_liquidity ON true
         LEFT JOIN market_history_evidence_latest history_readiness ON history_readiness.company_id = c.id
         WHERE c.is_active = true AND cps.sec_status = 'complete' AND c.sec_cik IS NOT NULL
           AND EXISTS (SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id)
@@ -224,6 +235,8 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
         ORDER BY CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
           c.is_pilot DESC,
           CASE WHEN history_readiness.rating_history_ready = true THEN 0 WHEN history_readiness.rating_history_ready IS NULL THEN 1 ELSE 2 END,
+          CASE WHEN stored_liquidity.dollar_volume IS NOT NULL THEN 0 ELSE 1 END,
+          COALESCE(stored_liquidity.dollar_volume, -1) DESC,
           COALESCE(fact_depth.fact_count, 0) DESC,
           COALESCE(filing_depth.filing_count, 0) DESC,
           COALESCE(revenue_metric.latest_annual_revenue, -1) DESC,
