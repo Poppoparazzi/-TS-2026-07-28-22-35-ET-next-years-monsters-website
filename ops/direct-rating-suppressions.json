@@ -2,7 +2,7 @@
   "generatedAt": "2026-09-01T20:10:55.867Z",
   "sourceWorkflow": "Monster Rating rollout worker",
   "sourceRunId": 33553456486,
-  "retryWindowDays": 7,
+  "retryWindowDays": 30,
   "policy": {
     "beforePaidCallCodes": [
       "insufficient_liquidity",
