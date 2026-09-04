@@ -1,4 +1,4 @@
-// TS: 2026-09-04 05:00 ET
+// TS: 2026-09-04 12:00 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -137,10 +137,13 @@ export async function runRatingBatch(
 
       const persistedHistorySuppression = await batchStore.getReusableMarketHistorySuppression(candidate.ticker, marketProvider.name);
       if (persistedHistorySuppression) {
+        const isLiquiditySuppression = persistedHistorySuppression.suppressionReason === "insufficient_liquidity";
         const failure = {
           ticker: candidate.ticker,
-          reason: `Persisted market history has only ${persistedHistorySuppression.usableBarCount} usable daily bars; at least 253 are required.`,
-          reasonCode: persistedHistorySuppression.suppressionReason ?? "insufficient_market_history",
+          reason: isLiquiditySuppression
+            ? "Persisted provider-backed market history previously proved average daily dollar volume below the $1 million tradability floor."
+            : `Persisted market history has only ${persistedHistorySuppression.usableBarCount} usable daily bars; at least 253 are required.`,
+          reasonCode: persistedHistorySuppression.suppressionReason,
           suppressionStage: "stored_market_history_preflight",
         };
         await recordFailure(failure, candidate.isProtected);
@@ -165,13 +168,20 @@ export async function runRatingBatch(
         throw error;
       }
 
-      await batchStore.saveMarketHistoryEvidence(buildMarketHistoryEvidence(history));
+      const marketHistoryEvidence = buildMarketHistoryEvidence(history);
+      await batchStore.saveMarketHistoryEvidence(marketHistoryEvidence);
       const calculatedAt = new Date().toISOString();
       const rating = calculateMonsterRatingV1(buildProductionRatingInput({ company, facts, companyHistory: history, benchmarkHistory, calculatedAt }));
       const quote = quoteFromDailyHistory(company, history);
       await persistenceStore.saveQuote(quote);
 
       if (!rating.eligible) {
+        if (rating.eligibilityCode === "insufficient_liquidity") {
+          await batchStore.saveMarketHistoryEvidence(Object.freeze({
+            ...marketHistoryEvidence,
+            suppressionReason: "insufficient_liquidity" as const,
+          }));
+        }
         const failure = { ticker: candidate.ticker, reason: rating.reasons[0]?.message ?? rating.summary, reasonCode: rating.eligibilityCode, suppressionStage: "rating_engine" };
         await recordFailure(failure, candidate.isProtected);
         continue;
