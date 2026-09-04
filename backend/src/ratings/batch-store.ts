@@ -1,4 +1,4 @@
-// TS: 2026-09-04 02:58 ET
+// TS: 2026-09-04 04:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -68,9 +68,13 @@ export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
     WHERE drr.refresh_type = 'ratings'
       AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
       AND prior_failure ->> 'ticker' = c.ticker
-      AND prior_failure ->> 'reasonCode' IS NOT NULL
       AND prior_failure ->> 'suppressionStage' IN ('sec_preflight', 'rating_engine')
-      AND prior_failure ->> 'reasonCode' <> 'candidate_processing_error'
+      AND prior_failure ->> 'reasonCode' IN (
+        'unresolved_sec_identity',
+        'insufficient_financial_history',
+        'unsupported_security_type',
+        'insufficient_market_history'
+      )
   )
 `;
 
