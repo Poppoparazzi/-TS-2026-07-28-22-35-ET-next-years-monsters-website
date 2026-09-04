@@ -1,4 +1,4 @@
-// TS: 2026-08-30 15:00 ET
+// TS: 2026-09-04 05:00 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -98,6 +98,12 @@ export async function runRatingBatch(
   const ratedTickers: string[] = [];
   const protectedMustRepair: RatingBatchFailure[] = [];
   const replaceable: RatingBatchFailure[] = [];
+  const recordFailure = async (failure: RatingBatchFailure, protectedCandidate: boolean): Promise<void> => {
+    if (batchStore.recordCandidateFailure) {
+      await batchStore.recordCandidateFailure(runId, failure, protectedCandidate);
+    }
+    if (protectedCandidate) protectedMustRepair.push(failure); else replaceable.push(failure);
+  };
   let examinedCount = 0;
   let stoppedReason: string | null = null;
   let benchmarkHistory: DailyMarketHistory | undefined;
@@ -117,7 +123,7 @@ export async function runRatingBatch(
 
       if (company.cik <= 0 || facts.cik !== company.cik) {
         const failure = { ticker: candidate.ticker, reason: "Official SEC company identity does not match the company-facts identity.", reasonCode: "unresolved_sec_identity", suppressionStage: "sec_preflight" };
-        if (candidate.isProtected) protectedMustRepair.push(failure); else replaceable.push(failure);
+        await recordFailure(failure, candidate.isProtected);
         continue;
       }
 
@@ -125,7 +131,7 @@ export async function runRatingBatch(
       const annualRevenuePeriods = annualFinancials.filter((period) => typeof period.revenue === "number" && Number.isFinite(period.revenue));
       if (annualFinancials.length < 2 || annualRevenuePeriods.length < 2) {
         const failure = { ticker: candidate.ticker, reason: "At least two comparable annual SEC revenue periods are required.", reasonCode: "insufficient_financial_history", suppressionStage: "sec_preflight" };
-        if (candidate.isProtected) protectedMustRepair.push(failure); else replaceable.push(failure);
+        await recordFailure(failure, candidate.isProtected);
         continue;
       }
 
@@ -137,7 +143,7 @@ export async function runRatingBatch(
           reasonCode: persistedHistorySuppression.suppressionReason ?? "insufficient_market_history",
           suppressionStage: "stored_market_history_preflight",
         };
-        if (candidate.isProtected) protectedMustRepair.push(failure); else replaceable.push(failure);
+        await recordFailure(failure, candidate.isProtected);
         continue;
       }
 
@@ -167,7 +173,7 @@ export async function runRatingBatch(
 
       if (!rating.eligible) {
         const failure = { ticker: candidate.ticker, reason: rating.reasons[0]?.message ?? rating.summary, reasonCode: rating.eligibilityCode, suppressionStage: "rating_engine" };
-        if (candidate.isProtected) protectedMustRepair.push(failure); else replaceable.push(failure);
+        await recordFailure(failure, candidate.isProtected);
         continue;
       }
 
@@ -180,7 +186,7 @@ export async function runRatingBatch(
       if (providerLimitReached(message) || providerAuthorizationUnavailable(message)) { stoppedReason = `Market-data provider remained unavailable while processing ${candidate.ticker}: ${message}`; break; }
       if (providerTransportUnavailable(message)) { stoppedReason = `Upstream transport unavailable while processing ${candidate.ticker}: ${message}`; break; }
       const failure = { ticker: candidate.ticker, reason: message, reasonCode: "candidate_processing_error", suppressionStage: "candidate_processing" };
-      if (candidate.isProtected) protectedMustRepair.push(failure); else replaceable.push(failure);
+      await recordFailure(failure, candidate.isProtected);
     }
   }
 
