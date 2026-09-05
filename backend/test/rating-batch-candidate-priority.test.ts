@@ -1,0 +1,35 @@
+// TS: 2026-09-05 00:59 ET
+
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const batchStoreUrl = new URL("../src/ratings/batch-store.ts", import.meta.url);
+
+test("quota-safe candidate ordering prefers fresh reusable market evidence before weaker reserve candidates", async () => {
+  const source = await readFile(batchStoreUrl, "utf8");
+
+  const orderByStart = source.indexOf("ORDER BY CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE}");
+  const orderByEnd = source.indexOf("LIMIT $1", orderByStart);
+  assert.notEqual(orderByStart, -1, "candidate query must retain the protected-company ordering anchor");
+  assert.notEqual(orderByEnd, -1, "candidate query must retain its bounded candidate limit");
+
+  const ordering = source.slice(orderByStart, orderByEnd);
+  const freshHistory = ordering.indexOf("history_readiness.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'");
+  const readyHistory = ordering.indexOf("history_readiness.rating_history_ready = true");
+  const verifiedLiquidity = ordering.indexOf("history_readiness.twenty_session_average_dollar_volume >= 1000000");
+  const storedLiquidity = ordering.indexOf("stored_liquidity.dollar_volume IS NOT NULL");
+  const revenueDepth = ordering.indexOf("revenue_depth.annual_revenue_period_count, 0) >= 2");
+
+  assert.ok(freshHistory >= 0, "candidate ordering must explicitly prefer recently retrieved stored market evidence");
+  assert.ok(readyHistory > freshHistory, "freshness must be evaluated before stored rating-history readiness");
+  assert.ok(verifiedLiquidity > readyHistory, "verified stored liquidity must remain ahead of weaker evidence-depth tie-breakers");
+  assert.ok(storedLiquidity > verifiedLiquidity, "fresh quote liquidity must remain a fallback behind verified market-history liquidity");
+  assert.ok(revenueDepth > storedLiquidity, "verified multi-year annual revenue depth must remain ahead of generic SEC fact/filing counts");
+
+  assert.match(
+    ordering,
+    /WHEN history_readiness\.retrieved_at IS NULL THEN 1\s+ELSE 2/s,
+    "no-history candidates must remain ahead of candidates whose stored history is stale enough to require refresh",
+  );
+});
