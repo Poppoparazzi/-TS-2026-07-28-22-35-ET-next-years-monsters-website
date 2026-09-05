@@ -1,4 +1,4 @@
-// TS: 2026-08-30 12:04 ET
+// TS: 2026-09-05 18:12 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -127,6 +127,8 @@ class OneCandidateBatchStore implements RatingBatchStore {
     _ticker: string,
     _provider: string,
   ): Promise<PersistedMarketHistorySuppression | null> { return null; }
+  public async tryClaimMarketHistoryRequest(_ticker: string, _provider: string, _runId: string): Promise<boolean> { return true; }
+  public async releaseMarketHistoryRequestClaim(_ticker: string, _provider: string, _runId: string): Promise<boolean> { return true; }
   public async saveMarketHistoryEvidence(_evidence: MarketHistoryEvidence): Promise<void> {}
   public async finishRun(_runId: string, accounting: RatingBatchAccounting): Promise<void> { this.finished = accounting; }
   public async close(): Promise<void> {}
