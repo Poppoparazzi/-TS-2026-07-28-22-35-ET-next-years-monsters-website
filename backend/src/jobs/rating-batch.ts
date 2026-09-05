@@ -1,4 +1,4 @@
-// TS: 2026-09-05 14:00 ET
+// TS: 2026-09-05 17:59 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -162,44 +162,57 @@ export async function runRatingBatch(
         if (benchmarkProblem) { stoppedReason = benchmarkProblem; break; }
       }
 
-      // Recheck immediately before the paid company-history request. A concurrent worker may
-      // have persisted a durable ineligibility result while this worker was loading SPY or pacing.
+      // Recheck immediately before attempting the cross-worker claim. A concurrent worker may
+      // have persisted durable ineligibility while this worker was loading SPY or pacing.
       if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
-      let history: DailyMarketHistory;
-      try { history = await getPacedHistory(candidate.ticker, 300); }
-      catch (error) {
-        const message = reason(error);
-        if (providerLimitReached(message) || providerAuthorizationUnavailable(message) || providerTransportUnavailable(message)) {
-          stoppedReason = `Market-data provider unavailable while processing ${candidate.ticker}: ${message}`;
-          break;
+      const marketHistoryClaimed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
+      if (!marketHistoryClaimed) continue;
+
+      try {
+        // Recheck after the atomic claim as well. This closes the race between the last free
+        // suppression read and claim acquisition without spending another paid provider call.
+        if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
+
+        let history: DailyMarketHistory;
+        try { history = await getPacedHistory(candidate.ticker, 300); }
+        catch (error) {
+          const message = reason(error);
+          if (providerLimitReached(message) || providerAuthorizationUnavailable(message) || providerTransportUnavailable(message)) {
+            stoppedReason = `Market-data provider unavailable while processing ${candidate.ticker}: ${message}`;
+            break;
+          }
+          throw error;
         }
-        throw error;
-      }
 
-      const marketHistoryEvidence = buildMarketHistoryEvidence(history);
-      await batchStore.saveMarketHistoryEvidence(marketHistoryEvidence);
-      const calculatedAt = new Date().toISOString();
-      const rating = calculateMonsterRatingV1(buildProductionRatingInput({ company, facts, companyHistory: history, benchmarkHistory, calculatedAt }));
-      const quote = quoteFromDailyHistory(company, history);
-      await persistenceStore.saveQuote(quote);
+        const marketHistoryEvidence = buildMarketHistoryEvidence(history);
+        await batchStore.saveMarketHistoryEvidence(marketHistoryEvidence);
+        const calculatedAt = new Date().toISOString();
+        const rating = calculateMonsterRatingV1(buildProductionRatingInput({ company, facts, companyHistory: history, benchmarkHistory, calculatedAt }));
+        const quote = quoteFromDailyHistory(company, history);
+        await persistenceStore.saveQuote(quote);
 
-      if (!rating.eligible) {
-        if (rating.eligibilityCode === "insufficient_liquidity") {
-          await batchStore.saveMarketHistoryEvidence(Object.freeze({
-            ...marketHistoryEvidence,
-            suppressionReason: "insufficient_liquidity" as const,
-          }));
+        if (!rating.eligible) {
+          if (rating.eligibilityCode === "insufficient_liquidity") {
+            await batchStore.saveMarketHistoryEvidence(Object.freeze({
+              ...marketHistoryEvidence,
+              suppressionReason: "insufficient_liquidity" as const,
+            }));
+          }
+          const failure = { ticker: candidate.ticker, reason: rating.reasons[0]?.message ?? rating.summary, reasonCode: rating.eligibilityCode, suppressionStage: "rating_engine" };
+          await recordFailure(failure, candidate.isProtected);
+          continue;
         }
-        const failure = { ticker: candidate.ticker, reason: rating.reasons[0]?.message ?? rating.summary, reasonCode: rating.eligibilityCode, suppressionStage: "rating_engine" };
-        await recordFailure(failure, candidate.isProtected);
-        continue;
-      }
 
-      const publishableRating = buildPublishableRating({ rating, facts, filings, quote, secProviderName: secProvider.name });
-      if (!persistenceStore.saveRating) throw new Error("Rating persistence is unavailable.");
-      await persistenceStore.saveRating(publishableRating);
-      ratedTickers.push(candidate.ticker);
+        const publishableRating = buildPublishableRating({ rating, facts, filings, quote, secProviderName: secProvider.name });
+        if (!persistenceStore.saveRating) throw new Error("Rating persistence is unavailable.");
+        await persistenceStore.saveRating(publishableRating);
+        ratedTickers.push(candidate.ticker);
+      } finally {
+        // A bounded lease guarantees recovery if release itself cannot reach Postgres. Do not turn
+        // an already-persisted rating/evidence result into a false candidate failure on cleanup.
+        await batchStore.releaseMarketHistoryRequestClaim(candidate.ticker, marketProvider.name, runId).catch(() => false);
+      }
     } catch (error) {
       const message = reason(error);
       if (providerLimitReached(message) || providerAuthorizationUnavailable(message)) { stoppedReason = `Market-data provider remained unavailable while processing ${candidate.ticker}: ${message}`; break; }
