@@ -1,4 +1,4 @@
-// TS: 2026-09-05 09:02 ET
+// TS: 2026-09-05 10:00 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -15,6 +15,21 @@ test("rating candidate selection leaves market-history retry suppression to dura
     recentFailureSql,
     /data_refresh_runs[\s\S]*metadata -> 'replaceable'[\s\S]*INTERVAL '30 days'[\s\S]*prior_failure ->> 'ticker' = c\.ticker[\s\S]*prior_failure ->> 'suppressionStage' = 'sec_preflight'[\s\S]*'unresolved_sec_identity'[\s\S]*'insufficient_financial_history'[\s\S]*'unsupported_security_type'/,
     "structural cooldowns must come only from SEC preflight evidence",
+  );
+  assert.match(
+    recentFailureSql,
+    /prior_failure ->> 'reasonCode' = 'unresolved_sec_identity'[\s\S]*c\.sec_cik IS NOT NULL[\s\S]*cps\.sec_status = 'complete'/,
+    "resolved SEC identity must invalidate an older unresolved-identity cooldown",
+  );
+  assert.match(
+    recentFailureSql,
+    /sec_filings newer_sf[\s\S]*newer_sf\.company_id = c\.id[\s\S]*newer_sf\.retrieved_at > drr\.started_at/,
+    "newer SEC filings must invalidate older structural preflight cooldowns",
+  );
+  assert.match(
+    recentFailureSql,
+    /company_facts newer_cf[\s\S]*newer_cf\.company_id = c\.id[\s\S]*newer_cf\.retrieved_at > drr\.started_at/,
+    "newer SEC company facts must invalidate older structural preflight cooldowns",
   );
   assert.doesNotMatch(
     recentFailureSql,
