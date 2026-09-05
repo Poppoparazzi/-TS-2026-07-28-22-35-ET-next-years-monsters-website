@@ -1,4 +1,4 @@
-// TS: 2026-09-04 18:03 ET
+// TS: 2026-09-05 08:00 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -6,36 +6,33 @@ import test from "node:test";
 
 const batchStorePath = new URL("../src/ratings/batch-store.ts", import.meta.url);
 
-test("rating candidate selection suppresses only recent structural ordinary ineligibility outcomes", async () => {
+test("rating candidate selection leaves market-history retry suppression to durable latest evidence", async () => {
   const source = await readFile(batchStorePath, "utf8");
+  const recentFailureSql = source.match(/export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `([\s\S]*?)`;/)?.[1];
+  assert.ok(recentFailureSql, "recent replaceable failure SQL must remain defined");
 
   assert.match(
-    source,
-    /export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `[^`]*data_refresh_runs[^`]*metadata -> 'replaceable'[^`]*INTERVAL '30 days'[^`]*prior_failure ->> 'ticker' = c\.ticker[^`]*prior_failure ->> 'suppressionStage' IN \('sec_preflight', 'stored_market_history_preflight', 'rating_engine'\)[^`]*prior_failure ->> 'reasonCode' IN \([^`]*'unresolved_sec_identity'[^`]*'insufficient_financial_history'[^`]*'unsupported_security_type'[^`]*'insufficient_market_history'[^`]*'insufficient_liquidity'[^`]*\)[^`]*prior_failure ->> 'reasonCode' = 'stale_market_data'[^`]*INTERVAL '2 days'[^`]*`/s,
-    "candidate selection must reuse durable structural ineligibility for thirty days and stale-market-data outcomes only for a short two-day cooldown",
+    recentFailureSql,
+    /data_refresh_runs[\s\S]*metadata -> 'replaceable'[\s\S]*INTERVAL '30 days'[\s\S]*prior_failure ->> 'ticker' = c\.ticker[\s\S]*'unresolved_sec_identity'[\s\S]*'insufficient_financial_history'[\s\S]*'unsupported_security_type'/,
+    "run metadata should retain only structural non-market-data cooldown reasons",
   );
   assert.doesNotMatch(
-    source,
-    /prior_failure ->> 'reasonCode' IS NOT NULL/,
-    "candidate cooldown must not suppress every machine-readable failure indiscriminately",
+    recentFailureSql,
+    /insufficient_market_history|insufficient_liquidity|stale_market_data|stored_market_history_preflight|rating_engine/,
+    "market-history failures must not be double-suppressed by stale run metadata after newer persisted evidence becomes eligible",
   );
   assert.match(
     source,
-    /prior_failure ->> 'reasonCode' = 'stale_market_data'[^`]*INTERVAL '2 days'/s,
-    "stale market data should avoid an immediate repeat paid history call while remaining retryable after a short cooldown",
-  );
-  assert.doesNotMatch(
-    source,
-    /prior_failure ->> 'reasonCode' = 'stale_market_data'[^`]*INTERVAL '30 days'/s,
-    "stale market data must not inherit the thirty-day structural suppression window",
+    /EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `[\s\S]*market_history_evidence_latest[\s\S]*insufficient_liquidity[\s\S]*stale_market_data/,
+    "durable latest market-history evidence must remain the authority for history/liquidity/staleness retry suppression",
   );
   assert.match(
     source,
     /AND \$\{EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL\}/,
-    "the structured ordinary-ineligibility exclusion must participate in the production candidate query",
+    "structural ordinary-ineligibility cooldown must still participate in the production candidate query",
   );
   assert.doesNotMatch(
-    source,
+    recentFailureSql,
     /metadata -> 'protectedMustRepair'/,
     "protected/VCL must-repair candidates must not be suppressed by the ordinary failure cooldown",
   );
