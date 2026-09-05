@@ -1,4 +1,4 @@
-// TS: 2026-09-04 12:00 ET
+// TS: 2026-09-05 14:00 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -104,6 +104,24 @@ export async function runRatingBatch(
     }
     if (protectedCandidate) protectedMustRepair.push(failure); else replaceable.push(failure);
   };
+  const recordReusableHistorySuppression = async (
+    ticker: string,
+    isProtected: boolean,
+  ): Promise<boolean> => {
+    const suppression = await batchStore.getReusableMarketHistorySuppression(ticker, marketProvider.name);
+    if (!suppression) return false;
+    const isLiquiditySuppression = suppression.suppressionReason === "insufficient_liquidity";
+    const failure = {
+      ticker,
+      reason: isLiquiditySuppression
+        ? "Persisted provider-backed market history previously proved average daily dollar volume below the $1 million tradability floor."
+        : `Persisted market history has only ${suppression.usableBarCount} usable daily bars; at least 253 are required.`,
+      reasonCode: suppression.suppressionReason,
+      suppressionStage: "stored_market_history_preflight",
+    };
+    await recordFailure(failure, isProtected);
+    return true;
+  };
   let examinedCount = 0;
   let stoppedReason: string | null = null;
   let benchmarkHistory: DailyMarketHistory | undefined;
@@ -135,20 +153,7 @@ export async function runRatingBatch(
         continue;
       }
 
-      const persistedHistorySuppression = await batchStore.getReusableMarketHistorySuppression(candidate.ticker, marketProvider.name);
-      if (persistedHistorySuppression) {
-        const isLiquiditySuppression = persistedHistorySuppression.suppressionReason === "insufficient_liquidity";
-        const failure = {
-          ticker: candidate.ticker,
-          reason: isLiquiditySuppression
-            ? "Persisted provider-backed market history previously proved average daily dollar volume below the $1 million tradability floor."
-            : `Persisted market history has only ${persistedHistorySuppression.usableBarCount} usable daily bars; at least 253 are required.`,
-          reasonCode: persistedHistorySuppression.suppressionReason,
-          suppressionStage: "stored_market_history_preflight",
-        };
-        await recordFailure(failure, candidate.isProtected);
-        continue;
-      }
+      if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
       if (!benchmarkHistory) {
         try { benchmarkHistory = await getPacedHistory("SPY", 300); }
@@ -156,6 +161,10 @@ export async function runRatingBatch(
         const benchmarkProblem = validateBenchmarkHistory(benchmarkHistory);
         if (benchmarkProblem) { stoppedReason = benchmarkProblem; break; }
       }
+
+      // Recheck immediately before the paid company-history request. A concurrent worker may
+      // have persisted a durable ineligibility result while this worker was loading SPY or pacing.
+      if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
       let history: DailyMarketHistory;
       try { history = await getPacedHistory(candidate.ticker, 300); }
