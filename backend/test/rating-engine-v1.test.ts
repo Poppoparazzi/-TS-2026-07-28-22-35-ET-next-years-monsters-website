@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:08 UTC
+// TS: 2026-09-05 16:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -100,4 +100,21 @@ test("Monster Rating v1 requires comparable annual SEC history", () => {
   assert.equal(result.eligible, false);
   assert.equal(result.eligibilityCode, "insufficient_financial_history");
   assert.match(result.reasons[0]?.message ?? "", /two comparable annual SEC revenue periods/i);
+});
+
+test("Monster Rating v1 applies the liquidity floor to per-session dollar volume", () => {
+  const input = productionInput();
+  const marketBarsWithSubfloorDollarVolume = Object.freeze(input.marketBars.map((bar, index) => {
+    if (index < 280) return bar;
+    const close = 10 + (index - 279) * 10;
+    return Object.freeze({ ...bar, close, volume: 900_000 / close });
+  }));
+
+  const result = calculateMonsterRatingV1({
+    ...input,
+    marketBars: marketBarsWithSubfloorDollarVolume,
+  });
+
+  assert.equal(result.eligible, false);
+  assert.equal(result.eligibilityCode, "insufficient_liquidity");
 });
