@@ -1,4 +1,4 @@
-// TS: 2026-09-05 10:00 ET
+// TS: 2026-09-05 11:01 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -23,13 +23,18 @@ test("rating candidate selection leaves market-history retry suppression to dura
   );
   assert.match(
     recentFailureSql,
-    /sec_filings newer_sf[\s\S]*newer_sf\.company_id = c\.id[\s\S]*newer_sf\.retrieved_at > drr\.started_at/,
-    "newer SEC filings must invalidate older structural preflight cooldowns",
+    /prior_failure ->> 'reasonCode' = 'insufficient_financial_history'[\s\S]*newer_revenue_fact\.retrieved_at > drr\.started_at[\s\S]*newer_revenue_fact\.fiscal_period = 'FY'[\s\S]*count\(DISTINCT current_revenue_fact\.fiscal_year\)[\s\S]*>= 2/,
+    "insufficient-financial-history cooldowns must reopen only after newer annual revenue evidence raises current depth to at least two fiscal years",
   );
-  assert.match(
+  assert.doesNotMatch(
     recentFailureSql,
-    /company_facts newer_cf[\s\S]*newer_cf\.company_id = c\.id[\s\S]*newer_cf\.retrieved_at > drr\.started_at/,
-    "newer SEC company facts must invalidate older structural preflight cooldowns",
+    /sec_filings newer_sf|company_facts newer_cf/,
+    "generic newer SEC records must not invalidate structural cooldowns regardless of failure reason",
+  );
+  assert.doesNotMatch(
+    recentFailureSql,
+    /prior_failure ->> 'reasonCode' = 'unsupported_security_type'[\s\S]*retrieved_at > drr\.started_at/,
+    "unsupported-security cooldowns must not be reopened by unrelated newer SEC data",
   );
   assert.doesNotMatch(
     recentFailureSql,
