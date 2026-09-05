@@ -1,4 +1,4 @@
-// TS: 2026-09-05 17:59 ET
+// TS: 2026-09-05 19:57 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -33,7 +33,10 @@ function providerLimitReached(message: string): boolean { return /rate limit|api
 function providerAuthorizationUnavailable(message: string): boolean { return /http 40[13]|unauthori[sz]ed|forbidden|invalid api key|api key.*invalid|authentication|entitlement|permission denied/i.test(message); }
 function providerTransportUnavailable(message: string): boolean { return /fetch failed|network|timeout|timed out|econnreset|econnrefused|etimedout|enotfound|eai_again|dns|socket hang up|service unavailable|bad gateway|gateway timeout|http 408|http 5\d\d/i.test(message); }
 function boundedDelay(value: number | undefined, maximum = 60_000): number { const parsed = Math.trunc(value ?? 0); return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), maximum) : 0; }
-function boundedRetryCount(value: number | undefined): number { const parsed = Math.trunc(value ?? 0); return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 1_000) : 0; }
+// The Postgres market-history claim lease is capped at one hour. Three retries at the maximum
+// 15-minute quota backoff keep deliberate retry sleep inside that lease instead of reopening the
+// cross-worker duplicate-paid-call race while a worker is still waiting on the provider.
+function boundedRetryCount(value: number | undefined): number { const parsed = Math.trunc(value ?? 0); return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 3) : 0; }
 function sleep(milliseconds: number): Promise<void> { return milliseconds <= 0 ? Promise.resolve() : new Promise((resolve) => setTimeout(resolve, milliseconds)); }
 
 function countFailureDimension(
