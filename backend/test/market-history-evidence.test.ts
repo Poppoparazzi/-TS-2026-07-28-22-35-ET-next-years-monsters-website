@@ -1,4 +1,4 @@
-// TS: 2026-09-05 03:58 ET
+// TS: 2026-09-05 15:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -32,6 +32,22 @@ test("counts only usable provider daily bars for rating preflight evidence", () 
   assert.equal(evidence.retrievedAt, history.retrievedAt);
   assert.equal(evidence.feedDisclosure, history.feedDisclosure);
   assert.equal(hasMinimumRatingHistoryEvidence(evidence), false);
+});
+
+test("computes twenty-session liquidity as the average of each session's close times volume", () => {
+  const history: DailyMarketHistory = Object.freeze({
+    symbol: "LIQ",
+    provider: "licensed-test-provider",
+    retrievedAt: "2026-09-05T19:00:00.000Z",
+    feedDisclosure: "test provider history",
+    bars: Object.freeze([
+      Object.freeze({ date: "2026-09-03", open: 10, high: 10, low: 10, close: 10, volume: 100_000 }),
+      Object.freeze({ date: "2026-09-04", open: 100, high: 100, low: 100, close: 100, volume: 10_000 }),
+    ]),
+  });
+
+  const evidence = buildMarketHistoryEvidence(history);
+  assert.equal(evidence.twentySessionAverageDollarVolume, 1_000_000);
 });
 
 test("marks provider history stale immediately after a paid response so it can be suppressed before a repeat call", () => {
