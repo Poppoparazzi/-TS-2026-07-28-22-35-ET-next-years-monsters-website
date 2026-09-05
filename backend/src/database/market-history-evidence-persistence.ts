@@ -1,4 +1,4 @@
-// TS: 2026-09-04 19:01 ET
+// TS: 2026-09-04 20:58 ET
 
 import type { PoolClient } from "pg";
 import {
@@ -173,16 +173,23 @@ export async function getPersistedMarketHistorySuppression(
   const result = await client.query<PersistedMarketHistorySuppressionRow>(
     `
       SELECT
-        rating_eligibility_code,
-        suppression_reason,
-        usable_bar_count,
-        retrieved_at
-      FROM market_history_evidence
-      WHERE company_id = $1
-        AND provider = $2
-        AND suppression_reason IS NOT NULL
-      ORDER BY retrieved_at DESC
-      LIMIT 1
+        latest.rating_eligibility_code,
+        latest.suppression_reason,
+        latest.usable_bar_count,
+        latest.retrieved_at
+      FROM (
+        SELECT
+          rating_eligibility_code,
+          suppression_reason,
+          usable_bar_count,
+          retrieved_at
+        FROM market_history_evidence
+        WHERE company_id = $1
+          AND provider = $2
+        ORDER BY retrieved_at DESC
+        LIMIT 1
+      ) latest
+      WHERE latest.suppression_reason IS NOT NULL
     `,
     [normalizedCompanyId, normalizedProvider],
   );
@@ -206,17 +213,24 @@ export async function getPersistedMarketHistorySuppressionByTicker(
   const result = await client.query<PersistedMarketHistorySuppressionRow>(
     `
       SELECT
-        mhe.rating_eligibility_code,
-        mhe.suppression_reason,
-        mhe.usable_bar_count,
-        mhe.retrieved_at
-      FROM market_history_evidence mhe
-      INNER JOIN companies c ON c.id = mhe.company_id
-      WHERE c.ticker = $1
-        AND mhe.provider = $2
-        AND mhe.suppression_reason IS NOT NULL
-      ORDER BY mhe.retrieved_at DESC
-      LIMIT 1
+        latest.rating_eligibility_code,
+        latest.suppression_reason,
+        latest.usable_bar_count,
+        latest.retrieved_at
+      FROM (
+        SELECT
+          mhe.rating_eligibility_code,
+          mhe.suppression_reason,
+          mhe.usable_bar_count,
+          mhe.retrieved_at
+        FROM market_history_evidence mhe
+        INNER JOIN companies c ON c.id = mhe.company_id
+        WHERE c.ticker = $1
+          AND mhe.provider = $2
+        ORDER BY mhe.retrieved_at DESC
+        LIMIT 1
+      ) latest
+      WHERE latest.suppression_reason IS NOT NULL
     `,
     [normalizedTicker, normalizedProvider],
   );
