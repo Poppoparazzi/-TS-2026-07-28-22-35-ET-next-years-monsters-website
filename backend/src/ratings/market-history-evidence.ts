@@ -1,4 +1,4 @@
-// TS: 2026-09-05 03:58 ET
+// TS: 2026-09-05 15:00 ET
 
 import type { DailyMarketHistory } from "../providers/types.js";
 
@@ -30,15 +30,10 @@ export function buildMarketHistoryEvidence(history: DailyMarketHistory): MarketH
     })
     .sort((left, right) => left.date.localeCompare(right.date));
   const recentBars = usableBars.slice(-20);
-  const latestClose = usableBars.at(-1)?.close ?? null;
   const latestBarDate = usableBars.at(-1)?.date ?? null;
-  const recentAverageVolume = recentBars.length > 0
-    ? recentBars.reduce((total, bar) => total + bar.volume, 0) / recentBars.length
+  const twentySessionAverageDollarVolume = recentBars.length > 0
+    ? recentBars.reduce((total, bar) => total + (bar.close * bar.volume), 0) / recentBars.length
     : null;
-  const twentySessionAverageDollarVolume =
-    latestClose !== null && recentAverageVolume !== null
-      ? recentAverageVolume * latestClose
-      : null;
   const latestBarMs = latestBarDate === null ? Number.NaN : Date.parse(latestBarDate);
   const staleMarketData =
     Number.isFinite(retrievedAtMs) && Number.isFinite(latestBarMs) &&
