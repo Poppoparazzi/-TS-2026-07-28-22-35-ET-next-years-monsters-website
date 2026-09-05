@@ -1,4 +1,4 @@
-// TS: 2026-09-04 19:01 ET
+// TS: 2026-09-05 03:58 ET
 
 import type { DailyMarketHistory } from "../providers/types.js";
 
@@ -17,11 +17,17 @@ export interface MarketHistoryEvidence {
 }
 
 export function buildMarketHistoryEvidence(history: DailyMarketHistory): MarketHistoryEvidence {
+  const retrievedAtMs = Date.parse(history.retrievedAt);
   const usableBars = history.bars
-    .filter((bar) =>
-      Number.isFinite(bar.close) && bar.close > 0 &&
-      Number.isFinite(bar.volume) && bar.volume >= 0
-    )
+    .filter((bar) => {
+      const barDateMs = /^\d{4}-\d{2}-\d{2}$/.test(bar.date)
+        ? Date.parse(`${bar.date}T00:00:00.000Z`)
+        : Number.NaN;
+      return Number.isFinite(bar.close) && bar.close > 0 &&
+        Number.isFinite(bar.volume) && bar.volume >= 0 &&
+        Number.isFinite(barDateMs) &&
+        (!Number.isFinite(retrievedAtMs) || barDateMs <= retrievedAtMs);
+    })
     .sort((left, right) => left.date.localeCompare(right.date));
   const recentBars = usableBars.slice(-20);
   const latestClose = usableBars.at(-1)?.close ?? null;
@@ -33,7 +39,6 @@ export function buildMarketHistoryEvidence(history: DailyMarketHistory): MarketH
     latestClose !== null && recentAverageVolume !== null
       ? recentAverageVolume * latestClose
       : null;
-  const retrievedAtMs = Date.parse(history.retrievedAt);
   const latestBarMs = latestBarDate === null ? Number.NaN : Date.parse(latestBarDate);
   const staleMarketData =
     Number.isFinite(retrievedAtMs) && Number.isFinite(latestBarMs) &&
