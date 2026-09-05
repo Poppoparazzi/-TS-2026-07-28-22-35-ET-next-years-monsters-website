@@ -1,4 +1,4 @@
-// TS: 2026-09-05 12:59 ET
+// TS: 2026-09-05 17:58 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -174,6 +174,8 @@ export interface RatingBatchStore {
     ticker: string,
     provider: string,
   ): Promise<PersistedMarketHistorySuppression | null>;
+  tryClaimMarketHistoryRequest(ticker: string, provider: string, runId: string): Promise<boolean>;
+  releaseMarketHistoryRequestClaim(ticker: string, provider: string, runId: string): Promise<boolean>;
   saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void>;
   recordCandidateFailure?(
     runId: string,
@@ -216,6 +218,14 @@ export class UnconfiguredRatingBatchStore implements RatingBatchStore {
     _ticker: string,
     _provider: string,
   ): Promise<PersistedMarketHistorySuppression | null> {
+    throw new ProviderNotConfiguredError("Rating batch database");
+  }
+
+  public async tryClaimMarketHistoryRequest(_ticker: string, _provider: string, _runId: string): Promise<boolean> {
+    throw new ProviderNotConfiguredError("Rating batch database");
+  }
+
+  public async releaseMarketHistoryRequestClaim(_ticker: string, _provider: string, _runId: string): Promise<boolean> {
     throw new ProviderNotConfiguredError("Rating batch database");
   }
 
@@ -362,6 +372,28 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
 
   public async getReusableMarketHistorySuppression(ticker: string, provider: string): Promise<PersistedMarketHistorySuppression | null> {
     return getPersistedMarketHistorySuppressionByTicker(this.pool, ticker, provider);
+  }
+
+  public async tryClaimMarketHistoryRequest(ticker: string, provider: string, runId: string): Promise<boolean> {
+    const result = await this.pool.query<{ claimed: boolean }>(
+      `SELECT try_claim_market_history_request(c.id, $2, $3, $4::bigint, 3600) AS claimed
+       FROM companies c
+       WHERE c.ticker = $1
+       LIMIT 1`,
+      [ticker, provider, MONSTER_RATING_ENGINE_VERSION, runId],
+    );
+    return result.rows[0]?.claimed === true;
+  }
+
+  public async releaseMarketHistoryRequestClaim(ticker: string, provider: string, runId: string): Promise<boolean> {
+    const result = await this.pool.query<{ released: boolean }>(
+      `SELECT release_market_history_request_claim(c.id, $2, $3, $4::bigint) AS released
+       FROM companies c
+       WHERE c.ticker = $1
+       LIMIT 1`,
+      [ticker, provider, MONSTER_RATING_ENGINE_VERSION, runId],
+    );
+    return result.rows[0]?.released === true;
   }
 
   public async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence): Promise<void> {
