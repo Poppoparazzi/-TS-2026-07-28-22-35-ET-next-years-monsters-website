@@ -1,4 +1,4 @@
-// TS: 2026-09-05 10:00 ET
+// TS: 2026-09-05 11:01 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -92,17 +92,41 @@ export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
           AND c.sec_cik IS NOT NULL
           AND cps.sec_status = 'complete'
         )
-        OR EXISTS (
-          SELECT 1
-          FROM sec_filings newer_sf
-          WHERE newer_sf.company_id = c.id
-            AND newer_sf.retrieved_at > drr.started_at
-        )
-        OR EXISTS (
-          SELECT 1
-          FROM company_facts newer_cf
-          WHERE newer_cf.company_id = c.id
-            AND newer_cf.retrieved_at > drr.started_at
+        OR (
+          prior_failure ->> 'reasonCode' = 'insufficient_financial_history'
+          AND EXISTS (
+            SELECT 1
+            FROM company_facts newer_revenue_fact
+            WHERE newer_revenue_fact.company_id = c.id
+              AND newer_revenue_fact.retrieved_at > drr.started_at
+              AND newer_revenue_fact.taxonomy = 'us-gaap'
+              AND newer_revenue_fact.concept IN (
+                'RevenueFromContractWithCustomerExcludingAssessedTax',
+                'Revenues',
+                'SalesRevenueNet'
+              )
+              AND newer_revenue_fact.value_numeric IS NOT NULL
+              AND newer_revenue_fact.value_numeric >= 0
+              AND newer_revenue_fact.fiscal_year IS NOT NULL
+              AND newer_revenue_fact.fiscal_period = 'FY'
+              AND newer_revenue_fact.form_type IN ('10-K','10-K/A','20-F','20-F/A','40-F','40-F/A')
+          )
+          AND (
+            SELECT count(DISTINCT current_revenue_fact.fiscal_year)
+            FROM company_facts current_revenue_fact
+            WHERE current_revenue_fact.company_id = c.id
+              AND current_revenue_fact.taxonomy = 'us-gaap'
+              AND current_revenue_fact.concept IN (
+                'RevenueFromContractWithCustomerExcludingAssessedTax',
+                'Revenues',
+                'SalesRevenueNet'
+              )
+              AND current_revenue_fact.value_numeric IS NOT NULL
+              AND current_revenue_fact.value_numeric >= 0
+              AND current_revenue_fact.fiscal_year IS NOT NULL
+              AND current_revenue_fact.fiscal_period = 'FY'
+              AND current_revenue_fact.form_type IN ('10-K','10-K/A','20-F','20-F/A','40-F','40-F/A')
+          ) >= 2
         )
       )
   )
