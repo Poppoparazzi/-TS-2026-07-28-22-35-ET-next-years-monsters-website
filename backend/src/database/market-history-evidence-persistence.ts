@@ -1,4 +1,4 @@
-// TS: 2026-09-04 20:58 ET
+// TS: 2026-09-05 05:01 ET
 
 import type { PoolClient } from "pg";
 import {
@@ -67,6 +67,12 @@ function assertPersistableMarketHistoryEvidence(
   const retrievedAtMs = Date.parse(evidence.retrievedAt);
   if (!Number.isFinite(retrievedAtMs)) {
     throw new Error("market_history_evidence_invalid_retrieved_at");
+  }
+  if (evidence.latestBarDate !== null) {
+    const latestBarMs = Date.parse(`${evidence.latestBarDate}T00:00:00.000Z`);
+    if (!Number.isFinite(latestBarMs) || latestBarMs > retrievedAtMs) {
+      throw new Error("market_history_evidence_future_latest_bar_date");
+    }
   }
   if (evidence.suppressionReason === "stale_market_data") {
     const latestBarMs = evidence.latestBarDate === null ? Number.NaN : Date.parse(evidence.latestBarDate);
