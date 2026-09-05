@@ -1,4 +1,4 @@
-// TS: 2026-09-04 05:00 ET
+// TS: 2026-09-05 14:01 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -21,6 +21,20 @@ test("rating batch persists SEC evidence before requesting paid company history"
   assert.ok(saveCompany < paidHistory, "Persist the SEC company before the paid history request.");
   assert.ok(saveFilings < paidHistory, "Persist SEC filings before the paid history request.");
   assert.ok(saveFacts < paidHistory, "Persist SEC facts before the paid history request.");
+});
+
+test("rating batch rechecks durable suppression immediately before a paid company-history request", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const benchmarkRequest = source.indexOf('benchmarkHistory = await getPacedHistory("SPY", 300);');
+  const paidHistory = source.indexOf("history = await getPacedHistory(candidate.ticker, 300);");
+  const recheckMarker = "await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)";
+  const firstCheck = source.indexOf(recheckMarker);
+  const secondCheck = source.indexOf(recheckMarker, firstCheck + recheckMarker.length);
+
+  assert.ok(firstCheck >= 0, "Initial durable market-history suppression check must remain present.");
+  assert.ok(benchmarkRequest > firstCheck, "Initial suppression must be checked before benchmark loading.");
+  assert.ok(secondCheck > benchmarkRequest, "Durable suppression must be checked again after benchmark loading.");
+  assert.ok(secondCheck < paidHistory, "The second durable suppression check must happen immediately before paid company history.");
 });
 
 test("rating batch persists machine-readable candidate failures before early Not Yet Rated returns", async () => {
