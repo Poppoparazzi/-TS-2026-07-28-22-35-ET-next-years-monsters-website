@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:08 UTC
+// TS: 2026-09-05 16:02 ET
 
 import type {
   EligibleProductionRating,
@@ -302,8 +302,7 @@ export function calculateMonsterRatingV1(input: ProductionRatingInput): Producti
   const volumeExpansion = priorAverageVolume > 0 ? recentAverageVolume / priorAverageVolume : 1;
   const priceVolumeScore = clamp(technical.score * 0.7 + clamp(50 + (volumeExpansion - 1) * 35 + (accumulationRatio - 0.5) * 80) * 0.3);
 
-  const latestClose = companyBars.at(-1)?.close ?? 0;
-  const averageDollarVolume = recentAverageVolume * latestClose;
+  const averageDollarVolume = recentBars.reduce((total, bar) => total + (bar.close * bar.volume), 0) / recentBars.length;
   const liquidityScore = clamp((Math.log10(Math.max(averageDollarVolume, 1)) - 6) / 3 * 100);
   if (averageDollarVolume < 1_000_000) {
     return ineligible(normalizedInput, "insufficient_liquidity", "Average daily dollar volume is below the initial $1 million tradability floor.", ["minimum_liquidity"]);
