@@ -1,4 +1,4 @@
-// TS: 2026-09-04 09:00 ET
+// TS: 2026-09-04 23:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -160,7 +160,7 @@ test("reads reusable insufficient-history suppression directly by ticker before 
 
   assert.match(sql, /INNER JOIN companies c ON c\.id = mhe\.company_id/);
   assert.match(sql, /WHERE c\.ticker = \$1/);
-  assert.match(sql, /mhe\.suppression_reason IS NOT NULL/);
+  assert.match(sql, /latest\.suppression_reason IS NOT NULL/);
   assert.deepEqual(params, ["NEWC", "licensed-test-provider"]);
   assert.deepEqual(suppression, {
     ratingEligibilityCode: "insufficient_market_history",
