@@ -1,4 +1,4 @@
-// TS: 2026-09-05 08:00 ET
+// TS: 2026-09-05 09:02 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -13,8 +13,8 @@ test("rating candidate selection leaves market-history retry suppression to dura
 
   assert.match(
     recentFailureSql,
-    /data_refresh_runs[\s\S]*metadata -> 'replaceable'[\s\S]*INTERVAL '30 days'[\s\S]*prior_failure ->> 'ticker' = c\.ticker[\s\S]*'unresolved_sec_identity'[\s\S]*'insufficient_financial_history'[\s\S]*'unsupported_security_type'/,
-    "run metadata should retain only structural non-market-data cooldown reasons",
+    /data_refresh_runs[\s\S]*metadata -> 'replaceable'[\s\S]*INTERVAL '30 days'[\s\S]*prior_failure ->> 'ticker' = c\.ticker[\s\S]*prior_failure ->> 'suppressionStage' = 'sec_preflight'[\s\S]*'unresolved_sec_identity'[\s\S]*'insufficient_financial_history'[\s\S]*'unsupported_security_type'/,
+    "structural cooldowns must come only from SEC preflight evidence",
   );
   assert.doesNotMatch(
     recentFailureSql,
