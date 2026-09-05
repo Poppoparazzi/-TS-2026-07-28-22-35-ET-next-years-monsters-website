@@ -1,4 +1,4 @@
-// TS: 2026-09-05 03:00 ET
+// TS: 2026-09-05 13:00 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -47,6 +47,9 @@ test("Monster Rating batch prioritizes persisted readiness, reusable liquidity, 
   assert.match(source, /SELECT \(qs\.price \* qs\.volume\)::numeric AS dollar_volume/);
   assert.match(source, /qs\.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'/);
   assert.match(source, /qs\.provider_timestamp <= CURRENT_TIMESTAMP \+ INTERVAL '5 minutes'/);
+  assert.match(source, /qs\.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'/);
+  assert.match(source, /qs\.retrieved_at <= CURRENT_TIMESTAMP \+ INTERVAL '5 minutes'/);
+  assert.match(source, /qs\.provider_timestamp <= qs\.retrieved_at \+ INTERVAL '5 minutes'/);
   assert.match(source, /count\(DISTINCT cf\.fiscal_year\) AS annual_revenue_period_count/);
   assert.match(source, /cf\.fiscal_period = 'FY'/);
   assert.match(source, /cf\.form_type IN \('10-K','10-K\/A','20-F','20-F\/A','40-F','40-F\/A'\)/);
