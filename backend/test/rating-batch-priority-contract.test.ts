@@ -1,4 +1,4 @@
-// TS: 2026-09-04 15:57 ET
+// TS: 2026-09-05 03:00 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -39,8 +39,11 @@ test("Monster Rating batch prioritizes persisted readiness, reusable liquidity, 
 
   assert.match(source, /LEFT JOIN market_history_evidence_latest history_readiness/);
   assert.match(source, /history_readiness\.twenty_session_average_dollar_volume >= 1000000 THEN 0/);
-  assert.match(source, /history_readiness\.twenty_session_average_dollar_volume IS NULL\s+OR history_readiness\.retrieved_at < CURRENT_TIMESTAMP - INTERVAL '30 days' THEN 1/);
+  assert.match(source, /history_readiness\.twenty_session_average_dollar_volume IS NULL\s+OR history_readiness\.retrieved_at < CURRENT_TIMESTAMP - INTERVAL '30 days'/);
   assert.match(source, /history_readiness\.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'/);
+  assert.match(source, /history_readiness\.latest_bar_date >= CURRENT_DATE - INTERVAL '7 days'/);
+  assert.match(source, /history_readiness\.latest_bar_date <= CURRENT_DATE/);
+  assert.match(source, /OR history_readiness\.latest_bar_date > CURRENT_DATE THEN 1/);
   assert.match(source, /SELECT \(qs\.price \* qs\.volume\)::numeric AS dollar_volume/);
   assert.match(source, /qs\.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'/);
   assert.match(source, /qs\.provider_timestamp <= CURRENT_TIMESTAMP \+ INTERVAL '5 minutes'/);
