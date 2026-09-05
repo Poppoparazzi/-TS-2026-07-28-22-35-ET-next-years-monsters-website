@@ -1,4 +1,4 @@
-// TS: 2026-09-04 19:01 ET
+// TS: 2026-09-05 03:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -48,6 +48,26 @@ test("marks provider history stale immediately after a paid response so it can b
   const evidence = buildMarketHistoryEvidence(history);
   assert.equal(evidence.latestBarDate, "2026-08-20");
   assert.equal(evidence.suppressionReason, "stale_market_data");
+});
+
+test("rejects malformed and future-dated provider bars before readiness and liquidity evidence are computed", () => {
+  const history: DailyMarketHistory = Object.freeze({
+    symbol: "future",
+    provider: "licensed-test-provider",
+    retrievedAt: "2026-09-05T07:58:00.000Z",
+    feedDisclosure: "test provider history",
+    bars: Object.freeze([
+      Object.freeze({ date: "2026-09-04", open: 100, high: 102, low: 99, close: 100, volume: 10_000 }),
+      Object.freeze({ date: "2026-09-06", open: 100, high: 102, low: 99, close: 100, volume: 99_000_000 }),
+      Object.freeze({ date: "not-a-date", open: 100, high: 102, low: 99, close: 100, volume: 99_000_000 }),
+    ]),
+  });
+
+  const evidence = buildMarketHistoryEvidence(history);
+  assert.equal(evidence.usableBarCount, 1);
+  assert.equal(evidence.latestBarDate, "2026-09-04");
+  assert.equal(evidence.twentySessionAverageDollarVolume, 1_000_000);
+  assert.equal(hasMinimumRatingHistoryEvidence(evidence), false);
 });
 
 test("uses the rating engine's 253-session minimum for persisted preflight evidence", () => {
