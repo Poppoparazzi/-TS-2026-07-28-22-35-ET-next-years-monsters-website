@@ -1,4 +1,4 @@
-// TS: 2026-09-05 09:02 ET
+// TS: 2026-09-05 10:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -85,6 +85,25 @@ export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
         'unresolved_sec_identity',
         'insufficient_financial_history',
         'unsupported_security_type'
+      )
+      AND NOT (
+        (
+          prior_failure ->> 'reasonCode' = 'unresolved_sec_identity'
+          AND c.sec_cik IS NOT NULL
+          AND cps.sec_status = 'complete'
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM sec_filings newer_sf
+          WHERE newer_sf.company_id = c.id
+            AND newer_sf.retrieved_at > drr.started_at
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM company_facts newer_cf
+          WHERE newer_cf.company_id = c.id
+            AND newer_cf.retrieved_at > drr.started_at
+        )
       )
   )
 `;
