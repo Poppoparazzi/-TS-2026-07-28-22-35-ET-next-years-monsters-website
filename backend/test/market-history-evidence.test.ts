@@ -1,10 +1,11 @@
-// TS: 2026-09-06 05:58 ET
+// TS: 2026-09-06 08:59 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildMarketHistoryEvidence,
   hasMinimumRatingHistoryEvidence,
+  MINIMUM_RATING_DOLLAR_VOLUME,
   MINIMUM_RATING_HISTORY_BARS,
 } from "../src/ratings/market-history-evidence.js";
 import type { DailyMarketHistory } from "../src/providers/types.js";
@@ -56,6 +57,43 @@ test("computes twenty-session liquidity as the average of each session's close t
 
   const evidence = buildMarketHistoryEvidence(history);
   assert.equal(evidence.twentySessionAverageDollarVolume, 1_000_000);
+});
+
+test("persists insufficient liquidity on the first paid-history evidence save", () => {
+  const history: DailyMarketHistory = Object.freeze({
+    symbol: "thin",
+    provider: "licensed-test-provider",
+    retrievedAt: "2026-09-05T19:00:00.000Z",
+    feedDisclosure: "test provider history",
+    bars: Object.freeze(dailyBarsEndingOn(MINIMUM_RATING_HISTORY_BARS, "2026-09-05").map((bar) => Object.freeze({
+      ...bar,
+      close: 10,
+      volume: 50_000,
+    }))),
+  });
+
+  const evidence = buildMarketHistoryEvidence(history);
+  assert.equal(evidence.usableBarCount, MINIMUM_RATING_HISTORY_BARS);
+  assert.equal(evidence.twentySessionAverageDollarVolume, 500_000);
+  assert.equal(evidence.suppressionReason, "insufficient_liquidity");
+});
+
+test("does not suppress liquidity exactly at the rating floor", () => {
+  const history: DailyMarketHistory = Object.freeze({
+    symbol: "floor",
+    provider: "licensed-test-provider",
+    retrievedAt: "2026-09-05T19:00:00.000Z",
+    feedDisclosure: "test provider history",
+    bars: Object.freeze(dailyBarsEndingOn(MINIMUM_RATING_HISTORY_BARS, "2026-09-05").map((bar) => Object.freeze({
+      ...bar,
+      close: 10,
+      volume: MINIMUM_RATING_DOLLAR_VOLUME / 10,
+    }))),
+  });
+
+  const evidence = buildMarketHistoryEvidence(history);
+  assert.equal(evidence.twentySessionAverageDollarVolume, MINIMUM_RATING_DOLLAR_VOLUME);
+  assert.equal(evidence.suppressionReason, null);
 });
 
 test("marks sufficiently deep provider history stale immediately after a paid response so it can be suppressed before a repeat call", () => {
@@ -112,6 +150,7 @@ test("rejects malformed and future-dated provider bars before readiness and liqu
 
 test("uses the rating engine's 253-session minimum for persisted preflight evidence", () => {
   assert.equal(MINIMUM_RATING_HISTORY_BARS, 253);
+  assert.equal(MINIMUM_RATING_DOLLAR_VOLUME, 1_000_000);
 
   const base = {
     symbol: "AAPL",
