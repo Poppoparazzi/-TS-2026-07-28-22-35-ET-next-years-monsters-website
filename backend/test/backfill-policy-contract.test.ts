@@ -1,4 +1,4 @@
-// TS: 2026-09-02 06:01 ET
+// TS: 2026-09-06 14:57 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -144,8 +144,8 @@ test("direct rating rollout preserves a visible first-500 milestone while contin
   );
   assert.match(
     rolloutWorker,
-    /rightLiquidity - leftLiquidity \|\|[\s\S]*?rightRevenue - leftRevenue/,
-    "paid rating attempts should prefer stronger known liquidity and then larger verified annual revenue before weaker candidates",
+    /compareStoredLiquidityPriority\(left, right\) \|\|[\s\S]*?rightRevenue - leftRevenue/,
+    "paid rating attempts should use quota-safe liquidity tiers and then larger verified annual revenue before weaker candidates",
   );
   assert.match(
     rolloutWorker,
