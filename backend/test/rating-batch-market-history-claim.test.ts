@@ -1,4 +1,4 @@
-// TS: 2026-09-06 00:00 ET
+// TS: 2026-09-06 00:03 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -67,7 +67,7 @@ function dependencies(
   const historyRequests: string[] = [];
   const claims: string[] = [];
   const releases: string[] = [];
-  const failures: Array<{ ticker: string; reasonCode?: string; suppressionStage?: string }> = [];
+  const failures: Array<{ ticker: string; reason?: string; reasonCode?: string; suppressionStage?: string }> = [];
   let candidateHistoryAttempts = 0;
   let claimIndex = 0;
   const marketProvider = {
@@ -129,7 +129,7 @@ function dependencies(
     },
     async releaseMarketHistoryRequestClaim(ticker: string) { releases.push(ticker); return true; },
     async saveMarketHistoryEvidence() {},
-    async recordCandidateFailure(_runId: string, failure: { ticker: string; reasonCode?: string; suppressionStage?: string }) {
+    async recordCandidateFailure(_runId: string, failure: { ticker: string; reason?: string; reasonCode?: string; suppressionStage?: string }) {
       failures.push(failure);
     },
     async finishRun() {},
@@ -185,9 +185,9 @@ test("durable suppression appearing during quota backoff blocks retry and record
   assert.deepEqual(fixture.claims, ["GOOD", "GOOD"], "the worker must renew ownership before reconsidering the paid retry");
   assert.deepEqual(fixture.historyRequests, ["SPY", "GOOD"], "persisted suppression discovered after renewal must prevent a second paid GOOD request");
   assert.deepEqual(fixture.releases, ["GOOD"], "the owner must release its claim after suppression aborts the retry");
-  assert.deepEqual(fixture.failures, [{
-    ticker: "GOOD",
-    reasonCode: "insufficient_liquidity",
-    suppressionStage: "stored_market_history_preflight",
-  }], "the durable ineligibility must be persisted into batch accounting as a machine-readable suppression reason");
+  assert.equal(fixture.failures.length, 1, "the durable suppression must create exactly one candidate accounting record");
+  assert.equal(fixture.failures[0]?.ticker, "GOOD");
+  assert.equal(fixture.failures[0]?.reasonCode, "insufficient_liquidity");
+  assert.equal(fixture.failures[0]?.suppressionStage, "stored_market_history_preflight");
+  assert.match(fixture.failures[0]?.reason ?? "", /persisted provider-backed market history/i, "the accounting record should preserve the human-readable persisted-evidence explanation too");
 });
