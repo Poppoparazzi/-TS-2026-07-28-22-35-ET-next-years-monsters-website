@@ -1,4 +1,4 @@
-# TS: 2026-09-04 14:57 ET
+# TS: 2026-09-06 02:03 ET
 
 name: Monster Rating suppression report
 
@@ -9,6 +9,7 @@ on:
       - ".github/workflows/rating-suppression-report.yml"
       - "backend/src/jobs/report-rating-candidate-suppression.ts"
       - "backend/src/jobs/report-rating-suppression-overlap.ts"
+      - "backend/src/jobs/report-rating-suppression-reconciliation.ts"
       - "backend/package.json"
   workflow_run:
     workflows: ["Monster Rating rollout worker"]
@@ -47,8 +48,10 @@ jobs:
           mkdir -p ops
           npm run --prefix backend ratings:suppression-report --silent > ops/rating-suppression.json
           npx --prefix backend tsx backend/src/jobs/report-rating-suppression-overlap.ts > ops/rating-suppression-overlap.json
+          npx --prefix backend tsx backend/src/jobs/report-rating-suppression-reconciliation.ts > ops/rating-suppression-reconciliation.json
           cat ops/rating-suppression.json
           cat ops/rating-suppression-overlap.json
+          cat ops/rating-suppression-reconciliation.json
           echo "available=true" >> "$GITHUB_OUTPUT"
 
       - name: Persist exact suppression snapshot
@@ -56,7 +59,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ops/rating-suppression.json ops/rating-suppression-overlap.json
+          git add ops/rating-suppression.json ops/rating-suppression-overlap.json ops/rating-suppression-reconciliation.json
           git diff --cached --quiet && exit 0
           git commit -m "Record live Monster Rating suppression status"
           for attempt in 1 2 3; do
