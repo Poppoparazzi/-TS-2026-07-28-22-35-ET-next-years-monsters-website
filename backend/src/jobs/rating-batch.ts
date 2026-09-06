@@ -1,4 +1,4 @@
-// TS: 2026-09-06 07:00 ET
+// TS: 2026-09-06 09:57 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -230,12 +230,6 @@ export async function runRatingBatch(
         await persistenceStore.saveQuote(quote);
 
         if (!rating.eligible) {
-          if (rating.eligibilityCode === "insufficient_liquidity") {
-            await batchStore.saveMarketHistoryEvidence(Object.freeze({
-              ...marketHistoryEvidence,
-              suppressionReason: "insufficient_liquidity" as const,
-            }));
-          }
           const failure = { ticker: candidate.ticker, reason: rating.reasons[0]?.message ?? rating.summary, reasonCode: rating.eligibilityCode, suppressionStage: "rating_engine" };
           await recordFailure(failure, candidate.isProtected);
           continue;
