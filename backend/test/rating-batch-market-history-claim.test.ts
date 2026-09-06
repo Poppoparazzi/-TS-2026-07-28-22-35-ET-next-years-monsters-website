@@ -1,4 +1,4 @@
-// TS: 2026-09-05 23:02 ET
+// TS: 2026-09-06 00:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -59,11 +59,15 @@ function facts(symbol: string) {
 
 function dependencies(
   claimResults: readonly boolean[],
-  options: { readonly failFirstCandidateHistoryWithQuota?: boolean } = {},
+  options: {
+    readonly failFirstCandidateHistoryWithQuota?: boolean;
+    readonly suppressAfterFirstCandidateHistory?: boolean;
+  } = {},
 ) {
   const historyRequests: string[] = [];
   const claims: string[] = [];
   const releases: string[] = [];
+  const failures: Array<{ ticker: string; reasonCode?: string; suppressionStage?: string }> = [];
   let candidateHistoryAttempts = 0;
   let claimIndex = 0;
   const marketProvider = {
@@ -105,7 +109,18 @@ function dependencies(
     configured: true,
     async listCandidates() { return Object.freeze([Object.freeze({ ticker: "GOOD", companyName: "Good Company", isPilot: false, isProtected: false, priorityMetric: 1 })]); },
     async startRun() { return "claim-run"; },
-    async getReusableMarketHistorySuppression() { return null; },
+    async getReusableMarketHistorySuppression() {
+      if (options.suppressAfterFirstCandidateHistory && candidateHistoryAttempts >= 1) {
+        return Object.freeze({
+          ticker: "GOOD",
+          provider: "claim-test-market",
+          usableBarCount: 300,
+          averageDollarVolume20d: 900_000,
+          suppressionReason: "insufficient_liquidity" as const,
+        });
+      }
+      return null;
+    },
     async tryClaimMarketHistoryRequest(ticker: string) {
       claims.push(ticker);
       const result = claimResults[Math.min(claimIndex, claimResults.length - 1)] ?? false;
@@ -114,10 +129,13 @@ function dependencies(
     },
     async releaseMarketHistoryRequestClaim(ticker: string) { releases.push(ticker); return true; },
     async saveMarketHistoryEvidence() {},
+    async recordCandidateFailure(_runId: string, failure: { ticker: string; reasonCode?: string; suppressionStage?: string }) {
+      failures.push(failure);
+    },
     async finishRun() {},
     async close() {},
   };
-  return { dependencies: { marketProvider, secProvider, persistenceStore, batchStore } as any, historyRequests, claims, releases };
+  return { dependencies: { marketProvider, secProvider, persistenceStore, batchStore } as any, historyRequests, claims, releases, failures };
 }
 
 test("a lost market-history claim spends zero candidate-history calls", async () => {
@@ -150,4 +168,26 @@ test("failed claim renewal after quota backoff spends zero additional candidate-
   assert.deepEqual(fixture.claims, ["GOOD", "GOOD"], "initial ownership and the retry renewal must both be attempted");
   assert.deepEqual(fixture.historyRequests, ["SPY", "GOOD"], "failed renewal must prevent a second paid GOOD history request");
   assert.deepEqual(fixture.releases, ["GOOD"], "the original owner must still release its bounded claim");
+});
+
+test("durable suppression appearing during quota backoff blocks retry and records its machine-readable reason", async () => {
+  const fixture = dependencies([true, true], {
+    failFirstCandidateHistoryWithQuota: true,
+    suppressAfterFirstCandidateHistory: true,
+  });
+  await runRatingBatch(fixture.dependencies, {
+    targetCount: 1,
+    candidateLimit: 1,
+    marketLimitRetryMs: 0,
+    marketLimitMaxRetries: 1,
+  });
+
+  assert.deepEqual(fixture.claims, ["GOOD", "GOOD"], "the worker must renew ownership before reconsidering the paid retry");
+  assert.deepEqual(fixture.historyRequests, ["SPY", "GOOD"], "persisted suppression discovered after renewal must prevent a second paid GOOD request");
+  assert.deepEqual(fixture.releases, ["GOOD"], "the owner must release its claim after suppression aborts the retry");
+  assert.deepEqual(fixture.failures, [{
+    ticker: "GOOD",
+    reasonCode: "insufficient_liquidity",
+    suppressionStage: "stored_market_history_preflight",
+  }], "the durable ineligibility must be persisted into batch accounting as a machine-readable suppression reason");
 });
