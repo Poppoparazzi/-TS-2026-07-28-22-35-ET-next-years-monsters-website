@@ -1,4 +1,4 @@
-// TS: 2026-09-05 17:58 ET
+// TS: 2026-09-06 03:01 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -309,6 +309,18 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           AND ${EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL}
         ORDER BY CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END,
           c.is_pilot DESC,
+          CASE
+            WHEN history_readiness.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+              AND history_readiness.latest_bar_date >= CURRENT_DATE - INTERVAL '7 days'
+              AND history_readiness.latest_bar_date <= CURRENT_DATE
+              AND history_readiness.rating_history_ready = true
+              AND history_readiness.twenty_session_average_dollar_volume >= 1000000
+              AND COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 0
+            WHEN stored_liquidity.dollar_volume >= 1000000
+              AND COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 1
+            WHEN COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 2
+            ELSE 3
+          END,
           CASE
             WHEN history_readiness.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
               AND history_readiness.latest_bar_date >= CURRENT_DATE - INTERVAL '7 days'
