@@ -1,8 +1,9 @@
-// TS: 2026-09-06 05:01 ET
+// TS: 2026-09-06 08:59 ET
 
 import type { DailyMarketHistory } from "../providers/types.js";
 
 export const MINIMUM_RATING_HISTORY_BARS = 253;
+export const MINIMUM_RATING_DOLLAR_VOLUME = 1_000_000;
 const MARKET_DATA_STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface MarketHistoryEvidence {
@@ -39,6 +40,9 @@ export function buildMarketHistoryEvidence(history: DailyMarketHistory): MarketH
   const staleMarketData =
     Number.isFinite(retrievedAtMs) && Number.isFinite(latestBarMs) &&
     retrievedAtMs - latestBarMs > MARKET_DATA_STALE_AFTER_MS;
+  const insufficientLiquidity =
+    twentySessionAverageDollarVolume !== null &&
+    twentySessionAverageDollarVolume < MINIMUM_RATING_DOLLAR_VOLUME;
 
   return Object.freeze({
     symbol: history.symbol.trim().toUpperCase(),
@@ -50,7 +54,9 @@ export function buildMarketHistoryEvidence(history: DailyMarketHistory): MarketH
       ? "insufficient_market_history"
       : staleMarketData
         ? "stale_market_data"
-        : null,
+        : insufficientLiquidity
+          ? "insufficient_liquidity"
+          : null,
     retrievedAt: history.retrievedAt,
     feedDisclosure: history.feedDisclosure,
   });
