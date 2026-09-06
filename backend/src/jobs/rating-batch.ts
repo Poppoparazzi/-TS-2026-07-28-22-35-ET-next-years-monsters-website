@@ -1,4 +1,4 @@
-// TS: 2026-09-05 22:07 ET
+// TS: 2026-09-06 07:00 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -57,6 +57,19 @@ function countFailureDimension(
     counts[value] = (counts[value] ?? 0) + 1;
   }
   return Object.freeze(counts);
+}
+
+function reusableHistorySuppressionReason(suppressionReason: string, usableBarCount: number): string {
+  if (suppressionReason === "insufficient_liquidity") {
+    return "Persisted provider-backed market history previously proved average daily dollar volume below the $1 million tradability floor.";
+  }
+  if (suppressionReason === "stale_market_data") {
+    return "Persisted provider-backed market history is stale and cannot be reused for a current rating.";
+  }
+  if (suppressionReason === "insufficient_market_history") {
+    return `Persisted market history has only ${usableBarCount} usable daily bars; at least 253 are required.`;
+  }
+  return `Persisted market-history evidence is suppressed by machine reason ${suppressionReason}.`;
 }
 
 function validateBenchmarkHistory(history: DailyMarketHistory, calculatedAt = new Date().toISOString()): string | null {
@@ -124,12 +137,9 @@ export async function runRatingBatch(
   ): Promise<boolean> => {
     const suppression = await batchStore.getReusableMarketHistorySuppression(ticker, marketProvider.name);
     if (!suppression) return false;
-    const isLiquiditySuppression = suppression.suppressionReason === "insufficient_liquidity";
     const failure = {
       ticker,
-      reason: isLiquiditySuppression
-        ? "Persisted provider-backed market history previously proved average daily dollar volume below the $1 million tradability floor."
-        : `Persisted market history has only ${suppression.usableBarCount} usable daily bars; at least 253 are required.`,
+      reason: reusableHistorySuppressionReason(suppression.suppressionReason, suppression.usableBarCount),
       reasonCode: suppression.suppressionReason,
       suppressionStage: "stored_market_history_preflight",
     };
