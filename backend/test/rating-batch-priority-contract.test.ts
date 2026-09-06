@@ -1,4 +1,4 @@
-// TS: 2026-09-05 13:00 ET
+// TS: 2026-09-06 14:57 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -15,7 +15,8 @@ test("Monster Rating batch prioritizes persisted readiness, reusable liquidity, 
   const historyLiquidityFloorOrder = source.indexOf("history_readiness.twenty_session_average_dollar_volume >= 1000000 THEN 0");
   const historyLiquidityUnknownOrder = source.indexOf("history_readiness.twenty_session_average_dollar_volume IS NULL");
   const historyLiquidityValueOrder = source.indexOf("THEN history_readiness.twenty_session_average_dollar_volume END");
-  const storedLiquidityPresentOrder = source.indexOf("CASE WHEN stored_liquidity.dollar_volume IS NOT NULL THEN 0 ELSE 1 END");
+  const storedLiquidityTierOrder = source.indexOf("WHEN stored_liquidity.dollar_volume >= 1000000 THEN 0");
+  const storedLiquidityUnknownOrder = source.indexOf("WHEN stored_liquidity.dollar_volume IS NULL THEN 1", storedLiquidityTierOrder);
   const storedLiquidityValueOrder = source.indexOf("COALESCE(stored_liquidity.dollar_volume, -1) DESC");
   const revenueDepthReadyOrder = source.indexOf("CASE WHEN COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 0 ELSE 1 END");
   const revenueDepthValueOrder = source.indexOf("COALESCE(revenue_depth.annual_revenue_period_count, 0) DESC");
@@ -29,8 +30,9 @@ test("Monster Rating batch prioritizes persisted readiness, reusable liquidity, 
   assert.ok(historyLiquidityFloorOrder > historyReadyOrder, "recent persisted liquidity at or above the engine floor must rank after history readiness");
   assert.ok(historyLiquidityUnknownOrder > historyLiquidityFloorOrder, "unknown or stale persisted liquidity must rank between qualifying and known below-floor evidence");
   assert.ok(historyLiquidityValueOrder > historyLiquidityUnknownOrder, "stronger qualifying persisted liquidity must break ties ahead of point-in-time quote liquidity");
-  assert.ok(storedLiquidityPresentOrder > historyLiquidityValueOrder, "fresh stored quote liquidity must remain a secondary free liquidity signal");
-  assert.ok(storedLiquidityValueOrder > storedLiquidityPresentOrder, "stronger stored quote dollar-volume evidence must rank ahead of SEC tie breakers");
+  assert.ok(storedLiquidityTierOrder > historyLiquidityValueOrder, "fresh stored quote liquidity at or above the floor must remain a secondary free liquidity signal");
+  assert.ok(storedLiquidityUnknownOrder > storedLiquidityTierOrder, "unknown stored liquidity must rank between strong and known weak fresh quote evidence");
+  assert.ok(storedLiquidityValueOrder > storedLiquidityUnknownOrder, "stronger stored quote dollar-volume evidence must rank ahead of SEC tie breakers inside its evidence tier");
   assert.ok(revenueDepthReadyOrder > storedLiquidityValueOrder, "two-plus verified annual revenue periods must rank ahead of generic SEC depth");
   assert.ok(revenueDepthValueOrder > revenueDepthReadyOrder, "deeper verified annual revenue history must break ties before generic SEC depth");
   assert.ok(factOrder > revenueDepthValueOrder, "generic SEC fact depth must rank after annual revenue depth");
@@ -44,6 +46,11 @@ test("Monster Rating batch prioritizes persisted readiness, reusable liquidity, 
   assert.match(source, /history_readiness\.latest_bar_date >= CURRENT_DATE - INTERVAL '7 days'/);
   assert.match(source, /history_readiness\.latest_bar_date <= CURRENT_DATE/);
   assert.match(source, /OR history_readiness\.latest_bar_date > CURRENT_DATE THEN 1/);
+  assert.match(
+    source,
+    /WHEN stored_liquidity\.dollar_volume >= 1000000 THEN 0[\s\S]*?WHEN stored_liquidity\.dollar_volume IS NULL THEN 1[\s\S]*?ELSE 2/,
+    "point-in-time quote ordering must be strong >=$1M first, unknown second, and known weak fresh evidence last",
+  );
   assert.match(source, /SELECT \(qs\.price \* qs\.volume\)::numeric AS dollar_volume/);
   assert.match(source, /qs\.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'/);
   assert.match(source, /qs\.provider_timestamp <= CURRENT_TIMESTAMP \+ INTERVAL '5 minutes'/);
