@@ -1,4 +1,4 @@
-// TS: 2026-09-06 09:57 ET
+// TS: 2026-09-06 10:57 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -224,6 +224,17 @@ export async function runRatingBatch(
 
         const marketHistoryEvidence = buildMarketHistoryEvidence(history);
         await batchStore.saveMarketHistoryEvidence(marketHistoryEvidence);
+        if (marketHistoryEvidence.suppressionReason) {
+          const failure = {
+            ticker: candidate.ticker,
+            reason: reusableHistorySuppressionReason(marketHistoryEvidence.suppressionReason, marketHistoryEvidence.usableBarCount),
+            reasonCode: marketHistoryEvidence.suppressionReason,
+            suppressionStage: "provider_market_history",
+          };
+          await recordFailure(failure, candidate.isProtected);
+          continue;
+        }
+
         const calculatedAt = new Date().toISOString();
         const rating = calculateMonsterRatingV1(buildProductionRatingInput({ company, facts, companyHistory: history, benchmarkHistory, calculatedAt }));
         const quote = quoteFromDailyHistory(company, history);
