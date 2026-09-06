@@ -1,4 +1,4 @@
-// TS: 2026-09-06 05:01 ET
+// TS: 2026-09-06 05:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -71,6 +71,22 @@ test("marks sufficiently deep provider history stale immediately after a paid re
   assert.equal(evidence.usableBarCount, MINIMUM_RATING_HISTORY_BARS);
   assert.equal(evidence.latestBarDate, "2026-08-20");
   assert.equal(evidence.suppressionReason, "stale_market_data");
+});
+
+test("keeps insufficient-history suppression dominant when a paid response is both short and stale", () => {
+  const history: DailyMarketHistory = Object.freeze({
+    symbol: "shortold",
+    provider: "licensed-test-provider",
+    retrievedAt: "2026-09-04T23:01:00.000Z",
+    feedDisclosure: "test provider history",
+    bars: dailyBarsEndingOn(MINIMUM_RATING_HISTORY_BARS - 1, "2026-08-20"),
+  });
+
+  const evidence = buildMarketHistoryEvidence(history);
+  assert.equal(evidence.usableBarCount, MINIMUM_RATING_HISTORY_BARS - 1);
+  assert.equal(evidence.latestBarDate, "2026-08-20");
+  assert.equal(evidence.suppressionReason, "insufficient_market_history");
+  assert.equal(hasMinimumRatingHistoryEvidence(evidence), false);
 });
 
 test("rejects malformed and future-dated provider bars before readiness and liquidity evidence are computed", () => {
