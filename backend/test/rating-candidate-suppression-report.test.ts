@@ -1,9 +1,10 @@
-// TS: 2026-09-04 14:02 ET
+// TS: 2026-09-06 01:10 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   RATING_CANDIDATE_SUPPRESSION_REPORT_SQL,
+  RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL,
   RATING_RECENT_FAILURE_REASON_REPORT_SQL,
 } from "../src/jobs/report-rating-candidate-suppression.js";
 
@@ -23,6 +24,18 @@ test("candidate suppression report separates history and durable liquidity suppr
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /durable_liquidity_retry_eligible_count/i);
   assert.match(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /total_known_liquidity_suppression_count/i);
   assert.doesNotMatch(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL, /\b(?:update|delete|insert|alter|drop|truncate)\b/i);
+});
+
+test("persisted suppression report classifies every latest ineligible market-history reason", () => {
+  assert.match(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /market_history_evidence_latest/i);
+  assert.match(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /rating_history_ready\s*=\s*false/i);
+  assert.match(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /suppression_reason/i);
+  assert.match(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /COALESCE\(NULLIF\(suppression_reason,\s*''\),\s*'unclassified'\)/i);
+  assert.match(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /GROUP\s+BY\s+reason_code/i);
+  assert.match(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /total_persisted_suppressed_count/i);
+  assert.match(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /persisted_market_history/i);
+  assert.match(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /reason_breakdown/i);
+  assert.doesNotMatch(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL, /\b(?:update|delete|insert|alter|drop|truncate)\b/i);
 });
 
 test("recent failure report counts unique candidates by their latest machine-readable reason", () => {
