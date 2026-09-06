@@ -1,4 +1,4 @@
-// TS: 2026-09-05 19:57 ET
+// TS: 2026-09-05 22:01 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -38,6 +38,13 @@ function boundedDelay(value: number | undefined, maximum = 60_000): number { con
 // cross-worker duplicate-paid-call race while a worker is still waiting on the provider.
 function boundedRetryCount(value: number | undefined): number { const parsed = Math.trunc(value ?? 0); return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 3) : 0; }
 function sleep(milliseconds: number): Promise<void> { return milliseconds <= 0 ? Promise.resolve() : new Promise((resolve) => setTimeout(resolve, milliseconds)); }
+
+class MarketHistoryRetryAbortedError extends Error {
+  public constructor() {
+    super("Market-history retry aborted because the paid-request claim could not be safely renewed.");
+    this.name = "MarketHistoryRetryAbortedError";
+  }
+}
 
 function countFailureDimension(
   failures: readonly RatingBatchFailure[],
@@ -79,9 +86,16 @@ export async function runRatingBatch(
   if (!secProvider.configured || !persistenceStore.configured || !batchStore.configured) throw new Error("The SEC provider and production database are required for rating batches.");
 
   let lastMarketRequestStartedAt = 0;
-  const getPacedHistory = async (symbol: string, outputSize: number): Promise<DailyMarketHistory> => {
+  const getPacedHistory = async (
+    symbol: string,
+    outputSize: number,
+    beforeRetryAttempt?: () => Promise<boolean>,
+  ): Promise<DailyMarketHistory> => {
     let providerLimitRetries = 0;
     while (true) {
+      if (providerLimitRetries > 0 && beforeRetryAttempt && !(await beforeRetryAttempt())) {
+        throw new MarketHistoryRetryAbortedError();
+      }
       const elapsed = Date.now() - lastMarketRequestStartedAt;
       const waitMs = lastMarketRequestStartedAt === 0 ? 0 : Math.max(0, marketRequestDelayMs - elapsed);
       if (waitMs > 0) await sleep(waitMs);
@@ -178,8 +192,18 @@ export async function runRatingBatch(
         if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
         let history: DailyMarketHistory;
-        try { history = await getPacedHistory(candidate.ticker, 300); }
+        try {
+          history = await getPacedHistory(candidate.ticker, 300, async () => {
+            // Migration 1013 makes a same-owner tryClaim call renew the bounded lease. Renew after
+            // quota backoff and before the next paid attempt, then recheck durable suppression in
+            // case another completed worker persisted decisive evidence while this worker slept.
+            const renewed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
+            if (!renewed) return false;
+            return !(await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected));
+          });
+        }
         catch (error) {
+          if (error instanceof MarketHistoryRetryAbortedError) continue;
           const message = reason(error);
           if (providerLimitReached(message) || providerAuthorizationUnavailable(message) || providerTransportUnavailable(message)) {
             stoppedReason = `Market-data provider unavailable while processing ${candidate.ticker}: ${message}`;
