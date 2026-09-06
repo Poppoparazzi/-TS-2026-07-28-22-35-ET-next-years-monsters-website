@@ -1,4 +1,4 @@
-// TS: 2026-09-05 15:00 ET
+// TS: 2026-09-06 05:01 ET
 
 import type { DailyMarketHistory } from "../providers/types.js";
 
@@ -11,7 +11,7 @@ export interface MarketHistoryEvidence {
   readonly usableBarCount: number;
   readonly latestBarDate: string | null;
   readonly twentySessionAverageDollarVolume?: number | null;
-  readonly suppressionReason?: "insufficient_liquidity" | "stale_market_data" | null;
+  readonly suppressionReason?: "insufficient_market_history" | "insufficient_liquidity" | "stale_market_data" | null;
   readonly retrievedAt: string;
   readonly feedDisclosure: string;
 }
@@ -35,6 +35,7 @@ export function buildMarketHistoryEvidence(history: DailyMarketHistory): MarketH
     ? recentBars.reduce((total, bar) => total + (bar.close * bar.volume), 0) / recentBars.length
     : null;
   const latestBarMs = latestBarDate === null ? Number.NaN : Date.parse(latestBarDate);
+  const insufficientMarketHistory = usableBars.length < MINIMUM_RATING_HISTORY_BARS;
   const staleMarketData =
     Number.isFinite(retrievedAtMs) && Number.isFinite(latestBarMs) &&
     retrievedAtMs - latestBarMs > MARKET_DATA_STALE_AFTER_MS;
@@ -45,7 +46,11 @@ export function buildMarketHistoryEvidence(history: DailyMarketHistory): MarketH
     usableBarCount: usableBars.length,
     latestBarDate,
     twentySessionAverageDollarVolume,
-    suppressionReason: staleMarketData ? "stale_market_data" : null,
+    suppressionReason: insufficientMarketHistory
+      ? "insufficient_market_history"
+      : staleMarketData
+        ? "stale_market_data"
+        : null,
     retrievedAt: history.retrievedAt,
     feedDisclosure: history.feedDisclosure,
   });
