@@ -1,4 +1,4 @@
-// TS: 2026-09-06 03:01 ET
+// TS: 2026-09-06 13:01 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -349,7 +349,11 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
               THEN history_readiness.twenty_session_average_dollar_volume END,
             -1
           ) DESC,
-          CASE WHEN stored_liquidity.dollar_volume IS NOT NULL THEN 0 ELSE 1 END,
+          CASE
+            WHEN stored_liquidity.dollar_volume >= 1000000 THEN 0
+            WHEN stored_liquidity.dollar_volume IS NULL THEN 1
+            ELSE 2
+          END,
           COALESCE(stored_liquidity.dollar_volume, -1) DESC,
           CASE WHEN COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 0 ELSE 1 END,
           COALESCE(revenue_depth.annual_revenue_period_count, 0) DESC,
