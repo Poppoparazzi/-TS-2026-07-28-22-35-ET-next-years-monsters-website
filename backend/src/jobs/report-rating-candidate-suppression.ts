@@ -1,4 +1,4 @@
-// TS: 2026-09-04 14:02 ET
+// TS: 2026-09-06 01:08 ET
 
 import pg from "pg";
 
@@ -66,6 +66,37 @@ export const RATING_CANDIDATE_SUPPRESSION_REPORT_SQL = `
   FROM evidence
 `;
 
+export const RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL = `
+  WITH latest_suppression AS (
+    SELECT
+      company_id,
+      COALESCE(NULLIF(suppression_reason, ''), 'unclassified') AS reason_code,
+      retrieved_at
+    FROM market_history_evidence_latest
+    WHERE rating_history_ready = false
+  ), grouped AS (
+    SELECT
+      reason_code,
+      count(*)::int AS candidate_count
+    FROM latest_suppression
+    GROUP BY reason_code
+  )
+  SELECT
+    COALESCE((SELECT count(*) FROM latest_suppression), 0)::int AS total_persisted_suppressed_count,
+    COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'reasonCode', reason_code,
+          'suppressionStage', 'persisted_market_history',
+          'count', candidate_count
+        )
+        ORDER BY reason_code
+      ) FILTER (WHERE candidate_count > 0),
+      '[]'::jsonb
+    ) AS reason_breakdown
+  FROM grouped
+`;
+
 export const RATING_RECENT_FAILURE_REASON_REPORT_SQL = `
   WITH recent_failure_events AS (
     SELECT
@@ -130,6 +161,15 @@ interface CandidateSuppressionRow {
   readonly total_known_liquidity_suppression_count: string | number;
 }
 
+interface SuppressionReasonRow {
+  readonly total_persisted_suppressed_count: string | number;
+  readonly reason_breakdown: readonly {
+    readonly reasonCode: string;
+    readonly suppressionStage: string;
+    readonly count: number;
+  }[] | string;
+}
+
 interface RecentFailureReasonRow {
   readonly total_recent_replaceable_count: string | number;
   readonly total_recent_replaceable_event_count: string | number;
@@ -154,6 +194,8 @@ export interface CandidateSuppressionReport {
   readonly durableLiquiditySuppressedCount: number;
   readonly durableLiquidityRetryEligibleCount: number;
   readonly totalKnownLiquiditySuppressionCount: number;
+  readonly persistedSuppressedCount: number;
+  readonly persistedSuppressionReasons: readonly CandidateSuppressionReasonCount[];
   readonly recentReplaceableCount: number;
   readonly recentReplaceableEventCount: number;
   readonly recentReplaceableReasons: readonly CandidateSuppressionReasonCount[];
@@ -168,15 +210,18 @@ function exactNonNegativeInteger(value: string | number, field: string): number 
   return parsed;
 }
 
-function normalizeReasonBreakdown(value: RecentFailureReasonRow["reason_breakdown"]): readonly CandidateSuppressionReasonCount[] {
+function normalizeReasonBreakdown(
+  value: SuppressionReasonRow["reason_breakdown"] | RecentFailureReasonRow["reason_breakdown"],
+  field = "reasonBreakdown",
+): readonly CandidateSuppressionReasonCount[] {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   if (!Array.isArray(parsed)) {
-    throw new Error("Candidate suppression report returned a non-array reason breakdown.");
+    throw new Error(`Candidate suppression report returned a non-array ${field}.`);
   }
   return Object.freeze(parsed.map((entry, index) => Object.freeze({
     reasonCode: String(entry.reasonCode ?? "legacy_unclassified"),
     suppressionStage: String(entry.suppressionStage ?? "legacy_unclassified"),
-    count: exactNonNegativeInteger(entry.count ?? 0, `recentReplaceableReasons[${index}].count`),
+    count: exactNonNegativeInteger(entry.count ?? 0, `${field}[${index}].count`),
   })));
 }
 
@@ -194,6 +239,13 @@ function validateCandidateSuppressionReport(report: CandidateSuppressionReport):
   if (liquidityPartitionTotal !== report.totalKnownLiquiditySuppressionCount) {
     throw new Error(
       `Candidate suppression liquidity partition mismatch: ${liquidityPartitionTotal} != ${report.totalKnownLiquiditySuppressionCount}.`,
+    );
+  }
+
+  const persistedReasonTotal = report.persistedSuppressionReasons.reduce((sum, item) => sum + item.count, 0);
+  if (persistedReasonTotal !== report.persistedSuppressedCount) {
+    throw new Error(
+      `Candidate suppression persisted reason total mismatch: ${persistedReasonTotal} != ${report.persistedSuppressedCount}.`,
     );
   }
 
@@ -220,16 +272,26 @@ export async function readCandidateSuppressionReport(databaseUrl: string): Promi
   });
 
   try {
-    const [historyResult, recentFailureResult] = await Promise.all([
+    const [historyResult, persistedSuppressionResult, recentFailureResult] = await Promise.all([
       pool.query<CandidateSuppressionRow>(RATING_CANDIDATE_SUPPRESSION_REPORT_SQL),
+      pool.query<SuppressionReasonRow>(RATING_PERSISTED_SUPPRESSION_REASON_REPORT_SQL),
       pool.query<RecentFailureReasonRow>(RATING_RECENT_FAILURE_REASON_REPORT_SQL),
     ]);
     const historyRow = historyResult.rows[0];
+    const persistedSuppressionRow = persistedSuppressionResult.rows[0];
     const recentFailureRow = recentFailureResult.rows[0];
     if (!historyRow) throw new Error("Candidate suppression report returned no history row.");
+    if (!persistedSuppressionRow) throw new Error("Candidate suppression report returned no persisted-suppression row.");
     if (!recentFailureRow) throw new Error("Candidate suppression report returned no recent-failure row.");
 
-    const recentReplaceableReasons = normalizeReasonBreakdown(recentFailureRow.reason_breakdown);
+    const persistedSuppressionReasons = normalizeReasonBreakdown(
+      persistedSuppressionRow.reason_breakdown,
+      "persistedSuppressionReasons",
+    );
+    const recentReplaceableReasons = normalizeReasonBreakdown(
+      recentFailureRow.reason_breakdown,
+      "recentReplaceableReasons",
+    );
     const report = Object.freeze({
       cooldownSuppressedCount: exactNonNegativeInteger(
         historyRow.cooldown_suppressed_count ?? 0,
@@ -259,6 +321,11 @@ export async function readCandidateSuppressionReport(databaseUrl: string): Promi
         historyRow.total_known_liquidity_suppression_count ?? 0,
         "totalKnownLiquiditySuppressionCount",
       ),
+      persistedSuppressedCount: exactNonNegativeInteger(
+        persistedSuppressionRow.total_persisted_suppressed_count ?? 0,
+        "persistedSuppressedCount",
+      ),
+      persistedSuppressionReasons,
       recentReplaceableCount: exactNonNegativeInteger(
         recentFailureRow.total_recent_replaceable_count ?? 0,
         "recentReplaceableCount",
