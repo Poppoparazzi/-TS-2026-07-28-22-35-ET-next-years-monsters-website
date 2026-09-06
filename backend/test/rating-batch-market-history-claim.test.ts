@@ -1,4 +1,4 @@
-// TS: 2026-09-05 18:57 ET
+// TS: 2026-09-05 23:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -57,15 +57,26 @@ function facts(symbol: string) {
   });
 }
 
-function dependencies(claimResult: boolean) {
+function dependencies(
+  claimResults: readonly boolean[],
+  options: { readonly failFirstCandidateHistoryWithQuota?: boolean } = {},
+) {
   const historyRequests: string[] = [];
   const claims: string[] = [];
   const releases: string[] = [];
+  let candidateHistoryAttempts = 0;
+  let claimIndex = 0;
   const marketProvider = {
     name: "claim-test-market",
     configured: true,
     async getDailyHistory(symbol: string) {
       historyRequests.push(symbol);
+      if (symbol === "GOOD") {
+        candidateHistoryAttempts += 1;
+        if (options.failFirstCandidateHistoryWithQuota && candidateHistoryAttempts === 1) {
+          throw new Error("API credits quota reached");
+        }
+      }
       return history(symbol);
     },
   };
@@ -95,7 +106,12 @@ function dependencies(claimResult: boolean) {
     async listCandidates() { return Object.freeze([Object.freeze({ ticker: "GOOD", companyName: "Good Company", isPilot: false, isProtected: false, priorityMetric: 1 })]); },
     async startRun() { return "claim-run"; },
     async getReusableMarketHistorySuppression() { return null; },
-    async tryClaimMarketHistoryRequest(ticker: string) { claims.push(ticker); return claimResult; },
+    async tryClaimMarketHistoryRequest(ticker: string) {
+      claims.push(ticker);
+      const result = claimResults[Math.min(claimIndex, claimResults.length - 1)] ?? false;
+      claimIndex += 1;
+      return result;
+    },
     async releaseMarketHistoryRequestClaim(ticker: string) { releases.push(ticker); return true; },
     async saveMarketHistoryEvidence() {},
     async finishRun() {},
@@ -105,7 +121,7 @@ function dependencies(claimResult: boolean) {
 }
 
 test("a lost market-history claim spends zero candidate-history calls", async () => {
-  const fixture = dependencies(false);
+  const fixture = dependencies([false]);
   await runRatingBatch(fixture.dependencies, { targetCount: 1, candidateLimit: 1 });
 
   assert.deepEqual(fixture.claims, ["GOOD"]);
@@ -114,10 +130,24 @@ test("a lost market-history claim spends zero candidate-history calls", async ()
 });
 
 test("a won market-history claim is released after candidate processing", async () => {
-  const fixture = dependencies(true);
+  const fixture = dependencies([true]);
   await runRatingBatch(fixture.dependencies, { targetCount: 1, candidateLimit: 1 });
 
   assert.deepEqual(fixture.claims, ["GOOD"]);
   assert.deepEqual(fixture.historyRequests, ["SPY", "GOOD"]);
   assert.deepEqual(fixture.releases, ["GOOD"]);
+});
+
+test("failed claim renewal after quota backoff spends zero additional candidate-history calls", async () => {
+  const fixture = dependencies([true, false], { failFirstCandidateHistoryWithQuota: true });
+  await runRatingBatch(fixture.dependencies, {
+    targetCount: 1,
+    candidateLimit: 1,
+    marketLimitRetryMs: 0,
+    marketLimitMaxRetries: 1,
+  });
+
+  assert.deepEqual(fixture.claims, ["GOOD", "GOOD"], "initial ownership and the retry renewal must both be attempted");
+  assert.deepEqual(fixture.historyRequests, ["SPY", "GOOD"], "failed renewal must prevent a second paid GOOD history request");
+  assert.deepEqual(fixture.releases, ["GOOD"], "the original owner must still release its bounded claim");
 });
