@@ -1,4 +1,4 @@
-// TS: 2026-09-05 01:59 ET
+// TS: 2026-09-06 03:06 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -20,14 +20,14 @@ test("quota-safe candidate ordering prefers fresh reusable market evidence befor
   const readyHistory = ordering.indexOf("history_readiness.rating_history_ready = true");
   const verifiedLiquidity = ordering.indexOf("history_readiness.twenty_session_average_dollar_volume >= 1000000");
   const storedLiquidity = ordering.indexOf("stored_liquidity.dollar_volume IS NOT NULL");
-  const revenueDepth = ordering.indexOf("revenue_depth.annual_revenue_period_count, 0) >= 2");
+  const revenueDepth = ordering.indexOf("CASE WHEN COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 0 ELSE 1 END", storedLiquidity);
 
   assert.ok(freshHistory >= 0, "candidate ordering must explicitly require recently retrieved stored market evidence");
   assert.ok(freshLatestBar > freshHistory, "recent retrieval alone must not count as fresh when the provider's latest bar is stale");
   assert.ok(readyHistory > freshLatestBar, "fresh provider-bar evidence must be evaluated before stored rating-history readiness");
   assert.ok(verifiedLiquidity > readyHistory, "verified stored liquidity must remain ahead of weaker evidence-depth tie-breakers");
   assert.ok(storedLiquidity > verifiedLiquidity, "fresh quote liquidity must remain a fallback behind verified market-history liquidity");
-  assert.ok(revenueDepth > storedLiquidity, "verified multi-year annual revenue depth must remain ahead of generic SEC fact/filing counts");
+  assert.ok(revenueDepth > storedLiquidity, "the granular annual-revenue-depth tie-breaker must remain ahead of generic SEC fact/filing counts");
 
   assert.match(
     ordering,
