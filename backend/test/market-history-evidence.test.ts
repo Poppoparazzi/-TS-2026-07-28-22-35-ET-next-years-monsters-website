@@ -1,4 +1,4 @@
-// TS: 2026-09-05 15:01 ET
+// TS: 2026-09-06 05:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -8,6 +8,14 @@ import {
   MINIMUM_RATING_HISTORY_BARS,
 } from "../src/ratings/market-history-evidence.js";
 import type { DailyMarketHistory } from "../src/providers/types.js";
+
+function dailyBarsEndingOn(count: number, endDate: string) {
+  const endMs = Date.parse(`${endDate}T00:00:00.000Z`);
+  return Object.freeze(Array.from({ length: count }, (_, index) => {
+    const date = new Date(endMs - (count - 1 - index) * 24 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+    return Object.freeze({ date, open: 50, high: 51, low: 49, close: 50, volume: 500_000 });
+  }));
+}
 
 test("counts only usable provider daily bars for rating preflight evidence", () => {
   const history: DailyMarketHistory = Object.freeze({
@@ -28,7 +36,7 @@ test("counts only usable provider daily bars for rating preflight evidence", () 
   assert.equal(evidence.provider, "licensed-test-provider");
   assert.equal(evidence.usableBarCount, 2);
   assert.equal(evidence.latestBarDate, "2026-08-28");
-  assert.equal(evidence.suppressionReason, null);
+  assert.equal(evidence.suppressionReason, "insufficient_market_history");
   assert.equal(evidence.retrievedAt, history.retrievedAt);
   assert.equal(evidence.feedDisclosure, history.feedDisclosure);
   assert.equal(hasMinimumRatingHistoryEvidence(evidence), false);
@@ -50,18 +58,17 @@ test("computes twenty-session liquidity as the average of each session's close t
   assert.equal(evidence.twentySessionAverageDollarVolume, 1_000_000);
 });
 
-test("marks provider history stale immediately after a paid response so it can be suppressed before a repeat call", () => {
+test("marks sufficiently deep provider history stale immediately after a paid response so it can be suppressed before a repeat call", () => {
   const history: DailyMarketHistory = Object.freeze({
     symbol: "oldc",
     provider: "licensed-test-provider",
     retrievedAt: "2026-09-04T23:01:00.000Z",
     feedDisclosure: "test provider history",
-    bars: Object.freeze([
-      Object.freeze({ date: "2026-08-20", open: 50, high: 51, low: 49, close: 50, volume: 500_000 }),
-    ]),
+    bars: dailyBarsEndingOn(MINIMUM_RATING_HISTORY_BARS, "2026-08-20"),
   });
 
   const evidence = buildMarketHistoryEvidence(history);
+  assert.equal(evidence.usableBarCount, MINIMUM_RATING_HISTORY_BARS);
   assert.equal(evidence.latestBarDate, "2026-08-20");
   assert.equal(evidence.suppressionReason, "stale_market_data");
 });
@@ -83,6 +90,7 @@ test("rejects malformed and future-dated provider bars before readiness and liqu
   assert.equal(evidence.usableBarCount, 1);
   assert.equal(evidence.latestBarDate, "2026-09-04");
   assert.equal(evidence.twentySessionAverageDollarVolume, 1_000_000);
+  assert.equal(evidence.suppressionReason, "insufficient_market_history");
   assert.equal(hasMinimumRatingHistoryEvidence(evidence), false);
 });
 
