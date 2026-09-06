@@ -1,4 +1,4 @@
-// TS: 2026-09-05 22:01 ET
+// TS: 2026-09-05 22:07 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -86,19 +86,16 @@ export async function runRatingBatch(
   if (!secProvider.configured || !persistenceStore.configured || !batchStore.configured) throw new Error("The SEC provider and production database are required for rating batches.");
 
   let lastMarketRequestStartedAt = 0;
-  const getPacedHistory = async (
-    symbol: string,
-    outputSize: number,
-    beforeRetryAttempt?: () => Promise<boolean>,
-  ): Promise<DailyMarketHistory> => {
+  let beforeMarketHistoryRetryAttempt: (() => Promise<boolean>) | undefined;
+  const getPacedHistory = async (symbol: string, outputSize: number): Promise<DailyMarketHistory> => {
     let providerLimitRetries = 0;
     while (true) {
-      if (providerLimitRetries > 0 && beforeRetryAttempt && !(await beforeRetryAttempt())) {
-        throw new MarketHistoryRetryAbortedError();
-      }
       const elapsed = Date.now() - lastMarketRequestStartedAt;
       const waitMs = lastMarketRequestStartedAt === 0 ? 0 : Math.max(0, marketRequestDelayMs - elapsed);
       if (waitMs > 0) await sleep(waitMs);
+      if (providerLimitRetries > 0 && beforeMarketHistoryRetryAttempt && !(await beforeMarketHistoryRetryAttempt())) {
+        throw new MarketHistoryRetryAbortedError();
+      }
       lastMarketRequestStartedAt = Date.now();
       try { return await marketProvider.getDailyHistory!(symbol, outputSize); }
       catch (error) {
@@ -193,14 +190,15 @@ export async function runRatingBatch(
 
         let history: DailyMarketHistory;
         try {
-          history = await getPacedHistory(candidate.ticker, 300, async () => {
-            // Migration 1013 makes a same-owner tryClaim call renew the bounded lease. Renew after
-            // quota backoff and before the next paid attempt, then recheck durable suppression in
-            // case another completed worker persisted decisive evidence while this worker slept.
+          // Migration 1013 makes a same-owner tryClaim call renew the bounded lease. The guard is
+          // consulted only after a quota backoff and all pacing sleep, immediately before another
+          // paid provider attempt. It also rechecks durable suppression while the worker slept.
+          beforeMarketHistoryRetryAttempt = async () => {
             const renewed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
             if (!renewed) return false;
             return !(await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected));
-          });
+          };
+          history = await getPacedHistory(candidate.ticker, 300);
         }
         catch (error) {
           if (error instanceof MarketHistoryRetryAbortedError) continue;
@@ -210,6 +208,8 @@ export async function runRatingBatch(
             break;
           }
           throw error;
+        } finally {
+          beforeMarketHistoryRetryAttempt = undefined;
         }
 
         const marketHistoryEvidence = buildMarketHistoryEvidence(history);
