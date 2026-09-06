@@ -1,4 +1,4 @@
-// TS: 2026-09-06 10:57 ET
+// TS: 2026-09-06 16:57 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -154,6 +154,11 @@ export async function runRatingBatch(
     if (ratedTickers.length >= targetCount) break;
     examinedCount += 1;
     try {
+      // Durable provider-backed market-history suppression is cheaper and more decisive than an
+      // SEC refresh. Skip known ineligible candidates before any SEC network reads or persistence.
+      // Later rechecks remain in place to close cross-worker races before paid history requests.
+      if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
+
       const [company, facts, filings] = await Promise.all([
         secProvider.getCompany(candidate.ticker),
         secProvider.getCompanyFacts(candidate.ticker),
