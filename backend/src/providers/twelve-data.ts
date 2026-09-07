@@ -1,4 +1,4 @@
-// TS: 2026-09-07 06:57 ET
+// TS: 2026-09-07 08:03 ET
 
 import {
   type DailyMarketBar,
@@ -12,6 +12,15 @@ const BASE_URL = "https://api.twelvedata.com";
 const FEED_DISCLOSURE =
   "Near-live U.S. market data from Twelve Data. This is not labeled as a full consolidated SIP quote.";
 const BENCHMARK_HISTORY_CACHE_TTL_MS = 15 * 60 * 1_000;
+
+// The HTTP app and the startup rating worker each construct their own Twelve Data provider.
+// Keep benchmark history at module scope so those provider instances share the same SPY fetch,
+// rather than independently spending quota before either instance can populate its own cache.
+const benchmarkHistoryCache = new Map<
+  number,
+  { readonly expiresAt: number; readonly history: DailyMarketHistory }
+>();
+const benchmarkHistoryInFlight = new Map<number, Promise<DailyMarketHistory>>();
 
 interface TwelveDataErrorResponse {
   readonly status?: string;
@@ -82,11 +91,6 @@ function normalizeSymbol(value: string): string {
 export class TwelveDataMarketDataProvider implements MarketDataProvider {
   public readonly name = "twelve-data";
   public readonly configured = true;
-  private readonly benchmarkHistoryCache = new Map<
-    number,
-    { readonly expiresAt: number; readonly history: DailyMarketHistory }
-  >();
-  private readonly benchmarkHistoryInFlight = new Map<number, Promise<DailyMarketHistory>>();
 
   public constructor(private readonly apiKey: string) {
     if (!apiKey.trim()) {
@@ -202,13 +206,13 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     const safeOutputSize = Math.min(Math.max(Math.trunc(outputSize), 60), 500);
 
     if (normalizedSymbol === "SPY") {
-      const cached = this.benchmarkHistoryCache.get(safeOutputSize);
+      const cached = benchmarkHistoryCache.get(safeOutputSize);
       if (cached && cached.expiresAt > Date.now()) {
         return cached.history;
       }
-      if (cached) this.benchmarkHistoryCache.delete(safeOutputSize);
+      if (cached) benchmarkHistoryCache.delete(safeOutputSize);
 
-      const inFlight = this.benchmarkHistoryInFlight.get(safeOutputSize);
+      const inFlight = benchmarkHistoryInFlight.get(safeOutputSize);
       if (inFlight) {
         return inFlight;
       }
@@ -260,7 +264,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
       });
 
       if (normalizedSymbol === "SPY") {
-        this.benchmarkHistoryCache.set(safeOutputSize, {
+        benchmarkHistoryCache.set(safeOutputSize, {
           expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
           history,
         });
@@ -274,13 +278,13 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     }
 
     const benchmarkRequest = loadHistory();
-    this.benchmarkHistoryInFlight.set(safeOutputSize, benchmarkRequest);
+    benchmarkHistoryInFlight.set(safeOutputSize, benchmarkRequest);
 
     try {
       return await benchmarkRequest;
     } finally {
-      if (this.benchmarkHistoryInFlight.get(safeOutputSize) === benchmarkRequest) {
-        this.benchmarkHistoryInFlight.delete(safeOutputSize);
+      if (benchmarkHistoryInFlight.get(safeOutputSize) === benchmarkRequest) {
+        benchmarkHistoryInFlight.delete(safeOutputSize);
       }
     }
   }
