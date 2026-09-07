@@ -1,4 +1,4 @@
-// TS: 2026-08-24 08:03 ET
+// TS: 2026-09-07 06:57 ET
 
 import {
   type DailyMarketBar,
@@ -86,6 +86,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     number,
     { readonly expiresAt: number; readonly history: DailyMarketHistory }
   >();
+  private readonly benchmarkHistoryInFlight = new Map<number, Promise<DailyMarketHistory>>();
 
   public constructor(private readonly apiKey: string) {
     if (!apiKey.trim()) {
@@ -206,59 +207,81 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
         return cached.history;
       }
       if (cached) this.benchmarkHistoryCache.delete(safeOutputSize);
+
+      const inFlight = this.benchmarkHistoryInFlight.get(safeOutputSize);
+      if (inFlight) {
+        return inFlight;
+      }
     }
 
-    const parameters = new URLSearchParams({
-      symbol: normalizedSymbol,
-      interval: "1day",
-      outputsize: String(safeOutputSize),
-      order: "ASC",
-    });
-    const payload = await this.request<TwelveDataTimeSeriesResponse>(
-      "/time_series",
-      parameters,
-    );
-    const bars = (payload.values ?? []).flatMap<DailyMarketBar>((value) => {
-      const open = parseFiniteNumber(value.open);
-      const high = parseFiniteNumber(value.high);
-      const low = parseFiniteNumber(value.low);
-      const close = parseFiniteNumber(value.close);
-      const volume = parseFiniteNumber(value.volume);
-      const date = value.datetime?.trim() ?? "";
+    const loadHistory = async (): Promise<DailyMarketHistory> => {
+      const parameters = new URLSearchParams({
+        symbol: normalizedSymbol,
+        interval: "1day",
+        outputsize: String(safeOutputSize),
+        order: "ASC",
+      });
+      const payload = await this.request<TwelveDataTimeSeriesResponse>(
+        "/time_series",
+        parameters,
+      );
+      const bars = (payload.values ?? []).flatMap<DailyMarketBar>((value) => {
+        const open = parseFiniteNumber(value.open);
+        const high = parseFiniteNumber(value.high);
+        const low = parseFiniteNumber(value.low);
+        const close = parseFiniteNumber(value.close);
+        const volume = parseFiniteNumber(value.volume);
+        const date = value.datetime?.trim() ?? "";
 
-      if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-        open === null || high === null || low === null || close === null || volume === null ||
-        open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0
-      ) {
-        return [];
+        if (
+          !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+          open === null || high === null || low === null || close === null || volume === null ||
+          open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0
+        ) {
+          return [];
+        }
+
+        return [{ date, open, high, low, close, volume }];
+      });
+
+      bars.sort((left, right) => left.date.localeCompare(right.date));
+      if (bars.length < 60) {
+        throw new Error(
+          `Insufficient daily market history was returned for ${normalizedSymbol}.`,
+        );
       }
 
-      return [{ date, open, high, low, close, volume }];
-    });
-
-    bars.sort((left, right) => left.date.localeCompare(right.date));
-    if (bars.length < 60) {
-      throw new Error(
-        `Insufficient daily market history was returned for ${normalizedSymbol}.`,
-      );
-    }
-
-    const history = Object.freeze({
-      symbol: payload.meta?.symbol?.toUpperCase() || normalizedSymbol,
-      bars: Object.freeze(bars),
-      provider: this.name,
-      retrievedAt: new Date().toISOString(),
-      feedDisclosure: FEED_DISCLOSURE,
-    });
-
-    if (normalizedSymbol === "SPY") {
-      this.benchmarkHistoryCache.set(safeOutputSize, {
-        expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
-        history,
+      const history = Object.freeze({
+        symbol: payload.meta?.symbol?.toUpperCase() || normalizedSymbol,
+        bars: Object.freeze(bars),
+        provider: this.name,
+        retrievedAt: new Date().toISOString(),
+        feedDisclosure: FEED_DISCLOSURE,
       });
+
+      if (normalizedSymbol === "SPY") {
+        this.benchmarkHistoryCache.set(safeOutputSize, {
+          expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
+          history,
+        });
+      }
+
+      return history;
+    };
+
+    if (normalizedSymbol !== "SPY") {
+      return loadHistory();
     }
 
-    return history;
+    const benchmarkRequest = loadHistory();
+    this.benchmarkHistoryInFlight.set(safeOutputSize, benchmarkRequest);
+
+    try {
+      return await benchmarkRequest;
+    } finally {
+      if (this.benchmarkHistoryInFlight.get(safeOutputSize) === benchmarkRequest) {
+        this.benchmarkHistoryInFlight.delete(safeOutputSize);
+      }
+    }
   }
 }
