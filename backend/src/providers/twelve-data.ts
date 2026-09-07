@@ -1,5 +1,6 @@
-// TS: 2026-09-07 08:03 ET
+// TS: 2026-09-07 09:14 ET
 
+import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
 import {
   type DailyMarketBar,
   type DailyMarketHistory,
@@ -92,7 +93,10 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
   public readonly name = "twelve-data";
   public readonly configured = true;
 
-  public constructor(private readonly apiKey: string) {
+  public constructor(
+    private readonly apiKey: string,
+    private readonly persistedBenchmarkHistoryCache?: BenchmarkHistoryCache,
+  ) {
     if (!apiKey.trim()) {
       throw new Error("Twelve Data API key is required.");
     }
@@ -219,6 +223,19 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     }
 
     const loadHistory = async (): Promise<DailyMarketHistory> => {
+      if (normalizedSymbol === "SPY" && this.persistedBenchmarkHistoryCache) {
+        const persisted = await this.persistedBenchmarkHistoryCache
+          .getFresh(normalizedSymbol, this.name, safeOutputSize, BENCHMARK_HISTORY_CACHE_TTL_MS)
+          .catch(() => null);
+        if (persisted) {
+          benchmarkHistoryCache.set(safeOutputSize, {
+            expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
+            history: persisted,
+          });
+          return persisted;
+        }
+      }
+
       const parameters = new URLSearchParams({
         symbol: normalizedSymbol,
         interval: "1day",
@@ -268,6 +285,9 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
           expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
           history,
         });
+        if (this.persistedBenchmarkHistoryCache) {
+          await this.persistedBenchmarkHistoryCache.save(history, safeOutputSize).catch(() => undefined);
+        }
       }
 
       return history;
