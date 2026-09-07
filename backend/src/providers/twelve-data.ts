@@ -1,5 +1,6 @@
-// TS: 2026-09-07 09:14 ET
+// TS: 2026-09-07 11:02 ET
 
+import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
 import {
   type DailyMarketBar,
@@ -13,6 +14,8 @@ const BASE_URL = "https://api.twelvedata.com";
 const FEED_DISCLOSURE =
   "Near-live U.S. market data from Twelve Data. This is not labeled as a full consolidated SIP quote.";
 const BENCHMARK_HISTORY_CACHE_TTL_MS = 15 * 60 * 1_000;
+const BENCHMARK_HISTORY_REFRESH_WAIT_MS = 10_000;
+const BENCHMARK_HISTORY_REFRESH_POLL_MS = 250;
 
 // The HTTP app and the startup rating worker each construct their own Twelve Data provider.
 // Keep benchmark history at module scope so those provider instances share the same SPY fetch,
@@ -87,6 +90,10 @@ function normalizeSymbol(value: string): string {
   }
 
   return normalized;
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export class TwelveDataMarketDataProvider implements MarketDataProvider {
@@ -223,6 +230,9 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     }
 
     const loadHistory = async (): Promise<DailyMarketHistory> => {
+      let refreshLeaseToken: string | null = null;
+      let refreshLeaseAcquired = false;
+
       if (normalizedSymbol === "SPY" && this.persistedBenchmarkHistoryCache) {
         const persisted = await this.persistedBenchmarkHistoryCache
           .getFresh(normalizedSymbol, this.name, safeOutputSize, BENCHMARK_HISTORY_CACHE_TTL_MS)
@@ -234,63 +244,116 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
           });
           return persisted;
         }
-      }
-
-      const parameters = new URLSearchParams({
-        symbol: normalizedSymbol,
-        interval: "1day",
-        outputsize: String(safeOutputSize),
-        order: "ASC",
-      });
-      const payload = await this.request<TwelveDataTimeSeriesResponse>(
-        "/time_series",
-        parameters,
-      );
-      const bars = (payload.values ?? []).flatMap<DailyMarketBar>((value) => {
-        const open = parseFiniteNumber(value.open);
-        const high = parseFiniteNumber(value.high);
-        const low = parseFiniteNumber(value.low);
-        const close = parseFiniteNumber(value.close);
-        const volume = parseFiniteNumber(value.volume);
-        const date = value.datetime?.trim() ?? "";
 
         if (
-          !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-          open === null || high === null || low === null || close === null || volume === null ||
-          open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0
+          this.persistedBenchmarkHistoryCache.acquireRefreshLease &&
+          this.persistedBenchmarkHistoryCache.releaseRefreshLease
         ) {
-          return [];
+          refreshLeaseToken = randomUUID();
+          const acquired = await this.persistedBenchmarkHistoryCache
+            .acquireRefreshLease(
+              normalizedSymbol,
+              this.name,
+              safeOutputSize,
+              refreshLeaseToken,
+            )
+            .catch(() => null);
+
+          if (acquired === false) {
+            const deadline = Date.now() + BENCHMARK_HISTORY_REFRESH_WAIT_MS;
+            while (Date.now() < deadline) {
+              await delay(BENCHMARK_HISTORY_REFRESH_POLL_MS);
+              const refreshed = await this.persistedBenchmarkHistoryCache
+                .getFresh(normalizedSymbol, this.name, safeOutputSize, BENCHMARK_HISTORY_CACHE_TTL_MS)
+                .catch(() => null);
+              if (refreshed) {
+                benchmarkHistoryCache.set(safeOutputSize, {
+                  expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
+                  history: refreshed,
+                });
+                return refreshed;
+              }
+            }
+            throw new Error("Benchmark history refresh is already in progress.");
+          }
+
+          refreshLeaseAcquired = acquired === true;
         }
-
-        return [{ date, open, high, low, close, volume }];
-      });
-
-      bars.sort((left, right) => left.date.localeCompare(right.date));
-      if (bars.length < 60) {
-        throw new Error(
-          `Insufficient daily market history was returned for ${normalizedSymbol}.`,
-        );
       }
 
-      const history = Object.freeze({
-        symbol: payload.meta?.symbol?.toUpperCase() || normalizedSymbol,
-        bars: Object.freeze(bars),
-        provider: this.name,
-        retrievedAt: new Date().toISOString(),
-        feedDisclosure: FEED_DISCLOSURE,
-      });
-
-      if (normalizedSymbol === "SPY") {
-        benchmarkHistoryCache.set(safeOutputSize, {
-          expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
-          history,
+      try {
+        const parameters = new URLSearchParams({
+          symbol: normalizedSymbol,
+          interval: "1day",
+          outputsize: String(safeOutputSize),
+          order: "ASC",
         });
-        if (this.persistedBenchmarkHistoryCache) {
-          await this.persistedBenchmarkHistoryCache.save(history, safeOutputSize).catch(() => undefined);
+        const payload = await this.request<TwelveDataTimeSeriesResponse>(
+          "/time_series",
+          parameters,
+        );
+        const bars = (payload.values ?? []).flatMap<DailyMarketBar>((value) => {
+          const open = parseFiniteNumber(value.open);
+          const high = parseFiniteNumber(value.high);
+          const low = parseFiniteNumber(value.low);
+          const close = parseFiniteNumber(value.close);
+          const volume = parseFiniteNumber(value.volume);
+          const date = value.datetime?.trim() ?? "";
+
+          if (
+            !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+            open === null || high === null || low === null || close === null || volume === null ||
+            open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0
+          ) {
+            return [];
+          }
+
+          return [{ date, open, high, low, close, volume }];
+        });
+
+        bars.sort((left, right) => left.date.localeCompare(right.date));
+        if (bars.length < 60) {
+          throw new Error(
+            `Insufficient daily market history was returned for ${normalizedSymbol}.`,
+          );
+        }
+
+        const history = Object.freeze({
+          symbol: payload.meta?.symbol?.toUpperCase() || normalizedSymbol,
+          bars: Object.freeze(bars),
+          provider: this.name,
+          retrievedAt: new Date().toISOString(),
+          feedDisclosure: FEED_DISCLOSURE,
+        });
+
+        if (normalizedSymbol === "SPY") {
+          benchmarkHistoryCache.set(safeOutputSize, {
+            expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
+            history,
+          });
+          if (this.persistedBenchmarkHistoryCache) {
+            await this.persistedBenchmarkHistoryCache.save(history, safeOutputSize).catch(() => undefined);
+          }
+        }
+
+        return history;
+      } finally {
+        if (
+          normalizedSymbol === "SPY" &&
+          refreshLeaseAcquired &&
+          refreshLeaseToken &&
+          this.persistedBenchmarkHistoryCache?.releaseRefreshLease
+        ) {
+          await this.persistedBenchmarkHistoryCache
+            .releaseRefreshLease(
+              normalizedSymbol,
+              this.name,
+              safeOutputSize,
+              refreshLeaseToken,
+            )
+            .catch(() => undefined);
         }
       }
-
-      return history;
     };
 
     if (normalizedSymbol !== "SPY") {
