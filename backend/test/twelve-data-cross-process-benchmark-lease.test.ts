@@ -1,4 +1,4 @@
-// TS: 2026-09-07 11:02 ET
+// TS: 2026-09-07 20:10 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -8,7 +8,7 @@ const migrationUrl = new URL("../database/migrations/1021_benchmark_history_refr
 const cacheUrl = new URL("../src/database/benchmark-history-cache.ts", import.meta.url);
 const providerUrl = new URL("../src/providers/twelve-data.ts", import.meta.url);
 
-test("SPY refreshes are leased across processes before paid Twelve Data history", async () => {
+test("daily-history refreshes are leased across processes before paid Twelve Data history", async () => {
   const [migration, cache, provider] = await Promise.all([
     readFile(migrationUrl, "utf8"),
     readFile(cacheUrl, "utf8"),
@@ -18,7 +18,7 @@ test("SPY refreshes are leased across processes before paid Twelve Data history"
   assert.match(
     migration,
     /CREATE TABLE IF NOT EXISTS benchmark_history_refresh_claims[\s\S]*PRIMARY KEY \(symbol, provider, output_size\)/,
-    "benchmark refresh claims need one database row per benchmark/provider/output-size key",
+    "daily-history refresh claims need one database row per symbol/provider/output-size key",
   );
 
   assert.match(
@@ -29,17 +29,20 @@ test("SPY refreshes are leased across processes before paid Twelve Data history"
 
   const acquireIndex = provider.indexOf(".acquireRefreshLease(");
   const paidRequestIndex = provider.indexOf('this.request<TwelveDataTimeSeriesResponse>');
-  assert.ok(acquireIndex >= 0 && paidRequestIndex > acquireIndex, "SPY must acquire its database lease before the paid history request");
+  assert.ok(
+    acquireIndex >= 0 && paidRequestIndex > acquireIndex,
+    "every persisted daily-history symbol must acquire its database lease before the paid history request",
+  );
 
   assert.match(
     provider,
-    /if \(acquired === false\)[\s\S]*getFresh\([\s\S]*Benchmark history refresh is already in progress/,
+    /if \(acquired === false\)[\s\S]*getFresh\([\s\S]*Daily market history refresh is already in progress/,
     "a process that loses the lease must wait for persisted history instead of spending duplicate quota",
   );
 
   assert.match(
     provider,
     /finally \{[\s\S]*refreshLeaseAcquired[\s\S]*releaseRefreshLease\(/,
-    "the winning process must release its benchmark refresh lease on success or failure",
+    "the winning process must release its daily-history refresh lease on success or failure",
   );
 });
