@@ -1,4 +1,4 @@
-// TS: 2026-09-06 16:57 ET
+// TS: 2026-09-07 12:57 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -184,15 +184,8 @@ export async function runRatingBatch(
 
       if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
-      if (!benchmarkHistory) {
-        try { benchmarkHistory = await getPacedHistory("SPY", 300); }
-        catch (error) { stoppedReason = `Benchmark market history could not be loaded: ${reason(error)}`; break; }
-        const benchmarkProblem = validateBenchmarkHistory(benchmarkHistory);
-        if (benchmarkProblem) { stoppedReason = benchmarkProblem; break; }
-      }
-
       // Recheck immediately before attempting the cross-worker claim. A concurrent worker may
-      // have persisted durable ineligibility while this worker was loading SPY or pacing.
+      // have persisted durable ineligibility while this worker was completing free preflight or pacing.
       if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
       const marketHistoryClaimed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
@@ -238,6 +231,15 @@ export async function runRatingBatch(
           };
           await recordFailure(failure, candidate.isProtected);
           continue;
+        }
+
+        // Do not spend benchmark quota until this candidate's own paid history has been persisted
+        // and has survived the durable history/liquidity gate. SPY remains shared for all survivors.
+        if (!benchmarkHistory) {
+          try { benchmarkHistory = await getPacedHistory("SPY", 300); }
+          catch (error) { stoppedReason = `Benchmark market history could not be loaded: ${reason(error)}`; break; }
+          const benchmarkProblem = validateBenchmarkHistory(benchmarkHistory);
+          if (benchmarkProblem) { stoppedReason = benchmarkProblem; break; }
         }
 
         const calculatedAt = new Date().toISOString();
