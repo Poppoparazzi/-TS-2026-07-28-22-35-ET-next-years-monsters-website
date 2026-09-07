@@ -1,4 +1,4 @@
-// TS: 2026-09-07 17:01 ET
+// TS: 2026-09-07 17:59 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -84,8 +84,6 @@ test("persisted daily history keeps its original freshness deadline in memory", 
     assert.equal(first, persistedHistory);
     assert.equal(fetchCount, 0);
 
-    // Advance past the persisted row's original 15-minute deadline, but only 1.5 seconds
-    // after it was loaded. A restarted worker must not manufacture another 15 minutes.
     Date.now = () => baseNow + 1_500;
     const second = await provider.getDailyHistory("AGEFIX", outputSize);
 
@@ -94,6 +92,38 @@ test("persisted daily history keeps its original freshness deadline in memory", 
     assert.equal(fetchCount, 1);
   } finally {
     Date.now = originalDateNow;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("lease coordination failure spends zero Twelve Data daily-history calls", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+
+  const persistedCache: BenchmarkHistoryCache = {
+    async getFresh() {
+      return null;
+    },
+    async save() {},
+    async acquireRefreshLease() {
+      throw new Error("database unavailable");
+    },
+    async releaseRefreshLease() {},
+  };
+
+  globalThis.fetch = (async () => {
+    fetchCount += 1;
+    throw new Error("paid provider fetch should not run");
+  }) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY, persistedCache);
+    await assert.rejects(
+      provider.getDailyHistory("LEASEFAIL", 260),
+      /refresh coordination is unavailable for LEASEFAIL/,
+    );
+    assert.equal(fetchCount, 0);
+  } finally {
     globalThis.fetch = originalFetch;
   }
 });
