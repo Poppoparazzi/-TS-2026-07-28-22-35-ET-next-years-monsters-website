@@ -1,4 +1,4 @@
-// TS: 2026-09-07 11:02 ET
+// TS: 2026-09-07 16:12 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -13,18 +13,18 @@ import {
 const BASE_URL = "https://api.twelvedata.com";
 const FEED_DISCLOSURE =
   "Near-live U.S. market data from Twelve Data. This is not labeled as a full consolidated SIP quote.";
-const BENCHMARK_HISTORY_CACHE_TTL_MS = 15 * 60 * 1_000;
-const BENCHMARK_HISTORY_REFRESH_WAIT_MS = 10_000;
-const BENCHMARK_HISTORY_REFRESH_POLL_MS = 250;
+const DAILY_HISTORY_CACHE_TTL_MS = 15 * 60 * 1_000;
+const DAILY_HISTORY_REFRESH_WAIT_MS = 10_000;
+const DAILY_HISTORY_REFRESH_POLL_MS = 250;
 
-// The HTTP app and the startup rating worker each construct their own Twelve Data provider.
-// Keep benchmark history at module scope so those provider instances share the same SPY fetch,
-// rather than independently spending quota before either instance can populate its own cache.
-const benchmarkHistoryCache = new Map<
-  number,
+// The HTTP app and startup rating worker can construct separate Twelve Data provider instances.
+// Keep daily history at module scope so all symbols share same-process completed and in-flight
+// requests. PostgreSQL persistence below extends the same quota protection across restarts.
+const dailyHistoryCache = new Map<
+  string,
   { readonly expiresAt: number; readonly history: DailyMarketHistory }
 >();
-const benchmarkHistoryInFlight = new Map<number, Promise<DailyMarketHistory>>();
+const dailyHistoryInFlight = new Map<string, Promise<DailyMarketHistory>>();
 
 interface TwelveDataErrorResponse {
   readonly status?: string;
@@ -94,6 +94,10 @@ function normalizeSymbol(value: string): string {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function dailyHistoryCacheKey(symbol: string, outputSize: number): string {
+  return `${symbol}:${outputSize}`;
 }
 
 export class TwelveDataMarketDataProvider implements MarketDataProvider {
@@ -215,31 +219,30 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
   ): Promise<DailyMarketHistory> {
     const normalizedSymbol = normalizeSymbol(symbol);
     const safeOutputSize = Math.min(Math.max(Math.trunc(outputSize), 60), 500);
+    const cacheKey = dailyHistoryCacheKey(normalizedSymbol, safeOutputSize);
 
-    if (normalizedSymbol === "SPY") {
-      const cached = benchmarkHistoryCache.get(safeOutputSize);
-      if (cached && cached.expiresAt > Date.now()) {
-        return cached.history;
-      }
-      if (cached) benchmarkHistoryCache.delete(safeOutputSize);
+    const cached = dailyHistoryCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.history;
+    }
+    if (cached) dailyHistoryCache.delete(cacheKey);
 
-      const inFlight = benchmarkHistoryInFlight.get(safeOutputSize);
-      if (inFlight) {
-        return inFlight;
-      }
+    const inFlight = dailyHistoryInFlight.get(cacheKey);
+    if (inFlight) {
+      return inFlight;
     }
 
     const loadHistory = async (): Promise<DailyMarketHistory> => {
       let refreshLeaseToken: string | null = null;
       let refreshLeaseAcquired = false;
 
-      if (normalizedSymbol === "SPY" && this.persistedBenchmarkHistoryCache) {
+      if (this.persistedBenchmarkHistoryCache) {
         const persisted = await this.persistedBenchmarkHistoryCache
-          .getFresh(normalizedSymbol, this.name, safeOutputSize, BENCHMARK_HISTORY_CACHE_TTL_MS)
+          .getFresh(normalizedSymbol, this.name, safeOutputSize, DAILY_HISTORY_CACHE_TTL_MS)
           .catch(() => null);
         if (persisted) {
-          benchmarkHistoryCache.set(safeOutputSize, {
-            expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
+          dailyHistoryCache.set(cacheKey, {
+            expiresAt: Date.now() + DAILY_HISTORY_CACHE_TTL_MS,
             history: persisted,
           });
           return persisted;
@@ -260,21 +263,21 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
             .catch(() => null);
 
           if (acquired === false) {
-            const deadline = Date.now() + BENCHMARK_HISTORY_REFRESH_WAIT_MS;
+            const deadline = Date.now() + DAILY_HISTORY_REFRESH_WAIT_MS;
             while (Date.now() < deadline) {
-              await delay(BENCHMARK_HISTORY_REFRESH_POLL_MS);
+              await delay(DAILY_HISTORY_REFRESH_POLL_MS);
               const refreshed = await this.persistedBenchmarkHistoryCache
-                .getFresh(normalizedSymbol, this.name, safeOutputSize, BENCHMARK_HISTORY_CACHE_TTL_MS)
+                .getFresh(normalizedSymbol, this.name, safeOutputSize, DAILY_HISTORY_CACHE_TTL_MS)
                 .catch(() => null);
               if (refreshed) {
-                benchmarkHistoryCache.set(safeOutputSize, {
-                  expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
+                dailyHistoryCache.set(cacheKey, {
+                  expiresAt: Date.now() + DAILY_HISTORY_CACHE_TTL_MS,
                   history: refreshed,
                 });
                 return refreshed;
               }
             }
-            throw new Error("Benchmark history refresh is already in progress.");
+            throw new Error(`Daily market history refresh is already in progress for ${normalizedSymbol}.`);
           }
 
           refreshLeaseAcquired = acquired === true;
@@ -326,20 +329,17 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
           feedDisclosure: FEED_DISCLOSURE,
         });
 
-        if (normalizedSymbol === "SPY") {
-          benchmarkHistoryCache.set(safeOutputSize, {
-            expiresAt: Date.now() + BENCHMARK_HISTORY_CACHE_TTL_MS,
-            history,
-          });
-          if (this.persistedBenchmarkHistoryCache) {
-            await this.persistedBenchmarkHistoryCache.save(history, safeOutputSize).catch(() => undefined);
-          }
+        dailyHistoryCache.set(cacheKey, {
+          expiresAt: Date.now() + DAILY_HISTORY_CACHE_TTL_MS,
+          history,
+        });
+        if (this.persistedBenchmarkHistoryCache) {
+          await this.persistedBenchmarkHistoryCache.save(history, safeOutputSize).catch(() => undefined);
         }
 
         return history;
       } finally {
         if (
-          normalizedSymbol === "SPY" &&
           refreshLeaseAcquired &&
           refreshLeaseToken &&
           this.persistedBenchmarkHistoryCache?.releaseRefreshLease
@@ -356,18 +356,14 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
       }
     };
 
-    if (normalizedSymbol !== "SPY") {
-      return loadHistory();
-    }
-
-    const benchmarkRequest = loadHistory();
-    benchmarkHistoryInFlight.set(safeOutputSize, benchmarkRequest);
+    const historyRequest = loadHistory();
+    dailyHistoryInFlight.set(cacheKey, historyRequest);
 
     try {
-      return await benchmarkRequest;
+      return await historyRequest;
     } finally {
-      if (benchmarkHistoryInFlight.get(safeOutputSize) === benchmarkRequest) {
-        benchmarkHistoryInFlight.delete(safeOutputSize);
+      if (dailyHistoryInFlight.get(cacheKey) === historyRequest) {
+        dailyHistoryInFlight.delete(cacheKey);
       }
     }
   }
