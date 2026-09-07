@@ -1,4 +1,4 @@
-// TS: 2026-09-02 03:58 ET
+// TS: 2026-09-07 02:03 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -26,6 +26,7 @@ import {
   MONSTER_RATING_ENGINE_VERSION,
 } from "./ratings/engine-v1.js";
 import {
+  buildAnnualFinancialPeriods,
   buildPublishableRating,
   buildProductionRatingInput,
   quoteFromDailyHistory,
@@ -85,6 +86,35 @@ function sendInvalidSymbol(reply: FastifyReply) {
     error: "invalid_symbol",
     message: "Ticker symbols may contain only letters, numbers, periods, and hyphens.",
   });
+}
+
+function directNotYetRated(input: {
+  readonly symbol: string;
+  readonly companyName?: string;
+  readonly calculatedAt: string;
+  readonly eligibilityCode: string;
+  readonly summary: string;
+  readonly reason: string;
+}) {
+  return {
+    symbol: input.symbol,
+    companyName: input.companyName ?? input.symbol,
+    engineVersion: MONSTER_RATING_ENGINE_VERSION,
+    calculatedAt: input.calculatedAt,
+    eligible: false,
+    score: null,
+    tier: "NOT YET RATED",
+    eligibilityCode: input.eligibilityCode,
+    summary: input.summary,
+    evidenceInputs: [],
+    components: [],
+    reasons: [{ code: input.eligibilityCode, message: input.reason }],
+    rollout: {
+      cohort: "top_500",
+      status: "rating_in_progress",
+      message: "Not Yet Rated — Stay Tuned. Coming Soon.",
+    },
+  };
 }
 
 function parseSymbolList(value: string): {
@@ -383,10 +413,76 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       throw new ProviderNotConfiguredError("Licensed historical market-data provider");
     }
 
-    const [secCompany, filings, secFacts, companyHistory, benchmarkHistory] = await Promise.all([
+    if (ratingBatchStore.configured) {
+      const reusableSuppression = await ratingBatchStore.getReusableMarketHistorySuppression(symbol, provider.name);
+      if (reusableSuppression) {
+        return directNotYetRated({
+          symbol,
+          calculatedAt,
+          eligibilityCode: reusableSuppression.ratingEligibilityCode,
+          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Persisted provider-backed market history already proves this candidate is not currently eligible.",
+          reason: `Paid market-history request suppressed: ${reusableSuppression.suppressionReason}.`,
+        });
+      }
+    }
+
+    const [secCompany, filings, secFacts] = await Promise.all([
       secProvider.getCompany(symbol),
       secProvider.getRecentFilings(symbol, 1),
       secProvider.getCompanyFacts(symbol),
+    ]);
+
+    if (persistenceStore.configured) {
+      try {
+        await persistenceStore.saveSecCompany(secCompany);
+        await Promise.all([
+          persistenceStore.saveSecFilings(secCompany, filings),
+          persistenceStore.saveSecFacts(secFacts),
+        ]);
+      } catch (error) {
+        request.log.error({ error, symbol }, "Unable to persist direct Monster Rating SEC preflight evidence");
+      }
+    }
+
+    if (secCompany.cik <= 0 || secFacts.cik !== secCompany.cik) {
+      return directNotYetRated({
+        symbol,
+        companyName: secCompany.companyName,
+        calculatedAt,
+        eligibilityCode: "unresolved_sec_identity",
+        summary: "Not Yet Rated — Stay Tuned. Coming Soon. SEC identity evidence is incomplete or inconsistent.",
+        reason: "SEC company identity and company-facts identity must agree before paid market history is requested.",
+      });
+    }
+
+    const annualRevenuePeriods = buildAnnualFinancialPeriods(secFacts)
+      .filter((period) => period.revenue !== null);
+    if (annualRevenuePeriods.length < 2) {
+      return directNotYetRated({
+        symbol,
+        companyName: secCompany.companyName,
+        calculatedAt,
+        eligibilityCode: "insufficient_financial_history",
+        summary: "Not Yet Rated — Stay Tuned. Coming Soon. Comparable annual SEC revenue history is incomplete.",
+        reason: "At least two comparable annual SEC revenue periods are required before paid market history is requested.",
+      });
+    }
+
+    if (ratingBatchStore.configured) {
+      const lastMinuteSuppression = await ratingBatchStore.getReusableMarketHistorySuppression(symbol, provider.name);
+      if (lastMinuteSuppression) {
+        return directNotYetRated({
+          symbol,
+          companyName: secCompany.companyName,
+          calculatedAt,
+          eligibilityCode: lastMinuteSuppression.ratingEligibilityCode,
+          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Persisted provider-backed market history blocks a repeat paid request.",
+          reason: `Paid market-history request suppressed: ${lastMinuteSuppression.suppressionReason}.`,
+        });
+      }
+    }
+
+    const [companyHistory, benchmarkHistory] = await Promise.all([
       provider.getDailyHistory(symbol, 300),
       provider.getDailyHistory("SPY", 300),
     ]);
@@ -394,15 +490,12 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
     if (persistenceStore.configured && ratingBatchStore.configured) {
       try {
-        await persistenceStore.saveSecCompany(secCompany);
         await Promise.all([
           persistenceStore.saveQuote(quote),
-          persistenceStore.saveSecFilings(secCompany, filings),
-          persistenceStore.saveSecFacts(secFacts),
           ratingBatchStore.saveMarketHistoryEvidence(buildMarketHistoryEvidence(companyHistory)),
         ]);
       } catch (error) {
-        request.log.error({ error, symbol }, "Unable to persist direct Monster Rating pre-return evidence");
+        request.log.error({ error, symbol }, "Unable to persist direct Monster Rating market-history evidence");
       }
     }
 
