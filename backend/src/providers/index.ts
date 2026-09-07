@@ -1,6 +1,7 @@
-// TS: 2026-07-29 10:45 ET
+// TS: 2026-09-07 09:14 ET
 
 import type { AppConfig } from "../config.js";
+import { PostgresBenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
 import type { MarketDataProvider } from "./types.js";
 import { TwelveDataMarketDataProvider } from "./twelve-data.js";
 import { UnconfiguredMarketDataProvider } from "./unconfigured.js";
@@ -13,7 +14,10 @@ export function createMarketDataProvider(config: AppConfig): MarketDataProvider 
       );
     }
 
-    return new TwelveDataMarketDataProvider(config.twelveDataApiKey);
+    const benchmarkHistoryCache = config.databaseUrl
+      ? new PostgresBenchmarkHistoryCache(config.databaseUrl)
+      : undefined;
+    return new TwelveDataMarketDataProvider(config.twelveDataApiKey, benchmarkHistoryCache);
   }
 
   return new UnconfiguredMarketDataProvider();
