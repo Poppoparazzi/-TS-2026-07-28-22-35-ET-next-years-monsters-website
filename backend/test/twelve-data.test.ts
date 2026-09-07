@@ -1,4 +1,4 @@
-// TS: 2026-08-24 10:30 ET
+// TS: 2026-09-07 06:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -164,6 +164,60 @@ test("Twelve Data daily history is normalized, ordered, and keeps the key out of
     assert.equal(history.bars.length, 260);
     assert.ok(history.bars[0]!.date < history.bars.at(-1)!.date);
     assert.equal(history.bars.at(-1)!.close, 359);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Twelve Data SPY history shares one paid request across concurrent callers", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  let releaseFetch: (() => void) | null = null;
+  const fetchGate = new Promise<void>((resolve) => {
+    releaseFetch = resolve;
+  });
+  const start = new Date("2025-12-05T00:00:00.000Z");
+  const values = Array.from({ length: 300 }, (_, index) => {
+    const date = new Date(start.getTime() + index * 24 * 60 * 60 * 1_000);
+    const close = 500 + index;
+    return {
+      datetime: date.toISOString().slice(0, 10),
+      open: String(close - 1),
+      high: String(close + 1),
+      low: String(close - 2),
+      close: String(close),
+      volume: String(10_000_000 + index),
+    };
+  });
+
+  globalThis.fetch = (async () => {
+    fetchCount += 1;
+    await fetchGate;
+    return new Response(JSON.stringify({ meta: { symbol: "SPY" }, values }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY);
+    const first = provider.getDailyHistory("SPY", 300);
+    const second = provider.getDailyHistory("spy", 300);
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(fetchCount, 1);
+
+    releaseFetch?.();
+    const [firstHistory, secondHistory] = await Promise.all([first, second]);
+
+    assert.equal(firstHistory, secondHistory);
+    assert.equal(firstHistory.symbol, "SPY");
+    assert.equal(firstHistory.bars.length, 300);
+    assert.equal(fetchCount, 1);
+
+    const cachedHistory = await provider.getDailyHistory("SPY", 300);
+    assert.equal(cachedHistory, firstHistory);
+    assert.equal(fetchCount, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
