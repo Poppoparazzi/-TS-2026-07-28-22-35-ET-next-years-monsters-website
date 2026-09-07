@@ -1,4 +1,4 @@
-// TS: 2026-09-07 06:01 ET
+// TS: 2026-09-07 12:57 ET
 
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
@@ -36,16 +36,20 @@ test("all paid daily-history production callsites stay behind free preflight and
   const ratingBatch = await readFile(new URL("../src/jobs/rating-batch.ts", import.meta.url), "utf8");
   const firstStoredSuppression = ratingBatch.indexOf("recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)");
   const secPreflight = ratingBatch.indexOf("secProvider.getCompany(candidate.ticker)");
-  const benchmark = ratingBatch.indexOf('getPacedHistory("SPY", 300)');
   const claim = ratingBatch.indexOf("tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId)");
   const paidCandidateHistory = ratingBatch.indexOf("history = await getPacedHistory(candidate.ticker, 300)");
   const persistEvidence = ratingBatch.indexOf("saveMarketHistoryEvidence(marketHistoryEvidence)");
+  const evidenceSuppressionGate = ratingBatch.indexOf("if (marketHistoryEvidence.suppressionReason)");
+  const benchmark = ratingBatch.indexOf('getPacedHistory("SPY", 300)');
+  const benchmarkValidation = ratingBatch.indexOf("validateBenchmarkHistory(benchmarkHistory)");
 
   assert.ok(firstStoredSuppression >= 0 && firstStoredSuppression < secPreflight, "stored suppression must remain ahead of free SEC refresh");
-  assert.ok(secPreflight >= 0 && secPreflight < benchmark, "free SEC preflight must remain ahead of paid benchmark history");
-  assert.ok(benchmark >= 0 && benchmark < claim, "benchmark validation must precede the candidate claim");
+  assert.ok(secPreflight >= 0 && secPreflight < claim, "free SEC preflight must remain ahead of the atomic paid-history claim");
   assert.ok(claim >= 0 && claim < paidCandidateHistory, "candidate paid history must remain behind the atomic claim");
   assert.ok(paidCandidateHistory >= 0 && paidCandidateHistory < persistEvidence, "provider-backed market-history evidence must be persisted immediately after the paid candidate history path");
+  assert.ok(persistEvidence >= 0 && persistEvidence < evidenceSuppressionGate, "candidate market-history evidence must be persisted before an early suppression return");
+  assert.ok(evidenceSuppressionGate >= 0 && evidenceSuppressionGate < benchmark, "suppressed candidates must not spend quota on shared benchmark history");
+  assert.ok(benchmark >= 0 && benchmark < benchmarkValidation, "shared benchmark history must be validated after the surviving candidate reaches it");
 
   const app = await readFile(new URL("../src/app.ts", import.meta.url), "utf8");
   const directRouteStart = app.indexOf('app.get<{ Params: SymbolParams }>("/api/ratings/:symbol"');
