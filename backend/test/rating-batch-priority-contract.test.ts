@@ -1,4 +1,4 @@
-// TS: 2026-09-06 14:57 ET
+// TS: 2026-09-07 14:06 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -6,11 +6,11 @@ import test from "node:test";
 
 const BATCH_STORE_PATH = new URL("../src/ratings/batch-store.ts", import.meta.url);
 
-test("Monster Rating batch prioritizes persisted readiness, reusable liquidity, annual revenue depth, and SEC evidence before revenue size", async () => {
+test("Monster Rating batch prioritizes protected stocks, then persisted readiness, reusable liquidity, annual revenue depth, and SEC evidence before revenue size", async () => {
   const source = await readFile(BATCH_STORE_PATH, "utf8");
 
   const protectedOrder = source.indexOf("CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END");
-  const pilotOrder = source.indexOf("c.is_pilot DESC");
+  const combinedEvidenceTierOrder = source.indexOf("AND COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 0");
   const historyReadyOrder = source.indexOf("WHEN history_readiness.rating_history_ready = true THEN 0");
   const historyLiquidityFloorOrder = source.indexOf("history_readiness.twenty_session_average_dollar_volume >= 1000000 THEN 0");
   const historyLiquidityUnknownOrder = source.indexOf("history_readiness.twenty_session_average_dollar_volume IS NULL");
@@ -25,8 +25,9 @@ test("Monster Rating batch prioritizes persisted readiness, reusable liquidity, 
   const revenueOrder = source.indexOf("COALESCE(revenue_metric.latest_annual_revenue, -1) DESC");
 
   assert.ok(protectedOrder >= 0, "protected-stock priority must remain first");
-  assert.ok(pilotOrder > protectedOrder, "pilot priority must remain ahead of ordinary candidates");
-  assert.ok(historyReadyOrder > pilotOrder, "persisted provider-backed history readiness must rank before ordinary evidence signals");
+  assert.ok(combinedEvidenceTierOrder > protectedOrder, "verified market/liquidity plus annual-revenue evidence must be the next candidate priority");
+  assert.equal(source.includes("c.is_pilot DESC"), false, "pilot membership is already represented by protected-stock priority and must not outrank stronger evidence inside that protected tier");
+  assert.ok(historyReadyOrder > combinedEvidenceTierOrder, "persisted provider-backed history readiness must rank before ordinary evidence signals");
   assert.ok(historyLiquidityFloorOrder > historyReadyOrder, "recent persisted liquidity at or above the engine floor must rank after history readiness");
   assert.ok(historyLiquidityUnknownOrder > historyLiquidityFloorOrder, "unknown or stale persisted liquidity must rank between qualifying and known below-floor evidence");
   assert.ok(historyLiquidityValueOrder > historyLiquidityUnknownOrder, "stronger qualifying persisted liquidity must break ties ahead of point-in-time quote liquidity");
