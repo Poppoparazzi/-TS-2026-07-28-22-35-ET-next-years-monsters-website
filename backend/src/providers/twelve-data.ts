@@ -1,4 +1,4 @@
-// TS: 2026-09-07 17:58 ET
+// TS: 2026-09-07 18:57 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -241,9 +241,19 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
       let refreshLeaseAcquired = false;
 
       if (this.persistedBenchmarkHistoryCache) {
-        const persisted = await this.persistedBenchmarkHistoryCache
-          .getFresh(normalizedSymbol, this.name, safeOutputSize, DAILY_HISTORY_CACHE_TTL_MS)
-          .catch(() => null);
+        let persisted: DailyMarketHistory | null;
+        try {
+          persisted = await this.persistedBenchmarkHistoryCache.getFresh(
+            normalizedSymbol,
+            this.name,
+            safeOutputSize,
+            DAILY_HISTORY_CACHE_TTL_MS,
+          );
+        } catch {
+          throw new Error(
+            `Persisted daily market history lookup is unavailable for ${normalizedSymbol}.`,
+          );
+        }
         if (persisted) {
           dailyHistoryCache.set(cacheKey, {
             expiresAt: dailyHistoryCacheExpiry(persisted),
@@ -277,9 +287,19 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
             const deadline = Date.now() + DAILY_HISTORY_REFRESH_WAIT_MS;
             while (Date.now() < deadline) {
               await delay(DAILY_HISTORY_REFRESH_POLL_MS);
-              const refreshed = await this.persistedBenchmarkHistoryCache
-                .getFresh(normalizedSymbol, this.name, safeOutputSize, DAILY_HISTORY_CACHE_TTL_MS)
-                .catch(() => null);
+              let refreshed: DailyMarketHistory | null;
+              try {
+                refreshed = await this.persistedBenchmarkHistoryCache.getFresh(
+                  normalizedSymbol,
+                  this.name,
+                  safeOutputSize,
+                  DAILY_HISTORY_CACHE_TTL_MS,
+                );
+              } catch {
+                throw new Error(
+                  `Persisted daily market history lookup is unavailable for ${normalizedSymbol}.`,
+                );
+              }
               if (refreshed) {
                 dailyHistoryCache.set(cacheKey, {
                   expiresAt: dailyHistoryCacheExpiry(refreshed),
