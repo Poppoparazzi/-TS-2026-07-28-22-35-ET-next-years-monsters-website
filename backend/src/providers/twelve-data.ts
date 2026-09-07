@@ -1,4 +1,4 @@
-// TS: 2026-09-07 16:12 ET
+// TS: 2026-09-07 17:01 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -98,6 +98,13 @@ function delay(milliseconds: number): Promise<void> {
 
 function dailyHistoryCacheKey(symbol: string, outputSize: number): string {
   return `${symbol}:${outputSize}`;
+}
+
+function dailyHistoryCacheExpiry(history: DailyMarketHistory): number {
+  const retrievedAtMs = Date.parse(history.retrievedAt);
+  return Number.isFinite(retrievedAtMs)
+    ? retrievedAtMs + DAILY_HISTORY_CACHE_TTL_MS
+    : Date.now();
 }
 
 export class TwelveDataMarketDataProvider implements MarketDataProvider {
@@ -242,7 +249,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
           .catch(() => null);
         if (persisted) {
           dailyHistoryCache.set(cacheKey, {
-            expiresAt: Date.now() + DAILY_HISTORY_CACHE_TTL_MS,
+            expiresAt: dailyHistoryCacheExpiry(persisted),
             history: persisted,
           });
           return persisted;
@@ -271,7 +278,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
                 .catch(() => null);
               if (refreshed) {
                 dailyHistoryCache.set(cacheKey, {
-                  expiresAt: Date.now() + DAILY_HISTORY_CACHE_TTL_MS,
+                  expiresAt: dailyHistoryCacheExpiry(refreshed),
                   history: refreshed,
                 });
                 return refreshed;
@@ -330,7 +337,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
         });
 
         dailyHistoryCache.set(cacheKey, {
-          expiresAt: Date.now() + DAILY_HISTORY_CACHE_TTL_MS,
+          expiresAt: dailyHistoryCacheExpiry(history),
           history,
         });
         if (this.persistedBenchmarkHistoryCache) {
