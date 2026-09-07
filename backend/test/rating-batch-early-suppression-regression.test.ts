@@ -1,4 +1,4 @@
-// TS: 2026-09-06 16:57 ET
+// TS: 2026-09-07 17:08 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -23,14 +23,15 @@ test("durable market-history suppression is checked before SEC refresh", () => {
   assert.ok(firstSuppressionCheck < getFilings, "durable suppression must precede SEC filings lookup");
 });
 
-test("paid-history race-closing suppression rechecks remain present", () => {
+test("paid-history race-closing suppression rechecks remain present without duplicate reads", () => {
   const suppressionChecks = source.match(
     /if \(await recordReusableHistorySuppression\(candidate\.ticker, candidate\.isProtected\)\) continue;/g,
   ) ?? [];
 
-  assert.ok(
-    suppressionChecks.length >= 4,
-    `expected early, post-SEC, pre-claim, and post-claim suppression checks; found ${suppressionChecks.length}`,
+  assert.equal(
+    suppressionChecks.length,
+    3,
+    `expected exactly early, post-SEC/pre-claim, and post-claim suppression checks; found ${suppressionChecks.length}`,
   );
   assert.match(source, /beforeMarketHistoryRetryAttempt = async \(\) =>/);
   assert.match(source, /return !\(await recordReusableHistorySuppression\(candidate\.ticker, candidate\.isProtected\)\);/);
