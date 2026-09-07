@@ -1,4 +1,4 @@
-// TS: 2026-09-07 03:03 ET
+// TS: 2026-09-07 06:01 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -522,20 +522,32 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     }
 
     try {
-      const [companyHistory, benchmarkHistory] = await Promise.all([
-        provider.getDailyHistory(symbol, 300),
-        provider.getDailyHistory("SPY", 300),
-      ]);
+      const companyHistory = await provider.getDailyHistory(symbol, 300);
+      const marketHistoryEvidence = buildMarketHistoryEvidence(companyHistory);
+
+      if (ratingBatchStore.configured) {
+        await ratingBatchStore.saveMarketHistoryEvidence(marketHistoryEvidence);
+      }
+
+      if (marketHistoryEvidence.suppressionReason) {
+        return directNotYetRated({
+          symbol,
+          companyName: secCompany.companyName,
+          calculatedAt,
+          eligibilityCode: marketHistoryEvidence.suppressionReason,
+          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Provider-backed company market history does not currently pass the rating gate.",
+          reason: `Benchmark history was not requested because company market history is suppressed: ${marketHistoryEvidence.suppressionReason}.`,
+        });
+      }
+
+      const benchmarkHistory = await provider.getDailyHistory("SPY", 300);
       const quote = quoteFromDailyHistory(secCompany, companyHistory);
 
-      if (persistenceStore.configured && ratingBatchStore.configured) {
+      if (persistenceStore.configured) {
         try {
-          await Promise.all([
-            persistenceStore.saveQuote(quote),
-            ratingBatchStore.saveMarketHistoryEvidence(buildMarketHistoryEvidence(companyHistory)),
-          ]);
+          await persistenceStore.saveQuote(quote);
         } catch (error) {
-          request.log.error({ error, symbol }, "Unable to persist direct Monster Rating market-history evidence");
+          request.log.error({ error, symbol }, "Unable to persist direct Monster Rating quote evidence");
         }
       }
 
