@@ -1,4 +1,4 @@
-// TS: 2026-09-06 17:03 ET
+// TS: 2026-09-07 12:57 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -23,22 +23,26 @@ test("rating batch persists SEC evidence before requesting paid company history"
   assert.ok(saveFacts < paidHistory, "Persist SEC facts before the paid history request.");
 });
 
-test("rating batch rechecks durable suppression immediately before a paid company-history request", async () => {
+test("rating batch rechecks durable suppression around the paid company-history claim before benchmark quota", async () => {
   const source = await readFile(sourceUrl, "utf8");
-  const benchmarkRequest = source.indexOf('benchmarkHistory = await getPacedHistory("SPY", 300);');
   const paidHistory = source.indexOf("history = await getPacedHistory(candidate.ticker, 300);");
   const claimRequest = source.indexOf("await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);");
+  const persistEvidence = source.indexOf("await batchStore.saveMarketHistoryEvidence(marketHistoryEvidence);");
+  const evidenceSuppression = source.indexOf("if (marketHistoryEvidence.suppressionReason)");
+  const benchmarkRequest = source.indexOf('benchmarkHistory = await getPacedHistory("SPY", 300);');
   const recheckMarker = "await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)";
   const earlyCheck = source.indexOf(recheckMarker);
-  const postBenchmarkCheck = source.indexOf(recheckMarker, benchmarkRequest);
+  const preClaimCheck = source.lastIndexOf(recheckMarker, claimRequest);
   const postClaimCheck = source.indexOf(recheckMarker, claimRequest);
 
   assert.ok(earlyCheck >= 0, "Initial durable market-history suppression check must remain present.");
-  assert.ok(benchmarkRequest > earlyCheck, "Initial suppression must be checked before benchmark loading.");
-  assert.ok(postBenchmarkCheck > benchmarkRequest, "Durable suppression must be checked again after benchmark loading.");
-  assert.ok(postBenchmarkCheck < claimRequest, "The post-benchmark suppression check must happen before the paid-history claim.");
+  assert.ok(preClaimCheck > earlyCheck, "Durable suppression must be rechecked after free SEC qualification and before the paid-history claim.");
+  assert.ok(preClaimCheck < claimRequest, "The final pre-claim durable suppression check must happen before atomic claim acquisition.");
   assert.ok(postClaimCheck > claimRequest, "Durable suppression must be checked again after claim acquisition.");
   assert.ok(postClaimCheck < paidHistory, "The post-claim durable suppression check must happen before paid company history.");
+  assert.ok(paidHistory < persistEvidence, "Provider-backed company history must be persisted after the paid company request.");
+  assert.ok(persistEvidence < evidenceSuppression, "Persist company evidence before its machine-readable suppression gate.");
+  assert.ok(evidenceSuppression < benchmarkRequest, "Only company history that survives suppression may spend shared benchmark quota.");
 });
 
 test("rating batch persists machine-readable candidate failures before early Not Yet Rated returns", async () => {
