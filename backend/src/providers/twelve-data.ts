@@ -1,4 +1,4 @@
-// TS: 2026-09-07 17:01 ET
+// TS: 2026-09-07 17:58 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -133,9 +133,6 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     const payload = (await response.json()) as T & TwelveDataErrorResponse;
 
     if (!response.ok || payload.status === "error") {
-      // Preserve the HTTP status even when Twelve Data supplies its own message.
-      // The batch controller uses HTTP 429/quota language to classify provider-wide
-      // throttling correctly instead of blaming the current stock.
       const details = [
         payload.message?.trim(),
         `HTTP ${response.status}`,
@@ -260,14 +257,21 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
           this.persistedBenchmarkHistoryCache.releaseRefreshLease
         ) {
           refreshLeaseToken = randomUUID();
-          const acquired = await this.persistedBenchmarkHistoryCache
-            .acquireRefreshLease(
+          let acquired: boolean;
+          try {
+            acquired = await this.persistedBenchmarkHistoryCache.acquireRefreshLease(
               normalizedSymbol,
               this.name,
               safeOutputSize,
               refreshLeaseToken,
-            )
-            .catch(() => null);
+            );
+          } catch {
+            // Fail closed on coordination uncertainty. An unguarded paid request here could
+            // duplicate another process's Twelve Data spend when PostgreSQL is unhealthy.
+            throw new Error(
+              `Daily market history refresh coordination is unavailable for ${normalizedSymbol}.`,
+            );
+          }
 
           if (acquired === false) {
             const deadline = Date.now() + DAILY_HISTORY_REFRESH_WAIT_MS;
@@ -287,7 +291,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
             throw new Error(`Daily market history refresh is already in progress for ${normalizedSymbol}.`);
           }
 
-          refreshLeaseAcquired = acquired === true;
+          refreshLeaseAcquired = true;
         }
       }
 
