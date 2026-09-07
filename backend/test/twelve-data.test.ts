@@ -1,4 +1,4 @@
-// TS: 2026-09-07 06:57 ET
+// TS: 2026-09-07 07:06 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -172,9 +172,9 @@ test("Twelve Data daily history is normalized, ordered, and keeps the key out of
 test("Twelve Data SPY history shares one paid request across concurrent callers", async () => {
   const originalFetch = globalThis.fetch;
   let fetchCount = 0;
-  let releaseFetch: (() => void) | null = null;
+  let releaseFetch!: () => void;
   const fetchGate = new Promise<void>((resolve) => {
-    releaseFetch = resolve;
+    releaseFetch = () => resolve();
   });
   const start = new Date("2025-12-05T00:00:00.000Z");
   const values = Array.from({ length: 300 }, (_, index) => {
@@ -207,7 +207,7 @@ test("Twelve Data SPY history shares one paid request across concurrent callers"
     await new Promise<void>((resolve) => setImmediate(resolve));
     assert.equal(fetchCount, 1);
 
-    releaseFetch?.();
+    releaseFetch();
     const [firstHistory, secondHistory] = await Promise.all([first, second]);
 
     assert.equal(firstHistory, secondHistory);
