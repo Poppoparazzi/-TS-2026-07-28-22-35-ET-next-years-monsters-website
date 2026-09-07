@@ -1,4 +1,4 @@
-// TS: 2026-09-05 18:14 ET
+// TS: 2026-09-07 12:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -246,7 +246,7 @@ test("rating batch reuses persisted insufficient-history suppression before paid
   assert.equal(accounting.replaceable[0]?.ticker, "YOUNG");
   assert.equal(accounting.replaceable[0]?.reasonCode, "insufficient_market_history");
   assert.equal(accounting.replaceable[0]?.suppressionStage, "stored_market_history_preflight");
-  assert.deepEqual(marketProvider.historyRequests, ["SPY", "GOOD"]);
+  assert.deepEqual(marketProvider.historyRequests, ["GOOD", "SPY"]);
   assert.ok(!marketProvider.historyRequests.includes("YOUNG"));
   assert.deepEqual(batchStore.savedMarketHistoryEvidence.map((evidence) => evidence.symbol), ["GOOD"]);
 });
@@ -254,9 +254,10 @@ test("rating batch reuses persisted insufficient-history suppression before paid
 test("rating batch closes its audit run when benchmark history is unavailable", async () => {
   const persistenceStore = new BatchPersistenceStore();
   const batchStore = new MemoryBatchStore();
+  const marketProvider = new BenchmarkFailingMarketProvider();
   const accounting = await runRatingBatch(
     {
-      marketProvider: new BenchmarkFailingMarketProvider(),
+      marketProvider,
       secProvider: new BatchSecProvider(),
       persistenceStore,
       batchStore,
@@ -267,10 +268,11 @@ test("rating batch closes its audit run when benchmark history is unavailable", 
   assert.equal(accounting.totalCandidatesExamined, 3);
   assert.equal(accounting.ratedCount, 0);
   assert.match(accounting.stoppedReason ?? "", /benchmark quota/i);
+  assert.deepEqual(marketProvider.historyRequests, ["GOOD", "SPY"]);
   assert.deepEqual(persistenceStore.savedCompanies, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedFacts, ["AAPL", "FAIL", "GOOD"]);
   assert.deepEqual(persistenceStore.savedQuotes, []);
-  assert.deepEqual(batchStore.savedMarketHistoryEvidence, []);
+  assert.deepEqual(batchStore.savedMarketHistoryEvidence.map((evidence) => evidence.symbol), ["GOOD"]);
   assert.deepEqual(batchStore.finished, accounting);
 });
 
