@@ -1,4 +1,4 @@
-// TS: 2026-09-07 02:03 ET
+// TS: 2026-09-07 03:03 ET
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -482,134 +482,185 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       }
     }
 
-    const [companyHistory, benchmarkHistory] = await Promise.all([
-      provider.getDailyHistory(symbol, 300),
-      provider.getDailyHistory("SPY", 300),
-    ]);
-    const quote = quoteFromDailyHistory(secCompany, companyHistory);
-
-    if (persistenceStore.configured && ratingBatchStore.configured) {
-      try {
-        await Promise.all([
-          persistenceStore.saveQuote(quote),
-          ratingBatchStore.saveMarketHistoryEvidence(buildMarketHistoryEvidence(companyHistory)),
-        ]);
-      } catch (error) {
-        request.log.error({ error, symbol }, "Unable to persist direct Monster Rating market-history evidence");
-      }
-    }
-
-    const calculatedRating = calculateMonsterRatingV1(buildProductionRatingInput({
-      company: secCompany,
-      facts: secFacts,
-      companyHistory,
-      benchmarkHistory,
-      benchmarkSymbol: "SPY",
-      calculatedAt,
-    }));
-    const riskComponent = calculatedRating.components.find(
-      (component) => component.key === "risk_deterioration",
-    );
-
-    const readiness = evaluatePublicRatingReadiness({
-      symbol,
-      quote,
-      secCompany,
-      secFacts,
-      riskEvidence: calculatedRating.eligible && riskComponent
-        ? {
-            symbol,
-            verified: true,
-            source: `${MONSTER_RATING_ENGINE_VERSION}: SEC-derived financial-risk component`,
-            retrievedAt: secFacts.retrievedAt,
-          }
-        : null,
-      calculation: calculatedRating.eligible
-        ? {
-            symbol,
-            score: calculatedRating.score,
-            modelVersion: calculatedRating.engineVersion,
-            calculatedAt: calculatedRating.calculatedAt,
-          }
-        : null,
-      now: new Date(calculatedAt),
-    });
-    const publishableRating = calculatedRating.eligible
-      ? buildPublishableRating({
-          rating: calculatedRating,
-          facts: secFacts,
-          filings,
-          quote,
-          secProviderName: secProvider.name,
-        })
-      : null;
-    const evidenceInputs = publishableRating?.evidenceInputs ?? calculatedRating.evidenceInputs;
-
-    const failedGates = Object.entries(readiness.gates)
-      .filter(([, gate]) => !gate.ready)
-      .map(([key, gate]) => ({
-        code: `gate_${key}`,
-        message: gate.reason,
-      }));
-    if (!calculatedRating.eligible) {
-      return {
-        ...calculatedRating,
-        tier: "NOT YET RATED",
-        evidenceInputs,
-        rollout: {
-          cohort: "top_500",
-          status: "rating_in_progress",
-          message: "Not Yet Rated — Stay Tuned. Coming Soon.",
-        },
-      };
-    }
-
-    if (!readiness.ready) {
-      return {
+    const directClaimRunId = null as unknown as string;
+    let directHistoryClaimed = false;
+    if (ratingBatchStore.configured) {
+      directHistoryClaimed = await ratingBatchStore.tryClaimMarketHistoryRequest(
         symbol,
-        companyName: calculatedRating.companyName,
-        engineVersion: MONSTER_RATING_ENGINE_VERSION,
-        calculatedAt,
-        eligible: false,
-        score: null,
-        tier: "NOT YET RATED",
-        eligibilityCode: "required_evidence_incomplete",
-        summary: "Not Yet Rated — Stay Tuned. Coming Soon. One or more production evidence gates did not pass.",
-        evidenceInputs,
-        components: calculatedRating.components,
-        reasons: failedGates,
-        rollout: {
-          cohort: "top_500",
-          status: "rating_in_progress",
-          message: "Not Yet Rated — Stay Tuned. Coming Soon.",
-        },
-      };
-    }
+        provider.name,
+        directClaimRunId,
+      );
+      if (!directHistoryClaimed) {
+        return directNotYetRated({
+          symbol,
+          companyName: secCompany.companyName,
+          calculatedAt,
+          eligibilityCode: "market_history_request_in_progress",
+          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Another request is already obtaining this ticker's market history.",
+          reason: "Paid market-history request suppressed because an active database lease already owns this ticker/provider/rating-version request.",
+        });
+      }
 
-    if (persistenceStore.configured && persistenceStore.saveRating) {
-      try {
-        await persistenceStore.saveSecCompany(secCompany);
-        await Promise.all([
-          persistenceStore.saveQuote(quote),
-          persistenceStore.saveSecFilings(secCompany, filings),
-          persistenceStore.saveSecFacts(secFacts),
-        ]);
-        await persistenceStore.saveRating(publishableRating ?? calculatedRating);
-      } catch (error) {
-        request.log.error({ error, symbol }, "Unable to persist complete Monster Rating evidence");
+      const postClaimSuppression = await ratingBatchStore.getReusableMarketHistorySuppression(symbol, provider.name);
+      if (postClaimSuppression) {
+        await ratingBatchStore.releaseMarketHistoryRequestClaim(
+          symbol,
+          provider.name,
+          directClaimRunId,
+        ).catch((error) => {
+          request.log.error({ error, symbol }, "Unable to release direct Monster Rating market-history claim after suppression");
+        });
+        return directNotYetRated({
+          symbol,
+          companyName: secCompany.companyName,
+          calculatedAt,
+          eligibilityCode: postClaimSuppression.ratingEligibilityCode,
+          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Persisted provider-backed market history blocks a repeat paid request.",
+          reason: `Paid market-history request suppressed: ${postClaimSuppression.suppressionReason}.`,
+        });
       }
     }
 
-    return {
-      ...(publishableRating ?? calculatedRating),
-      evidenceInputs,
-      reasons: [],
-      rollout: {
-        cohort: "top_500",
-        status: "rated",
-        message: "Verified Monster Rating™ available.",
-      },
-    };
+    try {
+      const [companyHistory, benchmarkHistory] = await Promise.all([
+        provider.getDailyHistory(symbol, 300),
+        provider.getDailyHistory("SPY", 300),
+      ]);
+      const quote = quoteFromDailyHistory(secCompany, companyHistory);
+
+      if (persistenceStore.configured && ratingBatchStore.configured) {
+        try {
+          await Promise.all([
+            persistenceStore.saveQuote(quote),
+            ratingBatchStore.saveMarketHistoryEvidence(buildMarketHistoryEvidence(companyHistory)),
+          ]);
+        } catch (error) {
+          request.log.error({ error, symbol }, "Unable to persist direct Monster Rating market-history evidence");
+        }
+      }
+
+      const calculatedRating = calculateMonsterRatingV1(buildProductionRatingInput({
+        company: secCompany,
+        facts: secFacts,
+        companyHistory,
+        benchmarkHistory,
+        benchmarkSymbol: "SPY",
+        calculatedAt,
+      }));
+      const riskComponent = calculatedRating.components.find(
+        (component) => component.key === "risk_deterioration",
+      );
+
+      const readiness = evaluatePublicRatingReadiness({
+        symbol,
+        quote,
+        secCompany,
+        secFacts,
+        riskEvidence: calculatedRating.eligible && riskComponent
+          ? {
+              symbol,
+              verified: true,
+              source: `${MONSTER_RATING_ENGINE_VERSION}: SEC-derived financial-risk component`,
+              retrievedAt: secFacts.retrievedAt,
+            }
+          : null,
+        calculation: calculatedRating.eligible
+          ? {
+              symbol,
+              score: calculatedRating.score,
+              modelVersion: calculatedRating.engineVersion,
+              calculatedAt: calculatedRating.calculatedAt,
+            }
+          : null,
+        now: new Date(calculatedAt),
+      });
+      const publishableRating = calculatedRating.eligible
+        ? buildPublishableRating({
+            rating: calculatedRating,
+            facts: secFacts,
+            filings,
+            quote,
+            secProviderName: secProvider.name,
+          })
+        : null;
+      const evidenceInputs = publishableRating?.evidenceInputs ?? calculatedRating.evidenceInputs;
+
+      const failedGates = Object.entries(readiness.gates)
+        .filter(([, gate]) => !gate.ready)
+        .map(([key, gate]) => ({
+          code: `gate_${key}`,
+          message: gate.reason,
+        }));
+      if (!calculatedRating.eligible) {
+        return {
+          ...calculatedRating,
+          tier: "NOT YET RATED",
+          evidenceInputs,
+          rollout: {
+            cohort: "top_500",
+            status: "rating_in_progress",
+            message: "Not Yet Rated — Stay Tuned. Coming Soon.",
+          },
+        };
+      }
+
+      if (!readiness.ready) {
+        return {
+          symbol,
+          companyName: calculatedRating.companyName,
+          engineVersion: MONSTER_RATING_ENGINE_VERSION,
+          calculatedAt,
+          eligible: false,
+          score: null,
+          tier: "NOT YET RATED",
+          eligibilityCode: "required_evidence_incomplete",
+          summary: "Not Yet Rated — Stay Tuned. Coming Soon. One or more production evidence gates did not pass.",
+          evidenceInputs,
+          components: calculatedRating.components,
+          reasons: failedGates,
+          rollout: {
+            cohort: "top_500",
+            status: "rating_in_progress",
+            message: "Not Yet Rated — Stay Tuned. Coming Soon.",
+          },
+        };
+      }
+
+      if (persistenceStore.configured && persistenceStore.saveRating) {
+        try {
+          await persistenceStore.saveSecCompany(secCompany);
+          await Promise.all([
+            persistenceStore.saveQuote(quote),
+            persistenceStore.saveSecFilings(secCompany, filings),
+            persistenceStore.saveSecFacts(secFacts),
+          ]);
+          await persistenceStore.saveRating(publishableRating ?? calculatedRating);
+        } catch (error) {
+          request.log.error({ error, symbol }, "Unable to persist complete Monster Rating evidence");
+        }
+      }
+
+      return {
+        ...(publishableRating ?? calculatedRating),
+        evidenceInputs,
+        reasons: [],
+        rollout: {
+          cohort: "top_500",
+          status: "rated",
+          message: "Verified Monster Rating™ available.",
+        },
+      };
+    } finally {
+      if (directHistoryClaimed) {
+        await ratingBatchStore.releaseMarketHistoryRequestClaim(
+          symbol,
+          provider.name,
+          directClaimRunId,
+        ).catch((error) => {
+          request.log.error({ error, symbol }, "Unable to release direct Monster Rating market-history claim");
+        });
+      }
+    }
   });
 
   app.get<{ Params: SymbolParams }>("/api/sec/company/:symbol", async (request, reply) => {
