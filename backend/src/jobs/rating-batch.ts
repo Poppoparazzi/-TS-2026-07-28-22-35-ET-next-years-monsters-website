@@ -1,4 +1,4 @@
-// TS: 2026-09-07 12:57 ET
+// TS: 2026-09-07 14:59 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -182,10 +182,8 @@ export async function runRatingBatch(
         continue;
       }
 
-      if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
-
-      // Recheck immediately before attempting the cross-worker claim. A concurrent worker may
-      // have persisted durable ineligibility while this worker was completing free preflight or pacing.
+      // Recheck once immediately before attempting the cross-worker claim. A concurrent worker may
+      // have persisted durable ineligibility while this worker was completing free SEC preflight.
       if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
       const marketHistoryClaimed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
