@@ -1,4 +1,4 @@
-// TS: 2026-09-07 17:59 ET
+// TS: 2026-09-07 18:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -96,6 +96,34 @@ test("persisted daily history keeps its original freshness deadline in memory", 
   }
 });
 
+test("persisted lookup failure spends zero Twelve Data daily-history calls", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+
+  const persistedCache: BenchmarkHistoryCache = {
+    async getFresh() {
+      throw new Error("database unavailable");
+    },
+    async save() {},
+  };
+
+  globalThis.fetch = (async () => {
+    fetchCount += 1;
+    throw new Error("paid provider fetch should not run");
+  }) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY, persistedCache);
+    await assert.rejects(
+      provider.getDailyHistory("LOOKUPFAIL", 260),
+      /Persisted daily market history lookup is unavailable for LOOKUPFAIL/,
+    );
+    assert.equal(fetchCount, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("lease coordination failure spends zero Twelve Data daily-history calls", async () => {
   const originalFetch = globalThis.fetch;
   let fetchCount = 0;
@@ -122,6 +150,42 @@ test("lease coordination failure spends zero Twelve Data daily-history calls", a
       provider.getDailyHistory("LEASEFAIL", 260),
       /refresh coordination is unavailable for LEASEFAIL/,
     );
+    assert.equal(fetchCount, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("refresh-wait lookup failure spends zero duplicate Twelve Data calls", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  let getFreshCount = 0;
+
+  const persistedCache: BenchmarkHistoryCache = {
+    async getFresh() {
+      getFreshCount += 1;
+      if (getFreshCount === 1) return null;
+      throw new Error("database unavailable while waiting");
+    },
+    async save() {},
+    async acquireRefreshLease() {
+      return false;
+    },
+    async releaseRefreshLease() {},
+  };
+
+  globalThis.fetch = (async () => {
+    fetchCount += 1;
+    throw new Error("paid provider fetch should not run");
+  }) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY, persistedCache);
+    await assert.rejects(
+      provider.getDailyHistory("WAITFAIL", 260),
+      /Persisted daily market history lookup is unavailable for WAITFAIL/,
+    );
+    assert.equal(getFreshCount, 2);
     assert.equal(fetchCount, 0);
   } finally {
     globalThis.fetch = originalFetch;
