@@ -1,4 +1,4 @@
--- TS: 2026-09-06 21:01 ET
+-- TS: 2026-09-06 21:05 ET
 
 BEGIN;
 
@@ -9,9 +9,9 @@ BEGIN;
 CREATE INDEX IF NOT EXISTS company_facts_rating_revenue_preflight_idx
   ON company_facts (
     company_id,
-    fiscal_year DESC,
-    period_end DESC,
-    filed_date DESC
+    fiscal_year DESC NULLS LAST,
+    period_end DESC NULLS LAST,
+    filed_date DESC NULLS LAST
   )
   INCLUDE (value_numeric, retrieved_at)
   WHERE taxonomy = 'us-gaap'
