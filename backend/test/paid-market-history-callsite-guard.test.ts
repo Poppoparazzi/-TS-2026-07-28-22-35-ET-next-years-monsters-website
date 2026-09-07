@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
-import { extname, join, relative } from "node:path";
+import { extname, relative } from "node:path";
 import test from "node:test";
 
 const srcRoot = new URL("../src/", import.meta.url);
@@ -17,7 +17,7 @@ async function listTypeScriptFiles(directory: URL): Promise<readonly URL[]> {
   return nested.flat();
 }
 
-test("paid daily-history provider calls stay centralized behind rating-batch quota guards", async () => {
+test("all paid daily-history production callsites stay behind free preflight and durable suppression guards", async () => {
   const files = await listTypeScriptFiles(srcRoot);
   const directCallsites: string[] = [];
 
@@ -29,8 +29,8 @@ test("paid daily-history provider calls stay centralized behind rating-batch quo
 
   assert.deepEqual(
     directCallsites.sort(),
-    ["src/jobs/rating-batch.ts"],
-    "production code must not add a direct paid daily-history call outside rating-batch; route new history work through its persisted suppression, atomic-claim, pacing, and retry guards",
+    ["src/app.ts", "src/jobs/rating-batch.ts"],
+    "new production paid-history callsites require an explicit quota-guard regression before they can be added",
   );
 
   const ratingBatch = await readFile(new URL("../src/jobs/rating-batch.ts", import.meta.url), "utf8");
@@ -46,4 +46,24 @@ test("paid daily-history provider calls stay centralized behind rating-batch quo
   assert.ok(benchmark >= 0 && benchmark < claim, "benchmark validation must precede the candidate claim");
   assert.ok(claim >= 0 && claim < paidCandidateHistory, "candidate paid history must remain behind the atomic claim");
   assert.ok(paidCandidateHistory >= 0 && paidCandidateHistory < persistEvidence, "provider-backed market-history evidence must be persisted immediately after the paid candidate history path");
+
+  const app = await readFile(new URL("../src/app.ts", import.meta.url), "utf8");
+  const directRouteStart = app.indexOf('app.get<{ Params: SymbolParams }>("/api/ratings/:symbol"');
+  const directRoute = directRouteStart >= 0 ? app.slice(directRouteStart) : "";
+  const firstDirectSuppression = directRoute.indexOf("getReusableMarketHistorySuppression(symbol, provider.name)");
+  const directSecPreflight = directRoute.indexOf("secProvider.getCompany(symbol)");
+  const directRevenuePreflight = directRoute.indexOf("buildAnnualFinancialPeriods(secFacts)");
+  const secondDirectSuppression = directRoute.indexOf(
+    "getReusableMarketHistorySuppression(symbol, provider.name)",
+    firstDirectSuppression + 1,
+  );
+  const directPaidHistory = directRoute.indexOf("provider.getDailyHistory(symbol, 300)");
+  const directPersistEvidence = directRoute.indexOf("saveMarketHistoryEvidence(buildMarketHistoryEvidence(companyHistory))");
+
+  assert.ok(directRouteStart >= 0, "direct rating route must remain present");
+  assert.ok(firstDirectSuppression >= 0 && firstDirectSuppression < directSecPreflight, "direct route must reuse durable paid-history suppression before SEC network work");
+  assert.ok(directSecPreflight >= 0 && directSecPreflight < directRevenuePreflight, "direct route must finish free SEC retrieval before revenue qualification");
+  assert.ok(directRevenuePreflight >= 0 && directRevenuePreflight < secondDirectSuppression, "direct route must reject insufficient SEC revenue history before the last paid-call suppression recheck");
+  assert.ok(secondDirectSuppression >= 0 && secondDirectSuppression < directPaidHistory, "direct route must close the suppression race immediately before paid company history");
+  assert.ok(directPaidHistory >= 0 && directPaidHistory < directPersistEvidence, "direct route must persist provider-backed market-history evidence before any later eligibility return");
 });
