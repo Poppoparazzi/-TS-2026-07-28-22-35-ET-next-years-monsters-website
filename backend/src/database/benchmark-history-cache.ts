@@ -1,4 +1,4 @@
-// TS: 2026-09-07 09:14 ET
+// TS: 2026-09-07 11:02 ET
 
 import pg from "pg";
 import type { DailyMarketBar, DailyMarketHistory } from "../providers/types.js";
@@ -6,6 +6,7 @@ import type { DailyMarketBar, DailyMarketHistory } from "../providers/types.js";
 const { Client } = pg;
 
 export const BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS = 15 * 60 * 1_000;
+export const BENCHMARK_HISTORY_REFRESH_LEASE_MS = 20 * 1_000;
 
 export interface BenchmarkHistoryCache {
   getFresh(
@@ -15,6 +16,19 @@ export interface BenchmarkHistoryCache {
     maxAgeMs?: number,
   ): Promise<DailyMarketHistory | null>;
   save(history: DailyMarketHistory, outputSize: number): Promise<void>;
+  acquireRefreshLease?(
+    symbol: string,
+    provider: string,
+    outputSize: number,
+    claimToken: string,
+    leaseMs?: number,
+  ): Promise<boolean>;
+  releaseRefreshLease?(
+    symbol: string,
+    provider: string,
+    outputSize: number,
+    claimToken: string,
+  ): Promise<void>;
 }
 
 interface BenchmarkHistoryRow {
@@ -23,6 +37,10 @@ interface BenchmarkHistoryRow {
   readonly bars: unknown;
   readonly retrieved_at: Date | string;
   readonly feed_disclosure: string;
+}
+
+interface RefreshClaimRow {
+  readonly claim_token: string;
 }
 
 function normalizeSymbol(symbol: string): string {
@@ -39,6 +57,21 @@ function normalizeOutputSize(outputSize: number): number {
     throw new Error("benchmark_history_cache_invalid_output_size");
   }
   return normalized;
+}
+
+function normalizeClaimToken(claimToken: string): string {
+  const normalized = claimToken.trim();
+  if (!normalized || normalized.length > 200) {
+    throw new Error("benchmark_history_cache_invalid_claim_token");
+  }
+  return normalized;
+}
+
+function normalizeLeaseMs(leaseMs: number): number {
+  if (!Number.isFinite(leaseMs) || leaseMs < 1_000 || leaseMs > 120_000) {
+    throw new Error("benchmark_history_cache_invalid_lease");
+  }
+  return Math.trunc(leaseMs);
 }
 
 function isDailyMarketBar(value: unknown): value is DailyMarketBar {
@@ -155,6 +188,79 @@ export class PostgresBenchmarkHistoryCache implements BenchmarkHistoryCache {
           history.retrievedAt,
           history.feedDisclosure,
         ],
+      );
+    });
+  }
+
+  public async acquireRefreshLease(
+    symbol: string,
+    provider: string,
+    outputSize: number,
+    claimToken: string,
+    leaseMs = BENCHMARK_HISTORY_REFRESH_LEASE_MS,
+  ): Promise<boolean> {
+    const normalizedSymbol = normalizeSymbol(symbol);
+    const normalizedProvider = provider.trim();
+    const normalizedOutputSize = normalizeOutputSize(outputSize);
+    const normalizedClaimToken = normalizeClaimToken(claimToken);
+    const normalizedLeaseMs = normalizeLeaseMs(leaseMs);
+    if (!normalizedProvider) throw new Error("benchmark_history_cache_provider_required");
+
+    return this.withClient(async (client) => {
+      const result = await client.query<RefreshClaimRow>(
+        `
+          INSERT INTO benchmark_history_refresh_claims (
+            symbol,
+            provider,
+            output_size,
+            claim_token,
+            claimed_until,
+            updated_at
+          )
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            now() + ($5::double precision * interval '1 millisecond'),
+            now()
+          )
+          ON CONFLICT (symbol, provider, output_size) DO UPDATE SET
+            claim_token = EXCLUDED.claim_token,
+            claimed_until = EXCLUDED.claimed_until,
+            updated_at = now()
+          WHERE benchmark_history_refresh_claims.claimed_until <= now()
+             OR benchmark_history_refresh_claims.claim_token = EXCLUDED.claim_token
+          RETURNING claim_token
+        `,
+        [normalizedSymbol, normalizedProvider, normalizedOutputSize, normalizedClaimToken, normalizedLeaseMs],
+      );
+      return result.rows[0]?.claim_token === normalizedClaimToken;
+    });
+  }
+
+  public async releaseRefreshLease(
+    symbol: string,
+    provider: string,
+    outputSize: number,
+    claimToken: string,
+  ): Promise<void> {
+    const normalizedSymbol = normalizeSymbol(symbol);
+    const normalizedProvider = provider.trim();
+    const normalizedOutputSize = normalizeOutputSize(outputSize);
+    const normalizedClaimToken = normalizeClaimToken(claimToken);
+    if (!normalizedProvider) throw new Error("benchmark_history_cache_provider_required");
+
+    await this.withClient(async (client) => {
+      await client.query(
+        `
+          DELETE FROM benchmark_history_refresh_claims
+          WHERE symbol = $1
+            AND provider = $2
+            AND output_size = $3
+            AND claim_token = $4
+        `,
+        [normalizedSymbol, normalizedProvider, normalizedOutputSize, normalizedClaimToken],
       );
     });
   }
