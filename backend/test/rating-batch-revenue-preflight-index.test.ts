@@ -1,4 +1,4 @@
-// TS: 2026-09-06 21:01 ET
+// TS: 2026-09-06 21:06 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -15,14 +15,20 @@ test("rating revenue preflight uses an index aligned with annual SEC evidence ga
 
   assert.match(
     migration,
-    /CREATE INDEX IF NOT EXISTS company_facts_rating_revenue_preflight_idx[\s\S]*ON company_facts[\s\S]*company_id,[\s\S]*fiscal_year DESC,[\s\S]*period_end DESC,[\s\S]*filed_date DESC[\s\S]*INCLUDE \(value_numeric, retrieved_at\)[\s\S]*taxonomy = 'us-gaap'[\s\S]*fiscal_period = 'FY'/,
-    "annual SEC revenue evidence should have a narrow company/year/date index for candidate preflight",
+    /CREATE INDEX IF NOT EXISTS company_facts_rating_revenue_preflight_idx[\s\S]*ON company_facts[\s\S]*company_id,[\s\S]*fiscal_year DESC NULLS LAST,[\s\S]*period_end DESC NULLS LAST,[\s\S]*filed_date DESC NULLS LAST[\s\S]*INCLUDE \(value_numeric, retrieved_at\)[\s\S]*taxonomy = 'us-gaap'[\s\S]*fiscal_period = 'FY'/,
+    "annual SEC revenue evidence should have a narrow company/year/date index matching the latest-revenue sort",
   );
 
   assert.match(
     batchStore,
-    /revenue_metric[\s\S]*taxonomy = 'us-gaap'[\s\S]*fiscal_period = 'FY'[\s\S]*revenue_depth[\s\S]*count\(DISTINCT cf\.fiscal_year\)/,
-    "the index must remain aligned with the revenue metric and annual-depth checks used to prioritize rating candidates",
+    /SELECT cf\.value_numeric AS latest_annual_revenue[\s\S]*?cf\.taxonomy = 'us-gaap'[\s\S]*?cf\.fiscal_period = 'FY'[\s\S]*?\) revenue_metric ON true/,
+    "the index must remain aligned with the latest annual revenue lookup used to prioritize rating candidates",
+  );
+
+  assert.match(
+    batchStore,
+    /SELECT count\(DISTINCT cf\.fiscal_year\) AS annual_revenue_period_count[\s\S]*?cf\.taxonomy = 'us-gaap'[\s\S]*?cf\.fiscal_period = 'FY'[\s\S]*?\) revenue_depth ON true/,
+    "the index must remain aligned with the annual revenue-depth gate used before paid rating work",
   );
 
   assert.match(
