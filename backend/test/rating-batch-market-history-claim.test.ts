@@ -1,4 +1,4 @@
-// TS: 2026-09-06 00:03 ET
+// TS: 2026-09-07 12:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -138,12 +138,12 @@ function dependencies(
   return { dependencies: { marketProvider, secProvider, persistenceStore, batchStore } as any, historyRequests, claims, releases, failures };
 }
 
-test("a lost market-history claim spends zero candidate-history calls", async () => {
+test("a lost market-history claim spends zero candidate-history or benchmark calls", async () => {
   const fixture = dependencies([false]);
   await runRatingBatch(fixture.dependencies, { targetCount: 1, candidateLimit: 1 });
 
   assert.deepEqual(fixture.claims, ["GOOD"]);
-  assert.deepEqual(fixture.historyRequests, ["SPY"]);
+  assert.deepEqual(fixture.historyRequests, [], "a lost candidate claim must not spend either candidate or SPY quota");
   assert.deepEqual(fixture.releases, []);
 });
 
@@ -152,11 +152,11 @@ test("a won market-history claim is released after candidate processing", async 
   await runRatingBatch(fixture.dependencies, { targetCount: 1, candidateLimit: 1 });
 
   assert.deepEqual(fixture.claims, ["GOOD"]);
-  assert.deepEqual(fixture.historyRequests, ["SPY", "GOOD"]);
+  assert.deepEqual(fixture.historyRequests, ["GOOD", "SPY"], "company evidence must survive before shared benchmark quota is spent");
   assert.deepEqual(fixture.releases, ["GOOD"]);
 });
 
-test("failed claim renewal after quota backoff spends zero additional candidate-history calls", async () => {
+test("failed claim renewal after quota backoff spends zero additional candidate-history or benchmark calls", async () => {
   const fixture = dependencies([true, false], { failFirstCandidateHistoryWithQuota: true });
   await runRatingBatch(fixture.dependencies, {
     targetCount: 1,
@@ -166,7 +166,7 @@ test("failed claim renewal after quota backoff spends zero additional candidate-
   });
 
   assert.deepEqual(fixture.claims, ["GOOD", "GOOD"], "initial ownership and the retry renewal must both be attempted");
-  assert.deepEqual(fixture.historyRequests, ["SPY", "GOOD"], "failed renewal must prevent a second paid GOOD history request");
+  assert.deepEqual(fixture.historyRequests, ["GOOD"], "failed renewal must prevent a second GOOD request and must not spend SPY quota");
   assert.deepEqual(fixture.releases, ["GOOD"], "the original owner must still release its bounded claim");
 });
 
@@ -183,7 +183,7 @@ test("durable suppression appearing during quota backoff blocks retry and record
   });
 
   assert.deepEqual(fixture.claims, ["GOOD", "GOOD"], "the worker must renew ownership before reconsidering the paid retry");
-  assert.deepEqual(fixture.historyRequests, ["SPY", "GOOD"], "persisted suppression discovered after renewal must prevent a second paid GOOD request");
+  assert.deepEqual(fixture.historyRequests, ["GOOD"], "persisted suppression discovered after renewal must prevent a second GOOD request and all SPY quota");
   assert.deepEqual(fixture.releases, ["GOOD"], "the owner must release its claim after suppression aborts the retry");
   assert.equal(fixture.failures.length, 1, "the durable suppression must create exactly one candidate accounting record");
   assert.equal(fixture.failures[0]?.ticker, "GOOD");
