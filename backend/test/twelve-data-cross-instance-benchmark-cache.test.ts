@@ -1,4 +1,4 @@
-// TS: 2026-09-07 10:05 ET
+// TS: 2026-09-07 16:14 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -171,6 +171,91 @@ test("missing or expired persisted SPY history performs one paid fetch and refre
 
     const cachedHistory = await provider.getDailyHistory("SPY", 303);
     assert.equal(cachedHistory, history);
+    assert.equal(fetchCount, 1);
+    assert.equal(getFreshCount, 1);
+    assert.equal(saved.length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("fresh persisted company history avoids a repeat paid Twelve Data fetch after restart", async () => {
+  const originalFetch = globalThis.fetch;
+  const persistedHistory = makeHistory("AAPL", 304, new Date().toISOString());
+  let getFreshCount = 0;
+  let saveCount = 0;
+
+  const persistedCache: BenchmarkHistoryCache = {
+    async getFresh(symbol, provider, outputSize, maxAgeMs) {
+      getFreshCount += 1;
+      assert.equal(symbol, "AAPL");
+      assert.equal(provider, "twelve-data");
+      assert.equal(outputSize, 304);
+      assert.equal(maxAgeMs, 15 * 60 * 1_000);
+      return persistedHistory;
+    },
+    async save() {
+      saveCount += 1;
+    },
+  };
+
+  globalThis.fetch = (async () => {
+    throw new Error("fresh persisted company history must avoid a repeat Twelve Data purchase");
+  }) as typeof fetch;
+
+  try {
+    const restartedWorkerProvider = new TwelveDataMarketDataProvider(API_KEY, persistedCache);
+    const history = await restartedWorkerProvider.getDailyHistory("aapl", 304);
+
+    assert.equal(history, persistedHistory);
+    assert.equal(getFreshCount, 1);
+    assert.equal(saveCount, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("missing persisted company history performs one paid fetch, persists it, then reuses it", async () => {
+  const originalFetch = globalThis.fetch;
+  const values = makeProviderValues(305);
+  let fetchCount = 0;
+  let getFreshCount = 0;
+  const saved: Array<{ history: DailyMarketHistory; outputSize: number }> = [];
+
+  const persistedCache: BenchmarkHistoryCache = {
+    async getFresh(symbol, provider, outputSize, maxAgeMs) {
+      getFreshCount += 1;
+      assert.equal(symbol, "MSFT");
+      assert.equal(provider, "twelve-data");
+      assert.equal(outputSize, 305);
+      assert.equal(maxAgeMs, 15 * 60 * 1_000);
+      return null;
+    },
+    async save(history, outputSize) {
+      saved.push({ history, outputSize });
+    },
+  };
+
+  globalThis.fetch = (async () => {
+    fetchCount += 1;
+    return new Response(JSON.stringify({ meta: { symbol: "MSFT" }, values }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY, persistedCache);
+    const history = await provider.getDailyHistory("MSFT", 305);
+
+    assert.equal(fetchCount, 1);
+    assert.equal(getFreshCount, 1);
+    assert.equal(saved.length, 1);
+    assert.equal(saved[0]?.history, history);
+    assert.equal(saved[0]?.outputSize, 305);
+
+    const reused = await provider.getDailyHistory("MSFT", 305);
+    assert.equal(reused, history);
     assert.equal(fetchCount, 1);
     assert.equal(getFreshCount, 1);
     assert.equal(saved.length, 1);
