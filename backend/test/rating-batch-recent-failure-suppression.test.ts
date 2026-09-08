@@ -1,4 +1,4 @@
-// TS: 2026-09-05 11:01 ET
+// TS: 2026-09-07 22:01 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -6,7 +6,7 @@ import test from "node:test";
 
 const batchStorePath = new URL("../src/ratings/batch-store.ts", import.meta.url);
 
-test("rating candidate selection leaves market-history retry suppression to durable latest evidence", async () => {
+test("rating candidate selection reuses durable structural and engine-version ineligibility", async () => {
   const source = await readFile(batchStorePath, "utf8");
   const recentFailureSql = source.match(/export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `([\s\S]*?)`;/)?.[1];
   assert.ok(recentFailureSql, "recent replaceable failure SQL must remain defined");
@@ -14,7 +14,12 @@ test("rating candidate selection leaves market-history retry suppression to dura
   assert.match(
     recentFailureSql,
     /data_refresh_runs[\s\S]*metadata -> 'replaceable'[\s\S]*INTERVAL '30 days'[\s\S]*prior_failure ->> 'ticker' = c\.ticker[\s\S]*prior_failure ->> 'suppressionStage' = 'sec_preflight'[\s\S]*'unresolved_sec_identity'[\s\S]*'insufficient_financial_history'[\s\S]*'unsupported_security_type'/,
-    "structural cooldowns must come only from SEC preflight evidence",
+    "SEC structural cooldowns must remain driven by durable preflight evidence",
+  );
+  assert.match(
+    recentFailureSql,
+    /prior_failure ->> 'suppressionStage' = 'rating_engine'[\s\S]*prior_failure ->> 'reasonCode' = 'unsupported_security_type'[\s\S]*drr\.metadata ->> 'ratingVersion' = \$2/,
+    "rating-engine unsupported-security failures must suppress repeat paid attempts only for the same rating-engine version",
   );
   assert.match(
     recentFailureSql,
@@ -38,7 +43,7 @@ test("rating candidate selection leaves market-history retry suppression to dura
   );
   assert.doesNotMatch(
     recentFailureSql,
-    /insufficient_market_history|insufficient_liquidity|stale_market_data|stored_market_history_preflight|rating_engine/,
+    /insufficient_market_history|insufficient_liquidity|stale_market_data|stored_market_history_preflight|provider_market_history/,
     "market-history failures must not be double-suppressed by stale run metadata after newer persisted evidence becomes eligible",
   );
   assert.match(
