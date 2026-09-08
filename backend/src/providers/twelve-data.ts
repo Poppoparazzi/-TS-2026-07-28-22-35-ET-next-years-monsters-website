@@ -1,4 +1,4 @@
-// TS: 2026-09-07 20:01 ET
+// TS: 2026-09-08 01:58 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -314,6 +314,49 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
           }
 
           refreshLeaseAcquired = true;
+
+          // Close the cache-miss/lease-acquisition race. Another worker can persist fresh
+          // history after our first getFresh() but before this process obtains the lease.
+          // Recheck while holding the lease so that already-paid history wins over a duplicate
+          // Twelve Data request.
+          let refreshedAfterLease: DailyMarketHistory | null;
+          try {
+            refreshedAfterLease = await this.persistedBenchmarkHistoryCache.getFresh(
+              normalizedSymbol,
+              this.name,
+              safeOutputSize,
+              DAILY_HISTORY_CACHE_TTL_MS,
+            );
+          } catch {
+            await this.persistedBenchmarkHistoryCache
+              .releaseRefreshLease(
+                normalizedSymbol,
+                this.name,
+                safeOutputSize,
+                refreshLeaseToken,
+              )
+              .catch(() => undefined);
+            refreshLeaseAcquired = false;
+            throw new Error(
+              `Persisted daily market history lookup is unavailable for ${normalizedSymbol}.`,
+            );
+          }
+          if (refreshedAfterLease) {
+            dailyHistoryCache.set(cacheKey, {
+              expiresAt: dailyHistoryCacheExpiry(refreshedAfterLease),
+              history: refreshedAfterLease,
+            });
+            await this.persistedBenchmarkHistoryCache
+              .releaseRefreshLease(
+                normalizedSymbol,
+                this.name,
+                safeOutputSize,
+                refreshLeaseToken,
+              )
+              .catch(() => undefined);
+            refreshLeaseAcquired = false;
+            return refreshedAfterLease;
+          }
         }
       }
 
