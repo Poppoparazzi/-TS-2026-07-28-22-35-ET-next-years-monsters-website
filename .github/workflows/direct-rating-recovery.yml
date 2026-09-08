@@ -1,0 +1,66 @@
+# TS: 2026-09-08 12:23 ET
+name: Direct Monster Rating recovery (manual only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: direct-monster-rating-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: production
+      MARKET_DATA_PROVIDER: twelve-data
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+      RATING_TARGET_COUNT: "2"
+      RATING_CANDIDATE_LIMIT: "4"
+      RATING_MARKET_REQUEST_DELAY_MS: "9000"
+      RATING_MARKET_LIMIT_RETRY_MS: "65000"
+      RATING_MARKET_LIMIT_MAX_RETRIES: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Verify direct-worker secrets are present
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in DATABASE_URL TWELVE_DATA_API_KEY SEC_USER_AGENT; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required secret: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 2
+          fi
+          echo "Direct worker prerequisites are configured."
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Typecheck direct worker
+        run: npm run typecheck
+
+      - name: Run tiny quota-bounded direct rating batch
+        run: npm run ratings:refresh
