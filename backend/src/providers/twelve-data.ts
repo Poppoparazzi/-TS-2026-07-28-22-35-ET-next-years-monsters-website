@@ -1,4 +1,4 @@
-// TS: 2026-09-08 04:58 ET
+// TS: 2026-09-08 06:58 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -106,6 +106,47 @@ function dailyHistoryCacheExpiry(history: DailyMarketHistory): number {
   return Number.isFinite(retrievedAtMs)
     ? retrievedAtMs + DAILY_HISTORY_CACHE_TTL_MS
     : Date.now();
+}
+
+function trimDailyHistory(
+  history: DailyMarketHistory,
+  outputSize: number,
+): DailyMarketHistory {
+  if (history.bars.length <= outputSize) {
+    return history;
+  }
+
+  return Object.freeze({
+    ...history,
+    bars: Object.freeze(history.bars.slice(-outputSize)),
+  });
+}
+
+function findCompatibleDailyHistoryInFlight(
+  symbol: string,
+  outputSize: number,
+): Promise<DailyMarketHistory> | null {
+  let bestOutputSize = Number.POSITIVE_INFINITY;
+  let bestRequest: Promise<DailyMarketHistory> | null = null;
+  const prefix = `${symbol}:`;
+
+  for (const [key, request] of dailyHistoryInFlight) {
+    if (!key.startsWith(prefix)) {
+      continue;
+    }
+
+    const inFlightOutputSize = Number(key.slice(prefix.length));
+    if (
+      Number.isFinite(inFlightOutputSize) &&
+      inFlightOutputSize >= outputSize &&
+      inFlightOutputSize < bestOutputSize
+    ) {
+      bestOutputSize = inFlightOutputSize;
+      bestRequest = request;
+    }
+  }
+
+  return bestRequest;
 }
 
 export class TwelveDataMarketDataProvider implements MarketDataProvider {
@@ -232,9 +273,20 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     }
     if (cached) dailyHistoryCache.delete(cacheKey);
 
-    const inFlight = dailyHistoryInFlight.get(cacheKey);
-    if (inFlight) {
-      return inFlight;
+    const compatibleInFlight = findCompatibleDailyHistoryInFlight(
+      normalizedSymbol,
+      safeOutputSize,
+    );
+    if (compatibleInFlight) {
+      const sharedHistory = await compatibleInFlight;
+      if (sharedHistory.bars.length >= safeOutputSize) {
+        const reusableHistory = trimDailyHistory(sharedHistory, safeOutputSize);
+        dailyHistoryCache.set(cacheKey, {
+          expiresAt: dailyHistoryCacheExpiry(reusableHistory),
+          history: reusableHistory,
+        });
+        return reusableHistory;
+      }
     }
 
     const loadHistory = async (): Promise<DailyMarketHistory> => {
