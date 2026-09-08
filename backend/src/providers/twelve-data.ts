@@ -138,7 +138,7 @@ function findCompatibleDailyHistoryInFlight(
     const inFlightOutputSize = Number(key.slice(prefix.length));
     if (
       Number.isFinite(inFlightOutputSize) &&
-      inFlightOutputSize >= outputSize &&
+      inFlightOutputSize > outputSize &&
       inFlightOutputSize < bestOutputSize
     ) {
       bestOutputSize = inFlightOutputSize;
@@ -272,6 +272,11 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
       return cached.history;
     }
     if (cached) dailyHistoryCache.delete(cacheKey);
+
+    const exactInFlight = dailyHistoryInFlight.get(cacheKey);
+    if (exactInFlight) {
+      return exactInFlight;
+    }
 
     const compatibleInFlight = findCompatibleDailyHistoryInFlight(
       normalizedSymbol,
