@@ -1,4 +1,4 @@
-// TS: 2026-09-07 18:57 ET
+// TS: 2026-09-07 20:01 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -16,6 +16,7 @@ const FEED_DISCLOSURE =
 const DAILY_HISTORY_CACHE_TTL_MS = 15 * 60 * 1_000;
 const DAILY_HISTORY_REFRESH_WAIT_MS = 10_000;
 const DAILY_HISTORY_REFRESH_POLL_MS = 250;
+const DAILY_HISTORY_PERSIST_RETRY_DELAYS_MS = [100, 250] as const;
 
 // The HTTP app and startup rating worker can construct separate Twelve Data provider instances.
 // Keep daily history at module scope so all symbols share same-process completed and in-flight
@@ -239,6 +240,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     const loadHistory = async (): Promise<DailyMarketHistory> => {
       let refreshLeaseToken: string | null = null;
       let refreshLeaseAcquired = false;
+      let keepRefreshLeaseUntilExpiry = false;
 
       if (this.persistedBenchmarkHistoryCache) {
         let persisted: DailyMarketHistory | null;
@@ -365,13 +367,37 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
           history,
         });
         if (this.persistedBenchmarkHistoryCache) {
-          await this.persistedBenchmarkHistoryCache.save(history, safeOutputSize).catch(() => undefined);
+          let persisted = false;
+          let lastPersistenceError: unknown = null;
+          for (let attempt = 0; attempt <= DAILY_HISTORY_PERSIST_RETRY_DELAYS_MS.length; attempt += 1) {
+            try {
+              await this.persistedBenchmarkHistoryCache.save(history, safeOutputSize);
+              persisted = true;
+              break;
+            } catch (error) {
+              lastPersistenceError = error;
+              const retryDelay = DAILY_HISTORY_PERSIST_RETRY_DELAYS_MS[attempt];
+              if (retryDelay !== undefined) {
+                await delay(retryDelay);
+              }
+            }
+          }
+          if (!persisted) {
+            // Keep the database lease until its natural expiry. Releasing it here would let
+            // another process immediately buy the same history that we already paid for.
+            keepRefreshLeaseUntilExpiry = refreshLeaseAcquired;
+            throw new Error(
+              `Paid daily market history could not be persisted for ${normalizedSymbol}; refusing an immediate duplicate refresh.`,
+              { cause: lastPersistenceError },
+            );
+          }
         }
 
         return history;
       } finally {
         if (
           refreshLeaseAcquired &&
+          !keepRefreshLeaseUntilExpiry &&
           refreshLeaseToken &&
           this.persistedBenchmarkHistoryCache?.releaseRefreshLease
         ) {
