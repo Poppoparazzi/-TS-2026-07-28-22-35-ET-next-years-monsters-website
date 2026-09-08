@@ -1,13 +1,15 @@
-// TS: 2026-09-07 14:06 ET
+// TS: 2026-09-08 19:00 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const BATCH_STORE_PATH = new URL("../src/ratings/batch-store.ts", import.meta.url);
+const RATING_BATCH_PATH = new URL("../src/jobs/rating-batch.ts", import.meta.url);
 
-test("Monster Rating batch prioritizes protected stocks, then persisted readiness, reusable liquidity, annual revenue depth, and SEC evidence before revenue size", async () => {
+test("Monster Rating batch prioritizes protected stocks, then provider-scoped persisted readiness, reusable liquidity, annual revenue depth, and SEC evidence before revenue size", async () => {
   const source = await readFile(BATCH_STORE_PATH, "utf8");
+  const ratingBatchSource = await readFile(RATING_BATCH_PATH, "utf8");
 
   const protectedOrder = source.indexOf("CASE WHEN ${PROTECTED_COMPANY_SQL_PREDICATE} THEN 0 ELSE 1 END");
   const combinedEvidenceTierOrder = source.indexOf("AND COALESCE(revenue_depth.annual_revenue_period_count, 0) >= 2 THEN 0");
@@ -40,7 +42,12 @@ test("Monster Rating batch prioritizes protected stocks, then persisted readines
   assert.ok(filingOrder > factOrder, "SEC filing depth must rank after fact depth");
   assert.ok(revenueOrder > filingOrder, "revenue size must remain a final tie breaker rather than a substitute for evidence completeness");
 
-  assert.match(source, /LEFT JOIN market_history_evidence_latest history_readiness/);
+  assert.match(source, /LEFT JOIN market_history_evidence_latest_by_provider history_readiness/);
+  assert.match(source, /history_readiness\.provider = \$3/);
+  assert.match(source, /FROM market_history_evidence_latest_by_provider mhe/);
+  assert.match(source, /mhe\.provider = \$3/);
+  assert.match(source, /\[safeLimit, MONSTER_RATING_ENGINE_VERSION, safeProvider\]/);
+  assert.match(ratingBatchSource, /batchStore\.listCandidates\(candidateLimit, marketProvider\.name\)/);
   assert.match(source, /history_readiness\.twenty_session_average_dollar_volume >= 1000000 THEN 0/);
   assert.match(source, /history_readiness\.twenty_session_average_dollar_volume IS NULL\s+OR history_readiness\.retrieved_at < CURRENT_TIMESTAMP - INTERVAL '30 days'/);
   assert.match(source, /history_readiness\.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'/);

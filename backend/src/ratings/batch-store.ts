@@ -1,4 +1,4 @@
-// TS: 2026-09-07 22:01 ET
+// TS: 2026-09-08 19:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -31,8 +31,9 @@ export const EXCLUDE_CURRENT_COMPLETED_RATING_SQL = `
 export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
   NOT EXISTS (
     SELECT 1
-    FROM market_history_evidence_latest mhe
+    FROM market_history_evidence_latest_by_provider mhe
     WHERE mhe.company_id = c.id
+      AND mhe.provider = $3
       AND (
         (
           mhe.rating_history_ready = false
@@ -178,7 +179,7 @@ export interface RatingBatchAccounting {
 export interface RatingBatchStore {
   readonly name: string;
   readonly configured: boolean;
-  listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]>;
+  listCandidates(limit: number, provider?: string): Promise<readonly RatingBatchCandidate[]>;
   startRun(targetCount: number, provider: string): Promise<string>;
   getReusableMarketHistorySuppression(
     ticker: string,
@@ -216,7 +217,7 @@ export class UnconfiguredRatingBatchStore implements RatingBatchStore {
   public readonly name = "unconfigured-database";
   public readonly configured = false;
 
-  public async listCandidates(_limit: number): Promise<readonly RatingBatchCandidate[]> {
+  public async listCandidates(_limit: number, _provider?: string): Promise<readonly RatingBatchCandidate[]> {
     throw new ProviderNotConfiguredError("Rating batch database");
   }
 
@@ -267,8 +268,10 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
     this.pool = new Pool({ connectionString: databaseUrl, max: 3, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 5_000 });
   }
 
-  public async listCandidates(limit: number): Promise<readonly RatingBatchCandidate[]> {
+  public async listCandidates(limit: number, provider = "unconfigured"): Promise<readonly RatingBatchCandidate[]> {
     const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 5_000);
+    const safeProvider = provider.trim().toLowerCase();
+    if (!safeProvider) throw new Error("A market-data provider is required for rating candidate selection.");
     const result = await this.pool.query<CandidateRow>(
       `
         SELECT c.ticker, c.company_name, c.is_pilot,
@@ -310,7 +313,9 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           ORDER BY qs.provider_timestamp DESC, qs.retrieved_at DESC
           LIMIT 1
         ) stored_liquidity ON true
-        LEFT JOIN market_history_evidence_latest history_readiness ON history_readiness.company_id = c.id
+        LEFT JOIN market_history_evidence_latest_by_provider history_readiness
+          ON history_readiness.company_id = c.id
+          AND history_readiness.provider = $3
         WHERE c.is_active = true AND cps.sec_status = 'complete' AND c.sec_cik IS NOT NULL
           AND EXISTS (SELECT 1 FROM sec_filings sf WHERE sf.company_id = c.id)
           AND EXISTS (SELECT 1 FROM company_facts cf WHERE cf.company_id = c.id)
@@ -372,7 +377,7 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           c.ticker
         LIMIT $1
       `,
-      [safeLimit, MONSTER_RATING_ENGINE_VERSION],
+      [safeLimit, MONSTER_RATING_ENGINE_VERSION, safeProvider],
     );
 
     return Object.freeze(result.rows.map((row) => Object.freeze({

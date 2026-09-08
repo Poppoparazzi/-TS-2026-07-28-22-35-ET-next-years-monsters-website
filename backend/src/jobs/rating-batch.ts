@@ -1,4 +1,4 @@
-// TS: 2026-09-07 14:59 ET
+// TS: 2026-09-08 19:00 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -120,7 +120,7 @@ export async function runRatingBatch(
     }
   };
 
-  const candidates = await batchStore.listCandidates(candidateLimit);
+  const candidates = await batchStore.listCandidates(candidateLimit, marketProvider.name);
   const runId = await batchStore.startRun(targetCount, marketProvider.name);
   const ratedTickers: string[] = [];
   const protectedMustRepair: RatingBatchFailure[] = [];
