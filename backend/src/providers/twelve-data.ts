@@ -1,4 +1,4 @@
-// TS: 2026-09-08 01:58 ET
+// TS: 2026-09-08 04:58 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -287,7 +287,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
 
           if (acquired === false) {
             const deadline = Date.now() + DAILY_HISTORY_REFRESH_WAIT_MS;
-            while (Date.now() < deadline) {
+            while (Date.now() < deadline && acquired === false) {
               await delay(DAILY_HISTORY_REFRESH_POLL_MS);
               let refreshed: DailyMarketHistory | null;
               try {
@@ -309,8 +309,26 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
                 });
                 return refreshed;
               }
+
+              // The competing refresh may have completed but produced fewer bars than this
+              // caller requires. Only after rechecking persisted history may this caller try
+              // to acquire the serialized lease and purchase the additional depth itself.
+              try {
+                acquired = await this.persistedBenchmarkHistoryCache.acquireRefreshLease(
+                  normalizedSymbol,
+                  this.name,
+                  safeOutputSize,
+                  refreshLeaseToken,
+                );
+              } catch {
+                throw new Error(
+                  `Daily market history refresh coordination is unavailable for ${normalizedSymbol}.`,
+                );
+              }
             }
-            throw new Error(`Daily market history refresh is already in progress for ${normalizedSymbol}.`);
+            if (acquired === false) {
+              throw new Error(`Daily market history refresh is already in progress for ${normalizedSymbol}.`);
+            }
           }
 
           refreshLeaseAcquired = true;
