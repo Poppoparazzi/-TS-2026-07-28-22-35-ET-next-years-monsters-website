@@ -1,4 +1,4 @@
-// TS: 2026-09-07 11:02 ET
+// TS: 2026-09-07 23:01 ET
 
 import pg from "pg";
 import type { DailyMarketBar, DailyMarketHistory } from "../providers/types.js";
@@ -123,9 +123,9 @@ export class PostgresBenchmarkHistoryCache implements BenchmarkHistoryCache {
           FROM benchmark_history_cache
           WHERE symbol = $1
             AND provider = $2
-            AND output_size = $3
+            AND output_size >= $3
             AND retrieved_at >= now() - ($4::double precision * interval '1 millisecond')
-          ORDER BY retrieved_at DESC
+          ORDER BY output_size ASC, retrieved_at DESC
           LIMIT 1
         `,
         [normalizedSymbol, normalizedProvider, normalizedOutputSize, maxAgeMs],
@@ -139,9 +139,13 @@ export class PostgresBenchmarkHistoryCache implements BenchmarkHistoryCache {
         : new Date(row.retrieved_at).toISOString();
       if (!Number.isFinite(Date.parse(retrievedAt))) return null;
 
+      const reusableBars = row.bars.length > normalizedOutputSize
+        ? row.bars.slice(-normalizedOutputSize)
+        : row.bars;
+
       return Object.freeze({
         symbol: row.symbol.toUpperCase(),
-        bars: Object.freeze([...row.bars]),
+        bars: Object.freeze([...reusableBars]),
         provider: row.provider,
         retrievedAt,
         feedDisclosure: row.feed_disclosure,
