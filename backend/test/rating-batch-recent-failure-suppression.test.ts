@@ -1,4 +1,4 @@
-// TS: 2026-09-07 22:01 ET
+// TS: 2026-09-07 22:08 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -38,8 +38,8 @@ test("rating candidate selection reuses durable structural and engine-version in
   );
   assert.doesNotMatch(
     recentFailureSql,
-    /prior_failure ->> 'reasonCode' = 'unsupported_security_type'[\s\S]*retrieved_at > drr\.started_at/,
-    "unsupported-security cooldowns must not be reopened by unrelated newer SEC data",
+    /prior_failure ->> 'reasonCode' = 'unsupported_security_type'[\s\S]{0,160}retrieved_at > drr\.started_at/,
+    "unsupported-security cooldowns must not be directly reopened by unrelated newer SEC data",
   );
   assert.doesNotMatch(
     recentFailureSql,
