@@ -1,4 +1,4 @@
-// TS: 2026-09-08 06:58 ET
+// TS: 2026-09-08 09:00 ET
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -120,6 +120,40 @@ function trimDailyHistory(
     ...history,
     bars: Object.freeze(history.bars.slice(-outputSize)),
   });
+}
+
+function findCompatibleDailyHistoryCache(
+  symbol: string,
+  outputSize: number,
+): { readonly expiresAt: number; readonly history: DailyMarketHistory } | null {
+  let bestOutputSize = Number.POSITIVE_INFINITY;
+  let bestEntry: { readonly expiresAt: number; readonly history: DailyMarketHistory } | null = null;
+  const prefix = `${symbol}:`;
+  const now = Date.now();
+
+  for (const [key, entry] of dailyHistoryCache) {
+    if (!key.startsWith(prefix)) {
+      continue;
+    }
+
+    if (entry.expiresAt <= now) {
+      dailyHistoryCache.delete(key);
+      continue;
+    }
+
+    const cachedOutputSize = Number(key.slice(prefix.length));
+    if (
+      Number.isFinite(cachedOutputSize) &&
+      cachedOutputSize > outputSize &&
+      cachedOutputSize < bestOutputSize &&
+      entry.history.bars.length >= outputSize
+    ) {
+      bestOutputSize = cachedOutputSize;
+      bestEntry = entry;
+    }
+  }
+
+  return bestEntry;
 }
 
 function findCompatibleDailyHistoryInFlight(
@@ -272,6 +306,19 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
       return cached.history;
     }
     if (cached) dailyHistoryCache.delete(cacheKey);
+
+    const compatibleCached = findCompatibleDailyHistoryCache(
+      normalizedSymbol,
+      safeOutputSize,
+    );
+    if (compatibleCached) {
+      const reusableHistory = trimDailyHistory(compatibleCached.history, safeOutputSize);
+      dailyHistoryCache.set(cacheKey, {
+        expiresAt: compatibleCached.expiresAt,
+        history: reusableHistory,
+      });
+      return reusableHistory;
+    }
 
     const exactInFlight = dailyHistoryInFlight.get(cacheKey);
     if (exactInFlight) {
