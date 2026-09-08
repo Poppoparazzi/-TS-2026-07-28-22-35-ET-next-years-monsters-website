@@ -1,4 +1,4 @@
-// TS: 2026-09-07 18:57 ET
+// TS: 2026-09-07 20:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -187,6 +187,102 @@ test("refresh-wait lookup failure spends zero duplicate Twelve Data calls", asyn
     );
     assert.equal(getFreshCount, 2);
     assert.equal(fetchCount, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("paid history persistence retries without another Twelve Data fetch", async () => {
+  const originalFetch = globalThis.fetch;
+  const outputSize = 263;
+  const values = makeProviderValues(outputSize);
+  let fetchCount = 0;
+  let saveCount = 0;
+  let releaseCount = 0;
+
+  const persistedCache: BenchmarkHistoryCache = {
+    async getFresh() {
+      return null;
+    },
+    async save() {
+      saveCount += 1;
+      if (saveCount < 3) throw new Error("transient database write failure");
+    },
+    async acquireRefreshLease() {
+      return true;
+    },
+    async releaseRefreshLease() {
+      releaseCount += 1;
+    },
+  };
+
+  globalThis.fetch = (async () => {
+    fetchCount += 1;
+    return new Response(JSON.stringify({ meta: { symbol: "SAVERETRY" }, values }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY, persistedCache);
+    const history = await provider.getDailyHistory("SAVERETRY", outputSize);
+    assert.equal(history.symbol, "SAVERETRY");
+    assert.equal(fetchCount, 1);
+    assert.equal(saveCount, 3);
+    assert.equal(releaseCount, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("failed paid-history persistence keeps lease and reuses same-process history", async () => {
+  const originalFetch = globalThis.fetch;
+  const outputSize = 264;
+  const values = makeProviderValues(outputSize);
+  let fetchCount = 0;
+  let saveCount = 0;
+  let releaseCount = 0;
+
+  const persistedCache: BenchmarkHistoryCache = {
+    async getFresh() {
+      return null;
+    },
+    async save() {
+      saveCount += 1;
+      throw new Error("database write unavailable");
+    },
+    async acquireRefreshLease() {
+      return true;
+    },
+    async releaseRefreshLease() {
+      releaseCount += 1;
+    },
+  };
+
+  globalThis.fetch = (async () => {
+    fetchCount += 1;
+    return new Response(JSON.stringify({ meta: { symbol: "SAVEFAIL" }, values }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const provider = new TwelveDataMarketDataProvider(API_KEY, persistedCache);
+    await assert.rejects(
+      provider.getDailyHistory("SAVEFAIL", outputSize),
+      /Paid daily market history could not be persisted for SAVEFAIL/,
+    );
+    assert.equal(fetchCount, 1);
+    assert.equal(saveCount, 3);
+    assert.equal(releaseCount, 0);
+
+    const cachedHistory = await provider.getDailyHistory("SAVEFAIL", outputSize);
+    assert.equal(cachedHistory.symbol, "SAVEFAIL");
+    assert.equal(fetchCount, 1);
+    assert.equal(saveCount, 3);
+    assert.equal(releaseCount, 0);
   } finally {
     globalThis.fetch = originalFetch;
   }
