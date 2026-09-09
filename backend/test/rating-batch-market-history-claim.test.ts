@@ -1,4 +1,4 @@
-// TS: 2026-09-07 12:57 ET
+// TS: 2026-09-09 09:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -62,9 +62,11 @@ function dependencies(
   options: {
     readonly failFirstCandidateHistoryWithQuota?: boolean;
     readonly suppressAfterFirstCandidateHistory?: boolean;
+    readonly invalidCachedBenchmark?: boolean;
   } = {},
 ) {
   const historyRequests: string[] = [];
+  const cachedHistoryRequests: string[] = [];
   const claims: string[] = [];
   const releases: string[] = [];
   const failures: Array<{ ticker: string; reason?: string; reasonCode?: string; suppressionStage?: string }> = [];
@@ -73,6 +75,12 @@ function dependencies(
   const marketProvider = {
     name: "claim-test-market",
     configured: true,
+    async getCachedDailyHistory(symbol: string) {
+      cachedHistoryRequests.push(symbol);
+      if (!options.invalidCachedBenchmark) return null;
+      const cached = history(symbol);
+      return Object.freeze({ ...cached, bars: Object.freeze(cached.bars.slice(-100)) });
+    },
     async getDailyHistory(symbol: string) {
       historyRequests.push(symbol);
       if (symbol === "GOOD") {
@@ -135,7 +143,7 @@ function dependencies(
     async finishRun() {},
     async close() {},
   };
-  return { dependencies: { marketProvider, secProvider, persistenceStore, batchStore } as any, historyRequests, claims, releases, failures };
+  return { dependencies: { marketProvider, secProvider, persistenceStore, batchStore } as any, historyRequests, cachedHistoryRequests, claims, releases, failures };
 }
 
 test("a lost market-history claim spends zero candidate-history or benchmark calls", async () => {
@@ -143,8 +151,21 @@ test("a lost market-history claim spends zero candidate-history or benchmark cal
   await runRatingBatch(fixture.dependencies, { targetCount: 1, candidateLimit: 1 });
 
   assert.deepEqual(fixture.claims, ["GOOD"]);
+  assert.deepEqual(fixture.cachedHistoryRequests, [], "a lost company claim must not even enter benchmark cache preflight");
   assert.deepEqual(fixture.historyRequests, [], "a lost candidate claim must not spend either candidate or SPY quota");
   assert.deepEqual(fixture.releases, []);
+});
+
+test("fresh invalid cached SPY spends zero company-history quota", async () => {
+  const fixture = dependencies([true], { invalidCachedBenchmark: true });
+  const accounting = await runRatingBatch(fixture.dependencies, { targetCount: 1, candidateLimit: 1 });
+
+  assert.deepEqual(fixture.claims, ["GOOD"], "company ownership must be established before cache-only benchmark preflight");
+  assert.deepEqual(fixture.cachedHistoryRequests, ["SPY"], "the persisted benchmark must be inspected exactly once");
+  assert.deepEqual(fixture.historyRequests, [], "known-bad persisted SPY must spend exactly zero paid company-history or benchmark calls");
+  assert.deepEqual(fixture.releases, ["GOOD"], "the company history claim must still be released when benchmark preflight stops the batch");
+  assert.equal(accounting.ratedCount, 0);
+  assert.match(accounting.stoppedReason ?? "", /Persisted benchmark preflight blocked paid company history/);
 });
 
 test("a won market-history claim is released after candidate processing", async () => {
@@ -152,6 +173,7 @@ test("a won market-history claim is released after candidate processing", async 
   await runRatingBatch(fixture.dependencies, { targetCount: 1, candidateLimit: 1 });
 
   assert.deepEqual(fixture.claims, ["GOOD"]);
+  assert.deepEqual(fixture.cachedHistoryRequests, ["SPY"]);
   assert.deepEqual(fixture.historyRequests, ["GOOD", "SPY"], "company evidence must survive before shared benchmark quota is spent");
   assert.deepEqual(fixture.releases, ["GOOD"]);
 });
