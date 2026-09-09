@@ -1,4 +1,4 @@
-// TS: 2026-09-09 11:57 ET
+// TS: 2026-09-09 13:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -56,4 +56,27 @@ test("one paid identity mismatch trips the circuit breaker before another provid
   );
 
   assert.equal(paidCalls, 1, "the provider must not receive a second paid history request after identity corruption is detected");
+});
+
+test("transient provider failure does not trip the identity circuit breaker", async () => {
+  let paidCalls = 0;
+  const guardedHistory = createMarketHistoryIdentityGuard(
+    "twelve-data",
+    async (symbol: string) => {
+      paidCalls += 1;
+      if (paidCalls === 1) throw new Error("HTTP 429 rate limit");
+      return history(symbol);
+    },
+  );
+
+  await assert.rejects(
+    () => guardedHistory("AAPL", 300),
+    /http 429 rate limit/i,
+  );
+  assert.equal(
+    (await guardedHistory("AAPL", 300)).symbol,
+    "AAPL",
+    "a later provider call must remain possible after a non-identity provider failure",
+  );
+  assert.equal(paidCalls, 2);
 });

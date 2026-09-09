@@ -1,4 +1,4 @@
-// TS: 2026-09-09 11:57 ET
+// TS: 2026-09-09 13:02 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -44,12 +44,13 @@ export function createMarketHistoryIdentityGuard(
   return async (symbol: string, outputSize = 260) => {
     if (blockedError) throw blockedError;
 
+    // Provider transport/quota/auth failures are not identity corruption. Let those errors flow to
+    // the batch's bounded retry/stop policy without permanently poisoning this provider instance.
+    // Only a successfully returned payload that fails the symbol/provider identity boundary trips
+    // the process-local circuit breaker.
+    const history = await getDailyHistory(symbol, outputSize);
     try {
-      return assertMarketHistoryIdentity(
-        await getDailyHistory(symbol, outputSize),
-        symbol,
-        providerName,
-      );
+      return assertMarketHistoryIdentity(history, symbol, providerName);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       blockedError = new Error(
@@ -80,8 +81,8 @@ export function createMarketDataProvider(config: AppConfig): MarketDataProvider 
     return Object.assign(provider, {
       // Treat the symbol/provider embedded in returned history as a data-integrity boundary. Once a
       // paid response crosses that boundary, trip a process-local circuit breaker before another
-      // paid history request can be sent. The batch recognizes the service-unavailable error as a
-      // run-level stop instead of walking the 5,000-company reserve through corrupted responses.
+      // paid history request can be sent. Ordinary provider failures remain retryable/stoppable by
+      // the batch and do not masquerade as identity corruption.
       getDailyHistory,
       getCachedDailyHistory: async (symbol: string, outputSize = 260) => {
         if (!benchmarkHistoryCache) return null;
