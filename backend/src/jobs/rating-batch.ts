@@ -1,4 +1,4 @@
-// TS: 2026-09-09 08:04 ET
+// TS: 2026-09-09 10:05 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -207,7 +207,10 @@ export async function runRatingBatch(
             stoppedReason = `Persisted benchmark preflight could not be read: ${reason(error)}`;
             break;
           }
-          if (cachedBenchmarkHistory) {
+          // The factory already scopes Postgres reads to the active provider, but keep the worker
+          // defensive too: cache corruption or a future provider implementation must never let
+          // another provider's SPY history suppress or seed this provider's rating batch.
+          if (cachedBenchmarkHistory && cachedBenchmarkHistory.provider === marketProvider.name) {
             const cachedBenchmarkProblem = validateBenchmarkHistory(cachedBenchmarkHistory);
             if (cachedBenchmarkProblem) {
               stoppedReason = `Persisted benchmark preflight blocked paid company history: ${cachedBenchmarkProblem}`;
