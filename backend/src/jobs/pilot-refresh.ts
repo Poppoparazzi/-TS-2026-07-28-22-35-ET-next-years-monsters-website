@@ -1,4 +1,4 @@
-// TS: 2026-08-01 21:38 ET
+// TS: 2026-09-09 17:58 ET
 
 import type { PersistenceStore, StoredCompanySnapshot } from "../database/persistence.js";
 import type { MarketDataProvider } from "../providers/types.js";
@@ -37,6 +37,7 @@ export interface PilotRefreshDependencies {
   readonly marketProvider: MarketDataProvider;
   readonly secProvider: SecDataProvider;
   readonly persistenceStore: PersistenceStore;
+  readonly includeMarketQuote?: boolean;
 }
 
 export function normalizeRefreshSymbols(values: readonly string[]): readonly string[] {
@@ -64,7 +65,12 @@ export async function refreshPilotSymbol(
   symbol: string,
   dependencies: PilotRefreshDependencies,
 ): Promise<PilotRefreshResult> {
-  const { marketProvider, secProvider, persistenceStore } = dependencies;
+  const {
+    marketProvider,
+    secProvider,
+    persistenceStore,
+    includeMarketQuote = true,
+  } = dependencies;
 
   if (!persistenceStore.configured) {
     throw new Error("The private persistence database is not configured.");
@@ -84,7 +90,7 @@ export async function refreshPilotSymbol(
   await persistenceStore.saveSecFacts(facts);
 
   let quoteStatus: QuoteRefreshStatus = "unconfigured";
-  if (marketProvider.configured) {
+  if (includeMarketQuote && marketProvider.configured) {
     try {
       const quote = await marketProvider.getQuote(symbol);
       await persistenceStore.saveQuote(quote);
