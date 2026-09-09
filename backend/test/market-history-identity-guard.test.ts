@@ -1,8 +1,11 @@
-// TS: 2026-09-09 11:00 ET
+// TS: 2026-09-09 11:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertMarketHistoryIdentity } from "../src/providers/index.js";
+import {
+  assertMarketHistoryIdentity,
+  createMarketHistoryIdentityGuard,
+} from "../src/providers/index.js";
 
 function history(symbol: string, provider = "twelve-data") {
   return Object.freeze({
@@ -31,4 +34,26 @@ test("market history identity rejects a response attributed to another provider"
     () => assertMarketHistoryIdentity(history("AAPL", "other-provider"), "AAPL", "twelve-data"),
     /provider mismatch.*expected twelve-data, received other-provider/i,
   );
+});
+
+test("one paid identity mismatch trips the circuit breaker before another provider call", async () => {
+  let paidCalls = 0;
+  const guardedHistory = createMarketHistoryIdentityGuard(
+    "twelve-data",
+    async (symbol: string) => {
+      paidCalls += 1;
+      return symbol === "AAPL" ? history("MSFT") : history(symbol);
+    },
+  );
+
+  await assert.rejects(
+    () => guardedHistory("AAPL", 300),
+    /service unavailable after identity-integrity failure.*symbol mismatch.*requested AAPL, received MSFT/i,
+  );
+  await assert.rejects(
+    () => guardedHistory("NVDA", 300),
+    /service unavailable after identity-integrity failure.*requested AAPL, received MSFT/i,
+  );
+
+  assert.equal(paidCalls, 1, "the provider must not receive a second paid history request after identity corruption is detected");
 });
