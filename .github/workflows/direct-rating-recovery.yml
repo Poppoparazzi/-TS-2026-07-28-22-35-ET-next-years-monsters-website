@@ -1,4 +1,4 @@
-# TS: 2026-09-08 12:23 ET
+# TS: 2026-09-08 19:57 ET
 name: Direct Monster Rating recovery (manual only)
 
 on:
@@ -64,3 +64,19 @@ jobs:
 
       - name: Run tiny quota-bounded direct rating batch
         run: npm run ratings:refresh
+
+      - name: Generate exact rating suppression report
+        if: ${{ always() && env.DATABASE_URL != '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../ops
+          npm run ratings:suppression-report > ../ops/rating-suppression.json
+
+      - name: Persist exact rating suppression report artifact
+        if: ${{ always() && env.DATABASE_URL != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rating-suppression-report
+          path: ops/rating-suppression.json
+          if-no-files-found: error
+          retention-days: 30
