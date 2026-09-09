@@ -1,6 +1,7 @@
-// TS: 2026-09-06 02:03 ET
+// TS: 2026-09-08 22:57 ET
 
 import pg from "pg";
+import { loadConfig } from "../config.js";
 
 const { Pool } = pg;
 
@@ -12,9 +13,10 @@ export const RATING_SUPPRESSION_RECONCILIATION_SQL = `
       'persisted_market_history'::text AS suppression_stage,
       mhe.retrieved_at AS observed_at,
       1 AS source_priority
-    FROM market_history_evidence_latest mhe
+    FROM market_history_evidence_latest_by_provider mhe
     INNER JOIN companies c ON c.id = mhe.company_id
-    WHERE mhe.rating_history_ready = false
+    WHERE mhe.provider = $1
+      AND mhe.rating_history_ready = false
       AND CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days'
   ), recent_failure_events AS (
     SELECT
@@ -65,6 +67,7 @@ export const RATING_SUPPRESSION_RECONCILIATION_SQL = `
     GROUP BY reason_code, suppression_stage
   )
   SELECT
+    $1::text AS provider,
     COALESCE((SELECT count(*) FROM authoritative), 0)::int AS unique_suppressed_candidate_count,
     COALESCE((SELECT count(*) FROM authoritative WHERE source_priority = 1), 0)::int AS persisted_authoritative_count,
     COALESCE((SELECT count(*) FROM authoritative WHERE source_priority = 2), 0)::int AS recent_authoritative_count,
@@ -83,6 +86,7 @@ export const RATING_SUPPRESSION_RECONCILIATION_SQL = `
 `;
 
 interface ReconciliationRow {
+  readonly provider: string;
   readonly unique_suppressed_candidate_count: string | number;
   readonly persisted_authoritative_count: string | number;
   readonly recent_authoritative_count: string | number;
@@ -100,6 +104,7 @@ export interface RatingSuppressionReconciliationReason {
 }
 
 export interface RatingSuppressionReconciliationReport {
+  readonly provider: string;
   readonly uniqueSuppressedCandidateCount: number;
   readonly persistedAuthoritativeCount: number;
   readonly recentAuthoritativeCount: number;
@@ -140,7 +145,13 @@ function validate(report: RatingSuppressionReconciliationReport): RatingSuppress
 
 export async function readRatingSuppressionReconciliationReport(
   databaseUrl: string,
+  marketDataProvider: string,
 ): Promise<RatingSuppressionReconciliationReport> {
+  const provider = marketDataProvider.trim();
+  if (!provider || provider === "unconfigured") {
+    throw new Error("MARKET_DATA_PROVIDER must be configured to reconcile provider-scoped rating suppression reasons.");
+  }
+
   const pool = new Pool({
     connectionString: databaseUrl,
     max: 1,
@@ -149,11 +160,12 @@ export async function readRatingSuppressionReconciliationReport(
   });
 
   try {
-    const result = await pool.query<ReconciliationRow>(RATING_SUPPRESSION_RECONCILIATION_SQL);
+    const result = await pool.query<ReconciliationRow>(RATING_SUPPRESSION_RECONCILIATION_SQL, [provider]);
     const row = result.rows[0];
     if (!row) throw new Error("Rating suppression reconciliation returned no row.");
 
     const report = Object.freeze({
+      provider: row.provider,
       uniqueSuppressedCandidateCount: exactNonNegativeInteger(
         row.unique_suppressed_candidate_count ?? 0,
         "uniqueSuppressedCandidateCount",
@@ -176,12 +188,18 @@ export async function readRatingSuppressionReconciliationReport(
 }
 
 async function main(): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL?.trim();
-  if (!databaseUrl) {
+  const config = loadConfig();
+  if (!config.databaseUrl) {
     throw new Error("DATABASE_URL is required to reconcile rating suppression reasons.");
   }
+  if (config.marketDataProvider === "unconfigured") {
+    throw new Error("MARKET_DATA_PROVIDER must be configured to reconcile provider-scoped rating suppression reasons.");
+  }
 
-  const report = await readRatingSuppressionReconciliationReport(databaseUrl);
+  const report = await readRatingSuppressionReconciliationReport(
+    config.databaseUrl,
+    config.marketDataProvider,
+  );
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 }
 

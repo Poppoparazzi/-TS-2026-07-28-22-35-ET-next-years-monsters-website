@@ -1,11 +1,13 @@
-// TS: 2026-09-06 02:03 ET
+// TS: 2026-09-08 22:57 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import { RATING_SUPPRESSION_RECONCILIATION_SQL } from "../src/jobs/report-rating-suppression-reconciliation.js";
 
-test("suppression reconciliation emits one authoritative machine-readable reason per candidate", () => {
-  assert.match(RATING_SUPPRESSION_RECONCILIATION_SQL, /market_history_evidence_latest/i);
+test("suppression reconciliation emits one authoritative machine-readable reason per candidate for the active provider", () => {
+  assert.match(RATING_SUPPRESSION_RECONCILIATION_SQL, /market_history_evidence_latest_by_provider/i);
+  assert.match(RATING_SUPPRESSION_RECONCILIATION_SQL, /provider\s*=\s*\$1/i);
+  assert.doesNotMatch(RATING_SUPPRESSION_RECONCILIATION_SQL, /FROM\s+market_history_evidence_latest\s/i);
   assert.match(RATING_SUPPRESSION_RECONCILIATION_SQL, /INNER\s+JOIN\s+companies/i);
   assert.match(RATING_SUPPRESSION_RECONCILIATION_SQL, /rating_history_ready\s*=\s*false/i);
   assert.match(RATING_SUPPRESSION_RECONCILIATION_SQL, /metadata\s*->\s*'replaceable'/i);
