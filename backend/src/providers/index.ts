@@ -1,4 +1,4 @@
-// TS: 2026-09-09 11:00 ET
+// TS: 2026-09-09 11:57 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -35,6 +35,31 @@ export function assertMarketHistoryIdentity(
   return history;
 }
 
+export function createMarketHistoryIdentityGuard(
+  providerName: string,
+  getDailyHistory: (symbol: string, outputSize?: number) => Promise<DailyMarketHistory>,
+): (symbol: string, outputSize?: number) => Promise<DailyMarketHistory> {
+  let blockedError: Error | null = null;
+
+  return async (symbol: string, outputSize = 260) => {
+    if (blockedError) throw blockedError;
+
+    try {
+      return assertMarketHistoryIdentity(
+        await getDailyHistory(symbol, outputSize),
+        symbol,
+        providerName,
+      );
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      blockedError = new Error(
+        `Market-data provider service unavailable after identity-integrity failure: ${detail}`,
+      );
+      throw blockedError;
+    }
+  };
+}
+
 export function createMarketDataProvider(config: AppConfig): MarketDataProvider {
   if (config.marketDataProvider === "twelve-data") {
     if (!config.twelveDataApiKey) {
@@ -47,17 +72,17 @@ export function createMarketDataProvider(config: AppConfig): MarketDataProvider 
       ? new PostgresBenchmarkHistoryCache(config.databaseUrl)
       : undefined;
     const provider = new TwelveDataMarketDataProvider(config.twelveDataApiKey, benchmarkHistoryCache);
-    const getDailyHistory = provider.getDailyHistory.bind(provider);
+    const getDailyHistory = createMarketHistoryIdentityGuard(
+      provider.name,
+      provider.getDailyHistory.bind(provider),
+    );
 
     return Object.assign(provider, {
-      // Treat the symbol/provider embedded in returned history as data-integrity boundaries. A paid
-      // response for the wrong ticker or provider must never be persisted, rated, or converted into
-      // a durable suppression reason for the candidate that happened to trigger the request.
-      getDailyHistory: async (symbol: string, outputSize = 260) => assertMarketHistoryIdentity(
-        await getDailyHistory(symbol, outputSize),
-        symbol,
-        provider.name,
-      ),
+      // Treat the symbol/provider embedded in returned history as a data-integrity boundary. Once a
+      // paid response crosses that boundary, trip a process-local circuit breaker before another
+      // paid history request can be sent. The batch recognizes the service-unavailable error as a
+      // run-level stop instead of walking the 5,000-company reserve through corrupted responses.
+      getDailyHistory,
       getCachedDailyHistory: async (symbol: string, outputSize = 260) => {
         if (!benchmarkHistoryCache) return null;
         const safeOutputSize = Math.min(Math.max(Math.trunc(outputSize), 60), 500);
