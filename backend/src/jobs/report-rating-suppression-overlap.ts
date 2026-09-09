@@ -1,15 +1,17 @@
-// TS: 2026-09-04 14:57 ET
+// TS: 2026-09-09 00:04 ET
 
 import pg from "pg";
+import { loadConfig } from "../config.js";
 
 const { Pool } = pg;
 
 export const RATING_SUPPRESSION_OVERLAP_REPORT_SQL = `
   WITH durable_suppressed AS (
     SELECT DISTINCT UPPER(c.ticker) AS ticker
-    FROM market_history_evidence_latest mhe
+    FROM market_history_evidence_latest_by_provider mhe
     INNER JOIN companies c ON c.id = mhe.company_id
-    WHERE CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days'
+    WHERE mhe.provider = $1
+      AND CURRENT_TIMESTAMP < mhe.retrieved_at + INTERVAL '30 days'
       AND (
         mhe.rating_history_ready = false
         OR mhe.suppression_reason = 'insufficient_liquidity'
@@ -50,6 +52,7 @@ export const RATING_SUPPRESSION_OVERLAP_REPORT_SQL = `
     GROUP BY ticker
   )
   SELECT
+    $1::text AS provider,
     count(*) FILTER (WHERE durable)::int AS durable_candidate_count,
     count(*) FILTER (WHERE recent)::int AS recent_machine_reason_candidate_count,
     count(*) FILTER (WHERE durable AND recent)::int AS overlap_candidate_count,
@@ -60,6 +63,7 @@ export const RATING_SUPPRESSION_OVERLAP_REPORT_SQL = `
 `;
 
 interface OverlapRow {
+  readonly provider: string;
   readonly durable_candidate_count: string | number;
   readonly recent_machine_reason_candidate_count: string | number;
   readonly overlap_candidate_count: string | number;
@@ -69,6 +73,7 @@ interface OverlapRow {
 }
 
 export interface RatingSuppressionOverlapReport {
+  readonly provider: string;
   readonly durableCandidateCount: number;
   readonly recentMachineReasonCandidateCount: number;
   readonly overlapCandidateCount: number;
@@ -99,7 +104,15 @@ function validate(report: RatingSuppressionOverlapReport): RatingSuppressionOver
   return report;
 }
 
-export async function readRatingSuppressionOverlapReport(databaseUrl: string): Promise<RatingSuppressionOverlapReport> {
+export async function readRatingSuppressionOverlapReport(
+  databaseUrl: string,
+  marketDataProvider: string,
+): Promise<RatingSuppressionOverlapReport> {
+  const provider = marketDataProvider.trim();
+  if (!provider || provider === "unconfigured") {
+    throw new Error("MARKET_DATA_PROVIDER must be configured to report provider-scoped rating suppression overlap.");
+  }
+
   const pool = new Pool({
     connectionString: databaseUrl,
     max: 1,
@@ -108,11 +121,12 @@ export async function readRatingSuppressionOverlapReport(databaseUrl: string): P
   });
 
   try {
-    const result = await pool.query<OverlapRow>(RATING_SUPPRESSION_OVERLAP_REPORT_SQL);
+    const result = await pool.query<OverlapRow>(RATING_SUPPRESSION_OVERLAP_REPORT_SQL, [provider]);
     const row = result.rows[0];
     if (!row) throw new Error("Rating suppression overlap report returned no row.");
 
     return validate(Object.freeze({
+      provider: row.provider,
       durableCandidateCount: exactNonNegativeInteger(row.durable_candidate_count ?? 0, "durableCandidateCount"),
       recentMachineReasonCandidateCount: exactNonNegativeInteger(
         row.recent_machine_reason_candidate_count ?? 0,
@@ -130,12 +144,18 @@ export async function readRatingSuppressionOverlapReport(databaseUrl: string): P
 }
 
 async function main(): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL?.trim();
-  if (!databaseUrl) {
+  const config = loadConfig();
+  if (!config.databaseUrl) {
     throw new Error("DATABASE_URL is required to report rating suppression overlap.");
   }
+  if (config.marketDataProvider === "unconfigured") {
+    throw new Error("MARKET_DATA_PROVIDER must be configured to report provider-scoped rating suppression overlap.");
+  }
 
-  const report = await readRatingSuppressionOverlapReport(databaseUrl);
+  const report = await readRatingSuppressionOverlapReport(
+    config.databaseUrl,
+    config.marketDataProvider,
+  );
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 }
 
