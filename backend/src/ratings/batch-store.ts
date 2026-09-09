@@ -1,4 +1,4 @@
-// TS: 2026-09-09 01:02 ET
+// TS: 2026-09-09 03:01 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -303,6 +303,7 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           SELECT (qs.price * qs.volume)::numeric AS dollar_volume
           FROM quote_snapshots qs
           WHERE qs.company_id = c.id
+            AND qs.provider = $3
             AND qs.price > 0
             AND qs.volume > 0
             AND qs.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
