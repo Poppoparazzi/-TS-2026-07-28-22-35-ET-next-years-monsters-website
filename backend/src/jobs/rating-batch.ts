@@ -1,4 +1,4 @@
-// TS: 2026-09-08 19:00 ET
+// TS: 2026-09-09 05:58 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -182,9 +182,21 @@ export async function runRatingBatch(
         continue;
       }
 
-      // Recheck once immediately before attempting the cross-worker claim. A concurrent worker may
-      // have persisted durable ineligibility while this worker was completing free SEC preflight.
+      // Recheck once immediately before any paid market-history work. A concurrent worker may have
+      // persisted durable ineligibility while this worker was completing free SEC preflight.
       if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
+
+      // SPY is shared by every rating survivor. Prove benchmark readiness before buying this
+      // candidate's company history so a temporarily insufficient/stale benchmark cannot burn one
+      // otherwise-useful company-history request on every new batch run. Twelve Data's persisted
+      // history cache stores any returned 60+ bar response, so an invalid benchmark is reused and
+      // revalidated on later runs without another provider purchase until its cache freshness ends.
+      if (!benchmarkHistory) {
+        try { benchmarkHistory = await getPacedHistory("SPY", 300); }
+        catch (error) { stoppedReason = `Benchmark market history could not be loaded: ${reason(error)}`; break; }
+        const benchmarkProblem = validateBenchmarkHistory(benchmarkHistory);
+        if (benchmarkProblem) { stoppedReason = benchmarkProblem; break; }
+      }
 
       const marketHistoryClaimed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
       if (!marketHistoryClaimed) continue;
@@ -229,15 +241,6 @@ export async function runRatingBatch(
           };
           await recordFailure(failure, candidate.isProtected);
           continue;
-        }
-
-        // Do not spend benchmark quota until this candidate's own paid history has been persisted
-        // and has survived the durable history/liquidity gate. SPY remains shared for all survivors.
-        if (!benchmarkHistory) {
-          try { benchmarkHistory = await getPacedHistory("SPY", 300); }
-          catch (error) { stoppedReason = `Benchmark market history could not be loaded: ${reason(error)}`; break; }
-          const benchmarkProblem = validateBenchmarkHistory(benchmarkHistory);
-          if (benchmarkProblem) { stoppedReason = benchmarkProblem; break; }
         }
 
         const calculatedAt = new Date().toISOString();
