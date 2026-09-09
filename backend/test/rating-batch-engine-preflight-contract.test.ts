@@ -1,4 +1,4 @@
-// TS: 2026-09-09 01:59 ET
+// TS: 2026-09-09 02:05 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -39,8 +39,9 @@ test("retryable rating ineligibility stays behind free SEC and persisted company
     "insufficient_financial_history",
     "insufficient_market_history",
     "stale_market_data",
+    "insufficient_liquidity",
   ]) {
-    assert.match(engine, new RegExp(`eligibilityCode: \\"${retryableCode}\\"`), `Engine must still expose ${retryableCode}.`);
+    assert.ok(engine.includes(`"${retryableCode}"`), `Engine must still expose ${retryableCode}.`);
   }
 
   assert.match(
@@ -50,7 +51,7 @@ test("retryable rating ineligibility stays behind free SEC and persisted company
   );
   assert.match(
     engine,
-    /retryable:\s*input\.securityType\s*!==\s*\"unsupported\"/,
+    /retryable:\s*code\s*!==\s*"unsupported_security_type"/,
     "Unsupported security type remains the structural non-retryable engine case when security-type evidence exists.",
   );
 });
