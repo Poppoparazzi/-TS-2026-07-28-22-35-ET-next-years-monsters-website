@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-09-09 17:58 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -163,6 +163,7 @@ export async function runSecUniverseBatch(
               marketProvider,
               secProvider,
               persistenceStore,
+              includeMarketQuote: false,
             });
             await queue.markComplete(candidate.ticker);
             succeededCount += 1;

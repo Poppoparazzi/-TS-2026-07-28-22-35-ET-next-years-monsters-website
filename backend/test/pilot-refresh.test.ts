@@ -1,4 +1,4 @@
-// TS: 2026-08-19 01:58 ET
+// TS: 2026-09-09 17:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -153,6 +153,7 @@ class MemoryPersistenceStore implements PersistenceStore {
 class FailingMarketProvider implements MarketDataProvider {
   public readonly name = "failing-market";
   public readonly configured = true;
+  public quoteCalls = 0;
 
   public async searchTickers(
     _query: string,
@@ -162,6 +163,7 @@ class FailingMarketProvider implements MarketDataProvider {
   }
 
   public async getQuote(_symbol: string): Promise<QuoteSnapshot> {
+    this.quoteCalls += 1;
     throw new Error("Test quote failure.");
   }
 }
@@ -234,15 +236,35 @@ test("pilot refresh persists SEC evidence when market quotes are unconfigured", 
   assert.equal(persistenceStore.quoteSaves, 0);
 });
 
+test("SEC-only refresh skips configured market quotes entirely", async () => {
+  const persistenceStore = new MemoryPersistenceStore();
+  const marketProvider = new FailingMarketProvider();
+  const result = await refreshPilotSymbol("AAPL", {
+    marketProvider,
+    secProvider: new StaticSecProvider(),
+    persistenceStore,
+    includeMarketQuote: false,
+  });
+
+  assert.equal(result.quoteStatus, "unconfigured");
+  assert.equal(marketProvider.quoteCalls, 0);
+  assert.equal(persistenceStore.companySaves, 1);
+  assert.equal(persistenceStore.filingSaves, 1);
+  assert.equal(persistenceStore.factSaves, 1);
+  assert.equal(persistenceStore.quoteSaves, 0);
+});
+
 test("pilot refresh preserves SEC progress when a configured quote provider fails", async () => {
   const persistenceStore = new MemoryPersistenceStore();
+  const marketProvider = new FailingMarketProvider();
   const result = await refreshPilotSymbol("AAPL", {
-    marketProvider: new FailingMarketProvider(),
+    marketProvider,
     secProvider: new StaticSecProvider(),
     persistenceStore,
   });
 
   assert.equal(result.quoteStatus, "unavailable");
+  assert.equal(marketProvider.quoteCalls, 1);
   assert.equal(result.stored.latestFiling?.form, "10-K");
   assert.equal(persistenceStore.companySaves, 1);
   assert.equal(persistenceStore.filingSaves, 1);
