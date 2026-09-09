@@ -1,4 +1,4 @@
-// TS: 2026-08-21 17:08 UTC
+// TS: 2026-09-09 08:01 ET
 
 export type MarketSession = "pre-market" | "regular" | "after-hours" | "closed" | "unknown";
 export type DataFreshness = "live" | "near-live" | "delayed" | "end-of-day" | "stale" | "unavailable";
@@ -51,6 +51,7 @@ export interface MarketDataProvider {
   searchTickers(query: string, limit?: number): Promise<readonly TickerSearchResult[]>;
   getQuote(symbol: string): Promise<QuoteSnapshot>;
   getDailyHistory?(symbol: string, outputSize?: number): Promise<DailyMarketHistory>;
+  getCachedDailyHistory?(symbol: string, outputSize?: number): Promise<DailyMarketHistory | null>;
 }
 
 export class ProviderNotConfiguredError extends Error {

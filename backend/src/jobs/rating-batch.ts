@@ -1,4 +1,4 @@
-// TS: 2026-09-08 19:00 ET
+// TS: 2026-09-09 08:04 ET
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -193,6 +193,29 @@ export async function runRatingBatch(
         // Recheck after the atomic claim as well. This closes the race between the last free
         // suppression read and claim acquisition without spending another paid provider call.
         if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
+
+        // A cache-only SPY readiness check belongs after the company claim/suppression gates so a
+        // lost or newly suppressed company still spends zero benchmark quota. When fresh persisted
+        // SPY evidence is already known bad, stop before purchasing this company's history. A cache
+        // miss deliberately preserves the existing ordering and permits one shared paid SPY refresh
+        // only after the company's own history survives its reusable evidence gate.
+        if (!benchmarkHistory && marketProvider.getCachedDailyHistory) {
+          let cachedBenchmarkHistory: DailyMarketHistory | null;
+          try {
+            cachedBenchmarkHistory = await marketProvider.getCachedDailyHistory("SPY", 300);
+          } catch (error) {
+            stoppedReason = `Persisted benchmark preflight could not be read: ${reason(error)}`;
+            break;
+          }
+          if (cachedBenchmarkHistory) {
+            const cachedBenchmarkProblem = validateBenchmarkHistory(cachedBenchmarkHistory);
+            if (cachedBenchmarkProblem) {
+              stoppedReason = `Persisted benchmark preflight blocked paid company history: ${cachedBenchmarkProblem}`;
+              break;
+            }
+            benchmarkHistory = cachedBenchmarkHistory;
+          }
+        }
 
         let history: DailyMarketHistory;
         try {
