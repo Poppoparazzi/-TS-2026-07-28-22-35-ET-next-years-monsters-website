@@ -1,4 +1,4 @@
-// TS: 2026-09-09 09:01 ET
+// TS: 2026-09-09 10:08 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -63,6 +63,7 @@ function dependencies(
     readonly failFirstCandidateHistoryWithQuota?: boolean;
     readonly suppressAfterFirstCandidateHistory?: boolean;
     readonly invalidCachedBenchmark?: boolean;
+    readonly wrongProviderCachedBenchmark?: boolean;
   } = {},
 ) {
   const historyRequests: string[] = [];
@@ -77,9 +78,11 @@ function dependencies(
     configured: true,
     async getCachedDailyHistory(symbol: string) {
       cachedHistoryRequests.push(symbol);
-      if (!options.invalidCachedBenchmark) return null;
+      if (!options.invalidCachedBenchmark && !options.wrongProviderCachedBenchmark) return null;
       const cached = history(symbol);
-      return Object.freeze({ ...cached, bars: Object.freeze(cached.bars.slice(-100)) });
+      const invalidCached = Object.freeze({ ...cached, bars: Object.freeze(cached.bars.slice(-100)) });
+      if (!options.wrongProviderCachedBenchmark) return invalidCached;
+      return Object.freeze({ ...invalidCached, provider: "other-market-provider" });
     },
     async getDailyHistory(symbol: string) {
       historyRequests.push(symbol);
@@ -166,6 +169,15 @@ test("fresh invalid cached SPY spends zero company-history quota", async () => {
   assert.deepEqual(fixture.releases, ["GOOD"], "the company history claim must still be released when benchmark preflight stops the batch");
   assert.equal(accounting.ratedCount, 0);
   assert.match(accounting.stoppedReason ?? "", /Persisted benchmark preflight blocked paid company history/);
+});
+
+test("cached SPY from another provider cannot suppress the active provider batch", async () => {
+  const fixture = dependencies([true], { wrongProviderCachedBenchmark: true });
+  const accounting = await runRatingBatch(fixture.dependencies, { targetCount: 1, candidateLimit: 1 });
+
+  assert.deepEqual(fixture.cachedHistoryRequests, ["SPY"], "the cache-only preflight may inspect the returned benchmark once");
+  assert.deepEqual(fixture.historyRequests, ["GOOD", "SPY"], "wrong-provider cached SPY must be ignored so the active provider follows its normal paid-history path");
+  assert.doesNotMatch(accounting.stoppedReason ?? "", /Persisted benchmark preflight blocked paid company history/);
 });
 
 test("a won market-history claim is released after candidate processing", async () => {
