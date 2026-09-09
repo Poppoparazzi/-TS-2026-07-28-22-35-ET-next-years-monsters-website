@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-09-09 19:08 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -23,6 +23,30 @@ export const SEC_BATCH_CANDIDATE_ELIGIBILITY_SQL = `
       )
     )
   )
+`;
+
+export const PROMOTE_STORED_SEC_EVIDENCE_SQL = `
+  UPDATE company_pipeline_status cps
+  SET
+    sec_status = 'complete',
+    last_error = NULL,
+    last_completed_at = now(),
+    next_retry_at = NULL
+  FROM companies c
+  WHERE c.id = cps.company_id
+    AND c.is_active = true
+    AND cps.sec_status IN ('queued', 'partial')
+    AND c.sec_cik IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM sec_filings sf
+      WHERE sf.company_id = c.id
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM company_facts cf
+      WHERE cf.company_id = c.id
+    )
 `;
 
 export const CLEANUP_DUPLICATE_CIK_FAILURES_SQL = `
@@ -182,6 +206,11 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
 
       await client.query(CLEANUP_DUPLICATE_CIK_FAILURES_SQL);
       await client.query(PROMOTE_EXHAUSTED_FAILURES_SQL);
+
+      // A queued/partial row can already be SEC-evidence-ready after a prior write,
+      // import, or interrupted worker. Reconcile that durable state before claiming
+      // network work so stored SEC evidence remains the first and cheapest preflight.
+      await client.query(PROMOTE_STORED_SEC_EVIDENCE_SQL);
 
       await client.query(
         `
