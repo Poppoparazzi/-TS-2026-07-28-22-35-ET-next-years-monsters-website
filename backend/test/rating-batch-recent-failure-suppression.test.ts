@@ -1,4 +1,4 @@
-// TS: 2026-09-07 22:08 ET
+// TS: 2026-09-09 01:02 ET
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -13,13 +13,18 @@ test("rating candidate selection reuses durable structural and engine-version in
 
   assert.match(
     recentFailureSql,
-    /data_refresh_runs[\s\S]*metadata -> 'replaceable'[\s\S]*INTERVAL '30 days'[\s\S]*prior_failure ->> 'ticker' = c\.ticker[\s\S]*prior_failure ->> 'suppressionStage' = 'sec_preflight'[\s\S]*'unresolved_sec_identity'[\s\S]*'insufficient_financial_history'[\s\S]*'unsupported_security_type'/,
-    "SEC structural cooldowns must remain driven by durable preflight evidence",
+    /data_refresh_runs[\s\S]*metadata -> 'replaceable'[\s\S]*prior_failure ->> 'ticker' = c\.ticker[\s\S]*drr\.started_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'[\s\S]*prior_failure ->> 'suppressionStage' = 'sec_preflight'[\s\S]*'unresolved_sec_identity'[\s\S]*'insufficient_financial_history'[\s\S]*'unsupported_security_type'/,
+    "SEC structural cooldowns must remain driven by durable preflight evidence inside the 30-day reconsideration window",
   );
   assert.match(
     recentFailureSql,
     /prior_failure ->> 'suppressionStage' = 'rating_engine'[\s\S]*prior_failure ->> 'reasonCode' = 'unsupported_security_type'[\s\S]*drr\.metadata ->> 'ratingVersion' = \$2/,
-    "rating-engine unsupported-security failures must suppress repeat paid attempts only for the same rating-engine version",
+    "rating-engine unsupported-security failures must suppress repeat paid attempts for the same rating-engine version",
+  );
+  assert.doesNotMatch(
+    recentFailureSql,
+    /WHERE drr\.refresh_type = 'ratings'\s+AND drr\.started_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'/,
+    "the 30-day SEC cooldown must not cap same-version rating-engine unsupported-security suppression",
   );
   assert.match(
     recentFailureSql,
@@ -39,7 +44,7 @@ test("rating candidate selection reuses durable structural and engine-version in
   assert.doesNotMatch(
     recentFailureSql,
     /prior_failure ->> 'reasonCode' = 'unsupported_security_type'[\s\S]{0,160}retrieved_at > drr\.started_at/,
-    "unsupported-security cooldowns must not be directly reopened by unrelated newer SEC data",
+    "unsupported-security suppression must not be directly reopened by unrelated newer SEC data",
   );
   assert.doesNotMatch(
     recentFailureSql,
@@ -54,7 +59,7 @@ test("rating candidate selection reuses durable structural and engine-version in
   assert.match(
     source,
     /AND \$\{EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL\}/,
-    "structural ordinary-ineligibility cooldown must still participate in the production candidate query",
+    "structural ordinary-ineligibility suppression must still participate in the production candidate query",
   );
   assert.doesNotMatch(
     recentFailureSql,
