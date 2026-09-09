@@ -1,4 +1,4 @@
-// TS: 2026-09-08 19:00 ET
+// TS: 2026-09-09 01:02 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -79,12 +79,12 @@ export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
       END
     ) AS prior_failure
     WHERE drr.refresh_type = 'ratings'
-      AND drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
       AND drr.metadata -> 'replaceable' @> jsonb_build_array(jsonb_build_object('ticker', c.ticker))
       AND prior_failure ->> 'ticker' = c.ticker
       AND (
         (
-          prior_failure ->> 'suppressionStage' = 'sec_preflight'
+          drr.started_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+          AND prior_failure ->> 'suppressionStage' = 'sec_preflight'
           AND prior_failure ->> 'reasonCode' IN (
             'unresolved_sec_identity',
             'insufficient_financial_history',
