@@ -1,4 +1,4 @@
-// TS: 2026-09-10 01:09 ET
+// TS: 2026-09-10 01:57 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -80,6 +80,11 @@ export const PROMOTE_EXHAUSTED_FAILURES_SQL = `
 export const SEC_REPLACEMENT_BUDGET_FILTER_SQL = `
   NOT ${PROTECTED_COMPANY_SQL_PREDICATE}
   AND cps.sec_status = 'unresolved'
+`;
+
+export const REPLACEMENT_CLAIM_ELIGIBILITY_SQL = `
+  candidates.protected_priority = 1
+  AND candidates.sec_attempt_count = 0
 `;
 
 export const MARK_FAILED_SQL = `
@@ -280,14 +285,19 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
           ranked_candidates AS (
             SELECT
               candidates.company_id,
-              row_number() OVER (
-                ORDER BY
-                  candidates.protected_priority,
-                  candidates.state_priority,
-                  candidates.sec_attempt_count,
-                  candidates.updated_at,
-                  candidates.ticker
-              ) AS claim_order
+              CASE
+                WHEN ${REPLACEMENT_CLAIM_ELIGIBILITY_SQL} THEN
+                  count(*) FILTER (WHERE ${REPLACEMENT_CLAIM_ELIGIBILITY_SQL}) OVER (
+                    ORDER BY
+                      candidates.protected_priority,
+                      candidates.state_priority,
+                      candidates.sec_attempt_count,
+                      candidates.updated_at,
+                      candidates.ticker
+                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                  )
+                ELSE NULL
+              END AS replacement_claim_order
             FROM candidates
           )
           UPDATE company_pipeline_status cps
@@ -295,8 +305,8 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
             sec_status = 'processing',
             sec_attempt_count = cps.sec_attempt_count + 1,
             replacement_attempted = cps.replacement_attempted OR (
-              cps.sec_attempt_count = 0
-              AND ranked_candidates.claim_order <= replacement_budget.available
+              ranked_candidates.replacement_claim_order IS NOT NULL
+              AND ranked_candidates.replacement_claim_order <= replacement_budget.available
             ),
             last_started_at = now(),
             last_error = NULL,
