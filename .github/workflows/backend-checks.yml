@@ -1,4 +1,4 @@
-# TS: 2026-08-26 00:00 ET
+# TS: 2026-09-10 13:05 ET
 
 name: Phase 3 Backend Checks
 
@@ -8,12 +8,16 @@ on:
     paths:
       - "backend/**"
       - "render.yaml"
+      - "scripts/resolve-backend-deploy-target.mjs"
+      - "scripts/resolve-backend-deploy-target.test.mjs"
       - ".github/workflows/backend-checks.yml"
   pull_request:
     branches: [main]
     paths:
       - "backend/**"
       - "render.yaml"
+      - "scripts/resolve-backend-deploy-target.mjs"
+      - "scripts/resolve-backend-deploy-target.test.mjs"
       - ".github/workflows/backend-checks.yml"
   workflow_dispatch:
 
@@ -48,3 +52,6 @@ jobs:
 
       - name: Run typechecks and tests
         run: npm run check
+
+      - name: Verify exact-main Render deployment target logic
+        run: node ../scripts/resolve-backend-deploy-target.test.mjs
