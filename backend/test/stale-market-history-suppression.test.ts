@@ -1,4 +1,4 @@
-// TS: 2026-09-10 10:02 ET
+// TS: 2026-09-10 14:01 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -81,6 +81,17 @@ test("insufficient history with a known latest bar date relies on trading-sessio
   assert.doesNotMatch(
     EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL,
     /CURRENT_TIMESTAMP < mhe\.retrieved_at \+ INTERVAL '30 days'\s+OR\s+\(\s*mhe\.latest_bar_date IS NOT NULL/,
+  );
+});
+
+test("trading-session catch-up counts only fully elapsed calendar days", () => {
+  assert.match(
+    EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL,
+    /generate_series\([\s\S]*mhe\.latest_bar_date \+ INTERVAL '1 day',[\s\S]*CURRENT_DATE - INTERVAL '1 day'/,
+  );
+  assert.doesNotMatch(
+    EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL,
+    /mhe\.latest_bar_date \+ INTERVAL '1 day',\s*CURRENT_DATE,\s*INTERVAL '1 day'/,
   );
 });
 
