@@ -1,9 +1,10 @@
-// TS: 2026-09-10 04:00 ET
+// TS: 2026-09-10 04:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   REPLACEMENT_CLAIM_ELIGIBILITY_SQL,
+  SEC_REPLACEMENT_BUDGET_FILTER_SQL,
   SEC_REPLACEMENT_CONSUMED_FILTER_SQL,
 } from "../src/universe/sec-batch-queue.js";
 
@@ -18,4 +19,9 @@ test("replacement claim accounting only consumes first-attempt candidates", () =
 test("permanently unresolved replacement candidates release their replacement entitlement", () => {
   assert.match(SEC_REPLACEMENT_CONSUMED_FILTER_SQL, /replacement_attempted = true/);
   assert.match(SEC_REPLACEMENT_CONSUMED_FILTER_SQL, /sec_status <> 'unresolved'/);
+});
+
+test("failed replacement candidates do not create a second replacement entitlement", () => {
+  assert.match(SEC_REPLACEMENT_BUDGET_FILTER_SQL, /sec_status = 'unresolved'/);
+  assert.match(SEC_REPLACEMENT_BUDGET_FILTER_SQL, /replacement_attempted = false/);
 });
