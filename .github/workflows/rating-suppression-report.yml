@@ -1,4 +1,4 @@
-# TS: 2026-09-08 21:57 ET
+# TS: 2026-09-10 22:02 UTC
 
 name: Monster Rating suppression report
 
@@ -15,10 +15,16 @@ on:
   workflow_run:
     workflows: ["Monster Rating rollout worker"]
     types: [completed]
+  schedule:
+    - cron: "23 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: monster-rating-suppression-report
+  cancel-in-progress: true
 
 jobs:
   report-suppression:
@@ -29,24 +35,39 @@ jobs:
         with:
           ref: main
 
+      - name: Detect database authority without exposing credentials
+        id: suppression-db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "${DATABASE_URL:-}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "GitHub DATABASE_URL is available; exact suppression reporting will run."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "GitHub DATABASE_URL is missing; exact suppression reporting is blocked."
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.suppression-db.outputs.available == 'true'
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install backend dependencies
-        run: npm install --prefix backend --no-audit --no-fund
+        if: steps.suppression-db.outputs.available == 'true'
+        run: npm ci --prefix backend --no-audit --no-fund
 
       - name: Record real provider-history suppression
         id: suppression
+        if: steps.suppression-db.outputs.available == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           MARKET_DATA_PROVIDER: twelve-data
         run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "DATABASE_URL is missing; suppression counts cannot be read from the production-capable database context."
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          set -euo pipefail
           mkdir -p ops
           npm run --prefix backend ratings:suppression-report --silent > ops/rating-suppression.json
           npx --prefix backend tsx backend/src/jobs/report-rating-suppression-overlap.ts > ops/rating-suppression-overlap.json
@@ -61,6 +82,7 @@ jobs:
       - name: Persist exact suppression snapshot
         if: steps.suppression.outputs.available == 'true'
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ops/rating-suppression.json ops/rating-suppression-overlap.json ops/rating-suppression-reconciliation.json ops/rating-suppression-evidence-violations.json
