@@ -1,4 +1,4 @@
-// TS: 2026-09-10 10:58 ET
+// TS: 2026-09-10 18:58 UTC
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -49,7 +49,7 @@ export const EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL = `
                 SELECT count(*)
                 FROM generate_series(
                   mhe.latest_bar_date + INTERVAL '1 day',
-                  CURRENT_DATE,
+                  CURRENT_DATE - INTERVAL '1 day',
                   INTERVAL '1 day'
                 ) AS candidate_session(day)
                 WHERE EXTRACT(ISODOW FROM candidate_session.day) BETWEEN 1 AND 5
