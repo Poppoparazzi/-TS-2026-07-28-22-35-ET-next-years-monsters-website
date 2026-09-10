@@ -1,4 +1,4 @@
-// TS: 2026-09-09 19:09 ET
+// TS: 2026-09-09 20:06 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -12,6 +12,18 @@ test("stored SEC evidence is reconciled before another SEC network claim", () =>
   assert.match(PROMOTE_STORED_SEC_EVIDENCE_SQL, /FROM company_facts cf/);
   assert.match(PROMOTE_STORED_SEC_EVIDENCE_SQL, /cf\.company_id = c\.id/);
   assert.match(PROMOTE_STORED_SEC_EVIDENCE_SQL, /sec_status = 'complete'/);
+});
+
+test("stored SEC reconciliation preserves evidence age for the later stale sweep", () => {
+  assert.match(
+    PROMOTE_STORED_SEC_EVIDENCE_SQL,
+    /last_completed_at = COALESCE\(cps\.last_completed_at, cps\.updated_at\)/,
+  );
+  assert.doesNotMatch(
+    PROMOTE_STORED_SEC_EVIDENCE_SQL,
+    /last_completed_at = now\(\)/,
+    "reconciliation must not make old stored evidence appear newly fetched",
+  );
 });
 
 test("stored-evidence reconciliation does not erase failure, unresolved, or stale repair states", () => {
