@@ -1,4 +1,4 @@
-// TS: 2026-08-21 15:16 UTC
+// TS: 2026-09-09 22:05 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -191,7 +191,7 @@ test("third ordinary SEC failure becomes replaceable while protected stocks stay
   assert.match(MARK_FAILED_SQL, /make_interval/);
 });
 
-test("bulk SEC workers replace ordinary failures immediately and continue through reserve", async () => {
+test("bulk SEC workers retry transient ordinary failures before replacing exhausted or permanent failures", async () => {
   const queue = new MemoryQueue();
   const persistenceStore = new MemoryPersistence();
 
@@ -211,23 +211,27 @@ test("bulk SEC workers replace ordinary failures immediately and continue throug
   assert.equal(summary.requestedBatchSize, 5_000);
   assert.equal(summary.claimedCount, 5);
   assert.equal(summary.succeededCount, 2);
-  assert.equal(summary.unresolvedCount, 3);
-  assert.equal(summary.failedCount, 0);
+  assert.equal(summary.unresolvedCount, 2);
+  assert.equal(summary.failedCount, 1);
   assert.equal(summary.protectedMustRepairCount, 0);
-  assert.equal(summary.replaceableFailureCount, 3);
-  assert.equal(summary.replacementsAttemptedCount, 2);
-  assert.deepEqual([...summary.unresolvedTickers].sort(), ["EXHAUST", "FAIL", "NOSEC"]);
+  assert.equal(summary.replaceableFailureCount, 2);
+  assert.equal(summary.replacementsAttemptedCount, 1);
+  assert.deepEqual([...summary.unresolvedTickers].sort(), ["EXHAUST", "NOSEC"]);
   assert.deepEqual(queue.completed.sort(), ["AAPL", "NVDA"]);
+  assert.deepEqual(queue.unresolved, [
+    { ticker: "NOSEC", message: "SEC EDGAR request failed with HTTP 404." },
+  ]);
   assert.deepEqual(
-    queue.unresolved.sort((left, right) => left.ticker.localeCompare(right.ticker)),
+    queue.failed.sort((left, right) => left.ticker.localeCompare(right.ticker)),
     [
       { ticker: "EXHAUST", message: "Synthetic SEC failure." },
       { ticker: "FAIL", message: "Synthetic SEC failure." },
-      { ticker: "NOSEC", message: "SEC EDGAR request failed with HTTP 404." },
     ],
   );
-  assert.deepEqual(queue.failed, []);
-  assert.equal(summary.failures.length, 0);
+  assert.equal(summary.failures.length, 1);
+  assert.equal(summary.failures[0]?.ticker, "FAIL");
+  assert.equal(summary.failures[0]?.attemptCount, 2);
+  assert.equal(summary.failures[0]?.disposition, "replaceable");
   assert.deepEqual(queue.claimLimits, [3, 3, 3]);
   assert.equal(queue.closed, true);
   assert.equal(persistenceStore.closed, true);
