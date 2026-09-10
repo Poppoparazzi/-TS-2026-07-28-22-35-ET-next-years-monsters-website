@@ -1,4 +1,4 @@
-// TS: 2026-09-10 04:00 ET
+// TS: 2026-09-10 04:58 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -80,6 +80,7 @@ export const PROMOTE_EXHAUSTED_FAILURES_SQL = `
 export const SEC_REPLACEMENT_BUDGET_FILTER_SQL = `
   NOT ${PROTECTED_COMPANY_SQL_PREDICATE}
   AND cps.sec_status = 'unresolved'
+  AND cps.replacement_attempted = false
 `;
 
 export const SEC_REPLACEMENT_CONSUMED_FILTER_SQL = `
