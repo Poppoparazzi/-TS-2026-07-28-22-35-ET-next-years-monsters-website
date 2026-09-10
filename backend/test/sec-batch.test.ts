@@ -1,4 +1,4 @@
-// TS: 2026-09-09 22:05 ET
+// TS: 2026-09-09 23:00 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -231,7 +231,7 @@ test("bulk SEC workers retry transient ordinary failures before replacing exhaus
   assert.equal(summary.failures.length, 1);
   assert.equal(summary.failures[0]?.ticker, "FAIL");
   assert.equal(summary.failures[0]?.attemptCount, 2);
-  assert.equal(summary.failures[0]?.disposition, "replaceable");
+  assert.equal(summary.failures[0]?.disposition, "retrying");
   assert.deepEqual(queue.claimLimits, [3, 3, 3]);
   assert.equal(queue.closed, true);
   assert.equal(persistenceStore.closed, true);
