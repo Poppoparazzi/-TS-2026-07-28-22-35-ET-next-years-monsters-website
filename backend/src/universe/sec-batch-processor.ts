@@ -1,4 +1,4 @@
-// TS: 2026-09-09 22:03 ET
+// TS: 2026-09-09 22:12 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -186,12 +186,14 @@ export async function runSecUniverseBatch(
                 return;
               }
 
-              unresolvedCount += 1;
-              replaceableFailureCount += 1;
-              outstandingReplaceableFailures += 1;
-              unresolvedTickers.push(candidate.ticker);
-              await queue.markUnresolved(candidate.ticker, message);
-              return;
+              if (!candidate.isProtected) {
+                unresolvedCount += 1;
+                replaceableFailureCount += 1;
+                outstandingReplaceableFailures += 1;
+                unresolvedTickers.push(candidate.ticker);
+                await queue.markUnresolved(candidate.ticker, message);
+                return;
+              }
             }
 
             // Ordinary transient SEC failures get the queue's bounded retry/backoff
