@@ -1,4 +1,4 @@
-// TS: 2026-09-06 14:57 ET
+// TS: 2026-09-09 22:08 ET
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -170,7 +170,7 @@ test("scheduled recovery and production closeout use the broad reserve", () => {
   assert.match(productionVerifier, /monster-check\.html\?ticker=AAPL/);
 });
 
-test("ordinary SEC failures are replaceable while protected failures stay must-repair", () => {
+test("ordinary SEC failures retry transient errors while permanent failures remain replaceable and protected failures stay must-repair", () => {
   const processor = readRepositoryFile("../src/universe/sec-batch-processor.ts");
   const queue = readRepositoryFile("../src/universe/sec-batch-queue.ts");
   const store = readRepositoryFile("../src/universe/store.ts");
@@ -180,7 +180,13 @@ test("ordinary SEC failures are replaceable while protected failures stay must-r
 
   assert.match(
     processor,
-    /if \(!candidate\.isProtected\)[\s\S]*?queue\.markUnresolved/,
+    /if \(isPermanentSecNotFound\(error\) \|\| isDuplicateSecIdentity\(error\)\)[\s\S]*?if \(!candidate\.isProtected\)[\s\S]*?queue\.markUnresolved/,
+    "permanent ordinary SEC failures must remain immediately replaceable",
+  );
+  assert.match(
+    processor,
+    /Ordinary transient SEC failures[\s\S]*?if \(!candidate\.isProtected\)[\s\S]*?queue\.markFailed[\s\S]*?candidate\.attemptCount >= 3/,
+    "transient ordinary SEC failures must use bounded queue retry/backoff before replacement",
   );
   assert.match(processor, /disposition:\s*"must_repair"/);
   assert.match(queue, /PROTECTED_COMPANY_SQL_PREDICATE/);

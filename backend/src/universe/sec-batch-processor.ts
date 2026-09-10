@@ -1,4 +1,4 @@
-// TS: 2026-09-09 17:58 ET
+// TS: 2026-09-09 22:12 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -186,23 +186,39 @@ export async function runSecUniverseBatch(
                 return;
               }
 
-              unresolvedCount += 1;
-              replaceableFailureCount += 1;
-              outstandingReplaceableFailures += 1;
-              unresolvedTickers.push(candidate.ticker);
-              await queue.markUnresolved(candidate.ticker, message);
-              return;
+              if (!candidate.isProtected) {
+                unresolvedCount += 1;
+                replaceableFailureCount += 1;
+                outstandingReplaceableFailures += 1;
+                unresolvedTickers.push(candidate.ticker);
+                await queue.markUnresolved(candidate.ticker, message);
+                return;
+              }
             }
 
-            // Ordinary candidates never block the broad reserve. Preserve their exact
-            // failure reason as an unresolved/replaceable exception and immediately
-            // continue with the next candidate. Protected stocks stay on must-repair.
+            // Ordinary transient SEC failures get the queue's bounded retry/backoff
+            // before we permanently replace the company. This keeps recoverable names
+            // moving toward SEC-evidence-ready without spending any market-data quota.
             if (!candidate.isProtected) {
-              await queue.markUnresolved(candidate.ticker, message);
-              unresolvedCount += 1;
-              replaceableFailureCount += 1;
-              outstandingReplaceableFailures += 1;
-              unresolvedTickers.push(candidate.ticker);
+              await queue.markFailed(candidate.ticker, message);
+
+              if (candidate.attemptCount >= 3) {
+                unresolvedCount += 1;
+                replaceableFailureCount += 1;
+                outstandingReplaceableFailures += 1;
+                unresolvedTickers.push(candidate.ticker);
+                return;
+              }
+
+              failedCount += 1;
+              failures.push(
+                Object.freeze({
+                  ticker: candidate.ticker,
+                  attemptCount: candidate.attemptCount,
+                  message,
+                  disposition: "replaceable",
+                }),
+              );
               return;
             }
 
