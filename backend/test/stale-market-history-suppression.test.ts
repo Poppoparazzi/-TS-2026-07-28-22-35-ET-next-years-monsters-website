@@ -1,4 +1,4 @@
-// TS: 2026-09-10 07:58 ET
+// TS: 2026-09-10 10:02 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -69,7 +69,25 @@ test("reuses stale-market suppression for two days but not for the structural th
 test("candidate selection scopes the structural thirty-day branch to insufficient market history", () => {
   assert.match(
     EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL,
-    /suppression_reason = 'insufficient_market_history'\s+AND mhe\.rating_history_ready = false\s+AND \(\s+CURRENT_TIMESTAMP < mhe\.retrieved_at \+ INTERVAL '30 days'/,
+    /suppression_reason = 'insufficient_market_history'\s+AND mhe\.rating_history_ready = false/,
+  );
+});
+
+test("insufficient history with a known latest bar date relies on trading-session catch-up instead of a hard thirty-day minimum", () => {
+  assert.match(
+    EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL,
+    /mhe\.latest_bar_date IS NOT NULL[\s\S]*generate_series\([\s\S]*253 - mhe\.usable_bar_count/,
+  );
+  assert.doesNotMatch(
+    EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL,
+    /CURRENT_TIMESTAMP < mhe\.retrieved_at \+ INTERVAL '30 days'\s+OR\s+\(\s*mhe\.latest_bar_date IS NOT NULL/,
+  );
+});
+
+test("insufficient history without a latest bar date keeps the conservative thirty-day fallback", () => {
+  assert.match(
+    EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL,
+    /mhe\.latest_bar_date IS NULL\s+AND CURRENT_TIMESTAMP < mhe\.retrieved_at \+ INTERVAL '30 days'/,
   );
 });
 
