@@ -1,4 +1,4 @@
-// TS: 2026-09-04 19:57 ET
+// TS: 2026-09-10 07:58 ET
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -64,6 +64,13 @@ test("reuses stale-market suppression for two days but not for the structural th
     Date.parse(retrievedAt) + STALE_MARKET_DATA_SUPPRESSION_MAX_AGE_MS + 1,
   );
   assert.equal(expired, null);
+});
+
+test("candidate selection scopes the structural thirty-day branch to insufficient market history", () => {
+  assert.match(
+    EXCLUDE_KNOWN_INSUFFICIENT_HISTORY_SQL,
+    /suppression_reason = 'insufficient_market_history'\s+AND mhe\.rating_history_ready = false\s+AND \(\s+CURRENT_TIMESTAMP < mhe\.retrieved_at \+ INTERVAL '30 days'/,
+  );
 });
 
 test("candidate selection excludes fresh durable stale evidence for only two days", () => {
