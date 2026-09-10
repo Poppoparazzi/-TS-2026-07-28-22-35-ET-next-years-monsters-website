@@ -1,6 +1,10 @@
-// TS: 2026-08-26 11:58 ET
+// TS: 2026-09-10 13:03 ET
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -8,7 +12,12 @@ import {
   isRatingRolloutKickOnly,
   isTimestampOnlyPatch,
   isTimestampOnlyRenderPatch,
+  resolveBackendDeployTarget,
 } from "./resolve-backend-deploy-target.mjs";
+
+function git(cwd, args) {
+  return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+}
 
 test("timestamp-only render nudges are not deployment targets", () => {
   assert.equal(
@@ -82,4 +91,31 @@ test("backend test-only commits do not make Render look stale", () => {
     false,
   );
   assert.equal(isBackendTestOnly(["scripts/verify-production.mjs"]), false);
+});
+
+test("Render deployment target is the merged main SHA, not the PR head SHA", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "nym-deploy-target-"));
+  try {
+    git(cwd, ["init", "-b", "main"]);
+    git(cwd, ["config", "user.name", "NYM Test"]);
+    git(cwd, ["config", "user.email", "nym-test@example.invalid"]);
+
+    writeFileSync(join(cwd, "README.md"), "base\n");
+    git(cwd, ["add", "README.md"]);
+    git(cwd, ["commit", "-m", "base"]);
+
+    git(cwd, ["checkout", "-b", "feature"]);
+    writeFileSync(join(cwd, "README.md"), "base\nfeature\n");
+    git(cwd, ["commit", "-am", "feature"]);
+    const prHeadSha = git(cwd, ["rev-parse", "HEAD"]);
+
+    git(cwd, ["checkout", "main"]);
+    git(cwd, ["merge", "--no-ff", "feature", "-m", "Merge pull request"]);
+    const mergedMainSha = git(cwd, ["rev-parse", "HEAD"]);
+
+    assert.notEqual(mergedMainSha, prHeadSha);
+    assert.equal(resolveBackendDeployTarget({ cwd }), mergedMainSha);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
 });

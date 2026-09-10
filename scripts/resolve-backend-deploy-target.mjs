@@ -1,4 +1,4 @@
-// TS: 2026-08-26 11:58 ET
+// TS: 2026-09-10 13:00 ET
 
 import { execFileSync } from "node:child_process";
 
@@ -69,7 +69,7 @@ function isDeployRelevantCommit(sha, cwd) {
   return !isTimestampOnlyRenderPatch(patch);
 }
 
-export function resolveBackendDeployTarget({ cwd = process.cwd() } = {}) {
+export function resolveLatestBackendRelevantCommit({ cwd = process.cwd() } = {}) {
   const candidates = git([
     "log",
     "--format=%H",
@@ -83,6 +83,17 @@ export function resolveBackendDeployTarget({ cwd = process.cwd() } = {}) {
   const sha = candidates.find((candidate) => isDeployRelevantCommit(candidate, cwd));
   if (!sha || !/^[0-9a-f]{40}$/i.test(sha)) {
     throw new Error("Unable to resolve the latest backend-deploy-relevant commit.");
+  }
+  return sha;
+}
+
+export function resolveBackendDeployTarget({ cwd = process.cwd() } = {}) {
+  // Render is configured to deploy branch main with autoDeployTrigger=commit.
+  // The production startup gate must therefore compare against the exact
+  // deployable main SHA, not a pre-merge PR head or backend-only ancestor.
+  const sha = git(["rev-parse", "HEAD"], cwd);
+  if (!sha || !/^[0-9a-f]{40}$/i.test(sha)) {
+    throw new Error("Unable to resolve the exact deployable main commit.");
   }
   return sha;
 }
