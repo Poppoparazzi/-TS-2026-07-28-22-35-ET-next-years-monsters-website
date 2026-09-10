@@ -1,4 +1,4 @@
-// TS: 2026-09-09 22:12 ET
+// TS: 2026-09-09 23:00 ET
 
 import type { AppConfig } from "../config.js";
 import {
@@ -26,7 +26,7 @@ export interface SecBatchFailure {
   readonly ticker: string;
   readonly attemptCount: number;
   readonly message: string;
-  readonly disposition: "must_repair" | "replaceable";
+  readonly disposition: "must_repair" | "replaceable" | "retrying";
 }
 
 export interface SecBatchRunSummary {
@@ -197,8 +197,9 @@ export async function runSecUniverseBatch(
             }
 
             // Ordinary transient SEC failures get the queue's bounded retry/backoff
-            // before we permanently replace the company. This keeps recoverable names
-            // moving toward SEC-evidence-ready without spending any market-data quota.
+            // before we permanently replace the company. Keep retry-pending failures
+            // machine-readable as retrying so downstream status/reporting cannot
+            // mistake them for names that are already eligible for replacement.
             if (!candidate.isProtected) {
               await queue.markFailed(candidate.ticker, message);
 
@@ -216,7 +217,7 @@ export async function runSecUniverseBatch(
                   ticker: candidate.ticker,
                   attemptCount: candidate.attemptCount,
                   message,
-                  disposition: "replaceable",
+                  disposition: "retrying",
                 }),
               );
               return;
