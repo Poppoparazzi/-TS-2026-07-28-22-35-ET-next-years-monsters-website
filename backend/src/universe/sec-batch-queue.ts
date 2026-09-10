@@ -1,4 +1,4 @@
-// TS: 2026-09-10 01:57 ET
+// TS: 2026-09-10 04:00 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -80,6 +80,11 @@ export const PROMOTE_EXHAUSTED_FAILURES_SQL = `
 export const SEC_REPLACEMENT_BUDGET_FILTER_SQL = `
   NOT ${PROTECTED_COMPANY_SQL_PREDICATE}
   AND cps.sec_status = 'unresolved'
+`;
+
+export const SEC_REPLACEMENT_CONSUMED_FILTER_SQL = `
+  cps.replacement_attempted = true
+  AND cps.sec_status <> 'unresolved'
 `;
 
 export const REPLACEMENT_CLAIM_ELIGIBILITY_SQL = `
@@ -239,7 +244,9 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
             SELECT GREATEST(
               count(*) FILTER (
                 WHERE ${SEC_REPLACEMENT_BUDGET_FILTER_SQL}
-              ) - count(*) FILTER (WHERE cps.replacement_attempted = true),
+              ) - count(*) FILTER (
+                WHERE ${SEC_REPLACEMENT_CONSUMED_FILTER_SQL}
+              ),
               0
             ) AS available
             FROM company_pipeline_status cps
