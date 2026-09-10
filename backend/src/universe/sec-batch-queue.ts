@@ -1,4 +1,4 @@
-// TS: 2026-09-09 19:08 ET
+// TS: 2026-09-09 20:05 ET
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -30,7 +30,7 @@ export const PROMOTE_STORED_SEC_EVIDENCE_SQL = `
   SET
     sec_status = 'complete',
     last_error = NULL,
-    last_completed_at = now(),
+    last_completed_at = COALESCE(cps.last_completed_at, cps.updated_at),
     next_retry_at = NULL
   FROM companies c
   WHERE c.id = cps.company_id
@@ -209,7 +209,8 @@ export class PostgresSecBatchQueue implements SecBatchQueue {
 
       // A queued/partial row can already be SEC-evidence-ready after a prior write,
       // import, or interrupted worker. Reconcile that durable state before claiming
-      // network work so stored SEC evidence remains the first and cheapest preflight.
+      // network work, but preserve its prior completion/update timestamp so old SEC
+      // evidence still becomes stale under the configured freshness window.
       await client.query(PROMOTE_STORED_SEC_EVIDENCE_SQL);
 
       await client.query(
