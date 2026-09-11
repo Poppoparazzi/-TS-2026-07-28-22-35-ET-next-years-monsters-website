@@ -1,7 +1,8 @@
-// TS: 2026-09-09 10:05 ET
+// TS: 2026-09-11 03:06 UTC
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
+import { inspectCachedCompanyHistory } from "../ratings/cached-company-history-preflight.js";
 import { calculateMonsterRatingV1 } from "../ratings/engine-v1.js";
 import {
   buildAnnualFinancialPeriods,
@@ -182,23 +183,45 @@ export async function runRatingBatch(
         continue;
       }
 
-      // Recheck once immediately before attempting the cross-worker claim. A concurrent worker may
+      // Recheck once immediately before attempting any company-history work. A concurrent worker may
       // have persisted durable ineligibility while this worker was completing free SEC preflight.
       if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
-      const marketHistoryClaimed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
-      if (!marketHistoryClaimed) continue;
+      const cachedCompanyPreflight = await inspectCachedCompanyHistory(
+        marketProvider,
+        batchStore,
+        candidate.ticker,
+      );
+      let cachedCompanyHistory = cachedCompanyPreflight.history;
+      if (cachedCompanyPreflight.evidence?.suppressionReason && !cachedCompanyPreflight.shouldRefresh) {
+        const failure = {
+          ticker: candidate.ticker,
+          reason: reusableHistorySuppressionReason(
+            cachedCompanyPreflight.evidence.suppressionReason,
+            cachedCompanyPreflight.evidence.usableBarCount,
+          ),
+          reasonCode: cachedCompanyPreflight.evidence.suppressionReason,
+          suppressionStage: "cached_company_history_preflight",
+        };
+        await recordFailure(failure, candidate.isProtected);
+        continue;
+      }
+
+      let marketHistoryClaimed = false;
+      if (!cachedCompanyHistory) {
+        marketHistoryClaimed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
+        if (!marketHistoryClaimed) continue;
+      }
 
       try {
-        // Recheck after the atomic claim as well. This closes the race between the last free
+        // Recheck after an atomic claim as well. This closes the race between the last free
         // suppression read and claim acquisition without spending another paid provider call.
-        if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
+        if (marketHistoryClaimed) {
+          if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
+        }
 
-        // A cache-only SPY readiness check belongs after the company claim/suppression gates so a
-        // lost or newly suppressed company still spends zero benchmark quota. When fresh persisted
-        // SPY evidence is already known bad, stop before purchasing this company's history. A cache
-        // miss deliberately preserves the existing ordering and permits one shared paid SPY refresh
-        // only after the company's own history survives its reusable evidence gate.
+        // A cache-only SPY readiness check belongs after the company cache/suppression gates so a
+        // lost or newly suppressed company still spends zero benchmark quota.
         if (!benchmarkHistory && marketProvider.getCachedDailyHistory) {
           let cachedBenchmarkHistory: DailyMarketHistory | null;
           try {
@@ -207,9 +230,6 @@ export async function runRatingBatch(
             stoppedReason = `Persisted benchmark preflight could not be read: ${reason(error)}`;
             break;
           }
-          // The factory already scopes Postgres reads to the active provider, but keep the worker
-          // defensive too: cache corruption or a future provider implementation must never let
-          // another provider's SPY history suppress or seed this provider's rating batch.
           if (cachedBenchmarkHistory && cachedBenchmarkHistory.provider === marketProvider.name) {
             const cachedBenchmarkProblem = validateBenchmarkHistory(cachedBenchmarkHistory);
             if (cachedBenchmarkProblem) {
@@ -221,43 +241,47 @@ export async function runRatingBatch(
         }
 
         let history: DailyMarketHistory;
-        try {
-          // Migration 1013 makes a same-owner tryClaim call renew the bounded lease. The guard is
-          // consulted only after a quota backoff and all pacing sleep, immediately before another
-          // paid provider attempt. It also rechecks durable suppression while the worker slept.
-          beforeMarketHistoryRetryAttempt = async () => {
-            const renewed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
-            if (!renewed) return false;
-            return !(await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected));
-          };
-          history = await getPacedHistory(candidate.ticker, 300);
-        }
-        catch (error) {
-          if (error instanceof MarketHistoryRetryAbortedError) continue;
-          const message = reason(error);
-          if (providerLimitReached(message) || providerAuthorizationUnavailable(message) || providerTransportUnavailable(message)) {
-            stoppedReason = `Market-data provider unavailable while processing ${candidate.ticker}: ${message}`;
-            break;
+        if (cachedCompanyHistory) {
+          history = cachedCompanyHistory;
+        } else {
+          try {
+            // Migration 1013 makes a same-owner tryClaim call renew the bounded lease. The guard is
+            // consulted only after a quota backoff and all pacing sleep, immediately before another
+            // paid provider attempt. It also rechecks durable suppression while the worker slept.
+            beforeMarketHistoryRetryAttempt = async () => {
+              const renewed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId);
+              if (!renewed) return false;
+              return !(await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected));
+            };
+            history = await getPacedHistory(candidate.ticker, 300);
           }
-          throw error;
-        } finally {
-          beforeMarketHistoryRetryAttempt = undefined;
+          catch (error) {
+            if (error instanceof MarketHistoryRetryAbortedError) continue;
+            const message = reason(error);
+            if (providerLimitReached(message) || providerAuthorizationUnavailable(message) || providerTransportUnavailable(message)) {
+              stoppedReason = `Market-data provider unavailable while processing ${candidate.ticker}: ${message}`;
+              break;
+            }
+            throw error;
+          } finally {
+            beforeMarketHistoryRetryAttempt = undefined;
+          }
+
+          const marketHistoryEvidence = buildMarketHistoryEvidence(history);
+          await batchStore.saveMarketHistoryEvidence(marketHistoryEvidence);
+          if (marketHistoryEvidence.suppressionReason) {
+            const failure = {
+              ticker: candidate.ticker,
+              reason: reusableHistorySuppressionReason(marketHistoryEvidence.suppressionReason, marketHistoryEvidence.usableBarCount),
+              reasonCode: marketHistoryEvidence.suppressionReason,
+              suppressionStage: "provider_market_history",
+            };
+            await recordFailure(failure, candidate.isProtected);
+            continue;
+          }
         }
 
-        const marketHistoryEvidence = buildMarketHistoryEvidence(history);
-        await batchStore.saveMarketHistoryEvidence(marketHistoryEvidence);
-        if (marketHistoryEvidence.suppressionReason) {
-          const failure = {
-            ticker: candidate.ticker,
-            reason: reusableHistorySuppressionReason(marketHistoryEvidence.suppressionReason, marketHistoryEvidence.usableBarCount),
-            reasonCode: marketHistoryEvidence.suppressionReason,
-            suppressionStage: "provider_market_history",
-          };
-          await recordFailure(failure, candidate.isProtected);
-          continue;
-        }
-
-        // Do not spend benchmark quota until this candidate's own paid history has been persisted
+        // Do not spend benchmark quota until this candidate's own history has been persisted/reused
         // and has survived the durable history/liquidity gate. SPY remains shared for all survivors.
         if (!benchmarkHistory) {
           try { benchmarkHistory = await getPacedHistory("SPY", 300); }
@@ -282,9 +306,11 @@ export async function runRatingBatch(
         await persistenceStore.saveRating(publishableRating);
         ratedTickers.push(candidate.ticker);
       } finally {
-        // A bounded lease guarantees recovery if release itself cannot reach Postgres. Do not turn
-        // an already-persisted rating/evidence result into a false candidate failure on cleanup.
-        await batchStore.releaseMarketHistoryRequestClaim(candidate.ticker, marketProvider.name, runId).catch(() => false);
+        if (marketHistoryClaimed) {
+          // A bounded lease guarantees recovery if release itself cannot reach Postgres. Do not turn
+          // an already-persisted rating/evidence result into a false candidate failure on cleanup.
+          await batchStore.releaseMarketHistoryRequestClaim(candidate.ticker, marketProvider.name, runId).catch(() => false);
+        }
       }
     } catch (error) {
       const message = reason(error);

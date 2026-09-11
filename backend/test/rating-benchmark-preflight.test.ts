@@ -1,14 +1,15 @@
-// TS: 2026-09-09 08:06 ET
+// TS: 2026-09-11 05:01 UTC
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("rating batch uses cache-only benchmark readiness without violating paid-call ordering", () => {
+test("rating batch uses free company-cache and benchmark-cache readiness without violating paid-call ordering", () => {
   const source = readFileSync(new URL("../src/jobs/rating-batch.ts", import.meta.url), "utf8");
   const providerFactory = readFileSync(new URL("../src/providers/index.ts", import.meta.url), "utf8");
 
-  const claim = source.indexOf("const marketHistoryClaimed = await batchStore.tryClaimMarketHistoryRequest");
+  const companyCachePreflight = source.indexOf("const cachedCompanyPreflight = await inspectCachedCompanyHistory");
+  const claim = source.indexOf("marketHistoryClaimed = await batchStore.tryClaimMarketHistoryRequest(candidate.ticker, marketProvider.name, runId)");
   const postClaimSuppression = source.indexOf("if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;", claim);
   const cachedBenchmarkRead = source.indexOf('marketProvider.getCachedDailyHistory("SPY", 300)');
   const cachedBenchmarkValidation = source.indexOf("validateBenchmarkHistory(cachedBenchmarkHistory)");
@@ -20,14 +21,15 @@ test("rating batch uses cache-only benchmark readiness without violating paid-ca
   const benchmarkValidation = source.indexOf("validateBenchmarkHistory(benchmarkHistory)");
   const ratingBuild = source.indexOf("const rating = calculateMonsterRatingV1");
 
-  assert.ok(claim >= 0, "company paid-history claim must remain ahead of benchmark cache preflight");
+  assert.ok(companyCachePreflight >= 0, "free company-cache preflight must be present");
+  assert.ok(claim > companyCachePreflight, "paid company-history claim must remain behind free company-cache preflight");
   assert.ok(postClaimSuppression > claim, "durable company suppression must be rechecked after the paid-history claim");
-  assert.ok(cachedBenchmarkRead > postClaimSuppression, "cache-only SPY readiness must wait until company claim and suppression gates survive");
+  assert.ok(cachedBenchmarkRead > postClaimSuppression, "cache-only SPY readiness must wait until company cache/claim and suppression gates survive");
   assert.ok(cachedBenchmarkValidation > cachedBenchmarkRead, "persisted SPY history must be validated before any company history purchase");
   assert.ok(companyHistoryFetch > cachedBenchmarkValidation, "known-bad persisted SPY must stop the batch before company-history quota is spent");
-  assert.ok(evidenceBuild > companyHistoryFetch, "company market-history evidence must be built immediately after paid company history");
-  assert.ok(evidenceSave > evidenceBuild, "company market-history evidence must be durably persisted before any eligibility return");
-  assert.ok(evidenceSuppression > evidenceSave, "persisted company evidence must be checked for a machine-readable suppression reason");
+  assert.ok(evidenceBuild > companyHistoryFetch, "paid company market-history evidence must be built immediately after paid company history");
+  assert.ok(evidenceSave > evidenceBuild, "paid company market-history evidence must be durably persisted before any eligibility return");
+  assert.ok(evidenceSuppression > evidenceSave, "persisted paid company evidence must be checked for a machine-readable suppression reason");
   assert.ok(benchmarkFetch > evidenceSuppression, "a cache miss may spend SPY quota only after company history survives durable suppression");
   assert.ok(benchmarkValidation > benchmarkFetch, "paid benchmark history must be validated after it is fetched");
   assert.ok(ratingBuild > benchmarkValidation, "benchmark history must pass its readiness gate before rating calculation");
