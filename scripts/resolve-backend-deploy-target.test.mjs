@@ -1,8 +1,8 @@
-// TS: 2026-09-10 13:03 ET
+// TS: 2026-09-11 20:02 UTC
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -100,13 +100,14 @@ test("Render deployment target is the merged main SHA, not the PR head SHA", () 
     git(cwd, ["config", "user.name", "NYM Test"]);
     git(cwd, ["config", "user.email", "nym-test@example.invalid"]);
 
-    writeFileSync(join(cwd, "README.md"), "base\n");
-    git(cwd, ["add", "README.md"]);
-    git(cwd, ["commit", "-m", "base"]);
+    mkdirSync(join(cwd, "backend", "src"), { recursive: true });
+    writeFileSync(join(cwd, "backend", "src", "server.ts"), "export const version = 1;\n");
+    git(cwd, ["add", "backend/src/server.ts"]);
+    git(cwd, ["commit", "-m", "base backend"]);
 
     git(cwd, ["checkout", "-b", "feature"]);
-    writeFileSync(join(cwd, "README.md"), "base\nfeature\n");
-    git(cwd, ["commit", "-am", "feature"]);
+    writeFileSync(join(cwd, "backend", "src", "server.ts"), "export const version = 2;\n");
+    git(cwd, ["commit", "-am", "feature backend"]);
     const prHeadSha = git(cwd, ["rev-parse", "HEAD"]);
 
     git(cwd, ["checkout", "main"]);
