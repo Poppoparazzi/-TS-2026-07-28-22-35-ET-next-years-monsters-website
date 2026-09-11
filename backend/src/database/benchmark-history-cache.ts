@@ -1,4 +1,4 @@
-// TS: 2026-09-11 09:00 UTC
+// TS: 2026-09-11 08:59 ET
 
 import pg from "pg";
 import type { DailyMarketBar, DailyMarketHistory } from "../providers/types.js";
@@ -119,6 +119,14 @@ export class PostgresBenchmarkHistoryCache implements BenchmarkHistoryCache {
       throw new Error("benchmark_history_cache_invalid_max_age");
     }
 
+    // Twelve Data daily bars should not be repurchased by hourly workers merely because a
+    // short-lived in-process cache expired. Enforce the persisted 24-hour reuse floor here so
+    // every database read site receives the same quota-safe policy, including older provider
+    // callers that still pass the 15-minute memory-cache TTL explicitly.
+    const effectiveMaxAgeMs = normalizedProvider === "twelve-data"
+      ? Math.max(maxAgeMs, BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS)
+      : maxAgeMs;
+
     return this.withClient(async (client) => {
       const result = await client.query<BenchmarkHistoryRow>(
         `
@@ -131,7 +139,7 @@ export class PostgresBenchmarkHistoryCache implements BenchmarkHistoryCache {
           ORDER BY output_size ASC, retrieved_at DESC
           LIMIT 1
         `,
-        [normalizedSymbol, normalizedProvider, normalizedOutputSize, maxAgeMs],
+        [normalizedSymbol, normalizedProvider, normalizedOutputSize, effectiveMaxAgeMs],
       );
       const row = result.rows[0];
       if (!row || !Array.isArray(row.bars) || row.bars.length < 60 || !row.bars.every(isDailyMarketBar)) {
