@@ -1,11 +1,14 @@
-// TS: 2026-09-07 23:01 ET
+// TS: 2026-09-11 09:00 UTC
 
 import pg from "pg";
 import type { DailyMarketBar, DailyMarketHistory } from "../providers/types.js";
 
 const { Client } = pg;
 
-export const BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS = 15 * 60 * 1_000;
+// Daily 1-day bars change at most once per trading day. Keep persisted history reusable across
+// hourly rating runs so the worker does not repurchase the same 300-day series every 15 minutes.
+// The rating evidence layer still rejects market data whose latest bar is more than seven days old.
+export const BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS = 24 * 60 * 60 * 1_000;
 export const BENCHMARK_HISTORY_REFRESH_LEASE_MS = 20 * 1_000;
 
 export interface BenchmarkHistoryCache {
