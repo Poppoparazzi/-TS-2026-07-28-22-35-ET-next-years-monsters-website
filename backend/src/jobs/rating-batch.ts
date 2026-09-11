@@ -1,7 +1,8 @@
-// TS: 2026-09-11 03:03 UTC
+// TS: 2026-09-11 03:06 UTC
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
+import { inspectCachedCompanyHistory } from "../ratings/cached-company-history-preflight.js";
 import { calculateMonsterRatingV1 } from "../ratings/engine-v1.js";
 import {
   buildAnnualFinancialPeriods,
@@ -186,29 +187,24 @@ export async function runRatingBatch(
       // have persisted durable ineligibility while this worker was completing free SEC preflight.
       if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
 
-      // Reuse provider-scoped persisted company history before acquiring a paid-request claim.
-      // Persist its machine-readable evidence immediately so proven ineligibility survives restarts.
-      let cachedCompanyHistory: DailyMarketHistory | null = null;
-      if (marketProvider.getCachedDailyHistory) {
-        cachedCompanyHistory = await marketProvider.getCachedDailyHistory(candidate.ticker, 300);
-        if (cachedCompanyHistory && cachedCompanyHistory.provider === marketProvider.name) {
-          const cachedCompanyHistoryEvidence = buildMarketHistoryEvidence(cachedCompanyHistory);
-          await batchStore.saveMarketHistoryEvidence(cachedCompanyHistoryEvidence);
-          if (cachedCompanyHistoryEvidence.suppressionReason === "stale_market_data") {
-            cachedCompanyHistory = null;
-          } else if (cachedCompanyHistoryEvidence.suppressionReason) {
-            const failure = {
-              ticker: candidate.ticker,
-              reason: reusableHistorySuppressionReason(cachedCompanyHistoryEvidence.suppressionReason, cachedCompanyHistoryEvidence.usableBarCount),
-              reasonCode: cachedCompanyHistoryEvidence.suppressionReason,
-              suppressionStage: "cached_company_history_preflight",
-            };
-            await recordFailure(failure, candidate.isProtected);
-            continue;
-          }
-        } else {
-          cachedCompanyHistory = null;
-        }
+      const cachedCompanyPreflight = await inspectCachedCompanyHistory(
+        marketProvider,
+        batchStore,
+        candidate.ticker,
+      );
+      let cachedCompanyHistory = cachedCompanyPreflight.history;
+      if (cachedCompanyPreflight.evidence?.suppressionReason && !cachedCompanyPreflight.shouldRefresh) {
+        const failure = {
+          ticker: candidate.ticker,
+          reason: reusableHistorySuppressionReason(
+            cachedCompanyPreflight.evidence.suppressionReason,
+            cachedCompanyPreflight.evidence.usableBarCount,
+          ),
+          reasonCode: cachedCompanyPreflight.evidence.suppressionReason,
+          suppressionStage: "cached_company_history_preflight",
+        };
+        await recordFailure(failure, candidate.isProtected);
+        continue;
       }
 
       let marketHistoryClaimed = false;
@@ -220,7 +216,9 @@ export async function runRatingBatch(
       try {
         // Recheck after an atomic claim as well. This closes the race between the last free
         // suppression read and claim acquisition without spending another paid provider call.
-        if (marketHistoryClaimed && await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
+        if (marketHistoryClaimed) {
+          if (await recordReusableHistorySuppression(candidate.ticker, candidate.isProtected)) continue;
+        }
 
         // A cache-only SPY readiness check belongs after the company cache/suppression gates so a
         // lost or newly suppressed company still spends zero benchmark quota.
