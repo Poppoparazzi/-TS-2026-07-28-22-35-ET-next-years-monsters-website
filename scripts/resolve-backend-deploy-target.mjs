@@ -1,4 +1,4 @@
-// TS: 2026-09-10 13:00 ET
+// TS: 2026-09-11 19:06 UTC
 
 import { execFileSync } from "node:child_process";
 
@@ -41,7 +41,13 @@ export function isBackendTestOnly(changedFiles) {
 }
 
 function isDeployRelevantCommit(sha, cwd) {
-  const changedFiles = git(["diff-tree", "--no-commit-id", "--name-only", "-r", sha], cwd)
+  const parent = git(["rev-list", "--parents", "-n", "1", sha], cwd).split(" ")[1] ?? null;
+  const changedFiles = git(
+    parent
+      ? ["diff", "--name-only", parent, sha, "--", ...DEPLOY_RELEVANT_PATHS]
+      : ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", sha, "--", ...DEPLOY_RELEVANT_PATHS],
+    cwd,
+  )
     .split("\n")
     .map((file) => file.trim())
     .filter(Boolean);
@@ -53,7 +59,9 @@ function isDeployRelevantCommit(sha, cwd) {
   const backendFiles = changedFiles.filter((file) => file === "backend" || file.startsWith("backend/"));
   if (backendFiles.length > 0) {
     const backendChangesAreTimestampOnly = backendFiles.every((file) => {
-      const patch = git(["show", "--format=", "--unified=0", sha, "--", file], cwd);
+      const patch = parent
+        ? git(["diff", "--unified=0", parent, sha, "--", file], cwd)
+        : git(["show", "--format=", "--unified=0", sha, "--", file], cwd);
       return isTimestampOnlyPatch(patch);
     });
     if (!backendChangesAreTimestampOnly) {
@@ -65,13 +73,16 @@ function isDeployRelevantCommit(sha, cwd) {
     return false;
   }
 
-  const patch = git(["show", "--format=", "--unified=0", sha, "--", "render.yaml"], cwd);
+  const patch = parent
+    ? git(["diff", "--unified=0", parent, sha, "--", "render.yaml"], cwd)
+    : git(["show", "--format=", "--unified=0", sha, "--", "render.yaml"], cwd);
   return !isTimestampOnlyRenderPatch(patch);
 }
 
 export function resolveLatestBackendRelevantCommit({ cwd = process.cwd() } = {}) {
   const candidates = git([
     "log",
+    "--first-parent",
     "--format=%H",
     "--",
     ...DEPLOY_RELEVANT_PATHS,
@@ -88,14 +99,10 @@ export function resolveLatestBackendRelevantCommit({ cwd = process.cwd() } = {})
 }
 
 export function resolveBackendDeployTarget({ cwd = process.cwd() } = {}) {
-  // Render is configured to deploy branch main with autoDeployTrigger=commit.
-  // The production startup gate must therefore compare against the exact
-  // deployable main SHA, not a pre-merge PR head or backend-only ancestor.
-  const sha = git(["rev-parse", "HEAD"], cwd);
-  if (!sha || !/^[0-9a-f]{40}$/i.test(sha)) {
-    throw new Error("Unable to resolve the exact deployable main commit.");
-  }
-  return sha;
+  // Status-ledger and other ops-only commits can land on main without changing the Render backend.
+  // Compare production to the newest merged-main backend/render.yaml commit that can actually alter runtime
+  // behavior so housekeeping commits do not manufacture a false stale-deployment condition.
+  return resolveLatestBackendRelevantCommit({ cwd });
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
