@@ -1,4 +1,4 @@
-# TS: 2026-09-02 08:00 ET
+# TS: 2026-09-11 22:04 UTC
 
 name: Render production recovery
 
@@ -29,11 +29,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
+
+      - name: Resolve substantive backend deploy target
+        id: backend-target
+        run: echo "sha=$(node scripts/resolve-backend-deploy-target.mjs)" >> "$GITHUB_OUTPUT"
 
       - name: Recover stale or unreachable Render production when authorized
         env:
           API_BASE: https://next-years-monsters-api.onrender.com
-          SOURCE_COMMIT: ${{ github.sha }}
+          SOURCE_COMMIT: ${{ steps.backend-target.outputs.sha }}
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
