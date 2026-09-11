@@ -1,4 +1,4 @@
-// TS: 2026-09-10 13:00 ET
+// TS: 2026-09-11 18:05 UTC
 
 import { execFileSync } from "node:child_process";
 
@@ -88,14 +88,10 @@ export function resolveLatestBackendRelevantCommit({ cwd = process.cwd() } = {})
 }
 
 export function resolveBackendDeployTarget({ cwd = process.cwd() } = {}) {
-  // Render is configured to deploy branch main with autoDeployTrigger=commit.
-  // The production startup gate must therefore compare against the exact
-  // deployable main SHA, not a pre-merge PR head or backend-only ancestor.
-  const sha = git(["rev-parse", "HEAD"], cwd);
-  if (!sha || !/^[0-9a-f]{40}$/i.test(sha)) {
-    throw new Error("Unable to resolve the exact deployable main commit.");
-  }
-  return sha;
+  // Status-ledger and other ops-only commits can land on main without changing the Render backend.
+  // Compare production to the newest backend/render.yaml commit that can actually alter runtime
+  // behavior so housekeeping commits do not manufacture a false stale-deployment condition.
+  return resolveLatestBackendRelevantCommit({ cwd });
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
