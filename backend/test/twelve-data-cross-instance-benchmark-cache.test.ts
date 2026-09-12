@@ -1,8 +1,11 @@
-// TS: 2026-09-07 16:14 ET
+// TS: 2026-09-12 13:00 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { BenchmarkHistoryCache } from "../src/database/benchmark-history-cache.js";
+import {
+  BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS,
+  type BenchmarkHistoryCache,
+} from "../src/database/benchmark-history-cache.js";
 import type { DailyMarketHistory } from "../src/providers/types.js";
 import { TwelveDataMarketDataProvider } from "../src/providers/twelve-data.js";
 
@@ -122,7 +125,7 @@ test("fresh persisted SPY history avoids a paid provider fetch", async () => {
     assert.equal(history, persistedHistory);
     assert.equal(getFreshCount, 1);
     assert.equal(saveCount, 0);
-    assert.equal(observedMaxAgeMs, 15 * 60 * 1_000);
+    assert.equal(observedMaxAgeMs, BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -141,7 +144,7 @@ test("missing or expired persisted SPY history performs one paid fetch and refre
       assert.equal(symbol, "SPY");
       assert.equal(provider, "twelve-data");
       assert.equal(outputSize, 303);
-      assert.equal(maxAgeMs, 15 * 60 * 1_000);
+      assert.equal(maxAgeMs, BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS);
       return null;
     },
     async save(history, outputSize) {
@@ -191,7 +194,7 @@ test("fresh persisted company history avoids a repeat paid Twelve Data fetch aft
       assert.equal(symbol, "AAPL");
       assert.equal(provider, "twelve-data");
       assert.equal(outputSize, 304);
-      assert.equal(maxAgeMs, 15 * 60 * 1_000);
+      assert.equal(maxAgeMs, BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS);
       return persistedHistory;
     },
     async save() {
@@ -228,7 +231,7 @@ test("missing persisted company history performs one paid fetch, persists it, th
       assert.equal(symbol, "MSFT");
       assert.equal(provider, "twelve-data");
       assert.equal(outputSize, 305);
-      assert.equal(maxAgeMs, 15 * 60 * 1_000);
+      assert.equal(maxAgeMs, BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS);
       return null;
     },
     async save(history, outputSize) {

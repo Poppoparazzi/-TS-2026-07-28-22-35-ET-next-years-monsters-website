@@ -1,7 +1,10 @@
-// TS: 2026-09-12 05:01 UTC
+// TS: 2026-09-12 12:00 UTC
 
 import { randomUUID } from "node:crypto";
-import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
+import {
+  BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS,
+  type BenchmarkHistoryCache,
+} from "../database/benchmark-history-cache.js";
 import {
   type DailyMarketBar,
   type DailyMarketHistory,
@@ -353,7 +356,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
             normalizedSymbol,
             this.name,
             safeOutputSize,
-            DAILY_HISTORY_CACHE_TTL_MS,
+            BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS,
           );
         } catch {
           throw new Error(
@@ -399,7 +402,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
                   normalizedSymbol,
                   this.name,
                   safeOutputSize,
-                  DAILY_HISTORY_CACHE_TTL_MS,
+                  BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS,
                 );
               } catch {
                 throw new Error(
@@ -447,7 +450,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
               normalizedSymbol,
               this.name,
               safeOutputSize,
-              DAILY_HISTORY_CACHE_TTL_MS,
+              BENCHMARK_HISTORY_PERSISTED_MAX_AGE_MS,
             );
           } catch {
             await this.persistedBenchmarkHistoryCache
