@@ -1,4 +1,4 @@
-// TS: 2026-09-11 02:01 UTC
+// TS: 2026-09-12 00:07 UTC
 
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
 import type { RatingBatchStore } from "./batch-store.js";
@@ -25,11 +25,17 @@ export async function inspectCachedCompanyHistory(
   }
 
   const evidence = buildMarketHistoryEvidence(cachedCompanyHistory);
-  await batchStore.saveMarketHistoryEvidence(evidence);
 
+  // Staleness is a refresh condition, not durable proof that the company is ineligible.
+  // Do not persist stale cache evidence as a reusable suppression or the post-claim
+  // suppression guard will immediately read it back and prevent the intended refresh.
   if (evidence.suppressionReason === "stale_market_data") {
     return Object.freeze({ history: null, evidence, shouldRefresh: true });
   }
+
+  // Persist reusable evidence for genuine history/liquidity ineligibility and for valid
+  // provider-backed history. This keeps repeat paid calls suppressed where evidence is decisive.
+  await batchStore.saveMarketHistoryEvidence(evidence);
 
   if (evidence.suppressionReason) {
     return Object.freeze({ history: null, evidence, shouldRefresh: false });

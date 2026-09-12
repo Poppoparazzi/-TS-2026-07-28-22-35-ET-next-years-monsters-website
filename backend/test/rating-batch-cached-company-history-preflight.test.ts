@@ -1,4 +1,4 @@
-// TS: 2026-09-11 05:01 UTC
+// TS: 2026-09-12 00:08 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -46,6 +46,11 @@ test("fresh provider-scoped cached company history is inspected before any paid 
     "buildMarketHistoryEvidence(cachedCompanyHistory)",
     "cached-company-history-preflight.ts",
   );
+  const staleRefreshGate = indexOrFail(
+    helperSource,
+    'evidence.suppressionReason === "stale_market_data"',
+    "cached-company-history-preflight.ts",
+  );
   const cachedEvidencePersistence = indexOrFail(
     helperSource,
     "batchStore.saveMarketHistoryEvidence(evidence)",
@@ -56,19 +61,48 @@ test("fresh provider-scoped cached company history is inspected before any paid 
   assert.ok(claim < paidHistory, "A paid company-history call must remain behind the atomic claim.");
   assert.ok(cachedRead < providerScope, "Cached history must be provider-scoped immediately after the free read.");
   assert.ok(providerScope < cachedEvidence, "Provider identity must be validated before cached evidence is derived.");
-  assert.ok(cachedEvidence < cachedEvidencePersistence, "Cached evidence must be persisted after validation.");
+  assert.ok(cachedEvidence < staleRefreshGate, "Cached evidence must be classified before deciding whether refresh is required.");
+  assert.ok(staleRefreshGate < cachedEvidencePersistence, "Stale cache evidence must escape to refresh before reusable suppression is persisted.");
 });
 
-test("cache preflight preserves refresh eligibility for stale history while suppressing proven history/liquidity failures", async () => {
+test("cache preflight refreshes stale history without persisting a self-blocking suppression", async () => {
+  const helperSource = await readFile(helperSourceUrl, "utf8");
+
+  const staleGate = indexOrFail(
+    helperSource,
+    'if (evidence.suppressionReason === "stale_market_data")',
+    "cached-company-history-preflight.ts",
+  );
+  const refreshReturn = indexOrFail(
+    helperSource,
+    "return Object.freeze({ history: null, evidence, shouldRefresh: true });",
+    "cached-company-history-preflight.ts",
+  );
+  const evidencePersistence = indexOrFail(
+    helperSource,
+    "await batchStore.saveMarketHistoryEvidence(evidence)",
+    "cached-company-history-preflight.ts",
+  );
+  const durableSuppressionGate = indexOrFail(
+    helperSource,
+    "if (evidence.suppressionReason)",
+    "cached-company-history-preflight.ts",
+  );
+
+  assert.ok(staleGate < refreshReturn, "Stale cached evidence must explicitly select refresh.");
+  assert.ok(refreshReturn < evidencePersistence, "The stale refresh return must occur before reusable evidence persistence.");
+  assert.ok(evidencePersistence < durableSuppressionGate, "Decisive history/liquidity suppressions must still be persisted before they are returned.");
+});
+
+test("cache preflight still suppresses proven history/liquidity failures with machine-readable evidence", async () => {
   const [batchSource, helperSource] = await Promise.all([
     readFile(batchSourceUrl, "utf8"),
     readFile(helperSourceUrl, "utf8"),
   ]);
 
-  indexOrFail(helperSource, 'evidence.suppressionReason === "stale_market_data"', "cached-company-history-preflight.ts");
-  indexOrFail(helperSource, "shouldRefresh: true", "cached-company-history-preflight.ts");
   indexOrFail(helperSource, "if (evidence.suppressionReason)", "cached-company-history-preflight.ts");
   indexOrFail(helperSource, "shouldRefresh: false", "cached-company-history-preflight.ts");
+  indexOrFail(helperSource, "batchStore.saveMarketHistoryEvidence(evidence)", "cached-company-history-preflight.ts");
   indexOrFail(batchSource, 'suppressionStage: "cached_company_history_preflight"', "rating-batch.ts");
   indexOrFail(batchSource, "cachedCompanyPreflight.evidence.suppressionReason", "rating-batch.ts");
 });
