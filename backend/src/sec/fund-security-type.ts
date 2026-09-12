@@ -1,11 +1,12 @@
-// TS: 2026-09-12 16:20 UTC
+// TS: 2026-09-12 17:08 UTC
 
 import { SecEdgarRequestError } from "./types.js";
 
 const SEC_FUND_TICKERS_URL = "https://www.sec.gov/files/company_tickers_mf.json";
+const SEC_COMPANY_TICKERS_EXCHANGE_URL = "https://www.sec.gov/files/company_tickers_exchange.json";
 const FUND_TICKER_CACHE_TTL_MS = 6 * 60 * 60 * 1_000;
 
-interface SecFundTickerResponse {
+interface SecTickerTableResponse {
   readonly fields?: readonly string[];
   readonly data?: readonly (readonly unknown[])[];
 }
@@ -14,15 +15,17 @@ export interface SecSecurityTypeEvidence {
   readonly securityType: "SEC registered fund";
   readonly provider: "sec-edgar";
   readonly sourceUrl: typeof SEC_FUND_TICKERS_URL;
+  readonly identitySourceUrl: typeof SEC_COMPANY_TICKERS_EXCHANGE_URL;
 }
 
-let cache:
-  | {
-      readonly expiresAt: number;
-      readonly tickers: ReadonlySet<string>;
-    }
-  | null = null;
-let inFlight: Promise<ReadonlySet<string>> | null = null;
+interface CachedFundEvidence {
+  readonly expiresAt: number;
+  readonly fundCiksByTicker: ReadonlyMap<string, ReadonlySet<number>>;
+  readonly currentCikByTicker: ReadonlyMap<string, number>;
+}
+
+let cache: CachedFundEvidence | null = null;
+let inFlight: Promise<CachedFundEvidence> | null = null;
 
 function normalizeSymbol(value: string): string {
   const normalized = value.trim().toUpperCase();
@@ -36,40 +39,85 @@ function safeText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function tickerFieldIndex(fields: readonly string[]): number {
-  return fields.findIndex((field) => field.trim().toLowerCase().replaceAll("_", "").includes("ticker"));
+function safeCik(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-async function loadFundTickers(userAgent: string): Promise<ReadonlySet<string>> {
-  if (cache && cache.expiresAt > Date.now()) return cache.tickers;
+function exactFieldIndex(fields: readonly string[], names: readonly string[]): number {
+  const normalizedNames = new Set(names.map((name) => name.toLowerCase().replaceAll("_", "")));
+  return fields.findIndex((field) => normalizedNames.has(field.trim().toLowerCase().replaceAll("_", "")));
+}
+
+async function fetchTickerTable(url: string, userAgent: string): Promise<SecTickerTableResponse> {
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": userAgent,
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new SecEdgarRequestError(response.status);
+  return (await response.json()) as SecTickerTableResponse;
+}
+
+function buildFundCiksByTicker(payload: SecTickerTableResponse): ReadonlyMap<string, ReadonlySet<number>> {
+  const fields = payload.fields ?? [];
+  const tickerIndex = exactFieldIndex(fields, ["ticker", "symbol"]);
+  const cikIndex = exactFieldIndex(fields, ["cik"]);
+  if (tickerIndex < 0 || cikIndex < 0) {
+    throw new Error("SEC fund ticker mapping did not contain authoritative ticker and CIK fields.");
+  }
+
+  const mutable = new Map<string, Set<number>>();
+  for (const row of payload.data ?? []) {
+    const ticker = safeText(row[tickerIndex])?.toUpperCase() ?? null;
+    const cik = safeCik(row[cikIndex]);
+    if (!ticker || !/^[A-Z0-9.-]{1,15}$/.test(ticker) || cik === null) continue;
+    const ciks = mutable.get(ticker) ?? new Set<number>();
+    ciks.add(cik);
+    mutable.set(ticker, ciks);
+  }
+
+  return Object.freeze(new Map(
+    [...mutable.entries()].map(([ticker, ciks]) => [ticker, Object.freeze(new Set(ciks)) as ReadonlySet<number>]),
+  ));
+}
+
+function buildCurrentCikByTicker(payload: SecTickerTableResponse): ReadonlyMap<string, number> {
+  const fields = payload.fields ?? [];
+  const tickerIndex = exactFieldIndex(fields, ["ticker", "symbol"]);
+  const cikIndex = exactFieldIndex(fields, ["cik"]);
+  if (tickerIndex < 0 || cikIndex < 0) {
+    throw new Error("SEC company ticker mapping did not contain authoritative ticker and CIK fields.");
+  }
+
+  const result = new Map<string, number>();
+  for (const row of payload.data ?? []) {
+    const ticker = safeText(row[tickerIndex])?.toUpperCase() ?? null;
+    const cik = safeCik(row[cikIndex]);
+    if (!ticker || !/^[A-Z0-9.-]{1,15}$/.test(ticker) || cik === null) continue;
+    result.set(ticker, cik);
+  }
+  return Object.freeze(result);
+}
+
+async function loadFundEvidence(userAgent: string): Promise<CachedFundEvidence> {
+  if (cache && cache.expiresAt > Date.now()) return cache;
   if (inFlight) return inFlight;
 
   inFlight = (async () => {
-    const response = await fetch(SEC_FUND_TICKERS_URL, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": userAgent,
-      },
-      signal: AbortSignal.timeout(10_000),
+    const [fundPayload, companyPayload] = await Promise.all([
+      fetchTickerTable(SEC_FUND_TICKERS_URL, userAgent),
+      fetchTickerTable(SEC_COMPANY_TICKERS_EXCHANGE_URL, userAgent),
+    ]);
+    const loaded: CachedFundEvidence = Object.freeze({
+      expiresAt: Date.now() + FUND_TICKER_CACHE_TTL_MS,
+      fundCiksByTicker: buildFundCiksByTicker(fundPayload),
+      currentCikByTicker: buildCurrentCikByTicker(companyPayload),
     });
-    if (!response.ok) throw new SecEdgarRequestError(response.status);
-
-    const payload = (await response.json()) as SecFundTickerResponse;
-    const fields = payload.fields ?? [];
-    const tickerIndex = tickerFieldIndex(fields);
-    if (tickerIndex < 0) {
-      throw new Error("SEC fund ticker mapping did not contain a ticker field.");
-    }
-
-    const tickers = new Set<string>();
-    for (const row of payload.data ?? []) {
-      const ticker = safeText(row[tickerIndex])?.toUpperCase() ?? null;
-      if (ticker && /^[A-Z0-9.-]{1,15}$/.test(ticker)) tickers.add(ticker);
-    }
-
-    const frozen = Object.freeze(tickers) as ReadonlySet<string>;
-    cache = { expiresAt: Date.now() + FUND_TICKER_CACHE_TTL_MS, tickers: frozen };
-    return frozen;
+    cache = loaded;
+    return loaded;
   })();
 
   try {
@@ -89,12 +137,21 @@ export async function getSecFundSecurityTypeEvidence(
   }
 
   const normalized = normalizeSymbol(symbol);
-  const tickers = await loadFundTickers(userAgent);
-  if (!tickers.has(normalized)) return null;
+  const evidence = await loadFundEvidence(userAgent);
+  const fundCiks = evidence.fundCiksByTicker.get(normalized);
+  if (!fundCiks || fundCiks.size === 0) return null;
+
+  // SEC notes that its ticker association files are periodically updated and not guaranteed to be
+  // exhaustive. A ticker-only hit could therefore be stale after symbol reuse. Require the fund-map
+  // CIK to agree with the SEC's current ticker/exchange association before treating the security as
+  // an authoritative unsupported fund. Ambiguous/mismatched evidence stays UNKNOWN, never common.
+  const currentCik = evidence.currentCikByTicker.get(normalized);
+  if (!currentCik || !fundCiks.has(currentCik)) return null;
 
   return Object.freeze({
     securityType: "SEC registered fund",
     provider: "sec-edgar",
     sourceUrl: SEC_FUND_TICKERS_URL,
+    identitySourceUrl: SEC_COMPANY_TICKERS_EXCHANGE_URL,
   });
 }
