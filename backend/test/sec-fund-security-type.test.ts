@@ -1,10 +1,10 @@
-// TS: 2026-09-12 17:10 UTC
+// TS: 2026-09-12 21:03 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getSecFundSecurityTypeEvidence } from "../src/sec/fund-security-type.js";
 
-test("SEC fund preflight requires fund ticker and current SEC CIK identity to agree", async () => {
+test("SEC fund preflight defers the current-identity map until a fund ticker actually matches", async () => {
   const originalFetch = globalThis.fetch;
   const requestedUrls: string[] = [];
   const userAgents: string[] = [];
@@ -42,9 +42,14 @@ test("SEC fund preflight requires fund ticker and current SEC CIK identity to ag
 
   try {
     const environment = { SEC_USER_AGENT: "NextYearsMonsters test@example.test" } as NodeJS.ProcessEnv;
+
+    const unknownEvidence = await getSecFundSecurityTypeEvidence("AAPL", environment);
+    assert.equal(unknownEvidence, null, "A fund-map miss must remain unknown rather than being labeled common stock.");
+    assert.equal(requestedUrls.length, 1, "A non-fund candidate should load only the SEC fund map.");
+    assert.ok(requestedUrls[0]?.endsWith("company_tickers_mf.json"));
+
     const fundEvidence = await getSecFundSecurityTypeEvidence("fundx", environment);
     const reusedTickerEvidence = await getSecFundSecurityTypeEvidence("REUSED", environment);
-    const unknownEvidence = await getSecFundSecurityTypeEvidence("AAPL", environment);
 
     assert.deepEqual(fundEvidence, {
       securityType: "SEC registered fund",
@@ -57,8 +62,7 @@ test("SEC fund preflight requires fund ticker and current SEC CIK identity to ag
       null,
       "A stale fund-map ticker whose current SEC CIK belongs to another issuer must remain unknown instead of being falsely suppressed.",
     );
-    assert.equal(unknownEvidence, null, "A fund-map miss must remain unknown rather than being labeled common stock.");
-    assert.equal(requestedUrls.length, 2, "Both authoritative SEC maps should be loaded once and cached across ticker checks.");
+    assert.equal(requestedUrls.length, 2, "The current SEC ticker/CIK map should load only after a fund-map hit, then remain cached.");
     assert.ok(requestedUrls.some((url) => url.endsWith("company_tickers_mf.json")));
     assert.ok(requestedUrls.some((url) => url.endsWith("company_tickers_exchange.json")));
     assert.deepEqual(new Set(userAgents), new Set([environment.SEC_USER_AGENT]));
