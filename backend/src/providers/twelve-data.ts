@@ -1,4 +1,4 @@
-// TS: 2026-09-08 09:00 ET
+// TS: 2026-09-12 05:01 UTC
 
 import { randomUUID } from "node:crypto";
 import type { BenchmarkHistoryCache } from "../database/benchmark-history-cache.js";
@@ -513,12 +513,16 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
         });
 
         bars.sort((left, right) => left.date.localeCompare(right.date));
-        if (bars.length < 60) {
+        if (bars.length === 0) {
           throw new Error(
-            `Insufficient daily market history was returned for ${normalizedSymbol}.`,
+            `No usable daily market history was returned for ${normalizedSymbol}.`,
           );
         }
 
+        // A paid request can legitimately prove that a recent listing has less history than
+        // requested. Return that non-empty evidence so the rating layer can persist the exact
+        // bar count plus machine-readable insufficient_market_history suppression, preventing
+        // later workers from purchasing the same conclusive history again.
         const history = Object.freeze({
           symbol: payload.meta?.symbol?.toUpperCase() || normalizedSymbol,
           bars: Object.freeze(bars),
