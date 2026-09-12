@@ -1,4 +1,4 @@
-// TS: 2026-09-12 06:59 UTC
+// TS: 2026-09-12 19:01 UTC
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -91,9 +91,13 @@ export const EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL = `
           AND prior_failure ->> 'suppressionStage' = 'sec_preflight'
           AND prior_failure ->> 'reasonCode' IN (
             'unresolved_sec_identity',
-            'insufficient_financial_history',
-            'unsupported_security_type'
+            'insufficient_financial_history'
           )
+        )
+        OR (
+          prior_failure ->> 'suppressionStage' = 'sec_preflight'
+          AND prior_failure ->> 'reasonCode' = 'unsupported_security_type'
+          AND drr.metadata ->> 'ratingVersion' = $2
         )
         OR (
           prior_failure ->> 'suppressionStage' = 'rating_engine'
