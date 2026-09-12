@@ -1,4 +1,4 @@
-// TS: 2026-09-06 13:01 ET
+// TS: 2026-09-12 10:02 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -35,8 +35,8 @@ test("quota-safe candidate ordering prefers fresh reusable market evidence befor
 
   assert.match(
     ordering,
-    /WHEN history_readiness\.retrieved_at IS NULL THEN 1\s+ELSE 2/s,
-    "no-history candidates must remain ahead of candidates whose stored history is stale enough to require refresh",
+    /WHEN history_readiness\.retrieved_at IS NOT NULL\s+AND history_readiness\.rating_history_ready = true THEN 1\s+WHEN history_readiness\.retrieved_at IS NULL THEN 2\s+ELSE 3/s,
+    "stale previously-ready history must outrank no-history candidates, which must still outrank stale previously-not-ready evidence",
   );
   assert.match(
     ordering,
