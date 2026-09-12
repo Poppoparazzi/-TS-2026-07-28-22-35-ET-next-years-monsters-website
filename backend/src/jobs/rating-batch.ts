@@ -1,4 +1,4 @@
-// TS: 2026-09-11 03:06 UTC
+// TS: 2026-09-12 02:00 UTC
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -221,7 +221,9 @@ export async function runRatingBatch(
         }
 
         // A cache-only SPY readiness check belongs after the company cache/suppression gates so a
-        // lost or newly suppressed company still spends zero benchmark quota.
+        // lost or newly suppressed company still spends zero benchmark quota. Invalid/stale cache is
+        // a cache miss, not a batch-level blocker: the shared paced SPY fetch below may refresh once
+        // after the candidate's own market history has survived its evidence/liquidity gate.
         if (!benchmarkHistory && marketProvider.getCachedDailyHistory) {
           let cachedBenchmarkHistory: DailyMarketHistory | null;
           try {
@@ -232,11 +234,7 @@ export async function runRatingBatch(
           }
           if (cachedBenchmarkHistory && cachedBenchmarkHistory.provider === marketProvider.name) {
             const cachedBenchmarkProblem = validateBenchmarkHistory(cachedBenchmarkHistory);
-            if (cachedBenchmarkProblem) {
-              stoppedReason = `Persisted benchmark preflight blocked paid company history: ${cachedBenchmarkProblem}`;
-              break;
-            }
-            benchmarkHistory = cachedBenchmarkHistory;
+            if (!cachedBenchmarkProblem) benchmarkHistory = cachedBenchmarkHistory;
           }
         }
 
