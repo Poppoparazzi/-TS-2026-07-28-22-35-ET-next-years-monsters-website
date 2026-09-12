@@ -1,4 +1,4 @@
-// TS: 2026-09-05 05:01 ET
+// TS: 2026-09-12 20:00 UTC
 
 import type { PoolClient } from "pg";
 import {
@@ -11,6 +11,7 @@ export const STALE_MARKET_DATA_SUPPRESSION_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
 export const MARKET_HISTORY_SUPPRESSION_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 const MARKET_DATA_STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type MarketHistorySuppressionReason = "insufficient_market_history" | "insufficient_liquidity" | "stale_market_data";
 type MarketHistoryEligibilityCode = "eligible" | MarketHistorySuppressionReason;
@@ -26,7 +27,37 @@ interface PersistedMarketHistorySuppressionRow {
   readonly rating_eligibility_code: MarketHistorySuppressionReason;
   readonly suppression_reason: MarketHistorySuppressionReason;
   readonly usable_bar_count: string | number;
+  readonly latest_bar_date?: Date | string | null;
   readonly retrieved_at: Date | string;
+}
+
+function completedWeekdaysAfterLatestBar(latestBarDate: Date | string, nowMs: number): number {
+  const latestDate = latestBarDate instanceof Date
+    ? latestBarDate.toISOString().slice(0, 10)
+    : String(latestBarDate).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(latestDate) || !Number.isFinite(nowMs)) return 0;
+  const latestDayMs = Date.parse(`${latestDate}T00:00:00.000Z`);
+  const currentDate = new Date(nowMs).toISOString().slice(0, 10);
+  const currentDayMs = Date.parse(`${currentDate}T00:00:00.000Z`);
+  if (!Number.isFinite(latestDayMs) || !Number.isFinite(currentDayMs) || currentDayMs <= latestDayMs) return 0;
+
+  let completedWeekdays = 0;
+  for (let candidateDayMs = latestDayMs + DAY_MS; candidateDayMs < currentDayMs; candidateDayMs += DAY_MS) {
+    const weekday = new Date(candidateDayMs).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) completedWeekdays += 1;
+  }
+  return completedWeekdays;
+}
+
+function insufficientHistoryCanReenter(
+  usableBarCount: number,
+  latestBarDate: Date | string | null | undefined,
+  nowMs: number,
+): boolean {
+  if (!latestBarDate || usableBarCount >= MINIMUM_RATING_HISTORY_BARS) return false;
+  const missingBars = MINIMUM_RATING_HISTORY_BARS - usableBarCount;
+  const conservativeSessionBuffer = Math.ceil(missingBars / 20);
+  return completedWeekdaysAfterLatestBar(latestBarDate, nowMs) >= missingBars + conservativeSessionBuffer;
 }
 
 function assertPersistableMarketHistoryEvidence(
@@ -146,6 +177,13 @@ function parsePersistedSuppressionRow(
   }
 
   if (!Number.isFinite(nowMs)) return null;
+  if (
+    row.suppression_reason === "insufficient_market_history" &&
+    insufficientHistoryCanReenter(usableBarCount, row.latest_bar_date, nowMs)
+  ) {
+    return null;
+  }
+
   const ageMs = nowMs - retrievedAtMs;
   const maximumAgeMs = row.suppression_reason === "stale_market_data"
     ? STALE_MARKET_DATA_SUPPRESSION_MAX_AGE_MS
@@ -182,12 +220,14 @@ export async function getPersistedMarketHistorySuppression(
         latest.rating_eligibility_code,
         latest.suppression_reason,
         latest.usable_bar_count,
+        latest.latest_bar_date,
         latest.retrieved_at
       FROM (
         SELECT
           rating_eligibility_code,
           suppression_reason,
           usable_bar_count,
+          latest_bar_date,
           retrieved_at
         FROM market_history_evidence
         WHERE company_id = $1
@@ -222,12 +262,14 @@ export async function getPersistedMarketHistorySuppressionByTicker(
         latest.rating_eligibility_code,
         latest.suppression_reason,
         latest.usable_bar_count,
+        latest.latest_bar_date,
         latest.retrieved_at
       FROM (
         SELECT
           mhe.rating_eligibility_code,
           mhe.suppression_reason,
           mhe.usable_bar_count,
+          mhe.latest_bar_date,
           mhe.retrieved_at
         FROM market_history_evidence mhe
         INNER JOIN companies c ON c.id = mhe.company_id
