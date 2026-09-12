@@ -1,0 +1,32 @@
+// TS: 2026-09-12 06:59 UTC
+
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const batchStoreUrl = new URL("../src/ratings/batch-store.ts", import.meta.url);
+
+test("paid refresh ordering prefers stale previously-ready history over unknown history", async () => {
+  const source = await readFile(batchStoreUrl, "utf8");
+
+  const freshHistory = source.indexOf("history_readiness.latest_bar_date <= CURRENT_DATE THEN 0");
+  const staleReady = source.indexOf("history_readiness.retrieved_at IS NOT NULL\n              AND history_readiness.rating_history_ready = true THEN 1");
+  const unknownHistory = source.indexOf("history_readiness.retrieved_at IS NULL THEN 2");
+  const staleNotReady = source.indexOf("ELSE 3", unknownHistory);
+
+  assert.ok(freshHistory >= 0, "fresh provider history must remain the first market-history ordering bucket");
+  assert.ok(staleReady > freshHistory, "stale previously-ready history must have an explicit paid-refresh priority bucket");
+  assert.ok(unknownHistory > staleReady, "unknown history must follow stale previously-ready evidence");
+  assert.ok(staleNotReady > unknownHistory, "stale previously-not-ready evidence must remain behind unknown history");
+
+  assert.match(
+    source,
+    /ORDER BY CASE WHEN \$\{PROTECTED_COMPANY_SQL_PREDICATE\} THEN 0 ELSE 1 END/,
+    "protected-company priority must remain the first ordering key",
+  );
+  assert.match(
+    source,
+    /stored_liquidity\.dollar_volume >= 1000000[\s\S]*annual_revenue_period_count, 0\) >= 2 THEN 1/,
+    "fresh stored liquidity plus at least two annual revenue periods must remain ahead of weaker evidence",
+  );
+});
