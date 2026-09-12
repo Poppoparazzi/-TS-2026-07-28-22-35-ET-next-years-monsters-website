@@ -192,7 +192,7 @@ export async function runRatingBatch(
         batchStore,
         candidate.ticker,
       );
-      let cachedCompanyHistory = cachedCompanyPreflight.history;
+      const cachedCompanyHistory = cachedCompanyPreflight.history;
       if (cachedCompanyPreflight.evidence?.suppressionReason && !cachedCompanyPreflight.shouldRefresh) {
         const failure = {
           ticker: candidate.ticker,
@@ -221,9 +221,9 @@ export async function runRatingBatch(
         }
 
         // A cache-only SPY readiness check belongs after the company cache/suppression gates so a
-        // lost or newly suppressed company still spends zero benchmark quota. Invalid/stale cache is
-        // a cache miss, not a batch-level blocker: the shared paced SPY fetch below may refresh once
-        // after the candidate's own market history has survived its evidence/liquidity gate.
+        // lost or newly suppressed company still spends zero benchmark quota. A stale-but-otherwise
+        // usable benchmark may refresh through the shared paced SPY path below. Structurally invalid
+        // persisted SPY remains a batch-level quota guard so it cannot trigger paid company history.
         if (!benchmarkHistory && marketProvider.getCachedDailyHistory) {
           let cachedBenchmarkHistory: DailyMarketHistory | null;
           try {
@@ -234,7 +234,12 @@ export async function runRatingBatch(
           }
           if (cachedBenchmarkHistory && cachedBenchmarkHistory.provider === marketProvider.name) {
             const cachedBenchmarkProblem = validateBenchmarkHistory(cachedBenchmarkHistory);
-            if (!cachedBenchmarkProblem) benchmarkHistory = cachedBenchmarkHistory;
+            if (!cachedBenchmarkProblem) {
+              benchmarkHistory = cachedBenchmarkHistory;
+            } else if (!cachedBenchmarkProblem.startsWith("Benchmark market history is stale;")) {
+              stoppedReason = `Persisted benchmark preflight blocked paid company history: ${cachedBenchmarkProblem}`;
+              break;
+            }
           }
         }
 
