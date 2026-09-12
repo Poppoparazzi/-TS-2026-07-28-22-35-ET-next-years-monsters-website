@@ -1,4 +1,4 @@
-// TS: 2026-09-12 17:08 UTC
+// TS: 2026-09-12 21:02 UTC
 
 import { SecEdgarRequestError } from "./types.js";
 
@@ -18,14 +18,20 @@ export interface SecSecurityTypeEvidence {
   readonly identitySourceUrl: typeof SEC_COMPANY_TICKERS_EXCHANGE_URL;
 }
 
-interface CachedFundEvidence {
+interface CachedFundTickerEvidence {
   readonly expiresAt: number;
   readonly fundCiksByTicker: ReadonlyMap<string, ReadonlySet<number>>;
+}
+
+interface CachedCurrentTickerIdentity {
+  readonly expiresAt: number;
   readonly currentCikByTicker: ReadonlyMap<string, number>;
 }
 
-let cache: CachedFundEvidence | null = null;
-let inFlight: Promise<CachedFundEvidence> | null = null;
+let fundCache: CachedFundTickerEvidence | null = null;
+let fundInFlight: Promise<CachedFundTickerEvidence> | null = null;
+let identityCache: CachedCurrentTickerIdentity | null = null;
+let identityInFlight: Promise<CachedCurrentTickerIdentity> | null = null;
 
 function normalizeSymbol(value: string): string {
   const normalized = value.trim().toUpperCase();
@@ -102,28 +108,45 @@ function buildCurrentCikByTicker(payload: SecTickerTableResponse): ReadonlyMap<s
   return Object.freeze(result);
 }
 
-async function loadFundEvidence(userAgent: string): Promise<CachedFundEvidence> {
-  if (cache && cache.expiresAt > Date.now()) return cache;
-  if (inFlight) return inFlight;
+async function loadFundTickerEvidence(userAgent: string): Promise<CachedFundTickerEvidence> {
+  if (fundCache && fundCache.expiresAt > Date.now()) return fundCache;
+  if (fundInFlight) return fundInFlight;
 
-  inFlight = (async () => {
-    const [fundPayload, companyPayload] = await Promise.all([
-      fetchTickerTable(SEC_FUND_TICKERS_URL, userAgent),
-      fetchTickerTable(SEC_COMPANY_TICKERS_EXCHANGE_URL, userAgent),
-    ]);
-    const loaded: CachedFundEvidence = Object.freeze({
+  fundInFlight = (async () => {
+    const payload = await fetchTickerTable(SEC_FUND_TICKERS_URL, userAgent);
+    const loaded: CachedFundTickerEvidence = Object.freeze({
       expiresAt: Date.now() + FUND_TICKER_CACHE_TTL_MS,
-      fundCiksByTicker: buildFundCiksByTicker(fundPayload),
-      currentCikByTicker: buildCurrentCikByTicker(companyPayload),
+      fundCiksByTicker: buildFundCiksByTicker(payload),
     });
-    cache = loaded;
+    fundCache = loaded;
     return loaded;
   })();
 
   try {
-    return await inFlight;
+    return await fundInFlight;
   } finally {
-    inFlight = null;
+    fundInFlight = null;
+  }
+}
+
+async function loadCurrentTickerIdentity(userAgent: string): Promise<CachedCurrentTickerIdentity> {
+  if (identityCache && identityCache.expiresAt > Date.now()) return identityCache;
+  if (identityInFlight) return identityInFlight;
+
+  identityInFlight = (async () => {
+    const payload = await fetchTickerTable(SEC_COMPANY_TICKERS_EXCHANGE_URL, userAgent);
+    const loaded: CachedCurrentTickerIdentity = Object.freeze({
+      expiresAt: Date.now() + FUND_TICKER_CACHE_TTL_MS,
+      currentCikByTicker: buildCurrentCikByTicker(payload),
+    });
+    identityCache = loaded;
+    return loaded;
+  })();
+
+  try {
+    return await identityInFlight;
+  } finally {
+    identityInFlight = null;
   }
 }
 
@@ -137,15 +160,20 @@ export async function getSecFundSecurityTypeEvidence(
   }
 
   const normalized = normalizeSymbol(symbol);
-  const evidence = await loadFundEvidence(userAgent);
-  const fundCiks = evidence.fundCiksByTicker.get(normalized);
+  const fundEvidence = await loadFundTickerEvidence(userAgent);
+  const fundCiks = fundEvidence.fundCiksByTicker.get(normalized);
   if (!fundCiks || fundCiks.size === 0) return null;
+
+  // Most candidates are not SEC-registered funds. Do not make the second SEC mapping request unless
+  // the authoritative fund map actually contains this ticker. A fund-map miss stays UNKNOWN without
+  // adding another network dependency to the common-stock path.
+  const currentIdentity = await loadCurrentTickerIdentity(userAgent);
 
   // SEC notes that its ticker association files are periodically updated and not guaranteed to be
   // exhaustive. A ticker-only hit could therefore be stale after symbol reuse. Require the fund-map
   // CIK to agree with the SEC's current ticker/exchange association before treating the security as
   // an authoritative unsupported fund. Ambiguous/mismatched evidence stays UNKNOWN, never common.
-  const currentCik = evidence.currentCikByTicker.get(normalized);
+  const currentCik = currentIdentity.currentCikByTicker.get(normalized);
   if (!currentCik || !fundCiks.has(currentCik)) return null;
 
   return Object.freeze({
