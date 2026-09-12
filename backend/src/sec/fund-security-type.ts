@@ -1,4 +1,4 @@
-// TS: 2026-09-12 21:02 UTC
+// TS: 2026-09-12 22:00 UTC
 
 import { SecEdgarRequestError } from "./types.js";
 
@@ -25,7 +25,7 @@ interface CachedFundTickerEvidence {
 
 interface CachedCurrentTickerIdentity {
   readonly expiresAt: number;
-  readonly currentCikByTicker: ReadonlyMap<string, number>;
+  readonly currentCiksByTicker: ReadonlyMap<string, ReadonlySet<number>>;
 }
 
 let fundCache: CachedFundTickerEvidence | null = null;
@@ -90,7 +90,7 @@ function buildFundCiksByTicker(payload: SecTickerTableResponse): ReadonlyMap<str
   ));
 }
 
-function buildCurrentCikByTicker(payload: SecTickerTableResponse): ReadonlyMap<string, number> {
+function buildCurrentCiksByTicker(payload: SecTickerTableResponse): ReadonlyMap<string, ReadonlySet<number>> {
   const fields = payload.fields ?? [];
   const tickerIndex = exactFieldIndex(fields, ["ticker", "symbol"]);
   const cikIndex = exactFieldIndex(fields, ["cik"]);
@@ -98,14 +98,19 @@ function buildCurrentCikByTicker(payload: SecTickerTableResponse): ReadonlyMap<s
     throw new Error("SEC company ticker mapping did not contain authoritative ticker and CIK fields.");
   }
 
-  const result = new Map<string, number>();
+  const mutable = new Map<string, Set<number>>();
   for (const row of payload.data ?? []) {
     const ticker = safeText(row[tickerIndex])?.toUpperCase() ?? null;
     const cik = safeCik(row[cikIndex]);
     if (!ticker || !/^[A-Z0-9.-]{1,15}$/.test(ticker) || cik === null) continue;
-    result.set(ticker, cik);
+    const ciks = mutable.get(ticker) ?? new Set<number>();
+    ciks.add(cik);
+    mutable.set(ticker, ciks);
   }
-  return Object.freeze(result);
+
+  return Object.freeze(new Map(
+    [...mutable.entries()].map(([ticker, ciks]) => [ticker, Object.freeze(new Set(ciks)) as ReadonlySet<number>]),
+  ));
 }
 
 async function loadFundTickerEvidence(userAgent: string): Promise<CachedFundTickerEvidence> {
@@ -137,7 +142,7 @@ async function loadCurrentTickerIdentity(userAgent: string): Promise<CachedCurre
     const payload = await fetchTickerTable(SEC_COMPANY_TICKERS_EXCHANGE_URL, userAgent);
     const loaded: CachedCurrentTickerIdentity = Object.freeze({
       expiresAt: Date.now() + FUND_TICKER_CACHE_TTL_MS,
-      currentCikByTicker: buildCurrentCikByTicker(payload),
+      currentCiksByTicker: buildCurrentCiksByTicker(payload),
     });
     identityCache = loaded;
     return loaded;
@@ -170,10 +175,12 @@ export async function getSecFundSecurityTypeEvidence(
   const currentIdentity = await loadCurrentTickerIdentity(userAgent);
 
   // SEC notes that its ticker association files are periodically updated and not guaranteed to be
-  // exhaustive. A ticker-only hit could therefore be stale after symbol reuse. Require the fund-map
-  // CIK to agree with the SEC's current ticker/exchange association before treating the security as
-  // an authoritative unsupported fund. Ambiguous/mismatched evidence stays UNKNOWN, never common.
-  const currentCik = currentIdentity.currentCikByTicker.get(normalized);
+  // exhaustive. A ticker-only hit could therefore be stale after symbol reuse. Require exactly one
+  // current CIK for the ticker and require that sole CIK to agree with the fund map. Duplicate current
+  // identities are ambiguous and must stay UNKNOWN rather than depending on SEC row order.
+  const currentCiks = currentIdentity.currentCiksByTicker.get(normalized);
+  if (!currentCiks || currentCiks.size !== 1) return null;
+  const [currentCik] = currentCiks;
   if (!currentCik || !fundCiks.has(currentCik)) return null;
 
   return Object.freeze({
