@@ -1,4 +1,4 @@
-// TS: 2026-09-09 02:05 ET
+// TS: 2026-09-12 16:27 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -18,6 +18,8 @@ test("retryable rating ineligibility stays behind free SEC and persisted company
   const paidCompanyHistory = batch.indexOf("history = await getPacedHistory(candidate.ticker, 300);");
   const secIdentityGate = batch.indexOf("company.cik <= 0 || facts.cik !== company.cik");
   const annualFinancialGate = batch.indexOf("annualFinancials.length < 2 || annualRevenuePeriods.length < 2");
+  const securityTypeGate = batch.indexOf("getSecFundSecurityTypeEvidence(candidate.ticker)");
+  const unsupportedSecurityReason = batch.indexOf('reasonCode: "unsupported_security_type"');
   const evidenceBuild = batch.indexOf("const marketHistoryEvidence = buildMarketHistoryEvidence(history);");
   const evidencePersist = batch.indexOf("await batchStore.saveMarketHistoryEvidence(marketHistoryEvidence);");
   const evidenceSuppression = batch.indexOf("if (marketHistoryEvidence.suppressionReason)");
@@ -27,6 +29,8 @@ test("retryable rating ineligibility stays behind free SEC and persisted company
   assert.ok(paidCompanyHistory >= 0, "Paid company-history request must remain identifiable.");
   assert.ok(secIdentityGate >= 0 && secIdentityGate < paidCompanyHistory, "Resolve SEC identity before paid company history.");
   assert.ok(annualFinancialGate >= 0 && annualFinancialGate < paidCompanyHistory, "Reject insufficient annual SEC revenue history before paid company history.");
+  assert.ok(securityTypeGate > annualFinancialGate && securityTypeGate < paidCompanyHistory, "Run authoritative SEC fund/security-type preflight before any paid company history.");
+  assert.ok(unsupportedSecurityReason > securityTypeGate && unsupportedSecurityReason < paidCompanyHistory, "Persist machine-readable unsupported security type before any paid company history.");
   assert.ok(evidenceBuild > paidCompanyHistory, "Build reusable evidence immediately from the paid company history result.");
   assert.ok(evidencePersist > evidenceBuild, "Persist provider-backed company-history evidence before using it as a gate.");
   assert.ok(evidenceSuppression > evidencePersist, "Persist machine-readable market-history evidence before an early Not Yet Rated return.");
@@ -47,7 +51,7 @@ test("retryable rating ineligibility stays behind free SEC and persisted company
   assert.match(
     inputBuilder,
     /securityType:\s*null/,
-    "Batch production input currently has no security-type evidence; do not pretend unsupported-security preflight is available from SEC company mapping.",
+    "Non-fund SEC-map misses remain unknown rather than being invented as common stock.",
   );
   assert.match(
     engine,
