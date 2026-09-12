@@ -1,4 +1,4 @@
-// TS: 2026-09-12 06:59 UTC
+// TS: 2026-09-12 07:59 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -9,7 +9,9 @@ const batchStoreUrl = new URL("../src/ratings/batch-store.ts", import.meta.url);
 test("paid refresh ordering prefers stale previously-ready history over unknown history", async () => {
   const source = await readFile(batchStoreUrl, "utf8");
 
-  const freshHistory = source.indexOf("history_readiness.latest_bar_date <= CURRENT_DATE THEN 0");
+  const freshHistory = source.indexOf(
+    "WHEN history_readiness.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'\n              AND history_readiness.latest_bar_date >= CURRENT_DATE - INTERVAL '7 days'\n              AND history_readiness.latest_bar_date <= CURRENT_DATE THEN 0",
+  );
   const staleReady = source.indexOf("history_readiness.retrieved_at IS NOT NULL\n              AND history_readiness.rating_history_ready = true THEN 1");
   const unknownHistory = source.indexOf("history_readiness.retrieved_at IS NULL THEN 2");
   const staleNotReady = source.indexOf("ELSE 3", unknownHistory);
