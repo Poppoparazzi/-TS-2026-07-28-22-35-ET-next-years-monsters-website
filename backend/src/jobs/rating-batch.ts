@@ -1,4 +1,4 @@
-// TS: 2026-09-12 02:00 UTC
+// TS: 2026-09-12 16:24 UTC
 
 import type { PersistenceStore } from "../database/persistence.js";
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
@@ -12,6 +12,7 @@ import {
 } from "../ratings/input-builder.js";
 import { buildMarketHistoryEvidence } from "../ratings/market-history-evidence.js";
 import type { RatingBatchAccounting, RatingBatchFailure, RatingBatchStore } from "../ratings/batch-store.js";
+import { getSecFundSecurityTypeEvidence } from "../sec/fund-security-type.js";
 import type { SecDataProvider } from "../sec/types.js";
 
 export interface RatingBatchDependencies {
@@ -181,6 +182,26 @@ export async function runRatingBatch(
         const failure = { ticker: candidate.ticker, reason: "At least two comparable annual SEC revenue periods are required.", reasonCode: "insufficient_financial_history", suppressionStage: "sec_preflight" };
         await recordFailure(failure, candidate.isProtected);
         continue;
+      }
+
+      if (secProvider.name === "sec-edgar") {
+        let securityTypeEvidence;
+        try {
+          securityTypeEvidence = await getSecFundSecurityTypeEvidence(candidate.ticker);
+        } catch (error) {
+          stoppedReason = `Authoritative SEC security-type preflight could not be loaded: ${reason(error)}`;
+          break;
+        }
+        if (securityTypeEvidence) {
+          const failure = {
+            ticker: candidate.ticker,
+            reason: `${securityTypeEvidence.securityType} is outside the initial common-stock rating policy. SEC source: ${securityTypeEvidence.sourceUrl}`,
+            reasonCode: "unsupported_security_type",
+            suppressionStage: "sec_preflight",
+          };
+          await recordFailure(failure, candidate.isProtected);
+          continue;
+        }
       }
 
       // Recheck once immediately before attempting any company-history work. A concurrent worker may
