@@ -1,4 +1,4 @@
-# TS: 2026-09-10 22:02 UTC
+# TS: 2026-09-13 04:00 UTC
 
 name: Monster Rating suppression report
 
@@ -7,6 +7,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/rating-suppression-report.yml"
+      - "backend/src/app.ts"
+      - "backend/src/database/market-history-evidence-persistence.ts"
+      - "backend/src/ratings/batch-store.ts"
+      - "backend/src/ratings/market-history-evidence.ts"
       - "backend/src/jobs/report-rating-candidate-suppression.ts"
       - "backend/src/jobs/report-rating-suppression-overlap.ts"
       - "backend/src/jobs/report-rating-suppression-reconciliation.ts"
