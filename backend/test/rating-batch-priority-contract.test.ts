@@ -1,4 +1,4 @@
-// TS: 2026-09-08 19:00 ET
+// TS: 2026-09-13 01:08 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -57,12 +57,12 @@ test("Monster Rating batch prioritizes protected stocks, then provider-scoped pe
   assert.match(
     source,
     /WHEN stored_liquidity\.dollar_volume >= 1000000 THEN 0[\s\S]*?WHEN stored_liquidity\.dollar_volume IS NULL THEN 1[\s\S]*?ELSE 2/,
-    "point-in-time quote ordering must be strong >=$1M first, unknown second, and known weak fresh evidence last",
+    "point-in-time quote ordering must be strong >=$1M first, unknown second, and known weak recent evidence last",
   );
   assert.match(source, /SELECT \(qs\.price \* qs\.volume\)::numeric AS dollar_volume/);
-  assert.match(source, /qs\.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'/);
+  assert.match(source, /qs\.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '7 days'/);
   assert.match(source, /qs\.provider_timestamp <= CURRENT_TIMESTAMP \+ INTERVAL '5 minutes'/);
-  assert.match(source, /qs\.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'/);
+  assert.match(source, /qs\.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'/);
   assert.match(source, /qs\.retrieved_at <= CURRENT_TIMESTAMP \+ INTERVAL '5 minutes'/);
   assert.match(source, /qs\.provider_timestamp <= qs\.retrieved_at \+ INTERVAL '5 minutes'/);
   assert.match(source, /count\(DISTINCT cf\.fiscal_year\) AS annual_revenue_period_count/);
