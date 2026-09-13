@@ -1,4 +1,4 @@
-// TS: 2026-09-07 06:01 ET
+// TS: 2026-09-13 03:00 UTC
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -31,6 +31,7 @@ import {
   buildProductionRatingInput,
   quoteFromDailyHistory,
 } from "./ratings/input-builder.js";
+import { getSecFundSecurityTypeEvidence } from "./sec/fund-security-type.js";
 import { createSecDataProvider } from "./sec/index.js";
 import type { SecDataProvider } from "./sec/types.js";
 import { createUniverseStore } from "./universe/store.js";
@@ -466,6 +467,32 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
         summary: "Not Yet Rated — Stay Tuned. Coming Soon. Comparable annual SEC revenue history is incomplete.",
         reason: "At least two comparable annual SEC revenue periods are required before paid market history is requested.",
       });
+    }
+
+    if (secProvider.name === "sec-edgar") {
+      try {
+        const securityTypeEvidence = await getSecFundSecurityTypeEvidence(symbol);
+        if (securityTypeEvidence) {
+          return directNotYetRated({
+            symbol,
+            companyName: secCompany.companyName,
+            calculatedAt,
+            eligibilityCode: "unsupported_security_type",
+            summary: "Not Yet Rated — Stay Tuned. Coming Soon. Official SEC security-type evidence places this ticker outside the initial common-stock rating policy.",
+            reason: `${securityTypeEvidence.securityType} is outside the initial common-stock rating policy. SEC source: ${securityTypeEvidence.sourceUrl}`,
+          });
+        }
+      } catch (error) {
+        request.log.error({ error, symbol }, "Unable to load authoritative SEC security-type preflight");
+        return directNotYetRated({
+          symbol,
+          companyName: secCompany.companyName,
+          calculatedAt,
+          eligibilityCode: "sec_security_type_preflight_unavailable",
+          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Authoritative SEC security-type preflight is temporarily unavailable.",
+          reason: "Paid market history was not requested because the authoritative SEC security-type preflight could not be completed.",
+        });
+      }
     }
 
     if (ratingBatchStore.configured) {
