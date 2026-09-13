@@ -1,4 +1,4 @@
-// TS: 2026-09-13 07:05 UTC
+// TS: 2026-09-13 09:00 UTC
 
 import pg from "pg";
 import { isProtectedCompany } from "../policy/protected-stocks.js";
@@ -15,7 +15,10 @@ export interface DirectSecSuppressionInput {
   readonly ticker: string;
   readonly provider: string;
   readonly reason: string;
-  readonly reasonCode: "unsupported_security_type";
+  readonly reasonCode:
+    | "unsupported_security_type"
+    | "unresolved_sec_identity"
+    | "insufficient_financial_history";
   readonly suppressionStage: "sec_preflight";
 }
 

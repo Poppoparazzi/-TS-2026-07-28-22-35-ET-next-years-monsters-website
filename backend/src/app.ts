@@ -1,4 +1,4 @@
-// TS: 2026-09-13 07:07 UTC
+// TS: 2026-09-13 09:01 UTC
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -447,26 +447,72 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     }
 
     if (secCompany.cik <= 0 || secFacts.cik !== secCompany.cik) {
+      const suppressionReason = "SEC company identity and company-facts identity must agree before paid market history is requested.";
+      if (config.databaseUrl) {
+        try {
+          await persistDirectSecSuppression({
+            databaseUrl: config.databaseUrl,
+            ticker: symbol,
+            provider: provider.name,
+            reason: suppressionReason,
+            reasonCode: "unresolved_sec_identity",
+            suppressionStage: "sec_preflight",
+          });
+        } catch (error) {
+          request.log.error({ error, symbol }, "Unable to persist direct SEC identity suppression");
+          return directNotYetRated({
+            symbol,
+            companyName: secCompany.companyName,
+            calculatedAt,
+            eligibilityCode: "sec_identity_suppression_persistence_unavailable",
+            summary: "Not Yet Rated — Stay Tuned. Coming Soon. SEC identity evidence was unresolved, but its suppression record could not be persisted.",
+            reason: "Paid market history was not requested because the unresolved SEC identity suppression could not be durably recorded.",
+          });
+        }
+      }
       return directNotYetRated({
         symbol,
         companyName: secCompany.companyName,
         calculatedAt,
         eligibilityCode: "unresolved_sec_identity",
         summary: "Not Yet Rated — Stay Tuned. Coming Soon. SEC identity evidence is incomplete or inconsistent.",
-        reason: "SEC company identity and company-facts identity must agree before paid market history is requested.",
+        reason: suppressionReason,
       });
     }
 
     const annualRevenuePeriods = buildAnnualFinancialPeriods(secFacts)
       .filter((period) => period.revenue !== null);
     if (annualRevenuePeriods.length < 2) {
+      const suppressionReason = "At least two comparable annual SEC revenue periods are required before paid market history is requested.";
+      if (config.databaseUrl) {
+        try {
+          await persistDirectSecSuppression({
+            databaseUrl: config.databaseUrl,
+            ticker: symbol,
+            provider: provider.name,
+            reason: suppressionReason,
+            reasonCode: "insufficient_financial_history",
+            suppressionStage: "sec_preflight",
+          });
+        } catch (error) {
+          request.log.error({ error, symbol }, "Unable to persist direct SEC financial-history suppression");
+          return directNotYetRated({
+            symbol,
+            companyName: secCompany.companyName,
+            calculatedAt,
+            eligibilityCode: "sec_financial_history_suppression_persistence_unavailable",
+            summary: "Not Yet Rated — Stay Tuned. Coming Soon. SEC financial history was insufficient, but its suppression record could not be persisted.",
+            reason: "Paid market history was not requested because the insufficient SEC financial-history suppression could not be durably recorded.",
+          });
+        }
+      }
       return directNotYetRated({
         symbol,
         companyName: secCompany.companyName,
         calculatedAt,
         eligibilityCode: "insufficient_financial_history",
         summary: "Not Yet Rated — Stay Tuned. Coming Soon. Comparable annual SEC revenue history is incomplete.",
-        reason: "At least two comparable annual SEC revenue periods are required before paid market history is requested.",
+        reason: suppressionReason,
       });
     }
 
