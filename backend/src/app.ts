@@ -1,4 +1,4 @@
-// TS: 2026-09-13 03:00 UTC
+// TS: 2026-09-13 07:07 UTC
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -18,6 +18,7 @@ import {
 } from "./providers/types.js";
 import { QuoteService } from "./quotes/service.js";
 import { createRatingBatchStore } from "./ratings/batch-store.js";
+import { persistDirectSecSuppression } from "./ratings/direct-sec-suppression.js";
 import { installFailClosedRatingErrorHandler } from "./ratings/install-fail-closed-handler.js";
 import { buildMarketHistoryEvidence } from "./ratings/market-history-evidence.js";
 import { evaluatePublicRatingReadiness } from "./ratings/public-rating-readiness.js";
@@ -473,13 +474,37 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       try {
         const securityTypeEvidence = await getSecFundSecurityTypeEvidence(symbol);
         if (securityTypeEvidence) {
+          const suppressionReason = `${securityTypeEvidence.securityType} is outside the initial common-stock rating policy. SEC source: ${securityTypeEvidence.sourceUrl}`;
+          if (config.databaseUrl) {
+            try {
+              await persistDirectSecSuppression({
+                databaseUrl: config.databaseUrl,
+                ticker: symbol,
+                provider: provider.name,
+                reason: suppressionReason,
+                reasonCode: "unsupported_security_type",
+                suppressionStage: "sec_preflight",
+              });
+            } catch (error) {
+              request.log.error({ error, symbol }, "Unable to persist direct SEC unsupported-security suppression");
+              return directNotYetRated({
+                symbol,
+                companyName: secCompany.companyName,
+                calculatedAt,
+                eligibilityCode: "sec_security_type_suppression_persistence_unavailable",
+                summary: "Not Yet Rated — Stay Tuned. Coming Soon. SEC security-type evidence was verified, but its suppression record could not be persisted.",
+                reason: "Paid market history was not requested because the verified SEC security-type suppression could not be durably recorded.",
+              });
+            }
+          }
+
           return directNotYetRated({
             symbol,
             companyName: secCompany.companyName,
             calculatedAt,
             eligibilityCode: "unsupported_security_type",
             summary: "Not Yet Rated — Stay Tuned. Coming Soon. Official SEC security-type evidence places this ticker outside the initial common-stock rating policy.",
-            reason: `${securityTypeEvidence.securityType} is outside the initial common-stock rating policy. SEC source: ${securityTypeEvidence.sourceUrl}`,
+            reason: suppressionReason,
           });
         }
       } catch (error) {
