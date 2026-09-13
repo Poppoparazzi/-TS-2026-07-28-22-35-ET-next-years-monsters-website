@@ -1,7 +1,12 @@
-// TS: 2026-09-13 14:58 UTC
+// TS: 2026-09-13 16:57 UTC
+
+export type CompletedRatingPersistenceState =
+  | "persisted"
+  | "completed_rating_persistence_pending";
 
 export interface CompletedRatingPersistenceResult {
   readonly persisted: boolean;
+  readonly state: CompletedRatingPersistenceState;
   readonly attempts: number;
   readonly error: unknown | null;
 }
@@ -20,17 +25,28 @@ export async function persistCompletedRatingWithSingleRetry(
 
   try {
     await persist();
-    return Object.freeze({ persisted: true, attempts: 1, error: null });
+    return Object.freeze({
+      persisted: true,
+      state: "persisted",
+      attempts: 1,
+      error: null,
+    });
   } catch (error) {
     firstError = error;
   }
 
   try {
     await persist();
-    return Object.freeze({ persisted: true, attempts: 2, error: null });
+    return Object.freeze({
+      persisted: true,
+      state: "persisted",
+      attempts: 2,
+      error: null,
+    });
   } catch (error) {
     return Object.freeze({
       persisted: false,
+      state: "completed_rating_persistence_pending",
       attempts: 2,
       error: error ?? firstError,
     });
