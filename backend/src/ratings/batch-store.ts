@@ -1,4 +1,4 @@
-// TS: 2026-09-13 00:00 UTC
+// TS: 2026-09-13 01:00 UTC
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -315,9 +315,9 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
             AND qs.provider = $3
             AND qs.price > 0
             AND qs.volume > 0
-            AND qs.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+            AND qs.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '7 days'
             AND qs.provider_timestamp <= CURRENT_TIMESTAMP + INTERVAL '5 minutes'
-            AND qs.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+            AND qs.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
             AND qs.retrieved_at <= CURRENT_TIMESTAMP + INTERVAL '5 minutes'
             AND qs.provider_timestamp <= qs.retrieved_at + INTERVAL '5 minutes'
           ORDER BY qs.provider_timestamp DESC, qs.retrieved_at DESC
