@@ -1,10 +1,13 @@
-// TS: 2026-09-13 20:59 UTC
+// TS: 2026-09-13 23:02 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { MarketDataProvider, DailyMarketHistory } from "../src/providers/types.js";
 import type { RatingBatchStore } from "../src/ratings/batch-store.js";
-import { loadDirectCompanyHistoryQuotaSafe } from "../src/ratings/direct-company-history.js";
+import {
+  loadDirectCompanyHistoryQuotaSafe,
+  loadDirectCompanyHistoryWithLease,
+} from "../src/ratings/direct-company-history.js";
 import type { MarketHistoryEvidence } from "../src/ratings/market-history-evidence.js";
 
 function buildHistory(input: {
@@ -38,18 +41,27 @@ function buildHistory(input: {
   };
 }
 
-function providerWithCache(cache: DailyMarketHistory | null): MarketDataProvider {
+function providerWithCache(
+  cache: DailyMarketHistory | null,
+  paidHistory = buildHistory({ symbol: cache?.symbol ?? "CACHE" }),
+  onPaidCall?: () => void,
+): MarketDataProvider {
   return {
     name: "twelve-data",
     configured: true,
     async searchTickers() { return []; },
     async getQuote() { throw new Error("not used"); },
     async getCachedDailyHistory() { return cache; },
+    async getDailyHistory() {
+      onPaidCall?.();
+      return paidHistory;
+    },
   };
 }
 
 function batchStore(savedReasons: Array<string | null | undefined>): RatingBatchStore {
   return {
+    configured: false,
     async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence) {
       savedReasons.push(evidence.suppressionReason);
     },
@@ -136,5 +148,80 @@ test("provider-mismatched cache reaches exactly one paid refresh", async () => {
   assert.equal(result.source, "paid_refresh");
   assert.equal(result.history?.symbol, "MISMATCH");
   assert.equal(paidRefreshCalls, 1);
+  assert.deepEqual(savedReasons, [null]);
+});
+
+test("lease-safe loader uses fresh cache before any claim or paid provider call", async () => {
+  let claimCalls = 0;
+  let paidCalls = 0;
+  const savedReasons: Array<string | null | undefined> = [];
+  const store = {
+    configured: true,
+    async tryClaimMarketHistoryRequest() {
+      claimCalls += 1;
+      return true;
+    },
+    async getReusableMarketHistorySuppression() { return null; },
+    async releaseMarketHistoryRequestClaim() { return true; },
+    async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence) {
+      savedReasons.push(evidence.suppressionReason);
+    },
+  } as unknown as RatingBatchStore;
+
+  const result = await loadDirectCompanyHistoryWithLease({
+    marketProvider: providerWithCache(buildHistory({ symbol: "CACHE" }), undefined, () => {
+      paidCalls += 1;
+    }),
+    batchStore: store,
+    ticker: "CACHE",
+    runId: "direct-test",
+  });
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.source, "cache");
+  assert.equal(result.claimAcquired, false);
+  assert.equal(claimCalls, 0);
+  assert.equal(paidCalls, 0);
+  assert.deepEqual(savedReasons, [null]);
+});
+
+test("lease-safe loader claims only after stale cache and retains claim for rating persistence", async () => {
+  let claimCalls = 0;
+  let releaseCalls = 0;
+  let paidCalls = 0;
+  const savedReasons: Array<string | null | undefined> = [];
+  const store = {
+    configured: true,
+    async tryClaimMarketHistoryRequest() {
+      claimCalls += 1;
+      return true;
+    },
+    async getReusableMarketHistorySuppression() { return null; },
+    async releaseMarketHistoryRequestClaim() {
+      releaseCalls += 1;
+      return true;
+    },
+    async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence) {
+      savedReasons.push(evidence.suppressionReason);
+    },
+  } as unknown as RatingBatchStore;
+
+  const result = await loadDirectCompanyHistoryWithLease({
+    marketProvider: providerWithCache(
+      buildHistory({ symbol: "STALE", latestDate: "2026-08-01" }),
+      buildHistory({ symbol: "STALE" }),
+      () => { paidCalls += 1; },
+    ),
+    batchStore: store,
+    ticker: "STALE",
+    runId: "direct-test",
+  });
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.source, "paid_refresh");
+  assert.equal(result.claimAcquired, true);
+  assert.equal(claimCalls, 1);
+  assert.equal(paidCalls, 1);
+  assert.equal(releaseCalls, 0);
   assert.deepEqual(savedReasons, [null]);
 });
