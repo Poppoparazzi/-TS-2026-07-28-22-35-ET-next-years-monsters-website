@@ -1,4 +1,4 @@
-// TS: 2026-09-07 12:57 ET
+// TS: 2026-09-13 03:00 UTC
 
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
@@ -57,6 +57,7 @@ test("all paid daily-history production callsites stay behind free preflight and
   const firstDirectSuppression = directRoute.indexOf("getReusableMarketHistorySuppression(symbol, provider.name)");
   const directSecPreflight = directRoute.indexOf("secProvider.getCompany(symbol)");
   const directRevenuePreflight = directRoute.indexOf("buildAnnualFinancialPeriods(secFacts)");
+  const directSecurityTypePreflight = directRoute.indexOf("getSecFundSecurityTypeEvidence(symbol)");
   const secondDirectSuppression = directRoute.indexOf(
     "getReusableMarketHistorySuppression(symbol, provider.name)",
     firstDirectSuppression + 1,
@@ -76,7 +77,8 @@ test("all paid daily-history production callsites stay behind free preflight and
   assert.ok(directRouteStart >= 0, "direct rating route must remain present");
   assert.ok(firstDirectSuppression >= 0 && firstDirectSuppression < directSecPreflight, "direct route must reuse durable paid-history suppression before SEC network work");
   assert.ok(directSecPreflight >= 0 && directSecPreflight < directRevenuePreflight, "direct route must finish free SEC retrieval before revenue qualification");
-  assert.ok(directRevenuePreflight >= 0 && directRevenuePreflight < secondDirectSuppression, "direct route must reject insufficient SEC revenue history before the last paid-call suppression recheck");
+  assert.ok(directRevenuePreflight >= 0 && directRevenuePreflight < directSecurityTypePreflight, "direct route must reject insufficient SEC revenue history before authoritative security-type classification");
+  assert.ok(directSecurityTypePreflight >= 0 && directSecurityTypePreflight < secondDirectSuppression, "direct route must complete authoritative SEC fund/security-type preflight before its last paid-call suppression recheck");
   assert.ok(secondDirectSuppression >= 0 && secondDirectSuppression < directClaim, "direct route must recheck durable suppression before trying to claim paid history");
   assert.ok(directClaim >= 0 && directClaim < postClaimSuppression, "direct route must atomically lease the ticker before its final suppression recheck");
   assert.ok(postClaimSuppression >= 0 && postClaimSuppression < directPaidHistory, "direct route must close the post-claim suppression race before paid history");
