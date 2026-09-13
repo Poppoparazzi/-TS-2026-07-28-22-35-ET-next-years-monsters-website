@@ -1,4 +1,4 @@
-// TS: 2026-09-13 07:08 UTC
+// TS: 2026-09-13 09:03 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -17,25 +17,49 @@ test("SEC unsupported-security suppression remains reusable for the current rati
   assert.doesNotMatch(thirtyDayBlock, /unsupported_security_type/);
 });
 
-test("direct SEC unsupported-security result is persisted before every paid-history path", async () => {
+test("SEC readiness suppressions remain reusable for 30 days and recover on fresher evidence", () => {
+  const sql = EXCLUDE_RECENT_REPLACEABLE_FAILURE_SQL.replace(/\s+/g, " ");
+
+  assert.match(
+    sql,
+    /started_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'.*suppressionStage' = 'sec_preflight'.*reasonCode' IN \( 'unresolved_sec_identity', 'insufficient_financial_history' \)/,
+  );
+  assert.match(sql, /reasonCode' = 'unresolved_sec_identity'.*c\.sec_cik IS NOT NULL.*cps\.sec_status = 'complete'/);
+  assert.match(sql, /reasonCode' = 'insufficient_financial_history'.*newer_revenue_fact\.retrieved_at > drr\.started_at/s);
+});
+
+test("direct SEC readiness results are persisted before every paid-history path", async () => {
   const app = await readFile(new URL("../src/app.ts", import.meta.url), "utf8");
   const directRouteStart = app.indexOf('app.get<{ Params: SymbolParams }>("/api/ratings/:symbol"');
   const directRoute = directRouteStart >= 0 ? app.slice(directRouteStart) : "";
+  const unresolvedCheck = directRoute.indexOf("secCompany.cik <= 0 || secFacts.cik !== secCompany.cik");
+  const unresolvedPersistence = directRoute.indexOf('reasonCode: "unresolved_sec_identity"');
+  const unresolvedReturn = directRoute.indexOf('eligibilityCode: "unresolved_sec_identity"', unresolvedPersistence);
+  const financialCheck = directRoute.indexOf("annualRevenuePeriods.length < 2");
+  const financialPersistence = directRoute.indexOf('reasonCode: "insufficient_financial_history"');
+  const financialReturn = directRoute.indexOf('eligibilityCode: "insufficient_financial_history"', financialPersistence);
   const securityTypePreflight = directRoute.indexOf("getSecFundSecurityTypeEvidence(symbol)");
-  const persistence = directRoute.indexOf("persistDirectSecSuppression({");
-  const unsupportedReturn = directRoute.indexOf('eligibilityCode: "unsupported_security_type"', persistence + 1);
-  const persistenceFailureReturn = directRoute.indexOf('eligibilityCode: "sec_security_type_suppression_persistence_unavailable"');
+  const securityPersistence = directRoute.indexOf('reasonCode: "unsupported_security_type"');
+  const securityReturn = directRoute.indexOf('eligibilityCode: "unsupported_security_type"', securityPersistence);
   const claim = directRoute.indexOf("tryClaimMarketHistoryRequest(");
   const paidHistory = directRoute.indexOf("provider.getDailyHistory(symbol, 300)");
 
   assert.ok(directRouteStart >= 0, "direct rating route must remain present");
-  assert.ok(securityTypePreflight >= 0 && securityTypePreflight < persistence, "authoritative SEC classification must precede suppression persistence");
-  assert.ok(persistence >= 0 && persistence < unsupportedReturn, "unsupported-security suppression must be persisted before the early Not Yet Rated return");
-  assert.ok(persistenceFailureReturn >= 0 && persistenceFailureReturn < claim, "persistence failure must fail closed before any paid-history lease");
-  assert.ok(unsupportedReturn >= 0 && unsupportedReturn < claim, "unsupported security types must return before any paid-history lease");
+  assert.ok(unresolvedCheck >= 0 && unresolvedCheck < unresolvedPersistence, "identity readiness must be checked before persistence");
+  assert.ok(unresolvedPersistence >= 0 && unresolvedPersistence < unresolvedReturn, "unresolved identity must be persisted before early return");
+  assert.ok(financialCheck >= 0 && financialCheck < financialPersistence, "financial readiness must be checked before persistence");
+  assert.ok(financialPersistence >= 0 && financialPersistence < financialReturn, "insufficient financial history must be persisted before early return");
+  assert.ok(securityTypePreflight >= 0 && securityTypePreflight < securityPersistence, "authoritative SEC classification must precede suppression persistence");
+  assert.ok(securityPersistence >= 0 && securityPersistence < securityReturn, "unsupported-security suppression must be persisted before early return");
+  assert.ok(unresolvedReturn >= 0 && unresolvedReturn < claim, "unresolved SEC identity must return before any paid-history lease");
+  assert.ok(financialReturn >= 0 && financialReturn < claim, "insufficient SEC financial history must return before any paid-history lease");
+  assert.ok(securityReturn >= 0 && securityReturn < claim, "unsupported security types must return before any paid-history lease");
   assert.ok(claim >= 0 && claim < paidHistory, "paid history must remain behind the atomic database lease");
 
   const persistenceSource = await readFile(new URL("../src/ratings/direct-sec-suppression.ts", import.meta.url), "utf8");
+  assert.match(persistenceSource, /"unresolved_sec_identity"/);
+  assert.match(persistenceSource, /"insufficient_financial_history"/);
+  assert.match(persistenceSource, /"unsupported_security_type"/);
   assert.match(persistenceSource, /ratingVersion:\s*MONSTER_RATING_ENGINE_VERSION/);
   assert.match(persistenceSource, /reasonCode:\s*input\.reasonCode/);
   assert.match(persistenceSource, /suppressionStage:\s*input\.suppressionStage/);
