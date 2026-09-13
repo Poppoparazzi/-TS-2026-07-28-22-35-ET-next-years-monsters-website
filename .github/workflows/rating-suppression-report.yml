@@ -1,4 +1,4 @@
-# TS: 2026-09-13 04:00 UTC
+# TS: 2026-09-13 08:02 UTC
 
 name: Monster Rating suppression report
 
@@ -10,6 +10,7 @@ on:
       - "backend/src/app.ts"
       - "backend/src/database/market-history-evidence-persistence.ts"
       - "backend/src/ratings/batch-store.ts"
+      - "backend/src/ratings/direct-sec-suppression.ts"
       - "backend/src/ratings/market-history-evidence.ts"
       - "backend/src/jobs/report-rating-candidate-suppression.ts"
       - "backend/src/jobs/report-rating-suppression-overlap.ts"
