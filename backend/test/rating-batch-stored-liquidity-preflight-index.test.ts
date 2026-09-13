@@ -1,4 +1,4 @@
-// TS: 2026-09-09 04:00 ET
+// TS: 2026-09-13 01:08 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -21,8 +21,8 @@ test("rating stored-liquidity preflight has a provider-scoped index aligned with
 
   assert.match(
     batchStore,
-    /FROM quote_snapshots qs[\s\S]*?qs\.company_id = c\.id[\s\S]*?qs\.provider = \$3[\s\S]*?qs\.price > 0[\s\S]*?qs\.volume > 0[\s\S]*?qs\.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'[\s\S]*?qs\.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'[\s\S]*?ORDER BY qs\.provider_timestamp DESC, qs\.retrieved_at DESC[\s\S]*?LIMIT 1/,
-    "candidate selection must use fresh stored quote evidence from the active provider before paid market-history calls",
+    /FROM quote_snapshots qs[\s\S]*?qs\.company_id = c\.id[\s\S]*?qs\.provider = \$3[\s\S]*?qs\.price > 0[\s\S]*?qs\.volume > 0[\s\S]*?qs\.provider_timestamp >= CURRENT_TIMESTAMP - INTERVAL '7 days'[\s\S]*?qs\.retrieved_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'[\s\S]*?ORDER BY qs\.provider_timestamp DESC, qs\.retrieved_at DESC[\s\S]*?LIMIT 1/,
+    "candidate selection must retain recent stored quote evidence from the active provider across ordinary market closures before paid market-history calls",
   );
 
   assert.match(
