@@ -1,10 +1,11 @@
-// TS: 2026-09-13 19:59 UTC
+// TS: 2026-09-13 20:59 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { MarketDataProvider, DailyMarketHistory } from "../src/providers/types.js";
 import type { RatingBatchStore } from "../src/ratings/batch-store.js";
 import { loadDirectCompanyHistoryQuotaSafe } from "../src/ratings/direct-company-history.js";
+import type { MarketHistoryEvidence } from "../src/ratings/market-history-evidence.js";
 
 function buildHistory(input: {
   symbol?: string;
@@ -49,7 +50,7 @@ function providerWithCache(cache: DailyMarketHistory | null): MarketDataProvider
 
 function batchStore(savedReasons: Array<string | null | undefined>): RatingBatchStore {
   return {
-    async saveMarketHistoryEvidence(evidence) {
+    async saveMarketHistoryEvidence(evidence: MarketHistoryEvidence) {
       savedReasons.push(evidence.suppressionReason);
     },
   } as unknown as RatingBatchStore;
