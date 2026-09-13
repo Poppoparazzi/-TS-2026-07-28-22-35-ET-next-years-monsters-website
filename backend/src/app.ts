@@ -1,4 +1,4 @@
-// TS: 2026-09-13 09:01 UTC
+// TS: 2026-09-13 17:09 UTC
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -18,6 +18,7 @@ import {
 } from "./providers/types.js";
 import { QuoteService } from "./quotes/service.js";
 import { createRatingBatchStore } from "./ratings/batch-store.js";
+import { persistCompletedRatingWithSingleRetry } from "./ratings/completed-rating-persistence.js";
 import { persistDirectSecSuppression } from "./ratings/direct-sec-suppression.js";
 import { installFailClosedRatingErrorHandler } from "./ratings/install-fail-closed-handler.js";
 import { buildMarketHistoryEvidence } from "./ratings/market-history-evidence.js";
@@ -737,16 +738,29 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       }
 
       if (persistenceStore.configured && persistenceStore.saveRating) {
-        try {
+        const persistenceResult = await persistCompletedRatingWithSingleRetry(async () => {
           await persistenceStore.saveSecCompany(secCompany);
           await Promise.all([
             persistenceStore.saveQuote(quote),
             persistenceStore.saveSecFilings(secCompany, filings),
             persistenceStore.saveSecFacts(secFacts),
           ]);
-          await persistenceStore.saveRating(publishableRating ?? calculatedRating);
-        } catch (error) {
-          request.log.error({ error, symbol }, "Unable to persist complete Monster Rating evidence");
+          await persistenceStore.saveRating!(publishableRating ?? calculatedRating);
+        });
+
+        if (!persistenceResult.persisted) {
+          request.log.error(
+            { error: persistenceResult.error, symbol, attempts: persistenceResult.attempts },
+            "Unable to persist complete Monster Rating evidence after retry",
+          );
+          return directNotYetRated({
+            symbol,
+            companyName: calculatedRating.companyName,
+            calculatedAt,
+            eligibilityCode: "completed_rating_persistence_pending",
+            summary: "Not Yet Rated — Stay Tuned. Coming Soon. The rating was computed, but complete production evidence is still awaiting durable storage.",
+            reason: "The already-computed rating could not be durably persisted after two write attempts. Paid market history will not be requested again while the persistence hold remains active.",
+          });
         }
       }
 
