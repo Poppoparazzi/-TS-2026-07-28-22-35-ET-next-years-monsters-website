@@ -1,4 +1,4 @@
-// TS: 2026-09-12 19:01 UTC
+// TS: 2026-09-13 00:00 UTC
 
 import pg from "pg";
 import type { AppConfig } from "../config.js";
@@ -292,6 +292,7 @@ export class PostgresRatingBatchStore implements RatingBatchStore {
           WHERE cf.company_id = c.id AND cf.taxonomy = 'us-gaap'
             AND cf.concept IN ('RevenueFromContractWithCustomerExcludingAssessedTax','Revenues','SalesRevenueNet')
             AND cf.value_numeric IS NOT NULL AND cf.value_numeric >= 0 AND cf.fiscal_period = 'FY'
+            AND cf.fiscal_year IS NOT NULL
             AND cf.form_type IN ('10-K','10-K/A','20-F','20-F/A','40-F','40-F/A')
           ORDER BY cf.fiscal_year DESC NULLS LAST, cf.period_end DESC NULLS LAST, cf.filed_date DESC NULLS LAST
           LIMIT 1
