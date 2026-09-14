@@ -1,4 +1,4 @@
-// TS: 2026-09-13 23:02 UTC
+// TS: 2026-09-14 04:03 UTC
 
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
 import type { RatingBatchStore } from "./batch-store.js";
@@ -34,6 +34,15 @@ export type DirectCompanyHistoryLeaseResult =
       readonly evidence: null;
       readonly source: null;
       readonly claimAcquired: false;
+    }
+  | {
+      readonly status: "persistence_unavailable";
+      readonly history: null;
+      readonly evidence: null;
+      readonly source: null;
+      readonly claimAcquired: false;
+      readonly eligibilityCode: "market_history_persistence_unavailable";
+      readonly suppressionReason: string;
     };
 
 export async function loadDirectCompanyHistoryQuotaSafe(input: {
@@ -109,44 +118,54 @@ export async function loadDirectCompanyHistoryWithLease(input: {
     });
   }
 
+  if (!input.batchStore.configured) {
+    return Object.freeze({
+      status: "persistence_unavailable" as const,
+      history: null,
+      evidence: null,
+      source: null,
+      claimAcquired: false as const,
+      eligibilityCode: "market_history_persistence_unavailable" as const,
+      suppressionReason: "Paid market history was not requested because durable market-history evidence storage and lease protection are unavailable.",
+    });
+  }
+
   let claimAcquired = false;
-  if (input.batchStore.configured) {
-    claimAcquired = await input.batchStore.tryClaimMarketHistoryRequest(
+  claimAcquired = await input.batchStore.tryClaimMarketHistoryRequest(
+    input.ticker,
+    input.marketProvider.name,
+    input.runId,
+  );
+
+  if (!claimAcquired) {
+    return Object.freeze({
+      status: "in_progress" as const,
+      history: null,
+      evidence: null,
+      source: null,
+      claimAcquired: false as const,
+    });
+  }
+
+  const postClaimSuppression = await input.batchStore.getReusableMarketHistorySuppression(
+    input.ticker,
+    input.marketProvider.name,
+  );
+  if (postClaimSuppression) {
+    await input.batchStore.releaseMarketHistoryRequestClaim(
       input.ticker,
       input.marketProvider.name,
       input.runId,
     );
-
-    if (!claimAcquired) {
-      return Object.freeze({
-        status: "in_progress" as const,
-        history: null,
-        evidence: null,
-        source: null,
-        claimAcquired: false as const,
-      });
-    }
-
-    const postClaimSuppression = await input.batchStore.getReusableMarketHistorySuppression(
-      input.ticker,
-      input.marketProvider.name,
-    );
-    if (postClaimSuppression) {
-      await input.batchStore.releaseMarketHistoryRequestClaim(
-        input.ticker,
-        input.marketProvider.name,
-        input.runId,
-      );
-      return Object.freeze({
-        status: "suppressed" as const,
-        history: null,
-        evidence: null,
-        source: "persisted_suppression" as const,
-        claimAcquired: false as const,
-        eligibilityCode: postClaimSuppression.ratingEligibilityCode,
-        suppressionReason: postClaimSuppression.suppressionReason,
-      });
-    }
+    return Object.freeze({
+      status: "suppressed" as const,
+      history: null,
+      evidence: null,
+      source: "persisted_suppression" as const,
+      claimAcquired: false as const,
+      eligibilityCode: postClaimSuppression.ratingEligibilityCode,
+      suppressionReason: postClaimSuppression.suppressionReason,
+    });
   }
 
   try {
