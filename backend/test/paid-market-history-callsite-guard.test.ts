@@ -1,4 +1,4 @@
-// TS: 2026-09-14 00:06 UTC
+// TS: 2026-09-14 00:09 UTC
 
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
@@ -52,12 +52,15 @@ test("all paid daily-history production callsites stay behind free preflight and
   assert.ok(benchmark >= 0 && benchmark < benchmarkValidation, "shared benchmark history must be validated after the surviving candidate reaches it");
 
   const directHistory = await readFile(new URL("../src/ratings/direct-company-history.ts", import.meta.url), "utf8");
-  const directHistoryCachePreflight = directHistory.indexOf("inspectCachedCompanyHistory(");
-  const directHistoryClaim = directHistory.indexOf("tryClaimMarketHistoryRequest(");
-  const directHistoryPostClaimSuppression = directHistory.indexOf("getReusableMarketHistorySuppression(");
-  const directHistoryPaidCall = directHistory.indexOf("provider.getDailyHistory(symbol, 300)");
-  const directHistoryPersist = directHistory.indexOf("saveMarketHistoryEvidence(");
+  const leaseLoaderStart = directHistory.indexOf("export async function loadDirectCompanyHistoryWithLease");
+  const leaseLoader = leaseLoaderStart >= 0 ? directHistory.slice(leaseLoaderStart) : "";
+  const directHistoryCachePreflight = leaseLoader.indexOf("inspectCachedCompanyHistory(");
+  const directHistoryClaim = leaseLoader.indexOf("tryClaimMarketHistoryRequest(");
+  const directHistoryPostClaimSuppression = leaseLoader.indexOf("getReusableMarketHistorySuppression(");
+  const directHistoryPaidCall = leaseLoader.indexOf("input.marketProvider.getDailyHistory(input.ticker, 300)");
+  const directHistoryPersist = leaseLoader.indexOf("saveMarketHistoryEvidence(");
 
+  assert.ok(leaseLoaderStart >= 0, "lease-safe direct-history helper must remain present");
   assert.ok(directHistoryCachePreflight >= 0 && directHistoryCachePreflight < directHistoryClaim, "direct-history helper must inspect free cached evidence before claiming paid quota");
   assert.ok(directHistoryClaim >= 0 && directHistoryClaim < directHistoryPostClaimSuppression, "direct-history helper must acquire the paid-history lease before its race-closing suppression recheck");
   assert.ok(directHistoryPostClaimSuppression >= 0 && directHistoryPostClaimSuppression < directHistoryPaidCall, "direct-history helper must close the suppression race before the paid provider call");
