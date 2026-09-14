@@ -1,4 +1,4 @@
-// TS: 2026-09-14 04:03 UTC
+// TS: 2026-09-14 06:05 UTC
 
 import type { DailyMarketHistory, MarketDataProvider } from "../providers/types.js";
 import type { RatingBatchStore } from "./batch-store.js";
@@ -168,8 +168,10 @@ export async function loadDirectCompanyHistoryWithLease(input: {
     });
   }
 
+  let paidHistoryFetched = false;
   try {
     const refreshedHistory = await input.marketProvider.getDailyHistory(input.ticker, 300);
+    paidHistoryFetched = true;
     const refreshedEvidence = buildMarketHistoryEvidence(refreshedHistory);
     await input.batchStore.saveMarketHistoryEvidence(refreshedEvidence);
 
@@ -200,7 +202,7 @@ export async function loadDirectCompanyHistoryWithLease(input: {
       claimAcquired,
     });
   } catch (error) {
-    if (claimAcquired) {
+    if (claimAcquired && !paidHistoryFetched) {
       await input.batchStore.releaseMarketHistoryRequestClaim(
         input.ticker,
         input.marketProvider.name,
