@@ -1,4 +1,4 @@
-// TS: 2026-09-14 00:09 UTC
+// TS: 2026-09-14 05:08 UTC
 
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
@@ -77,30 +77,22 @@ test("all paid daily-history production callsites stay behind free preflight and
     "getReusableMarketHistorySuppression(symbol, provider.name)",
     firstDirectSuppression + 1,
   );
-  const directClaim = directRoute.indexOf("tryClaimMarketHistoryRequest(");
-  const postClaimSuppression = directRoute.indexOf(
-    "getReusableMarketHistorySuppression(symbol, provider.name)",
-    secondDirectSuppression + 1,
-  );
-  const directPaidHistory = directRoute.indexOf("provider.getDailyHistory(symbol, 300)");
-  const directEvidenceBuild = directRoute.indexOf("const marketHistoryEvidence = buildMarketHistoryEvidence(companyHistory)");
-  const directPersistEvidence = directRoute.indexOf("saveMarketHistoryEvidence(marketHistoryEvidence)");
-  const directEvidenceSuppressionGate = directRoute.indexOf("if (marketHistoryEvidence.suppressionReason)");
+  const directHistoryLoader = directRoute.indexOf("loadDirectCompanyHistoryWithLease({");
+  const directReadyHistory = directRoute.indexOf("const companyHistory = directHistoryResult.history");
   const directBenchmarkHistory = directRoute.indexOf('provider.getDailyHistory("SPY", 300)');
-  const directRelease = directRoute.indexOf("releaseMarketHistoryRequestClaim(", directPaidHistory);
+  const directRelease = directRoute.indexOf("releaseMarketHistoryRequestClaim(", directHistoryLoader);
 
   assert.ok(directRouteStart >= 0, "direct rating route must remain present");
   assert.ok(firstDirectSuppression >= 0 && firstDirectSuppression < directSecPreflight, "direct route must reuse durable paid-history suppression before SEC network work");
   assert.ok(directSecPreflight >= 0 && directSecPreflight < directRevenuePreflight, "direct route must finish free SEC retrieval before revenue qualification");
   assert.ok(directRevenuePreflight >= 0 && directRevenuePreflight < directSecurityTypePreflight, "direct route must reject insufficient SEC revenue history before authoritative security-type classification");
   assert.ok(directSecurityTypePreflight >= 0 && directSecurityTypePreflight < secondDirectSuppression, "direct route must complete authoritative SEC fund/security-type preflight before its last paid-call suppression recheck");
-  assert.ok(secondDirectSuppression >= 0 && secondDirectSuppression < directClaim, "direct route must recheck durable suppression before trying to claim paid history");
-  assert.ok(directClaim >= 0 && directClaim < postClaimSuppression, "direct route must atomically lease the ticker before its final suppression recheck");
-  assert.ok(postClaimSuppression >= 0 && postClaimSuppression < directPaidHistory, "direct route must close the post-claim suppression race before paid history");
-  assert.ok(directPaidHistory >= 0 && directPaidHistory < directEvidenceBuild, "direct route must evaluate company history immediately after the paid company-history request");
-  assert.ok(directEvidenceBuild >= 0 && directEvidenceBuild < directPersistEvidence, "direct route must build machine-readable market-history evidence before persisting it");
-  assert.ok(directPersistEvidence >= 0 && directPersistEvidence < directEvidenceSuppressionGate, "direct route must durably persist provider-backed evidence before an early Not Yet Rated suppression return");
-  assert.ok(directEvidenceSuppressionGate >= 0 && directEvidenceSuppressionGate < directBenchmarkHistory, "direct route must reject suppressed company history before spending quota on SPY benchmark history");
-  assert.ok(directRelease > directPaidHistory, "direct route must release the ticker lease after the paid-history section");
-  assert.match(directRoute, /finally\s*\{[\s\S]*releaseMarketHistoryRequestClaim\(/, "direct route must release the ticker lease even when paid-history work throws or returns early");
+  assert.ok(secondDirectSuppression >= 0 && secondDirectSuppression < directHistoryLoader, "direct route must recheck durable suppression before invoking the lease-safe history loader");
+  assert.ok(directHistoryLoader >= 0 && directHistoryLoader < directReadyHistory, "direct route must obtain company history through the lease-safe helper before rating work");
+  assert.ok(directReadyHistory >= 0 && directReadyHistory < directBenchmarkHistory, "direct route must resolve a ready company-history result before spending quota on SPY benchmark history");
+  assert.equal(directRoute.indexOf("provider.getDailyHistory(symbol, 300)"), -1, "direct route must not bypass the lease-safe helper with a company-history provider call");
+  assert.equal(directRoute.indexOf("buildMarketHistoryEvidence(companyHistory)"), -1, "direct route must not duplicate market-history evidence construction owned by the helper");
+  assert.equal(directRoute.indexOf("saveMarketHistoryEvidence(marketHistoryEvidence)"), -1, "direct route must not duplicate evidence persistence owned by the helper");
+  assert.ok(directRelease > directHistoryLoader, "direct route must release a helper-acquired ticker lease after downstream rating work");
+  assert.match(directRoute, /finally\s*\{[\s\S]*releaseMarketHistoryRequestClaim\(/, "direct route must release a helper-acquired ticker lease even when downstream work throws or returns early");
 });
