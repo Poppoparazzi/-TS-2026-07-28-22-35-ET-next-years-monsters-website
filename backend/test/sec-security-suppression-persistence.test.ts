@@ -1,4 +1,4 @@
-// TS: 2026-09-13 09:03 UTC
+// TS: 2026-09-14 05:16 UTC
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -41,8 +41,8 @@ test("direct SEC readiness results are persisted before every paid-history path"
   const securityTypePreflight = directRoute.indexOf("getSecFundSecurityTypeEvidence(symbol)");
   const securityPersistence = directRoute.indexOf('reasonCode: "unsupported_security_type"');
   const securityReturn = directRoute.indexOf('eligibilityCode: "unsupported_security_type"', securityPersistence);
-  const claim = directRoute.indexOf("tryClaimMarketHistoryRequest(");
-  const paidHistory = directRoute.indexOf("provider.getDailyHistory(symbol, 300)");
+  const historyLoader = directRoute.indexOf("loadDirectCompanyHistoryWithLease({");
+  const benchmarkHistory = directRoute.indexOf('provider.getDailyHistory("SPY", 300)');
 
   assert.ok(directRouteStart >= 0, "direct rating route must remain present");
   assert.ok(unresolvedCheck >= 0 && unresolvedCheck < unresolvedPersistence, "identity readiness must be checked before persistence");
@@ -51,10 +51,18 @@ test("direct SEC readiness results are persisted before every paid-history path"
   assert.ok(financialPersistence >= 0 && financialPersistence < financialReturn, "insufficient financial history must be persisted before early return");
   assert.ok(securityTypePreflight >= 0 && securityTypePreflight < securityPersistence, "authoritative SEC classification must precede suppression persistence");
   assert.ok(securityPersistence >= 0 && securityPersistence < securityReturn, "unsupported-security suppression must be persisted before early return");
-  assert.ok(unresolvedReturn >= 0 && unresolvedReturn < claim, "unresolved SEC identity must return before any paid-history lease");
-  assert.ok(financialReturn >= 0 && financialReturn < claim, "insufficient SEC financial history must return before any paid-history lease");
-  assert.ok(securityReturn >= 0 && securityReturn < claim, "unsupported security types must return before any paid-history lease");
-  assert.ok(claim >= 0 && claim < paidHistory, "paid history must remain behind the atomic database lease");
+  assert.ok(unresolvedReturn >= 0 && unresolvedReturn < historyLoader, "unresolved SEC identity must return before the quota-safe company-history path");
+  assert.ok(financialReturn >= 0 && financialReturn < historyLoader, "insufficient SEC financial history must return before the quota-safe company-history path");
+  assert.ok(securityReturn >= 0 && securityReturn < historyLoader, "unsupported security types must return before the quota-safe company-history path");
+  assert.ok(historyLoader >= 0 && historyLoader < benchmarkHistory, "company history must pass through the lease-safe helper before benchmark quota is spent");
+  assert.equal(directRoute.indexOf("provider.getDailyHistory(symbol, 300)"), -1, "direct route must not bypass the lease-safe helper with a company-history provider call");
+
+  const helperSource = await readFile(new URL("../src/ratings/direct-company-history.ts", import.meta.url), "utf8");
+  const helperStart = helperSource.indexOf("export async function loadDirectCompanyHistoryWithLease");
+  const helper = helperStart >= 0 ? helperSource.slice(helperStart) : "";
+  const helperClaim = helper.indexOf("tryClaimMarketHistoryRequest(");
+  const helperPaidHistory = helper.indexOf("input.marketProvider.getDailyHistory(input.ticker, 300)");
+  assert.ok(helperClaim >= 0 && helperClaim < helperPaidHistory, "paid company history must remain behind the atomic database lease inside the helper");
 
   const persistenceSource = await readFile(new URL("../src/ratings/direct-sec-suppression.ts", import.meta.url), "utf8");
   assert.match(persistenceSource, /"unresolved_sec_identity"/);

@@ -1,4 +1,4 @@
-// TS: 2026-08-28 16:58 ET
+// TS: 2026-09-14 05:12 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -88,10 +88,6 @@ class StaticMarketDataProvider implements MarketDataProvider {
 }
 
 function dailyHistory(symbol: string, dailyGrowth: number): DailyMarketHistory {
-  // Keep this fixture fresh relative to the test clock so the route test does not
-  // rot as calendar time advances. The rating engine intentionally rejects stale
-  // or future-dated market evidence in production, and the fixture should exercise
-  // eligibility instead of accidentally becoming a clock-skew test.
   const retrievedAt = new Date();
   const end = new Date(retrievedAt);
   end.setUTCHours(0, 0, 0, 0);
@@ -395,7 +391,7 @@ test("production rating route stays usable when market data is unconfigured", as
   assert.equal(rating.reasons[0]?.code, "gate_marketQuote");
 });
 
-test("production rating route calculates, saves, and reuses a visible numeric rating", async (t) => {
+test("production rating route refuses paid history when durable market-history storage is unavailable", async (t) => {
   const provider = new HistoricalStaticMarketDataProvider();
   const persistenceStore = new MemoryPersistenceStore();
   const app = await buildApp({
@@ -409,23 +405,18 @@ test("production rating route calculates, saves, and reuses a visible numeric ra
 
   const first = await app.inject({ method: "GET", url: "/api/ratings/AAPL" });
   const firstRating = first.json();
-  const callsAfterCalculation = provider.historyCalls;
   const second = await app.inject({ method: "GET", url: "/api/ratings/AAPL" });
   const secondRating = second.json();
 
   assert.equal(first.statusCode, 200);
-  assert.equal(firstRating.eligible, true);
-  assert.equal(firstRating.engineVersion, "nym-current-stock-rating-v1.0.0");
-  assert.ok(Number.isFinite(firstRating.score));
-  assert.ok(firstRating.score >= 0 && firstRating.score <= 100);
-  assert.ok(firstRating.evidenceInputs.some((item: { key: string; provider?: string }) =>
-    item.key === "market_price" && item.provider === "historical-test-provider"));
-  assert.ok(firstRating.evidenceInputs.some((item: { key: string }) => item.key === "latest_sec_filing"));
-  assert.equal(persistenceStore.ratingSaves, 1);
-  assert.equal(callsAfterCalculation, 2);
+  assert.equal(firstRating.eligible, false);
+  assert.equal(firstRating.score, null);
+  assert.equal(firstRating.tier, "NOT YET RATED");
+  assert.equal(firstRating.eligibilityCode, "market_history_persistence_unavailable");
   assert.equal(second.statusCode, 200);
-  assert.equal(secondRating.score, firstRating.score);
-  assert.equal(provider.historyCalls, callsAfterCalculation);
+  assert.equal(secondRating.eligibilityCode, "market_history_persistence_unavailable");
+  assert.equal(provider.historyCalls, 0);
+  assert.equal(persistenceStore.ratingSaves, 0);
 });
 
 test("quote retrieval persists a snapshot that can be read later", async (t) => {

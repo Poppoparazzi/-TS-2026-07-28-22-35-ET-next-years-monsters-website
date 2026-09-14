@@ -1,4 +1,4 @@
-// TS: 2026-09-13 17:09 UTC
+// TS: 2026-09-14 05:00 UTC
 
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
@@ -19,9 +19,9 @@ import {
 import { QuoteService } from "./quotes/service.js";
 import { createRatingBatchStore } from "./ratings/batch-store.js";
 import { persistCompletedRatingWithSingleRetry } from "./ratings/completed-rating-persistence.js";
+import { loadDirectCompanyHistoryWithLease } from "./ratings/direct-company-history.js";
 import { persistDirectSecSuppression } from "./ratings/direct-sec-suppression.js";
 import { installFailClosedRatingErrorHandler } from "./ratings/install-fail-closed-handler.js";
-import { buildMarketHistoryEvidence } from "./ratings/market-history-evidence.js";
 import { evaluatePublicRatingReadiness } from "./ratings/public-rating-readiness.js";
 import {
   calculateMonsterRatingV1,
@@ -581,64 +581,55 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       }
     }
 
-    const directClaimRunId = null as unknown as string;
-    let directHistoryClaimed = false;
-    if (ratingBatchStore.configured) {
-      directHistoryClaimed = await ratingBatchStore.tryClaimMarketHistoryRequest(
-        symbol,
-        provider.name,
-        directClaimRunId,
-      );
-      if (!directHistoryClaimed) {
-        return directNotYetRated({
-          symbol,
-          companyName: secCompany.companyName,
-          calculatedAt,
-          eligibilityCode: "market_history_request_in_progress",
-          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Another request is already obtaining this ticker's market history.",
-          reason: "Paid market-history request suppressed because an active database lease already owns this ticker/provider/rating-version request.",
-        });
-      }
+    const directClaimRunId = `direct:${symbol}:${calculatedAt}`;
+    const directHistoryResult = await loadDirectCompanyHistoryWithLease({
+      marketProvider: provider,
+      batchStore: ratingBatchStore,
+      ticker: symbol,
+      runId: directClaimRunId,
+    });
 
-      const postClaimSuppression = await ratingBatchStore.getReusableMarketHistorySuppression(symbol, provider.name);
-      if (postClaimSuppression) {
-        await ratingBatchStore.releaseMarketHistoryRequestClaim(
-          symbol,
-          provider.name,
-          directClaimRunId,
-        ).catch((error) => {
-          request.log.error({ error, symbol }, "Unable to release direct Monster Rating market-history claim after suppression");
-        });
-        return directNotYetRated({
-          symbol,
-          companyName: secCompany.companyName,
-          calculatedAt,
-          eligibilityCode: postClaimSuppression.ratingEligibilityCode,
-          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Persisted provider-backed market history blocks a repeat paid request.",
-          reason: `Paid market-history request suppressed: ${postClaimSuppression.suppressionReason}.`,
-        });
-      }
+    if (directHistoryResult.status === "persistence_unavailable") {
+      return directNotYetRated({
+        symbol,
+        companyName: secCompany.companyName,
+        calculatedAt,
+        eligibilityCode: directHistoryResult.eligibilityCode,
+        summary: "Not Yet Rated — Stay Tuned. Coming Soon. Durable market-history protection is temporarily unavailable.",
+        reason: directHistoryResult.suppressionReason,
+      });
     }
 
+    if (directHistoryResult.status === "in_progress") {
+      return directNotYetRated({
+        symbol,
+        companyName: secCompany.companyName,
+        calculatedAt,
+        eligibilityCode: "market_history_request_in_progress",
+        summary: "Not Yet Rated — Stay Tuned. Coming Soon. Another request is already obtaining this ticker's market history.",
+        reason: "Paid market-history request suppressed because an active database lease already owns this ticker/provider/rating-version request.",
+      });
+    }
+
+    if (directHistoryResult.status === "suppressed") {
+      return directNotYetRated({
+        symbol,
+        companyName: secCompany.companyName,
+        calculatedAt,
+        eligibilityCode: directHistoryResult.eligibilityCode,
+        summary: directHistoryResult.source === "paid_refresh"
+          ? "Not Yet Rated — Stay Tuned. Coming Soon. Provider-backed company market history does not currently pass the rating gate."
+          : "Not Yet Rated — Stay Tuned. Coming Soon. Persisted provider-backed market history blocks a repeat paid request.",
+        reason: directHistoryResult.source === "paid_refresh"
+          ? `Benchmark history was not requested because company market history is suppressed: ${directHistoryResult.suppressionReason}.`
+          : `Paid market-history request suppressed: ${directHistoryResult.suppressionReason}.`,
+      });
+    }
+
+    const directHistoryClaimed = directHistoryResult.claimAcquired;
+
     try {
-      const companyHistory = await provider.getDailyHistory(symbol, 300);
-      const marketHistoryEvidence = buildMarketHistoryEvidence(companyHistory);
-
-      if (ratingBatchStore.configured) {
-        await ratingBatchStore.saveMarketHistoryEvidence(marketHistoryEvidence);
-      }
-
-      if (marketHistoryEvidence.suppressionReason) {
-        return directNotYetRated({
-          symbol,
-          companyName: secCompany.companyName,
-          calculatedAt,
-          eligibilityCode: marketHistoryEvidence.suppressionReason,
-          summary: "Not Yet Rated — Stay Tuned. Coming Soon. Provider-backed company market history does not currently pass the rating gate.",
-          reason: `Benchmark history was not requested because company market history is suppressed: ${marketHistoryEvidence.suppressionReason}.`,
-        });
-      }
-
+      const companyHistory = directHistoryResult.history;
       const benchmarkHistory = await provider.getDailyHistory("SPY", 300);
       const quote = quoteFromDailyHistory(secCompany, companyHistory);
 
