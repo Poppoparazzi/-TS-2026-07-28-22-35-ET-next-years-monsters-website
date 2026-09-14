@@ -1,4 +1,4 @@
-// TS: 2026-09-13 03:00 UTC
+// TS: 2026-09-14 00:09 UTC
 
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
@@ -29,7 +29,7 @@ test("all paid daily-history production callsites stay behind free preflight and
 
   assert.deepEqual(
     directCallsites.sort(),
-    ["src/app.ts", "src/jobs/rating-batch.ts"],
+    ["src/app.ts", "src/jobs/rating-batch.ts", "src/ratings/direct-company-history.ts"],
     "new production paid-history callsites require an explicit quota-guard regression before they can be added",
   );
 
@@ -50,6 +50,21 @@ test("all paid daily-history production callsites stay behind free preflight and
   assert.ok(persistEvidence >= 0 && persistEvidence < evidenceSuppressionGate, "candidate market-history evidence must be persisted before an early suppression return");
   assert.ok(evidenceSuppressionGate >= 0 && evidenceSuppressionGate < benchmark, "suppressed candidates must not spend quota on shared benchmark history");
   assert.ok(benchmark >= 0 && benchmark < benchmarkValidation, "shared benchmark history must be validated after the surviving candidate reaches it");
+
+  const directHistory = await readFile(new URL("../src/ratings/direct-company-history.ts", import.meta.url), "utf8");
+  const leaseLoaderStart = directHistory.indexOf("export async function loadDirectCompanyHistoryWithLease");
+  const leaseLoader = leaseLoaderStart >= 0 ? directHistory.slice(leaseLoaderStart) : "";
+  const directHistoryCachePreflight = leaseLoader.indexOf("inspectCachedCompanyHistory(");
+  const directHistoryClaim = leaseLoader.indexOf("tryClaimMarketHistoryRequest(");
+  const directHistoryPostClaimSuppression = leaseLoader.indexOf("getReusableMarketHistorySuppression(");
+  const directHistoryPaidCall = leaseLoader.indexOf("input.marketProvider.getDailyHistory(input.ticker, 300)");
+  const directHistoryPersist = leaseLoader.indexOf("saveMarketHistoryEvidence(");
+
+  assert.ok(leaseLoaderStart >= 0, "lease-safe direct-history helper must remain present");
+  assert.ok(directHistoryCachePreflight >= 0 && directHistoryCachePreflight < directHistoryClaim, "direct-history helper must inspect free cached evidence before claiming paid quota");
+  assert.ok(directHistoryClaim >= 0 && directHistoryClaim < directHistoryPostClaimSuppression, "direct-history helper must acquire the paid-history lease before its race-closing suppression recheck");
+  assert.ok(directHistoryPostClaimSuppression >= 0 && directHistoryPostClaimSuppression < directHistoryPaidCall, "direct-history helper must close the suppression race before the paid provider call");
+  assert.ok(directHistoryPaidCall >= 0 && directHistoryPaidCall < directHistoryPersist, "direct-history helper must persist provider-backed evidence immediately after the paid provider call");
 
   const app = await readFile(new URL("../src/app.ts", import.meta.url), "utf8");
   const directRouteStart = app.indexOf('app.get<{ Params: SymbolParams }>("/api/ratings/:symbol"');
