@@ -1,4 +1,4 @@
-// TS: 2026-09-13 14:58 UTC
+// TS: 2026-09-13 16:57 UTC
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -12,6 +12,7 @@ test("completed rating persistence succeeds on the first write without retrying"
   });
 
   assert.equal(result.persisted, true);
+  assert.equal(result.state, "persisted");
   assert.equal(result.attempts, 1);
   assert.equal(result.error, null);
   assert.equal(calls, 1);
@@ -26,12 +27,13 @@ test("completed rating persistence retries exactly once using the same write clo
   });
 
   assert.equal(result.persisted, true);
+  assert.equal(result.state, "persisted");
   assert.equal(result.attempts, 2);
   assert.equal(result.error, null);
   assert.equal(calls, 2);
 });
 
-test("completed rating persistence reports pending after two failed writes", async () => {
+test("completed rating persistence reports a machine-readable pending state after two failed writes", async () => {
   let calls = 0;
   const failure = new Error("database unavailable");
 
@@ -41,6 +43,7 @@ test("completed rating persistence reports pending after two failed writes", asy
   });
 
   assert.equal(result.persisted, false);
+  assert.equal(result.state, "completed_rating_persistence_pending");
   assert.equal(result.attempts, 2);
   assert.equal(result.error, failure);
   assert.equal(calls, 2);
