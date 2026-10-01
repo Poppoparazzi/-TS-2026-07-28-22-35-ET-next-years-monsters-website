@@ -1,5 +1,5 @@
 {
-  "ts": "2026-10-01 08:38 ET",
+  "ts": "2026-10-01 08:52 ET",
   "dataset": "monster-dna-v2-april-2026-historical-lab",
   "status": "development_set_in_progress",
   "warning": "Outcome buckets are known. This file is for retrospective feature discovery and stress testing, not proof of predictive accuracy.",
@@ -15,9 +15,9 @@
     "bottom": "StatMuse S&P 500 worst-performing stocks, 2026-04-01 to 2026-10-01"
   },
   "counts": {
-    "seededTopGainers": 23,
+    "seededTopGainers": 25,
     "seededBottomLosers": 25,
-    "seededTotal": 48,
+    "seededTotal": 50,
     "initialPreperiodEvidenceReviewed": 13,
     "pointInTimeValuationReviewed": 4
   },
@@ -319,6 +319,22 @@
       }
     },
     {
+      "ticker": "FLEX",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 64.34,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "MPC",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 64.91,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
       "ticker": "ROL",
       "outcomeBucket": "bottom_loser",
       "returnPct": -43.06,
@@ -573,5 +589,12 @@
     "Several major losers already showed weak growth, margin deterioration, or soft forward guidance before April 1.",
     "Strong business DNA alone produced dangerous false positives: APP, FICO, and INTU require expectations, concentration/disruption, valuation, and market-confirmation gates.",
     "Point-in-time valuation adds useful separation in at least one early pair: DELL traded near 19.4x trailing earnings on April 1 while APP carried a roughly 24.8x price/sales multiple at March 31 despite both showing strong operating growth."
-  ]
+  ],
+  "targetDesign": {
+    "totalStocks": 100,
+    "extremeWinners": 25,
+    "extremeLosers": 25,
+    "matchedControls": 50,
+    "note": "The 50 extreme outcomes define obvious successes/failures. The 50 matched controls will test whether V2 separates true Monster setups from plausible look-alikes."
+  }
 }
