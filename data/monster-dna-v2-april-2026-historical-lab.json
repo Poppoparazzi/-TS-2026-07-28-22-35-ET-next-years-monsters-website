@@ -1,5 +1,5 @@
 {
-  "ts": "2026-10-01 08:52 ET",
+  "ts": "2026-10-01 09:42 ET",
   "dataset": "monster-dna-v2-april-2026-historical-lab",
   "status": "development_set_in_progress",
   "warning": "Outcome buckets are known. This file is for retrospective feature discovery and stress testing, not proof of predictive accuracy.",
@@ -18,7 +18,7 @@
     "seededTopGainers": 25,
     "seededBottomLosers": 25,
     "seededTotal": 50,
-    "initialPreperiodEvidenceReviewed": 13,
+    "initialPreperiodEvidenceReviewed": 37,
     "pointInTimeValuationReviewed": 4
   },
   "rows": [
@@ -79,8 +79,24 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 194.7,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "exceptional",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-02-03",
+        "facts": [
+          "Q4 Data Center revenue was $5.4B, up 39% year over year.",
+          "Q4 Client & Gaming revenue was $3.9B, up 37% year over year.",
+          "FY2025 revenue rose 34%; Data Center revenue rose 32%."
+        ],
+        "antiDnaFlags": [
+          "export-control exposure",
+          "gross-margin/product-mix sensitivity"
+        ],
+        "classificationHint": "operating_acceleration",
+        "source": "AMD Q4/FY2025 results, 2026-02-03",
+        "sourceUrl": "https://ir.amd.com/news-events/press-releases/detail/1276/amd-reports-fourth-quarter-and-full-year-2025-financial-results"
+      }
     },
     {
       "ticker": "INTC",
@@ -113,8 +129,23 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 166.74,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "exceptional",
+        "inflectionExpectations": "exceptional",
+        "knownAsOf": "2026-01-29",
+        "facts": [
+          "Fiscal Q2 revenue was $3.03B, up 31% sequentially and above guidance.",
+          "Datacenter revenue increased 64% sequentially.",
+          "Fiscal Q3 revenue was guided to $4.4B-$4.8B with non-GAAP EPS of $12-$14."
+        ],
+        "antiDnaFlags": [
+          "memory-cycle exposure"
+        ],
+        "classificationHint": "operating_acceleration",
+        "source": "Sandisk fiscal Q2 2026 results, 2026-01-29",
+        "sourceUrl": "https://investor.sandisk.com/news-releases/news-release-details/sandisk-reports-fiscal-second-quarter-2026-financial-results"
+      }
     },
     {
       "ticker": "HPE",
@@ -174,24 +205,72 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 127.2,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "mixed-positive",
+        "knownAsOf": "2026-02-10",
+        "facts": [
+          "Q4 revenue grew 29% year over year to $953M.",
+          "$1M+ ARR customers increased 31% year over year.",
+          "FY2025 operating cash flow was $1.05B and free cash flow was $915M.",
+          "FY2026 revenue guidance of $4.06B-$4.10B implied slower growth than Q4."
+        ],
+        "antiDnaFlags": [
+          "forward-growth deceleration"
+        ],
+        "classificationHint": "platform_reacceleration",
+        "source": "Datadog Q4/FY2025 results, 2026-02-10",
+        "sourceUrl": "https://investors.datadoghq.com/news-releases/news-release-details/datadog-announces-fourth-quarter-and-fiscal-year-2025-financial"
+      }
     },
     {
       "ticker": "ILMN",
       "outcomeBucket": "top_gainer",
       "returnPct": 121.39,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate",
+        "inflectionExpectations": "turnaround-positive",
+        "knownAsOf": "2026-02-05",
+        "facts": [
+          "Q4 revenue grew 5% year over year, but full-year revenue was flat.",
+          "Management described improving second-half momentum and a return to growth.",
+          "FY2026 revenue guidance was 4%-6%, including acquisition benefit."
+        ],
+        "antiDnaFlags": [
+          "low organic growth",
+          "China exposure"
+        ],
+        "classificationHint": "turnaround_rerating",
+        "source": "Illumina Q4/FY2025 results, 2026-02-05",
+        "sourceUrl": "https://investor.illumina.com/news-releases/news-release-details/illumina-reports-financial-results-fourth-quarter-and-fiscal"
+      }
     },
     {
       "ticker": "HUM",
       "outcomeBucket": "top_gainer",
       "returnPct": 120.41,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "mixed",
+        "inflectionExpectations": "turnaround-catalyst",
+        "knownAsOf": "2026-02-11",
+        "facts": [
+          "FY2026 adjusted EPS guidance called for a year-over-year decline because of Star Ratings headwinds.",
+          "Individual Medicare Advantage membership was expected to grow about 25% in 2026.",
+          "CenterWell Senior Primary Care patients grew more than 25% during 2025."
+        ],
+        "antiDnaFlags": [
+          "Star Ratings headwind",
+          "medical-cost/benefit-ratio risk"
+        ],
+        "classificationHint": "turnaround_rerating",
+        "source": "Humana Q4 2025 results and FY2026 guidance, 2026-02-11",
+        "sourceUrl": "https://humana.gcs-web.com/news-releases/news-release-details/humana-reports-fourth-quarter-2025-financial-results-provides"
+      }
     },
     {
       "ticker": "FTNT",
@@ -216,32 +295,96 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 106.85,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-26",
+        "facts": [
+          "Fiscal Q3 revenue grew 4% year over year.",
+          "All-flash array revenue grew 11%; first-party/marketplace cloud storage grew 27%.",
+          "Billings grew 10% for a ninth consecutive quarter of growth.",
+          "Non-GAAP operating margin reached a record 31.1% for the quarter."
+        ],
+        "antiDnaFlags": [
+          "modest total-revenue growth"
+        ],
+        "classificationHint": "platform_reacceleration",
+        "source": "NetApp fiscal Q3 2026 results, 2026-02-26",
+        "sourceUrl": "https://investors.netapp.com/news/news-details/2026/NetApp-Reports-Third-Quarter-of-Fiscal-Year-2026-Results/default.aspx"
+      }
     },
     {
       "ticker": "BE",
       "outcomeBucket": "top_gainer",
       "returnPct": 105.02,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-02-05",
+        "facts": [
+          "FY2025 revenue grew 37.3% and product/service revenue grew 35.5%.",
+          "Product backlog grew about 2.5x year over year.",
+          "Operating income and operating cash flow improved materially."
+        ],
+        "antiDnaFlags": [
+          "Q4 gross margin fell about 7.5 percentage points year over year"
+        ],
+        "classificationHint": "operating_acceleration",
+        "source": "Bloom Energy Q4/FY2025 results, 2026-02-05",
+        "sourceUrl": "https://investor.bloomenergy.com/press-releases/press-release-details/2026/Bloom-Energy-Reports-Fourth-Quarter-and-Full-Year-2025-Financial-Results-with-Record-Full-Year-Revenues/default.aspx"
+      }
     },
     {
       "ticker": "CNC",
       "outcomeBucket": "top_gainer",
       "returnPct": 91.61,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "mixed",
+        "inflectionExpectations": "turnaround-positive",
+        "knownAsOf": "2026-02-06",
+        "facts": [
+          "Q4 premium and service revenue grew 23% year over year.",
+          "Q4 health benefits ratio was 94.3%, materially worse than the prior-year quarter.",
+          "Q4 adjusted diluted loss was $1.19 per share.",
+          "2026 adjusted EPS guidance was greater than $3.00 versus $2.08 in 2025."
+        ],
+        "antiDnaFlags": [
+          "very high health-benefits ratio",
+          "recent adjusted loss"
+        ],
+        "classificationHint": "turnaround_rerating",
+        "source": "Centene 2025 results and 2026 guidance, 2026-02-06",
+        "sourceUrl": "https://investors.centene.com/2026-02-06-CENTENE-CORPORATION-REPORTS-2025-RESULTS-AND-ANNOUNCES-2026-GUIDANCE"
+      }
     },
     {
       "ticker": "SMCI",
       "outcomeBucket": "top_gainer",
       "returnPct": 79.58,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "exceptional-growth-high-risk",
+        "inflectionExpectations": "mixed",
+        "knownAsOf": "2026-02-03",
+        "facts": [
+          "Fiscal Q2 net sales were $12.7B versus $5.0B in Q1 and $5.7B a year earlier.",
+          "Gross margin fell to 6.3% from 9.3% in Q1 and 11.8% a year earlier.",
+          "Operating cash flow was negative $24M for the quarter."
+        ],
+        "antiDnaFlags": [
+          "severe gross-margin compression",
+          "negative operating cash flow"
+        ],
+        "classificationHint": "operating_acceleration_high_risk",
+        "source": "Supermicro fiscal Q2 2026 results, 2026-02-03",
+        "sourceUrl": "https://ir.supermicro.com/news/news-details/2026/Supermicro-Announces-Second-Quarter-Fiscal-Year-2026-Financial-Results/"
+      }
     },
     {
       "ticker": "ZBRA",
@@ -256,24 +399,70 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 73.57,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate",
+        "inflectionExpectations": "weak-to-neutral",
+        "knownAsOf": "2026-02-02",
+        "facts": [
+          "Q4 revenue grew 6% and organic revenue grew 4%.",
+          "Diagnostics organic revenue grew 7%, but adjusted operating margin declined.",
+          "FY2026 organic revenue growth guidance was only 2%-3%."
+        ],
+        "antiDnaFlags": [
+          "slow forward organic growth",
+          "margin pressure"
+        ],
+        "classificationHint": "turnaround_rerating",
+        "source": "Revvity Q4/FY2025 results, 2026-02-02",
+        "sourceUrl": "https://ir.revvity.com/news/investor-news/news-details/2026/Revvity-Announces-Financial-Results-for-the-Fourth-Quarter-and-Full-Year-of-2025/default.aspx"
+      }
     },
     {
       "ticker": "CRL",
       "outcomeBucket": "top_gainer",
       "returnPct": 69.77,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "weak",
+        "inflectionExpectations": "turnaround-possible",
+        "knownAsOf": "2026-02-18",
+        "facts": [
+          "Q4 revenue declined 0.8% year over year and organic revenue declined 2.6%.",
+          "The company reported a Q4 GAAP loss per share of $5.62."
+        ],
+        "antiDnaFlags": [
+          "organic revenue decline",
+          "GAAP loss"
+        ],
+        "classificationHint": "turnaround_rerating",
+        "source": "Charles River Laboratories Q4/FY2025 results, 2026-02-18",
+        "sourceUrl": "https://charlesriverlaboratories.gcs-web.com/news-releases/news-release-details/charles-river-laboratories-announces-fourth-quarter-and-full-14/"
+      }
     },
     {
       "ticker": "HPQ",
       "outcomeBucket": "top_gainer",
       "returnPct": 66.5,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate",
+        "inflectionExpectations": "mixed",
+        "knownAsOf": "2026-02-24",
+        "facts": [
+          "Fiscal Q1 revenue grew 6.9% year over year.",
+          "Non-GAAP EPS grew 9.5%, but GAAP EPS declined 1.7%.",
+          "GAAP operating margin declined by 1.0 percentage point."
+        ],
+        "antiDnaFlags": [
+          "operating-margin contraction"
+        ],
+        "classificationHint": "reacceleration",
+        "source": "HP fiscal Q1 2026 results, 2026-02-24",
+        "sourceUrl": "https://investor.hp.com/news-events/news/news-details/2026/HP-Inc--Reports-Fiscal-2026-First-Quarter-Results/default.aspx"
+      }
     },
     {
       "ticker": "CHTR",
@@ -323,24 +512,67 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 64.34,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-02-04",
+        "facts": [
+          "Fiscal Q3 net sales grew 8% and exceeded guidance.",
+          "The company raised full-year sales, adjusted operating margin and adjusted EPS guidance.",
+          "Adjusted operating margin reached a record 6.5%."
+        ],
+        "antiDnaFlags": [],
+        "classificationHint": "operating_acceleration",
+        "source": "Flex fiscal Q3 2026 results, 2026-02-04",
+        "sourceUrl": "https://investors.flex.com/financials/quarterly-results/default.aspx"
+      }
     },
     {
       "ticker": "MPC",
       "outcomeBucket": "top_gainer",
       "returnPct": 64.91,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong-cyclical",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-03",
+        "facts": [
+          "Q4 net income rose to $1.5B from $371M a year earlier.",
+          "Full-year refining utilization was 94% with 105% margin capture.",
+          "Cash from operations was $8.3B and capital returns were $4.5B."
+        ],
+        "antiDnaFlags": [
+          "refining-cycle sensitivity"
+        ],
+        "classificationHint": "cyclical_inflection",
+        "source": "Marathon Petroleum Q4/FY2025 results, 2026-02-03",
+        "sourceUrl": "https://ir.marathonpetroleum.com/investor/news-releases/news-details/2026/Marathon-Petroleum-Corp--Reports-Fourth-Quarter-and-Full-Year-2025-Results/default.aspx"
+      }
     },
     {
       "ticker": "ROL",
       "outcomeBucket": "bottom_loser",
       "returnPct": -43.06,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate-strong",
+        "inflectionExpectations": "mixed",
+        "knownAsOf": "2026-02-11",
+        "facts": [
+          "Q4 revenue grew 9.7%, with organic revenue growth of 5.7%.",
+          "Operating income grew 6.3%, but operating margin declined 60 basis points."
+        ],
+        "antiDnaFlags": [
+          "margin contraction",
+          "needs valuation stress test"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "Rollins Q4/FY2025 results, 2026-02-11",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/84839/000008483926000003/rol-20260211xex991.htm"
+      }
     },
     {
       "ticker": "ALB",
@@ -381,16 +613,47 @@
       "outcomeBucket": "bottom_loser",
       "returnPct": -38.63,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate-strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-03",
+        "facts": [
+          "Q4 sales grew 5%; adjusted EPS grew 9%.",
+          "Full-year adjusted EPS grew 14% and free cash flow increased.",
+          "2026 adjusted EPS guidance implied further growth."
+        ],
+        "antiDnaFlags": [
+          "low-single-digit sales growth",
+          "needs valuation/market-confirmation stress test"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "Pentair Q4/FY2025 results, 2026-02-03",
+        "sourceUrl": "https://investors.pentair.com/news-releases/news-release-details/pentair-reports-strong-fourth-quarter-and-full-year-2025-results"
+      }
     },
     {
       "ticker": "PODD",
       "outcomeBucket": "bottom_loser",
       "returnPct": -37.92,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "exceptional",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-02-18",
+        "facts": [
+          "Q4 revenue grew 31.2%, above the high end of guidance.",
+          "Gross margin and operating margin both improved.",
+          "FY2026 revenue growth was guided to 20%-22% with adjusted EPS growth above 25%."
+        ],
+        "antiDnaFlags": [
+          "needs valuation/expectations stress test"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "Insulet Q4/FY2025 results, 2026-02-18",
+        "sourceUrl": "https://investor.insulet.com/news/news-details/2026/Insulet-Reports-Fourth-Quarter-and-Full-Year-2025-Results/default.aspx"
+      }
     },
     {
       "ticker": "LULU",
@@ -449,40 +712,122 @@
       "outcomeBucket": "bottom_loser",
       "returnPct": -32.33,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "weak",
+        "inflectionExpectations": "weak",
+        "knownAsOf": "2026-01-29",
+        "facts": [
+          "Q4 net sales declined 9% year over year.",
+          "Volume declined 2% and local price declined 8%.",
+          "The company reported a $1.5B GAAP net loss."
+        ],
+        "antiDnaFlags": [
+          "revenue decline",
+          "price deterioration",
+          "GAAP loss",
+          "cyclical pressure"
+        ],
+        "classificationHint": "clear_reject",
+        "source": "Dow Q4 2025 results, 2026-01-29",
+        "sourceUrl": "https://investors.dow.com/en/news/news-details/2026/Dow-reports-fourth-quarter-2025-results/default.aspx"
+      }
     },
     {
       "ticker": "CSGP",
       "outcomeBucket": "bottom_loser",
       "returnPct": -32.08,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "strong-but-risky",
+        "knownAsOf": "2026-02-24",
+        "facts": [
+          "Q4 revenue grew 27%; full-year revenue grew 19%.",
+          "Adjusted EBITDA increased 83% for the full year.",
+          "Net new bookings reached a record $308M.",
+          "Net income was only $7M as acquisition costs weighed on GAAP results."
+        ],
+        "antiDnaFlags": [
+          "acquisition/integration complexity",
+          "needs valuation stress test"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "CoStar FY2025 results, 2026-02-24",
+        "sourceUrl": "https://investors.costargroup.com/news-releases/news-release-details/costar-group-full-year-2025-revenue-increased-19-year-over-year"
+      }
     },
     {
       "ticker": "LHX",
       "outcomeBucket": "bottom_loser",
       "returnPct": -31.52,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate-strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-01-29",
+        "facts": [
+          "FY2025 orders were $27.5B with 1.3x book-to-bill.",
+          "Operating cash flow and adjusted free cash flow both increased 21%.",
+          "Organic revenue grew 5% for the year."
+        ],
+        "antiDnaFlags": [
+          "reported GAAP margin pressure",
+          "portfolio/disposal complexity"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "L3Harris Q4/FY2025 results, 2026-01-29",
+        "sourceUrl": "https://investors.l3harris.com/news/news-details/2026/L3Harris-Technologies-Reports-Strong-Full-Year-and-Fourth-Quarter-2025-Results-Initiates-2026-Guidance/default.aspx"
+      }
     },
     {
       "ticker": "BSX",
       "outcomeBucket": "bottom_loser",
       "returnPct": -31.5,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-04",
+        "facts": [
+          "Q4 sales grew 15.9% reported and 12.7% organically.",
+          "Full-year sales grew 19.9% reported and 15.8% organically."
+        ],
+        "antiDnaFlags": [
+          "needs valuation/expectations stress test"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "Boston Scientific Q4/FY2025 results, 2026-02-04",
+        "sourceUrl": "https://news.bostonscientific.com/nterested-in-our-q4-2025-financial-results"
+      }
     },
     {
       "ticker": "TSCO",
       "outcomeBucket": "bottom_loser",
       "returnPct": -29.99,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "weak-to-moderate",
+        "inflectionExpectations": "weak",
+        "knownAsOf": "2026-01-29",
+        "facts": [
+          "Q4 net sales grew 3.3%, but comparable-store sales grew only 0.3%.",
+          "Management said Q4 results were below expectations and discretionary demand moderated.",
+          "FY2026 net sales guidance was 4%-6% with comps of 1%-3%."
+        ],
+        "antiDnaFlags": [
+          "below-expectation quarter",
+          "weak comparable sales",
+          "consumer discretionary pressure"
+        ],
+        "classificationHint": "clear_reject",
+        "source": "Tractor Supply Q4/FY2025 results, 2026-01-29",
+        "sourceUrl": "https://ir.tractorsupply.com/newsroom/news-releases/news-releases-details/2026/Tractor-Supply-Company-Reports-Fourth-Quarter-and-Fiscal-Year-2025-Financial-Results-Provides-Fiscal-Year-2026-Outlook/default.aspx"
+      }
     },
     {
       "ticker": "TPL",
@@ -529,16 +874,48 @@
       "outcomeBucket": "bottom_loser",
       "returnPct": -28.49,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate",
+        "inflectionExpectations": "mixed",
+        "knownAsOf": "2026-02-02",
+        "facts": [
+          "Q4 revenue grew 5%, or 3% adjusted for currency and commodities.",
+          "Q4 GAAP net income and operating income declined year over year.",
+          "The company was preparing a major business separation."
+        ],
+        "antiDnaFlags": [
+          "profit decline",
+          "separation/execution complexity"
+        ],
+        "classificationHint": "clear_or_borderline_reject",
+        "source": "Aptiv Q4/FY2025 results, 2026-02-02",
+        "sourceUrl": "https://ir.aptiv.com/news/news-details/2026/Aptiv-Reports-Fourth-Quarter-2025-Financial-Results/default.aspx"
+      }
     },
     {
       "ticker": "FIS",
       "outcomeBucket": "bottom_loser",
       "returnPct": -28.26,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate",
+        "inflectionExpectations": "mixed",
+        "knownAsOf": "2026-02-24",
+        "facts": [
+          "FY2025 adjusted revenue grew 6% and adjusted EPS grew 10%.",
+          "Adjusted free cash flow increased 18%.",
+          "2026 pro forma revenue growth guidance was 5.1%-5.7%, despite much higher reported growth from transaction effects."
+        ],
+        "antiDnaFlags": [
+          "transaction complexity",
+          "modest pro forma organic growth"
+        ],
+        "classificationHint": "clear_or_borderline_reject",
+        "source": "FIS FY2025 results and 2026 outlook, 2026-02-24",
+        "sourceUrl": "https://www.investor.fisglobal.com/news-releases/news-release-details/fis-reports-full-year-2025-results-and-introduces-2026-outlook/"
+      }
     },
     {
       "ticker": "NFLX",
@@ -588,7 +965,11 @@
     "Several major winners showed simultaneous operating acceleration and improving/raised outlooks before April 1.",
     "Several major losers already showed weak growth, margin deterioration, or soft forward guidance before April 1.",
     "Strong business DNA alone produced dangerous false positives: APP, FICO, and INTU require expectations, concentration/disruption, valuation, and market-confirmation gates.",
-    "Point-in-time valuation adds useful separation in at least one early pair: DELL traded near 19.4x trailing earnings on April 1 while APP carried a roughly 24.8x price/sales multiple at March 31 despite both showing strong operating growth."
+    "Point-in-time valuation adds useful separation in at least one early pair: DELL traded near 19.4x trailing earnings on April 1 while APP carried a roughly 24.8x price/sales multiple at March 31 despite both showing strong operating growth.",
+    "The loser side contains several genuinely strong businesses (PODD, CSGP, BSX, ROL, APP), proving that Business DNA alone is insufficient.",
+    "Clear losers often advertised deterioration before April (DOW, CHTR, LULU, TSCO), supporting explicit Anti-DNA penalties.",
+    "Several winners were not classic growth stories (ILMN, HUM, CRL, CNC), so V2 needs turnaround/catalyst archetypes rather than one universal growth template.",
+    "The strongest clean operating-acceleration winners (MU, SNDK, DELL, AMD, CRWD, FLEX, BE) combined strong current growth with visible forward demand or raised/improving expectations."
   ],
   "targetDesign": {
     "totalStocks": 100,
@@ -596,5 +977,12 @@
     "extremeLosers": 25,
     "matchedControls": 50,
     "note": "The 50 extreme outcomes define obvious successes/failures. The 50 matched controls will test whether V2 separates true Monster setups from plausible look-alikes."
+  },
+  "researchProgress": {
+    "phase": "extreme_outcomes_preperiod_reconstruction",
+    "reviewedOf50": 37,
+    "marketConfirmationStillPending": true,
+    "valuationStressTestsStillPartial": true,
+    "matchedControlsStillToAdd": 50
   }
 }
