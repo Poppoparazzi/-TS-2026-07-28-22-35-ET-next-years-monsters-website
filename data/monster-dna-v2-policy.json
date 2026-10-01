@@ -1,0 +1,83 @@
+{
+  "ts": "2026-10-01 07:15 ET",
+  "version": "monster-dna-v2.0-prospective",
+  "status": "frozen-methodology-before-next-cohort",
+  "purpose": "Separate strong-business DNA from current expectations and market setup, using both winner traits and loser/non-winner traits.",
+  "score": {
+    "maxPrePenalty": 100,
+    "pillars": {
+      "businessDna": {
+        "weight": 40,
+        "criteria": {
+          "revenueGrowthAcceleration": 8,
+          "earningsFreeCashFlowInflection": 7,
+          "marginScalabilityTrajectory": 6,
+          "demandAdoptionBacklogCustomerGrowth": 7,
+          "competitiveAdvantageDifferentiation": 5,
+          "balanceSheetResilience": 4,
+          "capitalEfficiencyCashConversion": 3
+        }
+      },
+      "inflectionExpectations": {
+        "weight": 35,
+        "criteria": {
+          "latestQuarterAcceleration": 8,
+          "managementGuidanceDirection": 8,
+          "consensusEstimateRevisionDirection": 6,
+          "valuationVersusGrowth": 6,
+          "earningsSurpriseQuality": 4,
+          "expectationsGap": 3
+        }
+      },
+      "marketConfirmation": {
+        "weight": 25,
+        "criteria": {
+          "relativeStrength3mVsSpy": 6,
+          "relativeStrength6mVsSpy": 5,
+          "relativeStrength12mVsSpy": 3,
+          "priceVolumeAccumulation": 5,
+          "drawdownBaseExhaustion": 3,
+          "sectorMarketRegime": 3
+        }
+      }
+    },
+    "antiDnaMaxPenalty": 30,
+    "antiDna": {
+      "materialRevenueDeceleration": 8,
+      "marginDeterioration": 6,
+      "guidanceCut": 8,
+      "broadEstimateCuts": 6,
+      "extremeValuationWithoutEstimateUpgrades": 6,
+      "dilutionFinancingDependency": 5,
+      "customerConcentration": 4,
+      "priceRelativeStrengthTrendBreak": 6,
+      "deterioratingCashConversion": 5
+    }
+  },
+  "hardGates": {
+    "activeAdjustedScoreMin": 80,
+    "businessDnaMin": 70,
+    "inflectionExpectationsMin": 65,
+    "marketConfirmationMin": 55,
+    "antiDnaPenaltyMax": 15,
+    "requireCurrentEarningsGuidanceEvidence": true,
+    "requireCurrentValuationExpectationsEvidence": true,
+    "requireCurrentMarketEvidence": true,
+    "rejectUnresolvedCriticalEvidenceConflict": true
+  },
+  "forwardTest": {
+    "primaryHorizonDays": 90,
+    "diagnosticHorizonDays": 60,
+    "primaryHitDefinition": {
+      "positiveTotalReturn": true,
+      "outperformSpy": true
+    },
+    "targetPrimaryHitRate": 0.75,
+    "cohortSize": 15,
+    "minimumProspectiveCohortsBeforeReliabilityClaim": 3,
+    "minimumProspectiveCandidatesBeforeReliabilityClaim": 45,
+    "freezeBeforeOutcomeMeasurement": true,
+    "noMidCohortRuleChanges": true
+  },
+  "historicalRule": "Never rewrite August 8, 2026 Version 1 scores after observing outcomes."
+}

@@ -1,0 +1,600 @@
+{
+  "ts": "2026-10-01 08:52 ET",
+  "dataset": "monster-dna-v2-april-2026-historical-lab",
+  "status": "development_set_in_progress",
+  "warning": "Outcome buckets are known. This file is for retrospective feature discovery and stress testing, not proof of predictive accuracy.",
+  "window": {
+    "start": "2026-04-01",
+    "end": "2026-10-01"
+  },
+  "universePhase1": "S&P 500 liquid-stock laboratory",
+  "targetPhase2": "Expand to at least 100 U.S.-listed common stocks after liquidity/security-type filters; exclude warrants, shell-like listings, and obvious reverse-split distortions.",
+  "methodology": "Use only evidence public on or before 2026-04-01 when reconstructing Monster DNA V2 inputs.",
+  "realizedReturnSources": {
+    "top": "StatMuse S&P 500 best-performing stocks, 2026-04-01 to 2026-10-01",
+    "bottom": "StatMuse S&P 500 worst-performing stocks, 2026-04-01 to 2026-10-01"
+  },
+  "counts": {
+    "seededTopGainers": 25,
+    "seededBottomLosers": 25,
+    "seededTotal": 50,
+    "initialPreperiodEvidenceReviewed": 13,
+    "pointInTimeValuationReviewed": 4
+  },
+  "rows": [
+    {
+      "ticker": "MRNA",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 272.91,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "DELL",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 223.7,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-02-26",
+        "facts": [
+          "FY26 revenue +19% year over year; Q4 revenue +39%.",
+          "Record operating cash flow.",
+          "FY27 revenue growth guided to +23% at midpoint; EPS growth guided faster than revenue.",
+          "AI backlog exiting FY26 was $43B."
+        ],
+        "source": "Dell Technologies Q4/FY26 results, 2026-02-26",
+        "lesson": "Strong acceleration plus raised growth outlook came with a far less demanding earnings multiple than several false-positive controls."
+      },
+      "valuationSnapshot": {
+        "valuationAsOf": "2026-04-01",
+        "trailingPE": 19.4,
+        "valuationRead": "reasonable-relative-to-growth",
+        "valuationSource": "FinanceCharts historical P/E"
+      }
+    },
+    {
+      "ticker": "MU",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 205.31,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "exceptional",
+        "inflectionExpectations": "exceptional",
+        "knownAsOf": "2026-03-18",
+        "facts": [
+          "Fiscal Q2 revenue $23.86B vs $13.64B prior quarter and $8.05B year earlier.",
+          "Operating cash flow $11.90B vs $8.41B prior quarter.",
+          "Fiscal Q3 revenue guided to $33.5B ± $0.75B with ~81% gross margin."
+        ],
+        "source": "Micron fiscal Q2 2026 results, 2026-03-18"
+      }
+    },
+    {
+      "ticker": "AMD",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 194.7,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "INTC",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 167.18,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CRWD",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 166.92,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-03-03",
+        "facts": [
+          "Ending ARR +24% to $5.25B.",
+          "Net new ARR +47% to record $331M.",
+          "Positive GAAP net income and record operating/free cash flow."
+        ],
+        "source": "CrowdStrike Q4/FY26 results, 2026-03-03"
+      }
+    },
+    {
+      "ticker": "SNDK",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 166.74,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "HPE",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 166,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-03-09",
+        "facts": [
+          "Revenue +18% year over year.",
+          "Gross margin expanded sharply; cash flow improved.",
+          "Orders increased double digits across all segments.",
+          "Company raised fiscal 2026 outlook."
+        ],
+        "source": "HPE fiscal Q1 2026 results, 2026-03-09"
+      }
+    },
+    {
+      "ticker": "MRVL",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 162.26,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "PANW",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 146.09,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-17",
+        "facts": [
+          "Revenue +15% year over year.",
+          "Next-Generation Security ARR +33%.",
+          "Remaining performance obligation +23%."
+        ],
+        "source": "Palo Alto Networks fiscal Q2 2026 results, 2026-02-17"
+      }
+    },
+    {
+      "ticker": "STX",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 132.98,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "DDOG",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 127.2,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ILMN",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 121.39,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "HUM",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 120.41,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "FTNT",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 118.61,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-05",
+        "facts": [
+          "Revenue +15%; product revenue +20%.",
+          "Billings +18%; Unified SASE billings +40%.",
+          "GAAP operating margin 33%; free cash flow remained strong."
+        ],
+        "source": "Fortinet Q4/FY25 results, 2026-02-05"
+      }
+    },
+    {
+      "ticker": "NTAP",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 106.85,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "BE",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 105.02,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CNC",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 91.61,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "SMCI",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 79.58,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ZBRA",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 78.69,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "RVTY",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 73.57,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CRL",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 69.77,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "HPQ",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 66.5,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CHTR",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -47.98,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "weak",
+        "inflectionExpectations": "weak",
+        "knownAsOf": "2026-01-30",
+        "facts": [
+          "Q4 internet customers declined by 119,000.",
+          "Q4 revenue declined 2.3% year over year.",
+          "Q4 adjusted EBITDA declined 1.2% year over year."
+        ],
+        "source": "Charter Q4/FY25 results, 2026-01-30"
+      }
+    },
+    {
+      "ticker": "FICO",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -44.06,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "positive-but-concentrated",
+        "knownAsOf": "2026-01-28",
+        "facts": [
+          "Q1 revenue +16%; Scores revenue +29%.",
+          "Software revenue only +2%; non-platform ARR declined 8%.",
+          "Major earnings dependence on mortgage scoring economics creates concentration/regulatory exposure."
+        ],
+        "source": "FICO fiscal Q1 2026 results, 2026-01-28",
+        "lesson": "Strong reported growth coexisted with business-line concentration and a premium multiple; policy/competitive exposure belongs in Anti-DNA."
+      },
+      "valuationSnapshot": {
+        "valuationAsOf": "2026-04-01",
+        "trailingPE": 33.64,
+        "valuationRead": "premium-with-concentration-risk",
+        "valuationSource": "FinanceCharts historical P/E"
+      }
+    },
+    {
+      "ticker": "FLEX",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 64.34,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "MPC",
+      "outcomeBucket": "top_gainer",
+      "returnPct": 64.91,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ROL",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -43.06,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ALB",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -41.76,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "mixed",
+        "inflectionExpectations": "mixed",
+        "knownAsOf": "2026-02-11",
+        "facts": [
+          "Q4 net sales +16% and adjusted EBITDA +7%.",
+          "Company still reported a large GAAP net loss; commodity/cycle exposure remains material."
+        ],
+        "source": "Albemarle Q4/FY25 results, 2026-02-11"
+      }
+    },
+    {
+      "ticker": "ZTS",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -40.25,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate",
+        "inflectionExpectations": "weak-to-neutral",
+        "knownAsOf": "2026-02-12",
+        "facts": [
+          "Q4 revenue +3%; full-year revenue +2%.",
+          "2026 organic operational revenue guidance only +3% to +5%."
+        ],
+        "source": "Zoetis Q4/FY25 results, 2026-02-12"
+      }
+    },
+    {
+      "ticker": "PNR",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -38.63,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "PODD",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -37.92,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "LULU",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -36.27,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "deteriorating",
+        "inflectionExpectations": "weak",
+        "knownAsOf": "2026-03-17",
+        "facts": [
+          "Q4 revenue +1%; Americas revenue -4%.",
+          "Gross margin -550 bps; operating margin -660 bps.",
+          "FY25 EPS declined; 2026 revenue guidance only +2% to +4%."
+        ],
+        "source": "lululemon Q4/FY25 results, 2026-03-17"
+      }
+    },
+    {
+      "ticker": "INTU",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -35.59,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "mixed",
+        "knownAsOf": "2026-03-05",
+        "facts": [
+          "Fiscal Q2 revenue +17%; operating income +44%; EPS +49%.",
+          "Full-year guidance was reiterated rather than raised.",
+          "Q3 revenue growth guidance was ~10%.",
+          "Contemporaneous moat review highlighted elevated uncertainty from AI disruption."
+        ],
+        "source": "Intuit fiscal Q2 2026 results plus 2026-03-05 contemporaneous moat-risk review",
+        "lesson": "Strong reported fundamentals were not enough; forward growth deceleration and disruption uncertainty must affect Inflection & Expectations."
+      },
+      "valuationSnapshot": {
+        "valuationAsOf": "2026-04-01",
+        "trailingPE": 27.62,
+        "valuationRead": "premium-plus-disruption-uncertainty",
+        "valuationSource": "FinanceCharts historical P/E"
+      }
+    },
+    {
+      "ticker": "NRG",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -34.91,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "DOW",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -32.33,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CSGP",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -32.08,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "LHX",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -31.52,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "BSX",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -31.5,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "TSCO",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -29.99,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "TPL",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -29.71,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "PCG",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -29.67,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "LVS",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -29.36,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "NOC",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -29.23,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "HII",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -28.99,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "APTV",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -28.49,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "FIS",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -28.26,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "NFLX",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -27.87,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "APP",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -27.75,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "exceptional",
+        "inflectionExpectations": "strong-but-needs-expectations-gate",
+        "knownAsOf": "2026-02-11",
+        "facts": [
+          "Q4 revenue +66%; FY25 revenue +70%.",
+          "Q4 net income +84%; adjusted EBITDA +82%.",
+          "This later six-month loser is a critical false-positive stress case: strong operating DNA alone was not enough."
+        ],
+        "source": "AppLovin Q4/FY25 results, 2026-02-11",
+        "lesson": "Exceptional business growth was paired with a very high sales multiple; Version 2 must prevent raw growth from overpowering expectations/valuation risk."
+      },
+      "valuationSnapshot": {
+        "valuationAsOf": "2026-03-31",
+        "trailingPE": 39.64,
+        "forwardPE": 25.45,
+        "priceSales": 24.83,
+        "valuationRead": "very-demanding-sales-multiple",
+        "valuationSource": "Yahoo Finance historical valuation table"
+      }
+    },
+    {
+      "ticker": "LYB",
+      "outcomeBucket": "bottom_loser",
+      "returnPct": -26.65,
+      "evidenceCutoff": "2026-04-01",
+      "v2EvidenceStatus": "pending",
+      "preliminary": null
+    }
+  ],
+  "preliminaryLessons": [
+    "Several major winners showed simultaneous operating acceleration and improving/raised outlooks before April 1.",
+    "Several major losers already showed weak growth, margin deterioration, or soft forward guidance before April 1.",
+    "Strong business DNA alone produced dangerous false positives: APP, FICO, and INTU require expectations, concentration/disruption, valuation, and market-confirmation gates.",
+    "Point-in-time valuation adds useful separation in at least one early pair: DELL traded near 19.4x trailing earnings on April 1 while APP carried a roughly 24.8x price/sales multiple at March 31 despite both showing strong operating growth."
+  ],
+  "targetDesign": {
+    "totalStocks": 100,
+    "extremeWinners": 25,
+    "extremeLosers": 25,
+    "matchedControls": 50,
+    "note": "The 50 extreme outcomes define obvious successes/failures. The 50 matched controls will test whether V2 separates true Monster setups from plausible look-alikes."
+  }
+}
