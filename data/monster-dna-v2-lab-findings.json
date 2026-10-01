@@ -1,0 +1,49 @@
+{
+  "ts": "2026-10-01 10:38 ET",
+  "dataset": "monster-dna-v2-april-2026-historical-lab",
+  "evidenceCutoff": "2026-04-01",
+  "extremeOutcomeSample": {
+    "winners": 25,
+    "losers": 25,
+    "winnerAverageReturnPct": 131.7296,
+    "loserAverageReturnPct": -33.7532
+  },
+  "preliminaryFeatureCounts": {
+    "winners": {
+      "strongBusinessDna": 17,
+      "weakBusinessDna": 3,
+      "strongInflectionExpectations": 10,
+      "weakInflectionExpectations": 2,
+      "averageAntiDnaFlags": 1.24
+    },
+    "losers": {
+      "strongBusinessDna": 14,
+      "weakBusinessDna": 5,
+      "strongInflectionExpectations": 4,
+      "weakInflectionExpectations": 6,
+      "averageAntiDnaFlags": 1.72
+    }
+  },
+  "interpretation": [
+    "Business strength alone is a weak discriminator: 17/25 major winners and 14/25 major losers had strong or exceptional business DNA.",
+    "Inflection/expectations separate the groups more clearly in this first pass: 10/25 winners versus 4/25 losers were tagged strong or exceptional.",
+    "Losers carried more Anti-DNA flags on average (1.72 versus 1.24), but the gap is not large enough to rely on raw flag count alone.",
+    "The hardest cases are strong-business losers such as APP, PODD, CSGP, BSX, NFLX, HII, NRG and FICO. These require valuation, expectations, event/concentration risk and market-confirmation analysis.",
+    "Some major winners, including MRNA and INTC, were catalyst/turnaround cases and would be missed by a pure high-growth template. Monster archetype must be explicit.",
+    "Price momentum alone also needs a quality check: a strong pre-period price move can reflect genuine acceleration or late-cycle/exhaustion. Momentum should count only when aligned with improving business/expectations evidence."
+  ],
+  "v2RefinementsToTest": [
+    "Replace generic Market Confirmation with Market Confirmation & Alignment.",
+    "Add an exhaustion penalty when price strength is extreme but business/expectations are deteriorating.",
+    "Increase importance of latest-quarter acceleration and guidance/expectation change relative to absolute historical growth.",
+    "Treat valuation as an expectations burden, not a standalone cheap/expensive score.",
+    "Use archetype-specific evidence for Operating Acceleration, Platform Reacceleration, Turnaround/Re-rating, Catalyst/Event and Cyclical Inflection cases.",
+    "Require a reason-for-move thesis that is supported by evidence available at the historical cutoff."
+  ],
+  "controls": {
+    "selected": 50,
+    "selectionTiming": "before return retrieval",
+    "returnRetrievalStatus": "pending",
+    "preperiodEvidenceStatus": "pending"
+  }
+}
