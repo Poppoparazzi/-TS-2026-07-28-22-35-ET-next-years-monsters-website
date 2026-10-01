@@ -1,5 +1,5 @@
 {
-  "ts": "2026-10-01 08:20 ET",
+  "ts": "2026-10-01 08:38 ET",
   "dataset": "monster-dna-v2-april-2026-historical-lab",
   "status": "development_set_in_progress",
   "warning": "Outcome buckets are known. This file is for retrospective feature discovery and stress testing, not proof of predictive accuracy.",
@@ -18,7 +18,8 @@
     "seededTopGainers": 23,
     "seededBottomLosers": 25,
     "seededTotal": 48,
-    "initialPreperiodEvidenceReviewed": 13
+    "initialPreperiodEvidenceReviewed": 13,
+    "pointInTimeValuationReviewed": 4
   },
   "rows": [
     {
@@ -45,7 +46,14 @@
           "FY27 revenue growth guided to +23% at midpoint; EPS growth guided faster than revenue.",
           "AI backlog exiting FY26 was $43B."
         ],
-        "source": "Dell Technologies Q4/FY26 results, 2026-02-26"
+        "source": "Dell Technologies Q4/FY26 results, 2026-02-26",
+        "lesson": "Strong acceleration plus raised growth outlook came with a far less demanding earnings multiple than several false-positive controls."
+      },
+      "valuationSnapshot": {
+        "valuationAsOf": "2026-04-01",
+        "trailingPE": 19.4,
+        "valuationRead": "reasonable-relative-to-growth",
+        "valuationSource": "FinanceCharts historical P/E"
       }
     },
     {
@@ -300,7 +308,14 @@
           "Software revenue only +2%; non-platform ARR declined 8%.",
           "Major earnings dependence on mortgage scoring economics creates concentration/regulatory exposure."
         ],
-        "source": "FICO fiscal Q1 2026 results, 2026-01-28"
+        "source": "FICO fiscal Q1 2026 results, 2026-01-28",
+        "lesson": "Strong reported growth coexisted with business-line concentration and a premium multiple; policy/competitive exposure belongs in Anti-DNA."
+      },
+      "valuationSnapshot": {
+        "valuationAsOf": "2026-04-01",
+        "trailingPE": 33.64,
+        "valuationRead": "premium-with-concentration-risk",
+        "valuationSource": "FinanceCharts historical P/E"
       }
     },
     {
@@ -395,7 +410,14 @@
           "Q3 revenue growth guidance was ~10%.",
           "Contemporaneous moat review highlighted elevated uncertainty from AI disruption."
         ],
-        "source": "Intuit fiscal Q2 2026 results plus 2026-03-05 contemporaneous moat-risk review"
+        "source": "Intuit fiscal Q2 2026 results plus 2026-03-05 contemporaneous moat-risk review",
+        "lesson": "Strong reported fundamentals were not enough; forward growth deceleration and disruption uncertainty must affect Inflection & Expectations."
+      },
+      "valuationSnapshot": {
+        "valuationAsOf": "2026-04-01",
+        "trailingPE": 27.62,
+        "valuationRead": "premium-plus-disruption-uncertainty",
+        "valuationSource": "FinanceCharts historical P/E"
       }
     },
     {
@@ -525,7 +547,16 @@
           "Q4 net income +84%; adjusted EBITDA +82%.",
           "This later six-month loser is a critical false-positive stress case: strong operating DNA alone was not enough."
         ],
-        "source": "AppLovin Q4/FY25 results, 2026-02-11"
+        "source": "AppLovin Q4/FY25 results, 2026-02-11",
+        "lesson": "Exceptional business growth was paired with a very high sales multiple; Version 2 must prevent raw growth from overpowering expectations/valuation risk."
+      },
+      "valuationSnapshot": {
+        "valuationAsOf": "2026-03-31",
+        "trailingPE": 39.64,
+        "forwardPE": 25.45,
+        "priceSales": 24.83,
+        "valuationRead": "very-demanding-sales-multiple",
+        "valuationSource": "Yahoo Finance historical valuation table"
       }
     },
     {
@@ -536,5 +567,11 @@
       "v2EvidenceStatus": "pending",
       "preliminary": null
     }
+  ],
+  "preliminaryLessons": [
+    "Several major winners showed simultaneous operating acceleration and improving/raised outlooks before April 1.",
+    "Several major losers already showed weak growth, margin deterioration, or soft forward guidance before April 1.",
+    "Strong business DNA alone produced dangerous false positives: APP, FICO, and INTU require expectations, concentration/disruption, valuation, and market-confirmation gates.",
+    "Point-in-time valuation adds useful separation in at least one early pair: DELL traded near 19.4x trailing earnings on April 1 while APP carried a roughly 24.8x price/sales multiple at March 31 despite both showing strong operating growth."
   ]
 }
