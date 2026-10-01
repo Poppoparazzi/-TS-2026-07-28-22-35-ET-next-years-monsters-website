@@ -1,0 +1,13 @@
+{
+  "ts": "2026-10-01 07:15 ET",
+  "methodologyVersion": "monster-dna-v2.0-prospective",
+  "cohortStatus": "NOT_YET_FROZEN",
+  "cohortFrozenAt": null,
+  "benchmark": "SPY",
+  "primaryHorizonDays": 90,
+  "diagnosticHorizonDays": 60,
+  "primaryHitDefinition": "90-day stock return > 0 AND 90-day stock return > SPY return over the same interval",
+  "validationTarget": "At least 12 of 15 primary hits for a cohort; no reliability claim until at least 3 frozen prospective cohorts / 45 candidates.",
+  "candidates": [],
+  "note": "Populate only after Version 2 evidence inputs are implemented and the cohort is frozen. Do not backfill winners after outcomes are known."
+}
