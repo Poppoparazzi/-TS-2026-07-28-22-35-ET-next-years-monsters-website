@@ -1,5 +1,5 @@
 {
-  "ts": "2026-10-01 10:05 ET",
+  "ts": "2026-10-01 10:25 ET",
   "dataset": "monster-dna-v2-april-2026-historical-lab",
   "status": "development_set_in_progress",
   "warning": "Outcome buckets are known. This file is for retrospective feature discovery and stress testing, not proof of predictive accuracy.",
@@ -17,9 +17,10 @@
   "counts": {
     "seededTopGainers": 25,
     "seededBottomLosers": 25,
-    "seededTotal": 50,
+    "seededTotal": 100,
     "initialPreperiodEvidenceReviewed": 50,
-    "pointInTimeValuationReviewed": 4
+    "pointInTimeValuationReviewed": 4,
+    "matchedControls": 50
   },
   "rows": [
     {
@@ -1179,6 +1180,556 @@
         "source": "LyondellBasell FY2025 results, 2026-01-30",
         "sourceUrl": "https://investors.lyondellbasell.com/news/news-details/2026/LyondellBasell-reports-2025-earnings/default.aspx"
       }
+    },
+    {
+      "ticker": "NVDA",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "AVGO",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "QCOM",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "TXN",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "AMAT",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "LRCX",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "KLAC",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "WDC",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ON",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "MPWR",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "semis_storage",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ANET",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CSCO",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ORCL",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "IBM",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CRM",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "NOW",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "SNPS",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CDNS",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "AKAM",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "GDDY",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "software_network",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "UNH",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ELV",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CI",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CVS",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "TMO",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "DHR",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "REGN",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "VRTX",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ISRG",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "MDT",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "healthcare",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CAT",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "ETN",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "VRT",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "PWR",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "GE",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "HON",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "EMR",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "XOM",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "CVX",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "COP",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "industrial_energy",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "WMT",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "COST",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "TGT",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "MCD",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "SBUX",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "V",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "MA",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "GOOGL",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "META",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
+    },
+    {
+      "ticker": "DIS",
+      "outcomeBucket": "matched_control",
+      "returnPct": null,
+      "evidenceCutoff": "2026-04-01",
+      "peerGroup": "consumer_platform",
+      "controlSelectionRule": "Selected before outcome retrieval as a liquid S&P 500 peer/control spanning sectors represented by the extreme-outcome set.",
+      "outcomeStatus": "return_pending",
+      "v2EvidenceStatus": "control_selected_return_pending",
+      "preliminary": null
     }
   ],
   "preliminaryLessons": [
@@ -1199,13 +1750,16 @@
     "extremeWinners": 25,
     "extremeLosers": 25,
     "matchedControls": 50,
-    "note": "The 50 extreme outcomes define obvious successes/failures. The 50 matched controls will test whether V2 separates true Monster setups from plausible look-alikes."
+    "note": "The 50 extreme outcomes define obvious successes/failures. The 50 matched controls will test whether V2 separates true Monster setups from plausible look-alikes.",
+    "status": "100_stock_lab_roster_complete"
   },
   "researchProgress": {
-    "phase": "extreme_outcomes_preperiod_reconstruction_complete",
-    "reviewedOf50": 50,
+    "phase": "100_stock_roster_complete",
+    "reviewedExtremeOutcomes": 50,
+    "selectedMatchedControls": 50,
+    "controlReturnsStillToRetrieve": 50,
+    "controlPreperiodEvidenceStillToReview": 50,
     "marketConfirmationStillPending": true,
-    "valuationStressTestsStillPartial": true,
-    "matchedControlsStillToAdd": 50
+    "valuationStressTestsStillPartial": true
   }
 }
