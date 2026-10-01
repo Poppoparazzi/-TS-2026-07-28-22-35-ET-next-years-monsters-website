@@ -1,6 +1,6 @@
 # START HERE — Next Year’s Monsters™ Website
 
-<!-- TS: 2026-08-02 22:17 ET -->
+<!-- TS: 2026-10-01 07:25 ET -->
 
 This file is the permanent starting point for every future ChatGPT or Codex session working on this website.
 
@@ -25,9 +25,25 @@ Open and read these files before making any changes:
 3. `BULK_2000_PLAN.md`
 4. `RENDER_DEPLOYMENT_REQUIRED.md`
 5. `CONTROLLED_2000_ROLLOUT.md`
-6. The latest relevant files, workflow results, Render production status, commits, and open pull requests
+6. `MONSTER_DNA_V2.md`
+7. `data/monster-dna-v2-policy.json`
+8. `data/monster-dna-v2-forward-test.json`
+9. The latest relevant files, workflow results, Render production status, commits, and open pull requests
 
 Do not rely on prior chat memory as the source of truth. The repository, workflow results, and verified production endpoints are the source of truth.
+
+## October 1, 2026 methodology reset — Monster DNA V2
+
+- The August 8, 2026 Monster Hunt scores are frozen historical records. Never rewrite them after seeing subsequent returns.
+- The first retrospective check showed that a high fingerprint score alone did not reliably predict the next stock move. CRDO at 94 is the key stress-test failure; strong later winners also appeared lower in the original Top 15.
+- Version 2 deliberately studies both sides of the historical sample: what pre-breakout winners had **and what similar non-winners lacked or carried as negative evidence**.
+- Version 2 has three independent pillars: Business DNA (40%), Inflection & Expectations (35%), and Market Confirmation (25%), followed by explicit Anti-DNA penalties.
+- A weighted average cannot hide a failed pillar. Active Monster status requires an adjusted score of at least 80 plus every hard gate in `data/monster-dna-v2-policy.json`.
+- The next cohort must be frozen prospectively before outcomes are measured. The 60-day checkpoint is diagnostic only; the 90-day checkpoint is the primary evaluation.
+- A primary 90-day hit requires both a positive stock return and outperformance versus SPY over the same interval.
+- The research target is at least 75% primary hits (12 of 15), but this is a validation target, not a promise. Do not claim reliable predictive power until at least three frozen prospective cohorts / 45 candidates have completed without post-hoc rule changes.
+- Version 2 is not yet wired into production rating generation. The policy and hard-gate evaluator are being implemented on branch `feature/monster-dna-v2-forward-test-20261001` before any public score is changed.
+
 
 ## Current verified production status
 
