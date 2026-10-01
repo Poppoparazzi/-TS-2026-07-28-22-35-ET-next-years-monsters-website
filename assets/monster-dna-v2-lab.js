@@ -17,23 +17,34 @@
       const rows = Array.isArray(data.rows) ? data.rows : [];
       const winners = rows.filter((row) => row.outcomeBucket === "top_gainer").length;
       const losers = rows.filter((row) => row.outcomeBucket === "bottom_loser").length;
+      const controls = rows.filter((row) => row.outcomeBucket === "matched_control").length;
       const totalEl = document.querySelector("[data-lab-total]");
       const winnersEl = document.querySelector("[data-lab-winners]");
       const losersEl = document.querySelector("[data-lab-losers]");
       if (totalEl) totalEl.textContent = String(rows.length);
       if (winnersEl) winnersEl.textContent = String(winners);
       if (losersEl) losersEl.textContent = String(losers);
+      const controlsEl = document.querySelector("[data-lab-controls]");
+      if (controlsEl) controlsEl.textContent = String(controls);
 
       tbody.innerHTML = rows.map((row) => {
         const move = Number(row.returnPct);
-        const positive = Number.isFinite(move) && move >= 0;
+        const hasReturn = row.returnPct !== null && row.returnPct !== undefined && Number.isFinite(move);
+        const positive = hasReturn && move >= 0;
         const evidenceStatus = row.v2EvidenceStatus === "initial_preperiod_review"
           ? "INITIAL REVIEW COMPLETE"
-          : "RECONSTRUCTION PENDING";
+          : row.outcomeBucket === "matched_control"
+            ? "CONTROL SELECTED · RETURN/EVIDENCE PENDING"
+            : "RECONSTRUCTION PENDING";
+        const groupLabel = row.outcomeBucket === "top_gainer"
+          ? "MAJOR WINNER"
+          : row.outcomeBucket === "bottom_loser"
+            ? "MAJOR LOSER"
+            : "MATCHED CONTROL";
         return `<tr>
           <td><strong>${esc(row.ticker)}</strong></td>
-          <td>${row.outcomeBucket === "top_gainer" ? "MAJOR WINNER" : "MAJOR LOSER"}</td>
-          <td class="${positive ? "lab-return-pos" : "lab-return-neg"}">${positive ? "+" : ""}${Number.isFinite(move) ? move.toFixed(2) : "—"}%</td>
+          <td>${groupLabel}</td>
+          <td class="${hasReturn ? (positive ? "lab-return-pos" : "lab-return-neg") : ""}">${hasReturn ? `${positive ? "+" : ""}${move.toFixed(2)}%` : "PENDING"}</td>
           <td class="lab-status">${evidenceStatus}</td>
         </tr>`;
       }).join("");
