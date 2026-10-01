@@ -1,5 +1,5 @@
 {
-  "ts": "2026-10-01 09:42 ET",
+  "ts": "2026-10-01 10:05 ET",
   "dataset": "monster-dna-v2-april-2026-historical-lab",
   "status": "development_set_in_progress",
   "warning": "Outcome buckets are known. This file is for retrospective feature discovery and stress testing, not proof of predictive accuracy.",
@@ -18,7 +18,7 @@
     "seededTopGainers": 25,
     "seededBottomLosers": 25,
     "seededTotal": 50,
-    "initialPreperiodEvidenceReviewed": 37,
+    "initialPreperiodEvidenceReviewed": 50,
     "pointInTimeValuationReviewed": 4
   },
   "rows": [
@@ -27,8 +27,26 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 272.91,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "weak-operating-high-catalyst",
+        "inflectionExpectations": "catalyst-heavy",
+        "knownAsOf": "2026-02-13",
+        "facts": [
+          "Q4 revenue was about $0.7B and the company reported a GAAP net loss of about $0.8B.",
+          "Management reiterated a plan for up to 10% revenue growth in 2026 while reducing operating expense.",
+          "Multiple 2026 pipeline milestones were visible, including norovirus Phase 3 data and oncology programs.",
+          "The U.S. FDA had issued a Refusal-to-File letter for the influenza vaccine, creating explicit regulatory risk."
+        ],
+        "antiDnaFlags": [
+          "large GAAP losses",
+          "regulatory risk",
+          "binary clinical/catalyst dependence"
+        ],
+        "classificationHint": "catalyst_event",
+        "source": "Moderna Q4/FY2025 results, 2026-02-13",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1682852/000168285226000015/exhibit9912025q4pressrelea.htm"
+      }
     },
     {
       "ticker": "DELL",
@@ -103,8 +121,27 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 167.18,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "weak-to-mixed",
+        "inflectionExpectations": "weak-fundamentals-strong-catalyst",
+        "knownAsOf": "2026-01-22",
+        "facts": [
+          "Q4 revenue declined 4% year over year and full-year revenue was flat.",
+          "Q4 GAAP gross margin fell 3.1 percentage points year over year.",
+          "Q1 2026 guidance called for $11.7B-$12.7B revenue and break-even non-GAAP EPS.",
+          "Management nevertheless described strong data-center demand and improving supply later in 2026."
+        ],
+        "antiDnaFlags": [
+          "revenue decline",
+          "gross-margin contraction",
+          "weak near-term guidance",
+          "execution risk"
+        ],
+        "classificationHint": "turnaround_catalyst",
+        "source": "Intel Q4/FY2025 results, 2026-01-22",
+        "sourceUrl": "https://www.intc.com/filings-reports/all-sec-filings/content/0000050863-26-000009/q425earningsrelease.htm"
+      }
     },
     {
       "ticker": "CRWD",
@@ -171,8 +208,22 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 162.26,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-03-05",
+        "facts": [
+          "Fiscal Q4 revenue reached a record $2.219B, up 22% year over year and above guidance midpoint.",
+          "The next quarter was guided to $2.4B plus or minus 5%."
+        ],
+        "antiDnaFlags": [
+          "semiconductor-cycle exposure"
+        ],
+        "classificationHint": "operating_acceleration",
+        "source": "Marvell fiscal Q4/FY2026 results, 2026-03-05",
+        "sourceUrl": "https://investor.marvell.com/news-events/press-releases/detail/1011/marvell-technology-inc-reports-fourth-quarter-and-fiscal-year-2026-financial-results"
+      }
     },
     {
       "ticker": "PANW",
@@ -197,8 +248,24 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 132.98,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "strong",
+        "knownAsOf": "2026-01-27",
+        "facts": [
+          "Fiscal Q2 revenue rose to $2.825B from $2.325B a year earlier.",
+          "GAAP gross margin expanded to 41.6% from 34.9%.",
+          "The quarter exceeded top- and bottom-line expectations and set margin/EPS records.",
+          "Fiscal Q3 revenue guidance was $2.9B plus or minus $100M."
+        ],
+        "antiDnaFlags": [
+          "storage-cycle exposure"
+        ],
+        "classificationHint": "operating_acceleration",
+        "source": "Seagate fiscal Q2 2026 results, 2026-01-27",
+        "sourceUrl": "https://investors.seagate.com/news/news-details/2026/Seagate-Technology-Reports-Fiscal-Second-Quarter-2026-Financial-Results/"
+      }
     },
     {
       "ticker": "DDOG",
@@ -391,8 +458,24 @@
       "outcomeBucket": "top_gainer",
       "returnPct": 78.69,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate-strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-12",
+        "facts": [
+          "Q4 net sales grew 10.6% year over year to $1.475B.",
+          "Adjusted EBITDA increased 10.5% and non-GAAP EPS increased 8.3%.",
+          "GAAP net income fell sharply because of restructuring/exit charges."
+        ],
+        "antiDnaFlags": [
+          "restructuring charges",
+          "GAAP profit volatility"
+        ],
+        "classificationHint": "reacceleration",
+        "source": "Zebra Q4/FY2025 results, 2026-02-12",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/877212/000087721226000003/zbra-20260212.htm"
+      }
     },
     {
       "ticker": "RVTY",
@@ -704,8 +787,25 @@
       "outcomeBucket": "bottom_loser",
       "returnPct": -34.91,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong-but-transaction-driven",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-24",
+        "facts": [
+          "The company exceeded raised 2025 guidance and extended a 14%+ adjusted EPS growth target through 2030.",
+          "NRG completed an acquisition that roughly doubled its generation footprint.",
+          "2026 adjusted EPS guidance midpoint was $8.90."
+        ],
+        "antiDnaFlags": [
+          "large-acquisition integration risk",
+          "higher interest expense",
+          "power-market sensitivity"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "NRG FY2025 results, 2026-02-24",
+        "sourceUrl": "https://investors.nrg.com/news-releases/news-release-details/nrg-energy-inc-reports-full-year-2025-financial-results"
+      }
     },
     {
       "ticker": "DOW",
@@ -834,40 +934,124 @@
       "outcomeBucket": "bottom_loser",
       "returnPct": -29.71,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong-cyclical",
+        "inflectionExpectations": "mixed",
+        "knownAsOf": "2026-02-18",
+        "facts": [
+          "FY2025 produced record consolidated revenue, net income and free cash flow.",
+          "Q4 production volumes increased sequentially.",
+          "Average realized price per BOE fell materially from the prior quarter."
+        ],
+        "antiDnaFlags": [
+          "commodity-price sensitivity",
+          "customer development dependence"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "Texas Pacific Land Q4/FY2025 results, 2026-02-18",
+        "sourceUrl": "https://www.texaspacific.com/investors/news-events/press-releases/detail/179/texas-pacific-land-corporation-announces-fourth-quarter-and"
+      }
     },
     {
       "ticker": "PCG",
       "outcomeBucket": "bottom_loser",
       "returnPct": -29.67,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate",
+        "inflectionExpectations": "positive-but-regulated",
+        "knownAsOf": "2026-02-12",
+        "facts": [
+          "2025 non-GAAP core EPS increased to $1.50 from $1.36.",
+          "2026 core EPS guidance was tightened to $1.64-$1.66.",
+          "The company continued targeting operating-cost reductions."
+        ],
+        "antiDnaFlags": [
+          "wildfire liability risk",
+          "regulatory exposure",
+          "capital intensity"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "PG&E FY2025 results, 2026-02-12",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1004980/000100498026000008/pge-q42025pressrelease.htm"
+      }
     },
     {
       "ticker": "LVS",
       "outcomeBucket": "bottom_loser",
       "returnPct": -29.36,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate",
+        "inflectionExpectations": "positive-cyclical",
+        "knownAsOf": "2026-01-28",
+        "facts": [
+          "Q4 net revenue was $3.65B and adjusted property EBITDA was $1.41B.",
+          "Management remained focused on growth from Singapore and Macao capital investments.",
+          "Quarterly EBITDA benefited from favorable rolling-play hold."
+        ],
+        "antiDnaFlags": [
+          "gaming-cycle exposure",
+          "China/Macao exposure",
+          "hold-normalization risk"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "Las Vegas Sands Q4 2025 results, 2026-01-28",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1300514/000130051426000004/lvs_ex991x12312025.htm"
+      }
     },
     {
       "ticker": "NOC",
       "outcomeBucket": "bottom_loser",
       "returnPct": -29.23,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "moderate-strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-01-27",
+        "facts": [
+          "Management guided 2026 sales to $43.5B-$44.0B, representing mid-single-digit growth.",
+          "2026 adjusted EPS was expected to grow mid-single digits.",
+          "Growth was expected to accelerate through the year."
+        ],
+        "antiDnaFlags": [
+          "program-execution risk",
+          "government-budget concentration",
+          "modest growth rate"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "Northrop Grumman Q4 2025 earnings call, 2026-01-27",
+        "sourceUrl": "https://investor.northropgrumman.com/static-files/a1b89de5-7dc5-4cfe-8aad-fd74e07f2c31"
+      }
     },
     {
       "ticker": "HII",
       "outcomeBucket": "bottom_loser",
       "returnPct": -28.99,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "strong",
+        "inflectionExpectations": "positive",
+        "knownAsOf": "2026-02-05",
+        "facts": [
+          "FY2025 revenue increased 8.2% and diluted EPS increased 10.2%.",
+          "Q4 revenue rose from $3.0B to $3.5B and operating margin improved.",
+          "Free cash flow increased to $800M from $40M in 2024.",
+          "Shipbuilding throughput grew about 14% in 2025 with roughly 15% targeted for 2026."
+        ],
+        "antiDnaFlags": [
+          "shipbuilding execution risk",
+          "government-customer concentration"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "HII Q4/FY2025 results, 2026-02-05",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1501585/000150158526000004/hiiq42025earningsrelease.htm"
+      }
     },
     {
       "ticker": "APTV",
@@ -922,8 +1106,25 @@
       "outcomeBucket": "bottom_loser",
       "returnPct": -27.87,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "exceptional",
+        "inflectionExpectations": "strong-but-event-risk",
+        "knownAsOf": "2026-01-20",
+        "facts": [
+          "FY2025 revenue grew 16% and operating margin expanded about 3 percentage points to 29.5%.",
+          "Q4 revenue grew 18% and operating income grew 30%.",
+          "2026 revenue guidance was 12%-14% growth with operating margin guided to 31.5%.",
+          "The company was working to close a very large Warner Bros. acquisition."
+        ],
+        "antiDnaFlags": [
+          "mega-deal execution/integration risk",
+          "expectations/valuation risk"
+        ],
+        "classificationHint": "false_positive_stress_case",
+        "source": "Netflix Q4/FY2025 shareholder letter, 2026-01-20",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1065280/000106528026000033/ex991_q425.htm"
+      }
     },
     {
       "ticker": "APP",
@@ -957,8 +1158,27 @@
       "outcomeBucket": "bottom_loser",
       "returnPct": -26.65,
       "evidenceCutoff": "2026-04-01",
-      "v2EvidenceStatus": "pending",
-      "preliminary": null
+      "v2EvidenceStatus": "initial_preperiod_review",
+      "preliminary": {
+        "businessDna": "weak",
+        "inflectionExpectations": "weak-to-turnaround",
+        "knownAsOf": "2026-01-30",
+        "facts": [
+          "FY2025 sales declined to $30.15B from $33.39B.",
+          "The company reported a $738M full-year net loss.",
+          "Management described challenging market conditions and margin compression across most businesses.",
+          "A cash-improvement program exceeded its target, providing a turnaround lever."
+        ],
+        "antiDnaFlags": [
+          "sales decline",
+          "net loss",
+          "margin compression",
+          "commodity-cycle pressure"
+        ],
+        "classificationHint": "clear_reject",
+        "source": "LyondellBasell FY2025 results, 2026-01-30",
+        "sourceUrl": "https://investors.lyondellbasell.com/news/news-details/2026/LyondellBasell-reports-2025-earnings/default.aspx"
+      }
     }
   ],
   "preliminaryLessons": [
@@ -969,7 +1189,10 @@
     "The loser side contains several genuinely strong businesses (PODD, CSGP, BSX, ROL, APP), proving that Business DNA alone is insufficient.",
     "Clear losers often advertised deterioration before April (DOW, CHTR, LULU, TSCO), supporting explicit Anti-DNA penalties.",
     "Several winners were not classic growth stories (ILMN, HUM, CRL, CNC), so V2 needs turnaround/catalyst archetypes rather than one universal growth template.",
-    "The strongest clean operating-acceleration winners (MU, SNDK, DELL, AMD, CRWD, FLEX, BE) combined strong current growth with visible forward demand or raised/improving expectations."
+    "The strongest clean operating-acceleration winners (MU, SNDK, DELL, AMD, CRWD, FLEX, BE) combined strong current growth with visible forward demand or raised/improving expectations.",
+    "Intel and Moderna prove that some six-month Monsters are catalyst/turnaround cases that would fail a pure operating-growth screen; archetype matters.",
+    "HII, NFLX, NRG, PODD, CSGP, BSX, APP and ROL are strong-business losers that must be explained by expectations, valuation, event risk or market confirmation rather than weak fundamentals.",
+    "Clear operating deterioration remains useful rejection evidence, but it is not sufficient to solve the hard false-positive cases."
   ],
   "targetDesign": {
     "totalStocks": 100,
@@ -979,8 +1202,8 @@
     "note": "The 50 extreme outcomes define obvious successes/failures. The 50 matched controls will test whether V2 separates true Monster setups from plausible look-alikes."
   },
   "researchProgress": {
-    "phase": "extreme_outcomes_preperiod_reconstruction",
-    "reviewedOf50": 37,
+    "phase": "extreme_outcomes_preperiod_reconstruction_complete",
+    "reviewedOf50": 50,
     "marketConfirmationStillPending": true,
     "valuationStressTestsStillPartial": true,
     "matchedControlsStillToAdd": 50
