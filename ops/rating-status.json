@@ -27,7 +27,7 @@
   "postMilestoneStall": false,
   "postMilestoneStallThreshold": 3,
   "deployedCommit": "3356910a73c6d43ec10d0af911105f7fb024718c",
-  "repositoryHeadCommit": "94f63d953abe8c801f0e97ac688a95893463b02a",
+  "repositoryHeadCommit": "2e95ea9fb1677da728c29682275e985d3db8c52d",
   "backendDeployTargetCommit": "28a2296ecdc44546b00072c159f8e3d504d83214",
   "currentMainCommit": "28a2296ecdc44546b00072c159f8e3d504d83214",
   "staleDeployment": true,
@@ -60,6 +60,6 @@
   },
   "productionReachable": false,
   "productionReadError": "The operation was aborted due to timeout",
-  "lastAttemptedAt": "2026-10-10T17:51:34.325Z",
+  "lastAttemptedAt": "2026-10-10T20:07:22.649Z",
   "lastVerifiedRecordedAt": "2026-09-01T20:11:33.164Z"
 }
